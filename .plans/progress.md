@@ -87,3 +87,74 @@ Append one entry per day, newest last. Keep each entry short: done, decisions an
   1. Run `uv run python scripts/spike_api.py` (at most $0.20).
   2. Fill in the **Live** lines of `docs/api-notes.md`.
   3. Record the spend here.
+
+## Day 3 — Tue 27 Oct 2026 (brought forward from Wed 28) — Kernel + verifiable replay + LLM layer
+**Done:**
+- **Kernel** (`kernel/`):
+  - `ids.py`: canonical JSON, blake2b helpers, `stable_hash` (identical across processes, tested with different `PYTHONHASHSEED`s), chain hash.
+  - `events.py`: the §5.1 envelope and a type registry; every payload is validated before it enters the log.
+  - `store.py`: SQLite WAL, append-only, hash chain, `idem_key` UNIQUE, `verify_chain()` naming the first bad seq, JSONL export/import.
+  - `clock.py`: `live`, `sim` and `replay` clocks, plus Lamport helpers.
+  - `scheduler.py`: actor registry, one queue ordered by `(vtime, lamport, seq)`, commands `Emit`, `Send`, `StartEffect`, `SetTimer`, `Spawn`, `Stop`, plus `Cancel` and `SetCap`.
+  - `effects.py`: the effect runner (asyncio tasks) with a live driver (arrival order) and a sim driver (virtual completion order).
+  - `replay.py`: generic replay with a first-divergence report.
+- **LLM layer** (`llm/`):
+  - `client.py`: Responses API, stateless (`store: false`); role routing; retries on 429/500/503 and transport errors, with backoff, seeded jitter and `Retry-After`; rate-limit header parsing; cost from usage.
+  - `cassette.py`: one entry per call with every attempt; secrets redacted before writing (headers, `LLM_…` keys, `hf_…` tokens, bearer tokens, the configured secret values).
+  - `fake.py`: a scripted, deterministic fake that returns Responses-shaped JSON, with a `LatencyModel` hook for Day 5.
+  - `roles.py`.
+- **Market** (`market/`):
+  - `ledger.py`: the in-run `Ledger` (caps per contract, squad, run and project) and the persistent `ProjectLedger` (atomic `BEGIN IMMEDIATE` reserve).
+  - `prices.py`.
+- **Wiring and CLI.**
+  - `runs.py` records a run directory (`events.sqlite`, `events.jsonl`, `cassette.jsonl`) and replays one.
+  - CLI: `fractalswarm toy`, `replay RUN [--verify]`, `spend`.
+- **Toy scenario** (`actors/toy.py`): a hub and two workers, two rounds of fake LLM calls, seeded timers, progress pings, a judge merge and a cancelled deadline timer: 56 events. `ONE_CALL` is ready for the real-call golden.
+- **Tests:** 87 green; ruff green.
+  - `tests/integration/test_replay_verify.py`:
+    - the golden bundle (`tests/golden/toy`) replays to its recorded head;
+    - a fresh run reproduces the golden head;
+    - a live-clock run with racing completions replays;
+    - retries and errors replay;
+    - an edited log is caught by the chain;
+    - a resealed forgery (valid chain, forged LLM answer) is caught by replay;
+    - an edited cassette is caught;
+    - the CLI exit codes are checked.
+  - Hash-chain tamper tests.
+  - Ledger property tests: hypothesis over reserve/settle sequences, and 8 threads racing on the SQLite project ledger.
+  - The real backend is tested against an in-process `httpx2.MockTransport` (auth sent, not recorded).
+  - The determinism lint now covers the real kernel and market code.
+
+**Exit criteria:**
+- Tests: all green.
+- `replay --verify`: MATCH for the toy scenario. The real-call golden is pending (item 13).
+- Spend: $0.
+
+**Deviations:**
+- **Handlers return `(new_state, commands)`**, not just `commands`, so that state changes stay pure and explicit.
+- **`ts_virtual` is an integer in milliseconds.**
+- **Three clock modes.** The added `sim` mode is a discrete-event clock: fake runs take no wall time, and their latencies still produce meaningful virtual stall times. Day 6 needs this.
+- **Replay recomputes LLM completions from the cassette.** It does not copy them from the log. The cassette must hold the exact request the replayed actor makes, so replay checks the handlers, the cassette and the response parsing together. The recorded log supplies only the position and timestamp of each outside event. Timers take their payload from the log.
+- **Config snapshot.** `run.started` stores the role and price tables. Recorded runs therefore keep replaying after `roles.yaml` is tuned on Day 4.
+- **Budget in two layers.**
+  - The run book (contract, squad, run, plus a snapshot of the project remainder) lives in the kernel, so `budget.reserved`, `budget.refused` and `budget.settled` are logged and replayed.
+  - The persistent project ledger is checked inside the LLM client, for real backends only.
+  - A real call that is cancelled or crashes leaves its project reservation open on purpose, in case it was billed.
+- **The project ledger lives at `~/.fractalswarm/ledger.sqlite`**, not at `runs/ledger.sqlite`. Each day has its own worktree, so a per-worktree ledger would lose spend history. `FRACTALSWARM_LEDGER_PATH` overrides it.
+- **Additions:**
+  - the `Cancel` command and the `effect.cancelled` event;
+  - `runs.py`, which is not in the §18 layout;
+  - the `fractalswarm toy` command;
+  - the fake LLM works at the backend level, so fake and real calls share parsing, cost and cassette code.
+- **Token-count endpoint not used** (api-notes item 8). Reservations use a local upper bound of `len(canonical_json(body)) / 2` input tokens plus the full `max_output_tokens`.
+
+**Spend:** $0. No real API calls were made: Yoel asked for none today, and `MODEL_API_KEY` is still empty.
+
+**Issues and pending:**
+- **Item 13 is pending:** one real, tiny recorded Spark call, replayed hash-identically, and stored as a golden fixture. The code path is ready: `fractalswarm toy --scenario one-call --backend real --confirm-real-spend`, then `replay <run> --verify`, then copy the bundle to `tests/golden/one-call/`. It needs the key, the credits in Billing and Yoel's go-ahead. Worst case is about $0.01.
+- **The live spike** (`scripts/spike_api.py`) is still pending, for the same reasons.
+
+**Next:** Day 4 (`.plans/days/day-04.md`). Before its first real run:
+1. The key and the credits must be in place.
+2. Run the live spike.
+3. Do item 13.

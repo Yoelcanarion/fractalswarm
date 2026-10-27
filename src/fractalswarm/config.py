@@ -10,8 +10,10 @@ from pathlib import Path
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-SHARED_ENV_FILE = Path.home() / ".fractalswarm" / ".env"
+SHARED_DIR = Path.home() / ".fractalswarm"
+SHARED_ENV_FILE = SHARED_DIR / ".env"
 LOCAL_ENV_FILE = Path(".env")
+CONFIG_DIR = Path(__file__).resolve().parents[2] / "config"
 
 
 class Settings(BaseSettings):
@@ -29,3 +31,13 @@ class Settings(BaseSettings):
     project_cap_usd: float = Field(
         default=150.0, gt=0, validation_alias="FRACTALSWARM_PROJECT_CAP_USD"
     )
+    # Shared by every worktree, like the secrets, so that spend survives the daily branches.
+    ledger_path: Path = Field(
+        default=SHARED_DIR / "ledger.sqlite", validation_alias="FRACTALSWARM_LEDGER_PATH"
+    )
+    runs_dir: Path = Field(default=Path("runs"), validation_alias="FRACTALSWARM_RUNS_DIR")
+
+    def secret_values(self) -> list[str]:
+        """Every secret's value, for redaction. Never print the result."""
+        secrets = (self.model_api_key, self.hf_token)
+        return [secret.get_secret_value() for secret in secrets if secret is not None]
