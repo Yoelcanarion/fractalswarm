@@ -43,7 +43,7 @@ run bundle.
 | Metric | Definition |
 |---|---|
 | **Stall time (s)** | Within the work window (first agent LLM call start → last agent LLM call end), the virtual time during which **no agent LLM call is in flight anywhere**. A call is in flight from `effect.started` to its `effect.completed` or `effect.cancelled`; a call never closed counts until the run ends. Planner, judge and supervisor calls are not agent work. |
-| **Extra cost vs C0 (%)** | `(cost(Ck) − cost(C0)) / cost(C0)`, same workflow, task and seed. Cost = sum of `cost_usd` of completed LLM calls. Cancelled calls count as $0, a lower bound that can only flatter whoever cancels. |
+| **Extra cost vs C0 (%)** | `(cost(Ck) − cost(C0)) / cost(C0)`, same workflow, task and seed. Cost = sum of `cost_usd` of completed LLM calls, plus an estimate for calls cancelled or still in flight at the end: input billed in full, plus output so far (elapsed × the run's observed output rate for that role, capped at the full answer). Base latency is counted in the rate, so the estimate errs low. |
 | **Time lost vs C0 (s)** | `makespan(Ck) − makespan(C0)`, same workflow, task and seed. |
 | **Completion / validity** | From each task's deterministic checker (T2: 0 hard-constraint violations; T1: field formats). |
 | **Quality** | T2 soft score; T1 field-level F1. |
@@ -104,7 +104,7 @@ run bundle.
   original frameworks' deployments (except LangGraph).
 - The log is centralized (single process); the chaos is simulated by injection.
 - Fake-LLM gate runs use calibrated latencies; only the paid runs measure real latency.
-- Cancelled calls are counted at $0 (see Metrics).
+- Cancelled calls are billed by an estimate, not by the provider's invoice (see Metrics).
 - TBD: anything the runs reveal.
 
 ## 7. Reproduce

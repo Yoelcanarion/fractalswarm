@@ -10,7 +10,13 @@ from typing import Any
 
 from fractalswarm.baselines import supervisor as sup
 from fractalswarm.bench.profiles import RESTART_DELAY_MS, profile
-from fractalswarm.bench.scoring import Outcome, load_events, score_run, time_lost_s
+from fractalswarm.bench.scoring import (
+    Outcome,
+    extra_cost_pct,
+    load_events,
+    score_run,
+    time_lost_s,
+)
 from fractalswarm.kernel.events import Event, Payload, register
 from fractalswarm.kernel.scheduler import (
     ActorKind,
@@ -134,6 +140,9 @@ async def test_crashes_stall_for_the_restart_delay_and_redo_lost_work(tmp_path: 
     # Nothing runs while the coordinator is down: each crash stalls the whole restart delay.
     assert c2.stall_s >= 3 * RESTART_DELAY_MS / 1000
     assert time_lost_s(c2.makespan_s, c0.makespan_s) >= 3 * RESTART_DELAY_MS / 1000
+
+    # The cancelled calls were billed for what they ran, then redone: central pays twice.
+    assert (extra_cost_pct(c2.cost_usd, c0.cost_usd) or 0) > 0
 
     report = await replay_run(c2_dir)
     assert report.ok, report.detail

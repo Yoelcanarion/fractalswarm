@@ -16,9 +16,15 @@ bundle. The definitions:
   outside the window: every workflow pays it at C0 too, and it is not what a crash costs.
 - **Makespan.** ``run.completed.ts_virtual - run.started.ts_virtual`` (the last event if
   the run never completed).
-- **Cost.** The sum of ``result.cost_usd`` over completed LLM calls. A cancelled call
-  counts as $0. That is a lower bound for whoever cancels (a real provider may bill part
-  of it), so it can only flatter the baselines, never the swarm.
+- **Cost.** The sum of ``result.cost_usd`` over completed LLM calls, plus an estimate for
+  calls that were cancelled or still in flight at the run end: the provider has billed the
+  input in full and the output produced so far. Input tokens come from a completed call
+  with the identical request in the same run, else from the body size (4 chars/token).
+  Output tokens are ``elapsed × the run's observed output rate`` for that role (output
+  tokens over latency of its completed calls, base latency included, so the estimate errs
+  low), capped at the identical call's output or the role's ``max_output_tokens``. Prices
+  and roles come from the snapshot in ``run.started``; a log without one bills $0. A crash
+  that cancels in-flight work and then redoes it therefore pays for it twice.
 - **Coordination tokens.** Input plus output tokens of LLM calls whose role is a
   coordination role (``COORDINATION_ROLES``) or whose effect tag starts with ``coord:``.
   These are calls spent deciding who does what or rebuilding coordination state (supervisor
@@ -39,7 +45,10 @@ from typing import Any
 from pydantic import BaseModel
 
 from fractalswarm.kernel.events import Event
+from fractalswarm.kernel.ids import canonical_json
 from fractalswarm.kernel.store import EventStore
+from fractalswarm.llm.client import LLMClient, LLMRequest
+from fractalswarm.market.prices import Usage
 
 COORDINATION_ROLES = frozenset({"coordinator", "supervisor", "router", "recovery"})
 COORDINATION_TAG_PREFIX = "coord:"
@@ -72,6 +81,7 @@ class LLMCall(BaseModel):
     cost_usd: float = 0.0
     input_tokens: int = 0
     output_tokens: int = 0
+    estimated: bool = False  # cost and tokens estimated (cancelled or never closed)
 
 
 class RunMetrics(BaseModel):
@@ -206,7 +216,47 @@ def llm_calls(events: Sequence[Event]) -> list[LLMCall]:
     for call in ordered:
         if call.end is None:
             call.end = max(run_end, call.start)
+    _bill_unfinished(events, ordered)
     return ordered
+
+
+CHARS_PER_TOKEN = 4
+
+
+def _bill_unfinished(events: Sequence[Event], calls: list[LLMCall]) -> None:
+    """Estimate what the provider billed for calls cut off before they completed."""
+    started = next((e for e in events if e.type == "run.started"), None)
+    snapshot = ((started.payload.get("config") or {}) if started else {}).get("llm")
+    unfinished = [c for c in calls if c.status in ("cancelled", "inflight")]
+    if not snapshot or not unfinished:
+        return
+    roles, prices = LLMClient.config_from_snapshot(snapshot)
+    client = LLMClient(None, roles=roles, prices=prices, mode="live")  # type: ignore[arg-type]
+    requests = _requests(events)
+    done = [c for c in calls if c.status in ("ok", "incomplete")]
+    twins = {canonical_json(requests[c.effect_id]): c for c in done}
+
+    def rate(sample: Iterable[LLMCall]) -> float:
+        sample = list(sample)
+        busy = sum((c.end or c.start) - c.start for c in sample)
+        return sum(c.output_tokens for c in sample) / busy if busy > 0 else 0.0
+
+    overall = rate(done)
+    for call in unfinished:
+        request = requests[call.effect_id]
+        model, body, max_output = client.build(LLMRequest.model_validate(request))
+        twin = twins.get(canonical_json(request))
+        if twin is not None:
+            input_tokens, cap = twin.input_tokens, twin.output_tokens
+        else:
+            input_tokens, cap = len(canonical_json(body)) // CHARS_PER_TOKEN + 1, max_output
+        role_rate = rate(c for c in done if c.role == call.role) or overall
+        elapsed = (call.end or call.start) - call.start
+        output_tokens = min(int(elapsed * role_rate), cap)
+        usage = Usage(input_tokens=input_tokens, output_tokens=output_tokens)
+        call.cost_usd = prices.cost(model, usage)
+        call.input_tokens, call.output_tokens = input_tokens, output_tokens
+        call.estimated = True
 
 
 def _requests(events: Sequence[Event]) -> dict[str, dict[str, Any]]:

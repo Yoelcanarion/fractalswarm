@@ -71,7 +71,10 @@ the Day 5 takeover streams; only the pieces that need neither.
   the first agent call and integration after the last are excluded (every workflow pays
   them at C0; they are not crash cost). Spec glossary: "total wall time during which no
   agent work is in flight"; this is that, bounded to the work window.
-- **Cancelled calls cost $0** in the metric (lower bound; it only flatters the baselines).
+- **Cancelled calls cost $0** in the metric (first phase). **Replaced on 2026-10-28, Yoel's
+  call:** cancelled and never-closed calls are billed as input in full + output so far
+  (elapsed × the run's observed output rate for that role, capped at the identical call's
+  output or `max_output_tokens`), priced from the `run.started` snapshot.
 - `breaker.tripped` is not registered as an event type here (comms owns breakers); scoring
   counts it by type name.
 - The pre-flight only prices registered workflows; for v1, `--dry-run` currently lists all
@@ -83,11 +86,10 @@ the Day 5 takeover streams; only the pieces that need neither.
 $0. No real API calls. Tests never open the project ledger.
 
 ## Issues / what remains of Day 6
-- **Extra cost is flat for the baselines under the current metric (found 2026-10-28).**
-  The supervised coordinator above scores C0 $0.002247, C2 $0.002247, C3 $0.002247 (stall
-  0 / 15 / 25 s). Cancelled calls count $0 and the redo costs what the original would have,
-  so "paying twice" never shows. Needs a decision on how cancelled calls are billed before
-  the gate.
+- **Extra cost was flat for the baselines (found and fixed 2026-10-28).** With cancelled
+  calls at $0, the supervised coordinator scored the same cost at C0/C2/C3, so "paying
+  twice" never showed. With the billed estimate (Yoel chose: input + output so far):
+  C0 $0.002247, C2 $0.002844 (+27%), C3 $0.003296 (+47%); stall 0 / 15 / 25 s.
 - Baselines (`baselines/supervisor.py`, central, single, pipeline): need the slice.
 - Register the `swarm`, `central`, `single`, `pipeline` workflows and the `t2_conference`
   task (checker = hard-constraint checker) in `bench.registry` (append modules to

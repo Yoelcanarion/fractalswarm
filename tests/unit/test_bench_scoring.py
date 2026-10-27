@@ -18,7 +18,11 @@ from fractalswarm.bench.scoring import (
     union_length,
 )
 from fractalswarm.kernel.events import Event, EventDraft
+from fractalswarm.kernel.ids import canonical_json
 from fractalswarm.kernel.store import EventStore
+from fractalswarm.llm.client import LLMClient, LLMRequest
+from fractalswarm.llm.roles import RoleTable
+from fractalswarm.market.prices import PriceTable, Usage
 
 GOLDEN = Path(__file__).resolve().parents[1] / "golden" / "toy"
 
@@ -105,8 +109,16 @@ class LogBuilder:
             )
         )
 
-    def start_llm(self, ts: int, eid: str, role: str, actor: str = "a", tag: str | None = None):
-        request = {"role": role, "input": "x"}
+    def start_llm(
+        self,
+        ts: int,
+        eid: str,
+        role: str,
+        actor: str = "a",
+        tag: str | None = None,
+        text: str = "x",
+    ):
+        request = {"role": role, "input": text}
         payload = {"effect_id": eid, "kind": "llm", "request": request, "tag": tag}
         self.add(ts, "effect.started", actor, payload)
 
@@ -165,6 +177,32 @@ def test_unclosed_calls_close_at_the_run_end() -> None:
     calls = {c.effect_id: c for c in llm_calls(list(synthetic().store.read()))}
     assert calls["w3"].end == 16_000 and calls["w3"].status == "inflight"
     assert calls["w2"].status == "cancelled" and calls["w2"].cost_usd == 0
+
+
+def test_cut_off_calls_are_billed_for_input_and_output_so_far() -> None:
+    roles, prices = RoleTable.load(), PriceTable.load()
+    client = LLMClient(None, roles=roles, prices=prices, mode="live")  # type: ignore[arg-type]
+    log = LogBuilder()
+    config = {"llm": client.config_snapshot()}
+    started = {"seed": "1", "scenario": "s", "clock": "sim", "config": config}
+    log.add(0, "run.started", "@kernel", started)
+    log.start_llm(0, "done", "agent")
+    log.done_llm(1_000, "done", tokens=(10, 100))  # 0.1 output tokens per ms
+    log.start_llm(0, "twin", "agent")  # the same request, cut off halfway
+    log.cancel_llm(500, "twin")
+    long_text = "y" * 400
+    log.start_llm(0, "long", "agent", text=long_text)  # in flight until the run end
+    log.add(100_000, "run.completed", "@kernel", {"events": 0, "alive": [], "spent_usd": 0})
+
+    calls = {c.effect_id: c for c in llm_calls(list(log.store.read()))}
+    model, body, max_output = client.build(LLMRequest(role="agent", input=long_text))
+    twin, long = calls["twin"], calls["long"]
+    assert twin.estimated and (twin.input_tokens, twin.output_tokens) == (10, 50)
+    expected = prices.cost(model, Usage(input_tokens=10, output_tokens=50))
+    assert twin.cost_usd == pytest.approx(expected)
+    assert long.input_tokens == len(canonical_json(body)) // 4 + 1
+    assert long.output_tokens == max_output  # 0.1 × 100 s, capped
+    assert not calls["done"].estimated
 
 
 def test_breaker_trips_and_chaos_events_are_counted_when_present() -> None:
