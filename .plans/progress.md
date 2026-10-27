@@ -30,7 +30,7 @@ Append one entry per day, newest last. Keep each entry short: done, decisions an
 
 **Status of Yoel's setup:**
 - Done: `gh auth login`, as Yoelcanarion with the `repo` scope. The private repo is created by the bootstrap chat.
-- Done: HF access requested for `meta-llama/Llama-Prompt-Guard-2-22M`; approval may still be pending.
+- Done: HF access to `meta-llama/Llama-Prompt-Guard-2-22M` granted on Day 2.
 - Pending: put `MODEL_API_KEY` (and `HF_TOKEN`, a Read token) in `C:\Users\yogar\.fractalswarm\.env`. This file is outside the repo and shared by every worktree. The Meta key is created under API keys on dev.meta.ai.
 - Credits: requested on Day 2 through Meta's "Model API Credit Claims" form. Once applied, they show on dev.meta.ai under Billing → Free credits; on Day 2 they were not showing yet. The account has Yoel's card on file, so until then every real call is charged to the card.
 - Days 2–3 can run without the key or the credits, on the fake LLM. The first real run on Day 4 (Thu 29 Oct) needs both, so they must be in place by Wednesday night.
