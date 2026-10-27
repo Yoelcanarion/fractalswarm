@@ -35,7 +35,7 @@ Build the deterministic kernel and the **hash-verified replay** (a crown jewel),
     - CLI command `fractalswarm spend`.
 11. `kernel/replay.py` and CLI `replay RUN --verify`. Re-run the actors against the cassette in the recorded completion order, then compare the final hash.
 12. Toy scenario: 3 actors exchanging messages, with fake LLM calls and timers → record → `replay --verify`.
-13. One real tiny recorded Spark call, replayed hash-identically. Store it as a golden fixture (redacted) in `tests/golden/`. If `MODEL_API_KEY` has not arrived yet, skip this item, record it as pending, and do it as soon as the key arrives; everything else runs on the fake LLM.
+13. One real tiny recorded Spark call, replayed hash-identically. Store it as a golden fixture (redacted) in `tests/golden/`. If `MODEL_API_KEY` or the hackathon credits are not in place yet, skip this item, record it as pending, and do it as soon as both are; everything else runs on the fake LLM.
 14. Tests:
     - `test_replay_verify` (golden);
     - hash-chain verification;
@@ -44,7 +44,7 @@ Build the deterministic kernel and the **hash-verified replay** (a crown jewel),
 
 ## Exit criteria
 - [ ] All the tests above are green.
-- [ ] `replay --verify` reports a hash match for the toy scenario, and for the real call once the key is available.
+- [ ] `replay --verify` reports a hash match for the toy scenario, and for the real call once the key and the credits are in place.
 - [ ] Spend ≤ $0.50.
 
 ## Allowed fallbacks today

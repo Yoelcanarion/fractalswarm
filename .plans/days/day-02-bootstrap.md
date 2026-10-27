@@ -47,7 +47,7 @@ Build the project skeleton, and replace assumptions with **verified facts** abou
 
    Correct `config/prices.yaml` if the docs differ.
 
-   **If `MODEL_API_KEY` is not set yet:** write the script anyway, make it exit with a clear message when the key is missing, and mark every §24 item as pending in `docs/api-notes.md`. Run it as soon as the key arrives.
+   **Before running it, ask Yoel to confirm that the hackathon credits show on dev.meta.ai under Billing → Free credits.** Until they do, every call is charged to the card on file. **If `MODEL_API_KEY` is not set yet, or the credits are not there yet:** write the script anyway, make it exit with a clear message when the key is missing, and mark every §24 item as pending in `docs/api-notes.md`. Run it as soon as both are in place.
 7. **LlamaFirewall install test.** Add `llamafirewall` as an optional `safety` dependency group, and try PromptGuard 2 22M on one benign string and one injection string, recording latency on CPU. Yoel requested HF access on Day 2; authenticate with `HF_TOKEN` from the settings. If HF access or `HF_TOKEN` is still pending, record that and the fallback plan (spec §13) in `docs/api-notes.md`, and move on.
 8. **Git.** Commit.
    - If Yoel has run `! gh auth login`, create the **private** GitHub repo `fractalswarm`, add it as `origin`, and push `master` and this branch. Ask before pushing.

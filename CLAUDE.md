@@ -26,6 +26,7 @@ A multi-agent LLM runtime for the Meta Global AI Developer Hackathon (Indie trac
 - **Credits:** $150 total on Meta Model API.
   - Tests and dev default to the fake LLM.
   - Real calls happen only through explicit commands.
+  - The credits show on dev.meta.ai under Billing → Free credits once Meta applies them. Until then, every real call is charged to the card on file, so ask Yoel to confirm the credits are there before the first real call.
   - Check `fractalswarm spend` before and after real runs.
 - **Event rule:** show only work built during the event.
 
