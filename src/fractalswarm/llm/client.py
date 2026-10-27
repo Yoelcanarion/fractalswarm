@@ -30,6 +30,7 @@ from fractalswarm.llm.cassette import Attempt, Cassette, CassetteEntry, load_jso
 from fractalswarm.llm.roles import CONTRIBUTOR_SUFFIX, RoleTable
 from fractalswarm.market.ledger import ProjectLedger
 from fractalswarm.market.prices import PriceTable, Usage
+from fractalswarm.safety.scanners import contributor_gate
 
 Sleep = Callable[[int], Awaitable[None]]
 Mode = Literal["record", "live", "replay"]
@@ -58,6 +59,12 @@ class LLMRequest(BaseModel):
     prompt_cache_key: str | None = None
     contributor: bool = False  # honored only where the role allows it (spec §7.5)
     keep_reasoning: bool = False  # ask for encrypted reasoning items, for multi-turn replay
+
+
+def contributor_allowed(request: LLMRequest) -> bool:
+    """The Contributor gate (spec §7.5): content the scanners flag stays on Standard."""
+    content = [request.instructions, request.input]
+    return contributor_gate(content, opted_in=request.contributor).contributor
 
 
 class RetryPolicy(BaseModel):
@@ -167,7 +174,7 @@ class LLMClient:
         """(model, Responses body, max_output_tokens) for a request."""
         spec = self.roles.resolve(request.role, request.level)
         model = spec.model
-        if request.contributor and spec.contributor_ok:
+        if request.contributor and spec.contributor_ok and contributor_allowed(request):
             model += CONTRIBUTOR_SUFFIX
         body: dict[str, Any] = {
             "model": model,

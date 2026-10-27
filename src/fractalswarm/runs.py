@@ -4,6 +4,7 @@ A run directory holds ``events.sqlite`` (the live log), ``events.jsonl`` (its ex
 fixtures and bundles) and ``cassette.jsonl`` (every LLM call, redacted).
 """
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -49,6 +50,33 @@ class RunPaths:
     @property
     def cassette(self) -> Path:
         return self.root / "cassette.jsonl"
+
+    @property
+    def control(self) -> Path:
+        """Inbox for outside control requests (``fractalswarm halt``, budget shocks)."""
+        return self.root / "control"
+
+    def request_control(self, request: dict[str, Any]) -> Path:
+        self.control.mkdir(parents=True, exist_ok=True)
+        number = len(list(self.control.iterdir()))
+        path = self.control / f"{number:04d}-{request['op']}.json"
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(request), encoding="utf-8")
+        tmp.replace(path)
+        return path
+
+    def poll_control(self) -> list[dict[str, Any]]:
+        """Requests not yet applied, oldest first; each is marked done once read."""
+        if not self.control.is_dir():
+            return []
+        requests = []
+        for path in sorted(self.control.glob("*.json")):
+            try:
+                requests.append(json.loads(path.read_text(encoding="utf-8")))
+            except ValueError:
+                continue
+            path.replace(path.with_suffix(".done"))
+        return requests
 
     def open_log(self) -> EventStore:
         """The recorded log: the SQLite store if present, else the JSONL export."""
@@ -111,7 +139,7 @@ async def record_run(
         )
         run_clock = ManualClock("sim") if clock == "sim" else LiveClock(speed)
         runner = EffectRunner({"llm": client.effect()}, EffectContext(run_id, run_clock))
-        completed = await drive(runtime, runner)
+        completed = await drive(runtime, runner, control=paths.poll_control)
         store.export_jsonl(paths.events_jsonl)
         return RunResult(run_id, paths, completed, store.head_hash, store.last_seq)
 

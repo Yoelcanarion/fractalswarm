@@ -122,6 +122,13 @@ async def _advance(runtime: Runtime, recorded: Event | None, replayers: Mapping[
         else:
             status, result = await replayer(started, recorded)
         runtime.complete(effect_id, status, result, recorded.ts_virtual)
+    elif recorded.actor == ENV and recorded.type == "run.halted":
+        runtime.halt(recorded.payload["reason"], recorded.ts_virtual, recorded.payload["by"])
+    elif recorded.actor == ENV and recorded.type == "budget.shock":
+        shock = recorded.payload
+        runtime.shock(
+            shock["level"], shock["key"], shock["usd"], recorded.ts_virtual, shock["reason"]
+        )
     elif recorded.actor == ENV:
         raise Divergence(recorded.seq, f"unsupported outside event {recorded.type}")
     elif runtime.step():

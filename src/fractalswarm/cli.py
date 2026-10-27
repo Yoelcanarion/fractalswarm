@@ -156,3 +156,71 @@ def spend() -> None:
                 row.key, str(row.calls), f"{row.actual_usd:.4f}", f"{row.reserved_usd:.4f}"
             )
         console.print(table)
+
+
+audit_app = typer.Typer(no_args_is_help=True, help="Check the audit trail of a run.")
+app.add_typer(audit_app, name="audit")
+
+
+@audit_app.command("verify")
+def audit_verify(
+    run: Annotated[str, typer.Argument(help="run id under runs/, or a run directory")],
+    replay: Annotated[bool, typer.Option(help="also replay the run and compare hashes")] = False,
+) -> None:
+    """Check the hash chain, the security decisions and the kill switch of a run."""
+    import asyncio
+
+    from fractalswarm.verify.audit import audit_run
+
+    run_dir = _resolve_run_dir(run)
+    report = asyncio.run(audit_run(run_dir, with_replay=replay))
+    chain = report.chain
+    typer.echo(f"{run_dir}: {chain.events} events, head {chain.head_hash or '-'}")
+    typer.echo(f"hash chain: {'ok' if chain.ok else 'BROKEN'}")
+    if report.head_file_ok is not None:
+        typer.echo(f"HEAD file: {'match' if report.head_file_ok else 'MISMATCH'}")
+    if report.replay_ok is not None:
+        typer.echo(f"replay: {'MATCH' if report.replay_ok else 'MISMATCH'}")
+    for entry in report.entries:
+        typer.echo(f"  seq {entry.seq:>5}  {entry.type:<22} {entry.summary}")
+    for problem in report.problems:
+        typer.echo(f"PROBLEM {problem}")
+    typer.echo("AUDIT OK" if report.ok else "AUDIT FAILED")
+    raise typer.Exit(0 if report.ok else 1)
+
+
+def _control(run: str, request: dict) -> None:
+    from fractalswarm.runs import RunPaths
+
+    run_dir = _resolve_run_dir(run)
+    paths = RunPaths(run_dir)
+    if paths.events_jsonl.exists():
+        typer.echo(f"run {run_dir.name} has already finished; nothing to do")
+        raise typer.Exit(1)
+    path = paths.request_control(request)
+    typer.echo(f"requested {request['op']} for {run_dir.name} ({path.name})")
+
+
+@app.command()
+def halt(
+    run: Annotated[str, typer.Argument(help="run id under runs/, or a run directory")],
+    reason: Annotated[str, typer.Option(help="recorded in the run.halted event")] = "kill switch",
+) -> None:
+    """Kill switch: ask a running run to halt. It records run.halted and stops everything."""
+    _control(run, {"op": "halt", "reason": reason, "by": "human"})
+
+
+@app.command()
+def budget(
+    run: Annotated[str, typer.Argument(help="run id under runs/, or a run directory")],
+    usd: Annotated[float, typer.Option(help="the new cap in USD")],
+    level: Annotated[str, typer.Option(help="contract | squad | run | project")] = "run",
+    key: Annotated[str | None, typer.Option(help="scope key; default: the run id")] = None,
+    reason: str = "budget shock",
+) -> None:
+    """Budget shock: change a cap of a running run (records budget.shock)."""
+    if usd < 0:
+        raise typer.BadParameter("--usd must be >= 0")
+    if level not in ("contract", "squad", "run", "project"):
+        raise typer.BadParameter("--level must be contract, squad, run or project")
+    _control(run, {"op": "budget", "level": level, "key": key, "usd": usd, "reason": reason})

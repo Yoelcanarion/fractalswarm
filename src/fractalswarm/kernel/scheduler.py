@@ -195,6 +195,7 @@ class Runtime:
         self.cancelled: list[str] = []  # effect ids the driver should stop
         self.started_event: Event | None = None
         self.completed_event: Event | None = None
+        self.halted: Event | None = None
 
     # -- run lifecycle ------------------------------------------------------------------
 
@@ -220,6 +221,64 @@ class Runtime:
         reaction = Reaction(KERNEL, event)
         for command in self.scenario.boot(self.params):
             self._apply(reaction, command)
+        return event
+
+    # -- outside control: kill switch and budget shock ------------------------------------
+
+    def halt(self, reason: str, ts_virtual: int, by: str = "human") -> Event | None:
+        """Honor the kill switch: drop every queued delivery, cancel every in-flight effect
+        (releasing its reservation) and stop every actor. Later halts are ignored."""
+        if self.halted is not None:
+            return None
+        self.vtime = max(self.vtime, ts_virtual)
+        self.kernel_lamport = lamport_tick(self.kernel_lamport)
+        event = self._append(
+            "run.halted",
+            ENV,
+            {"reason": reason, "by": by},
+            self.kernel_lamport,
+            idem_key="run.halted",
+        )
+        self.halted = event
+        self.queue.clear()
+        reaction = Reaction(KERNEL, event)
+        for started in sorted(self.inflight.values(), key=lambda e: e.seq):
+            effect_id = started.payload["effect_id"]
+            self.cancelled.append(effect_id)
+            payload = {"effect_id": effect_id, "kind": started.payload["kind"]}
+            payload["tag"] = started.payload["tag"]
+            self._react(reaction, "effect.cancelled", payload, correlation_id=effect_id)
+            if effect_id in self.ledger.open:
+                reservation = self.ledger.release(effect_id)
+                settled = {"effect_id": effect_id, "reserved_usd": reservation.usd}
+                self._react(
+                    reaction,
+                    "budget.settled",
+                    settled | {"actual_usd": 0.0},
+                    correlation_id=effect_id,
+                )
+        self.inflight.clear()
+        for actor_id in sorted(self.actors):
+            self._react(reaction, "actor.stopped", {"actor_id": actor_id, "reason": "halted"})
+        self.actors.clear()
+        return event
+
+    def shock(self, level: str, key: str, usd: float, ts_virtual: int, reason: str = "") -> Event:
+        """A budget shock: set a new cap now and tell every live actor (it forces an epoch)."""
+        self.vtime = max(self.vtime, ts_virtual)
+        self.kernel_lamport = lamport_tick(self.kernel_lamport)
+        payload = {"level": level, "key": key, "usd": usd, "reason": reason}
+        event = self._append(
+            "budget.shock",
+            ENV,
+            payload,
+            self.kernel_lamport,
+            idem_key=f"shock:{self.store.next_seq}",
+        )
+        self.ledger.set_cap(level, key, usd)
+        if self.halted is None:
+            for actor_id in sorted(self.actors):
+                self._enqueue(event, actor_id)
         return event
 
     @property
