@@ -1,0 +1,46 @@
+[project]
+name = "fractalswarm"
+version = "0.1.0"
+description = "A multi-agent LLM runtime whose orchestrators form a fractal tree: kill half of them mid-run and it still finishes, and every run replays bit-for-bit from a hash-verified log."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Yoelcanarion" }]
+requires-python = "==3.12.*"
+dependencies = [
+    "httpx>=0.28.1",
+    "openai>=3.40.0",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.16.1",
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+    "typer>=0.27.3",
+]
+
+[project.scripts]
+fractalswarm = "fractalswarm.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.12.19,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.170.12",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.1",
+    "ruff>=0.17.3",
+]

@@ -1,0 +1,17 @@
+# Secrets (real values live in ~/.fractalswarm/.env, outside the repo)
+.env
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+dist/
+
+# Runs: project ledger, per-run dirs, spike evidence
+runs/
+
+# Web
+web/node_modules/
+web/dist/

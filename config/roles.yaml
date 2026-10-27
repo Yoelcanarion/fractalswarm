@@ -1,0 +1,60 @@
+# Role -> (model, effort, max_output_tokens) at each budget level (spec §7.4).
+# L0 is normal operation. L1 starts when 80% of the run budget is spent, L2 at 90%.
+# At 95% the run stops (config/defaults.yaml).
+#
+# effort: minimal | low | medium | high (the API also accepts xhigh and max).
+# max_output_tokens caps reasoning and visible output together, so it must leave room for
+# the reasoning. These values are first guesses, to be tuned from the Day 4 cassettes.
+# contributor_ok: the call may go to muse-spark-1.3-contributor if the task opted in and
+# the scanners found the content clean (spec §7.5).
+
+roles:
+  root_planner:
+    L0: {model: muse-wonder-1.0, effort: high, max_output_tokens: 16384}
+    L1: {model: muse-spark-1.3, effort: high, max_output_tokens: 16384}
+    L2: {model: muse-spark-1.3, effort: medium, max_output_tokens: 16384}
+
+  # LCA arbitration of goal collisions (spec §6.2).
+  arbiter:
+    L0: {model: muse-wonder-1.0, effort: high, max_output_tokens: 8192}
+    L1: {model: muse-spark-1.3, effort: high, max_output_tokens: 8192}
+    L2: {model: muse-spark-1.3, effort: medium, max_output_tokens: 8192}
+
+  sub_planner:
+    L0: {model: muse-spark-1.3, effort: medium, max_output_tokens: 8192}
+    L1: {model: muse-spark-1.3, effort: low, max_output_tokens: 8192}
+    L2: {model: muse-spark-1.3, effort: low, max_output_tokens: 8192}
+
+  judge:
+    L0: {model: muse-spark-1.3, effort: low, max_output_tokens: 2048}
+    L1: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 2048}
+    L2: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 2048}
+
+  # Cross-squad audit (spec §11). Same ladder as the judge.
+  auditor:
+    L0: {model: muse-spark-1.3, effort: low, max_output_tokens: 2048}
+    L1: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 2048}
+    L2: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 2048}
+
+  agent:
+    L0: {model: muse-spark-1.3, effort: low, max_output_tokens: 4096}
+    L1: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 4096, contributor_ok: true}
+    L2: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 4096, contributor_ok: true}
+
+  # Semantic collision check on suspicion (spec §6.2). Not in the §7.4 ladder: never degraded.
+  collision_check:
+    L0: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
+    L1: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
+    L2: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
+
+  # Intake policy classifier (spec §13). Never degraded.
+  safety_classifier:
+    L0: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 1024}
+    L1: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 1024}
+    L2: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 1024}
+
+  # Never degraded.
+  alignment_check:
+    L0: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
+    L1: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
+    L2: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
