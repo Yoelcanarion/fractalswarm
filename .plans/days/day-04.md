@@ -11,6 +11,8 @@ Paste this into a **new Claude Code chat**. Branch/worktree: `day-04-slice`, fro
 ## Goal
 Run the T2 conference task end to end on the real API: root → 3 tracks → 6 sessions → agents. It must produce a schedule with **0 hard-constraint violations** whose replay verifies.
 
+**Requires `MODEL_API_KEY`** for the real run (task 12). If it still hasn't arrived, build and test everything against the fake LLM, do the real run the moment the key arrives, and flag the delay to Yoel: it now blocks the crown-jewel days.
+
 ## Tasks (in order)
 1. `bench/tasks/t2_conference/generator.py`: a seeded generator.
    - It produces about 48 talks with free-text abstracts, about 32 speaker emails with natural-language availability and preferences, 4 rooms with capacities, 2 days and 3 tracks, plus the ground-truth constraints.

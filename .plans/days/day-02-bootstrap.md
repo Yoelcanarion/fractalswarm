@@ -46,7 +46,9 @@ Build the project skeleton, and replace assumptions with **verified facts** abou
    - evidence about prompt caching.
 
    Correct `config/prices.yaml` if the docs differ.
-7. **LlamaFirewall install test.** Add `llamafirewall` as an optional `safety` dependency group, and try PromptGuard 2 22M on one benign string and one injection string, recording latency on CPU. Yoel requested HF access on Day 2; authenticate with `HF_TOKEN` from the settings. If HF access is still pending, record that and the fallback plan (spec §13) in `docs/api-notes.md`.
+
+   **If `MODEL_API_KEY` is not set yet:** write the script anyway, make it exit with a clear message when the key is missing, and mark every §24 item as pending in `docs/api-notes.md`. Run it as soon as the key arrives.
+7. **LlamaFirewall install test.** Add `llamafirewall` as an optional `safety` dependency group, and try PromptGuard 2 22M on one benign string and one injection string, recording latency on CPU. Yoel requested HF access on Day 2; authenticate with `HF_TOKEN` from the settings. If HF access or `HF_TOKEN` is still pending, record that and the fallback plan (spec §13) in `docs/api-notes.md`, and move on.
 8. **Git.** Commit.
    - If Yoel has run `! gh auth login`, create the **private** GitHub repo `fractalswarm`, add it as `origin`, and push `master` and this branch. Ask before pushing.
    - If gh is still not logged in, leave this step pending in the progress log.
