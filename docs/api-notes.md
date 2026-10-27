@@ -6,14 +6,14 @@ Written by the Day 2 spike. Trust this file over memory for Meta Model API detai
 
 | Part | Status |
 |---|---|
-| Meta Model API, live calls | **Done** on 2026-10-27 (`runs/spike/spike-20261027T214932Z-live.json`, $0.0454). The Live lines below are being filled in from that evidence |
+| Meta Model API, live calls | **Done** on 2026-10-27 (`runs/spike/spike-20261027T214932Z-live.json`, gitignored; $0.0454). Every **Live** line below comes from that run |
 | Meta Model API, docs | Read on 2026-10-27 (https://dev.meta.ai/docs). Every §24 item below gives what the docs say |
 | `config/prices.yaml` | Checked against the docs' pricing page: matches spec §7.1, no changes. A live run re-checks the usage fields |
 | PromptGuard 2 22M via LlamaFirewall | **Done.** Installs and runs on Windows 11, Python 3.12, CPU. See [LlamaFirewall](#llamafirewall-and-promptguard-2) |
 
 Each §24 item has three parts:
 - **Docs:** what the official docs say;
-- **Live:** what `scripts/spike_api.py` observed (pending until the first live run);
+- **Live:** what `scripts/spike_api.py` observed on 2026-10-27 (`runs/spike/spike-20261027T214932Z-live.json`, 42 probes, $0.0454);
 - **For the runtime:** what the LLM layer should do about it.
 
 ### Running the live spike
@@ -68,7 +68,7 @@ Each §24 item has three parts:
 
   Neither API supports `stop`, `n > 1`, `logprobs`, `frequency_penalty`/`presence_penalty` or `logit_bias`: omit them, since setting them can return 400.
   Non-streaming requests that run too long return 504 `gateway_timeout`; streaming is exempt.
-- **Live:** pending (`basic.*`, `sdk.*`).
+- **Live:** both APIs return 200 through raw HTTP and through the openai SDK; `output_text` parses. A trivial Spark call takes 0.8–2.3 s. Without an explicit effort, Spark spent 127 reasoning tokens on "say OK" (vs 17 at `low` for a similar prompt), so the default level is not cheap.
 - **For the runtime:**
   - Use the Responses API, statelessly: send `store: false`, and replay the output items (including encrypted reasoning) as the next turn's input.
   - Keep Chat Completions only as a fallback.
@@ -85,7 +85,7 @@ Each §24 item has three parts:
   - Price: **$2.50 per 1,000 queries**, on top of tokens.
   - With hosted tools, `input_tokens` is cumulative across the model's internal iterations.
   - Function tools may not use the names `browser.search`, `browser.open` or `browser.find`.
-- **Live:** pending (`web_search.*`). The usage field that counts searches, if there is one, is unknown, so the spike counts the `web_search_call` items.
+- **Live:** Chat Completions rejects both `tools: [{"type": "web_search"}]` and `web_search_options` (400). Responses ran one search (one `web_search_call` item, `action.query`, 10 raw results with `title`/`url`, empty `snippet`), 3.7 s, $0.0076 in total. `usage` has **no search counter** and `input_tokens` was 2,037 for a short prompt (cumulative, as documented). No `url_citation` annotations came back on this probe.
 - **For the runtime:** bill one query per `web_search_call` item until the live run shows a better field. The `fetch` provenance rule (spec §13) can take URLs from `url_citation` annotations and from `results`.
 
 ### 3. Reasoning effort
@@ -97,7 +97,7 @@ Each §24 item has three parts:
   - If effort is omitted, the model reasons "at a model-determined level".
   - **`max_output_tokens` / `max_completion_tokens` cap reasoning and visible output together**; reasoning tokens bill at the output rate.
   - Raw reasoning is never returned. Responses can return summaries (`reasoning.summary`: `auto` | `concise` | `detailed`), and Chat Completions' `reasoning_content` is redacted to empty for external keys.
-- **Live:** pending (`effort.*`: reasoning tokens per level, invalid values, `none`, `max` on contributor).
+- **Live:** for the same short prompt on Spark, reasoning tokens were minimal 129, low 241, medium 244, xhigh 287, high 321; `max` used the whole 2,048-token cap (status `incomplete`) and took 12.7 s. `bogus` → 400 listing the variants; `none` → 400 "not supported for model". **`max` on `muse-spark-1.3-contributor` was accepted** (200, truncated by the probe's tiny cap), contrary to the docs. `reasoning.summary` returned empty summaries.
 - **For the runtime:**
   - Always send an explicit effort.
   - Size `max_output_tokens` in `config/roles.yaml` to leave room for the reasoning.
@@ -113,7 +113,7 @@ Each §24 item has three parts:
     - `required` lists every property.
   - Limits: depth 10, 5,000 properties, 1,000 enum values, no recursive `$ref`. The same rules apply to function `parameters`.
   - `json_object` is not documented.
-- **Live:** pending (`structured.*`, including a strict-violation probe and a `json_object` probe).
+- **Live:** `json_schema` works on both APIs and the output matched the schema; strict mode with a schema lacking `additionalProperties: false` → 400 ("'additionalProperties' is required to be supplied and to be false."). `json_object` (undocumented) works on Chat Completions. Structured calls spent 285–529 reasoning tokens on a 4-field object at default effort.
 - **For the runtime:** generate contract `produces` schemas from pydantic models with `extra="forbid"` and every field required (optional values as `X | None`), then send `strict: true` so bad schemas fail fast.
 
 ### 5. Tool calling, including parallel calls
@@ -126,7 +126,7 @@ Each §24 item has three parts:
     - function names must match `^[a-zA-Z0-9_.-]+$`, with **at most one dot**, so `memory.search` and `workspace.read` are fine;
     - `call_id` is 1–64 characters.
   - `strict` on a function only validates the schema; arguments must still be validated.
-- **Live:** pending (`tools.*`: calls per turn, the stateless round trip with encrypted reasoning, and `tool_choice: "required"`).
+- **Live:** `tool_choice: "required"` → 400 (only `auto`). The model returned **2 parallel calls in one turn** on both APIs. The stateless Responses round trip works: the reasoning item comes back with `encrypted_content`, and sending it plus `function_call_output` items with the matching `call_id`s returned the final answer. `call_id`s look like `call_<uuid>`.
 - **For the runtime:**
   - The agent loop (spec §10) cannot force a tool call, so it must handle a plain text reply on every step.
   - Validate arguments with pydantic before running a tool.
@@ -136,7 +136,7 @@ Each §24 item has three parts:
   - Chat Completions: `prompt_tokens`, `completion_tokens`, `total_tokens`, `prompt_tokens_details.cached_tokens`, `completion_tokens_details.reasoning_tokens`.
   - Responses: `input_tokens`, `output_tokens`, `total_tokens`, `input_tokens_details.cached_tokens`, `output_tokens_details.reasoning_tokens`.
   - `cached_tokens` is a subset of the input tokens, and `reasoning_tokens` is a subset of the output tokens.
-- **Live:** pending. The spike lists every usage key it sees.
+- **Live:** exactly the documented keys on both APIs (Responses: `input_tokens`, `input_tokens_details.cached_tokens`, `output_tokens`, `output_tokens_details.reasoning_tokens`, `total_tokens`). The costs computed from them match what `fractalswarm spend` records.
 - **For the runtime:** `cost = (input − cached) × input_price + cached × cached_input_price + output × output_price + searches × search_price`. This is what `Prices.actual` in the spike computes.
 
 ### 7. Rate-limit headers and 429 behaviour
@@ -151,7 +151,7 @@ Each §24 item has three parts:
     - `server_shutting_down`: a few seconds.
   - Retry 429, 500 and 503; do not retry other 4xx. For 504, stream or use background mode rather than retrying unchanged.
   - Suggested backoff: start at 0.5–1 s, double each attempt, add 0–1 s of jitter, 3–5 attempts, and never wait less than `Retry-After`. This matches `config/defaults.yaml`.
-- **Live:** pending. The spike records every response header name. The 429 burst is opt-in (`--probe-429`).
+- **Live:** headers seen: `x-ratelimit-{limit,remaining}-{requests,tokens}`, `x-request-id`, `x-route`, `proxy-status`, plus standard ones. No reset header. The last values seen (a Contributor call) were 150 RPM / 3M TPM, matching the documented Contributor limits. Errors: bad key → 401 `authentication_error` / `invalid_api_key`; unknown model → 404 `model_not_found`. The 429 burst was not run.
 - **For the runtime:** the AIMD quotas (spec §6.1) read `x-ratelimit-remaining-*`. The model breaker (spec §8) treats `Retry-After` > 20 s as "open", which matches the 503 overload case (60 s).
 
 ### 8. Token-count endpoint
@@ -161,7 +161,7 @@ Each §24 item has three parts:
   - It generates nothing and stores nothing. Whether it is billed is not stated.
   - There is no Chat Completions equivalent. Messages has `POST /v1/messages/count_tokens`.
   - The openai SDK exposes it as `client.responses.input_tokens.count(...)`.
-- **Live:** pending (`token_count.*`, plus `caching.count` compared with the real `input_tokens`).
+- **Live:** returns 200 in 0.2–0.4 s and the spike was not charged for it. `caching.count` said 3,791 while the real call billed 3,648 input tokens (count ≈ 4% high, so it is a safe upper bound). Adding tools or `web_search` to the body raises the count (172 → 766 → 1,179).
 - **For the runtime:** budget reservations can use it for exact input counts, but local estimates are cheaper. Decide on Day 3 once the live run shows its latency and whether it is free.
 
 ### 9. Prompt caching
@@ -170,14 +170,14 @@ Each §24 item has three parts:
   - The minimum length, the granularity and the TTL are not stated. The default in-memory cache is evicted under pressure or after inactivity; Responses accepts `prompt_cache_retention: "24h"` as a hint.
   - `prompt_cache_key` groups requests: use one stable key per shared prefix.
   - Cached tokens bill at the cached-input rate. No write charge is documented.
-- **Live:** pending (`caching.call_1..3`: the same prefix of about 3k tokens three times, with one `prompt_cache_key`).
+- **Live:** call 1: 3,648 input, 0 cached, $0.0052. Calls 2 and 3 (seconds later, same `prompt_cache_key`): 3,569 of ~3,645 cached (98%), $0.0008 each, an 84% saving. Caching works immediately and per key.
 - **For the runtime:** keep the prompt layout of spec §10 (static role prompt → tools/schemas → contract header → dynamic context), and use one `prompt_cache_key` per role.
 
 ### 10. Contributor mode on the account
 - **Docs:**
   - Contributor mode is selected by the model id `muse-spark-1.3-contributor` on pay-as-you-go. No separate opt-in is documented.
   - **Wonder has no Contributor variant on pay-as-you-go.**
-- **Live:** pending (`models.list`, `contributor.basic`, `effort.contributor.max`).
+- **Live:** `models.list` returns `muse-spark-1.1`, `-1.2`, `-1.2-contributor`, `-1.3`, `-1.3-contributor`, `muse-wonder-1.0`, plus `muse-image-1.0`, `muse-voice-transcribe-1.0` and `sam-3.1`; no Wonder contributor id. `muse-spark-1.3-contributor` answered (2.4 s, 239 output tokens) which prices at $0.00005 with `config/prices.yaml` (about 1/20 of Standard Spark for the same tokens); `max` effort is accepted on it. All dollar figures in these Live lines are computed from `usage` and the price table; check them against the Billing page after larger runs.
 - **For the runtime:** in Contributor bench runs, the Wonder roles (root planner, arbiter) still pay Standard Wonder prices, unless the bench maps them to Spark Contributor at high effort. That is a decision for Day 6 (see the progress log).
 
 ### 11. PromptGuard 2 access and LlamaFirewall on Windows with Python 3.12
