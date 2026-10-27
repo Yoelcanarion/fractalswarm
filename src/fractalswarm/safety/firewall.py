@@ -71,7 +71,8 @@ INJECTION_PATTERNS: tuple[tuple[str, re.Pattern[str], float], ...] = tuple(
         (
             "override",
             r"\b(ignore|disregard|forget|override)\b[^.\n]{0,40}\b(previous|prior|above|"
-            r"earlier|all|your|system)\b[^.\n]{0,20}\b(instructions?|prompts?|rules|directions)",
+            r"earlier|all|your|system)\b[^.\n]{0,20}\b(instructions?|prompts?|rules|directions|"
+            r"constraints|guidelines|polic(y|ies))",
             0.97,
         ),
         ("new_role", r"\byou are now\b|\bact as (an? )?(unrestricted|jailbroken|dan)\b", 0.92),
@@ -86,11 +87,15 @@ INJECTION_PATTERNS: tuple[tuple[str, re.Pattern[str], float], ...] = tuple(
         ),
         (
             "agent_address",
-            r"\b(note|message|instructions?) (to|for) the [a-z ]{0,20}"
+            r"\b(note|message|instructions?) (to|for) (the|any|all) [a-z ]{0,20}"
             r"(agent|assistant|model|ai|scheduler)\b",
             0.6,
         ),
-        ("fake_delimiter", r"<\s*/?\s*(system|untrusted|im_start|im_end)\b|\[/?INST\]", 0.9),
+        (
+            "fake_delimiter",
+            r"<\s*/?\s*(system|untrusted|im_start|im_end)\b|\[/?INST\]|\[\s*/?\s*system\s*\]",
+            0.9,
+        ),
     )
 )
 
