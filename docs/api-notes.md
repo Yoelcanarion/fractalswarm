@@ -6,7 +6,7 @@ Written by the Day 2 spike. Trust this file over memory for Meta Model API detai
 
 | Part | Status |
 |---|---|
-| Meta Model API, live calls | **Pending.** `MODEL_API_KEY` is not set yet, and the hackathon credits do not show in Billing yet |
+| Meta Model API, live calls | **Done** on 2026-10-27 (`runs/spike/spike-20261027T214932Z-live.json`, $0.0454). The Live lines below are being filled in from that evidence |
 | Meta Model API, docs | Read on 2026-10-27 (https://dev.meta.ai/docs). Every §24 item below gives what the docs say |
 | `config/prices.yaml` | Checked against the docs' pricing page: matches spec §7.1, no changes. A live run re-checks the usage fields |
 | PromptGuard 2 22M via LlamaFirewall | **Done.** Installs and runs on Windows 11, Python 3.12, CPU. See [LlamaFirewall](#llamafirewall-and-promptguard-2) |

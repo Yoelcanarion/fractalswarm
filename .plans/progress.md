@@ -158,3 +158,10 @@ Append one entry per day, newest last. Keep each entry short: done, decisions an
 1. The key and the credits must be in place.
 2. Run the live spike.
 3. Do item 13.
+
+### Day 3 addendum (Tue 27 Oct, evening): first real calls
+- Yoel set `MODEL_API_KEY` and confirmed the $150 credits in Billing.
+- **Item 13 done.** One real Spark call (`toy --scenario one-call --backend real --clock live`, run `golden-one-call`) cost $0.0005 (15 input, 115 output tokens of which 105 reasoning, 2.6 s). `replay --verify` gives MATCH. The bundle is in `tests/golden/one-call/` and `test_real_spark_call_replays_to_its_recorded_hash` guards it. The key appears nowhere in the cassette or log.
+- **Live spike done:** `scripts/spike_api.py --yes`, about 45 probes, $0.0454. Evidence in `runs/spike/spike-20261027T214932Z-live.{json,md}` (gitignored). The spike does not go through the project ledger, so its spend was entered by hand as reservation `spike-20261027T214932Z`.
+- **Spend so far:** $0.0459 of $150 (`fractalswarm spend`).
+- From here on, the work runs as parallel streams, each in its own worktree; see the next entries.

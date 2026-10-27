@@ -37,6 +37,16 @@ async def test_golden_toy_replays_to_its_recorded_hash(tmp_path: Path) -> None:
     assert report.replayed_head == report.recorded_head == GOLDEN_HEAD
 
 
+async def test_real_spark_call_replays_to_its_recorded_hash(tmp_path: Path) -> None:
+    # Recorded once against the real Meta Model API (one tiny Spark call, $0.0005).
+    run_dir = tmp_path / "one-call"
+    shutil.copytree(GOLDEN.parent / "one-call", run_dir)
+    report = await replay_run(run_dir)
+    assert report.ok, report.detail
+    assert report.replayed_head == (run_dir / "HEAD").read_text(encoding="utf-8").strip()
+    assert "LLM_" not in (run_dir / "cassette.jsonl").read_text(encoding="utf-8")
+
+
 async def test_a_fresh_toy_run_reproduces_the_golden_hash(tmp_path: Path) -> None:
     # Same run id, seed and (recorded) role and price tables: a new process, same bytes.
     with EventStore.import_jsonl(GOLDEN / "events.jsonl") as golden:
