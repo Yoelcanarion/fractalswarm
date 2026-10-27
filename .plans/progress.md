@@ -28,9 +28,10 @@ Append one entry per day, newest last. Keep each entry short: done, decisions an
 - uv 0.12.19, Node 24.22.1, npm 11.19.1, gh 2.103.2 (not logged in).
 - No Docker. No git remote. The default branch is `master`.
 
-**Pending (Yoel):**
-- `gh auth login`, then create the private repo.
-- Request HF access to `meta-llama/Llama-Prompt-Guard-2-22M`.
-- Put `MODEL_API_KEY` in `.env`.
+**Status of Yoel's setup:**
+- Done: `gh auth login`, as Yoelcanarion with the `repo` scope. The private repo is created by the bootstrap chat.
+- Done: HF access requested for `meta-llama/Llama-Prompt-Guard-2-22M`; approval may still be pending.
+- Pending: put `MODEL_API_KEY` (and `HF_TOKEN`, a Read token) in `C:\Users\yogar\.fractalswarm\.env`. This file is outside the repo and shared by every worktree.
+- Pending: merge `Yoelcanarion/Inicio-plan` into `master` before opening the Day 2 bootstrap worktree.
 
 **Next:** Day 2 afternoon, in a new chat: `.plans/days/day-02-bootstrap.md`.

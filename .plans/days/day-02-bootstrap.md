@@ -17,7 +17,7 @@ Build the project skeleton, and replace assumptions with **verified facts** abou
    - heavy deps (fastapi, llamafirewall/torch, langgraph, langchain-openai, matplotlib, trafilatura) are added on the day they are needed.
 2. **Repo hygiene.**
    - `.gitignore`: `.env`, `.venv/`, `runs/`, `__pycache__/`, `web/node_modules/`, `web/dist/`.
-   - `.env.example`: `MODEL_API_KEY=`, `HF_TOKEN=`, `FRACTALSWARM_PROJECT_CAP_USD=150`.
+   - `.env.example`: `MODEL_API_KEY=`, `HF_TOKEN=`, `FRACTALSWARM_PROJECT_CAP_USD=150`. It only documents the variables; the real values already live in `~/.fractalswarm/.env`.
    - `LICENSE`: MIT. Ask Yoel which name to use as copyright holder.
 3. **Config skeletons** in `config/`:
    - `prices.yaml`, from §7.1;
@@ -25,7 +25,7 @@ Build the project skeleton, and replace assumptions with **verified facts** abou
    - `defaults.yaml`: caps, heartbeat 1 s, dead after 5 missed, epoch timing, breaker thresholds from §8.
 4. **CLI and settings.**
    - `src/fractalswarm/cli.py`: a typer app with a `version` command and the console script `fractalswarm`.
-   - `config.py`: pydantic-settings (`MODEL_API_KEY`, caps).
+   - `config.py`: pydantic-settings (`MODEL_API_KEY`, `HF_TOKEN`, caps). It loads `~/.fractalswarm/.env` first, because that file is shared by every worktree and already holds Yoel's keys, then a local `.env` if one exists. Never print or log the values.
 5. **Tests.**
    - `tests/unit/test_smoke.py`.
    - `tests/unit/test_determinism_lint.py`: forbids `time.time`, `random.` and `hash(` in `kernel/`, `coord/` and `market/`. It passes on the empty dirs.
@@ -46,7 +46,7 @@ Build the project skeleton, and replace assumptions with **verified facts** abou
    - evidence about prompt caching.
 
    Correct `config/prices.yaml` if the docs differ.
-7. **LlamaFirewall install test.** Add `llamafirewall` as an optional `safety` dependency group, and try PromptGuard 2 22M on one benign string and one injection string, recording latency on CPU. If HF access is still pending, record that and the fallback plan (spec §13) in `docs/api-notes.md`.
+7. **LlamaFirewall install test.** Add `llamafirewall` as an optional `safety` dependency group, and try PromptGuard 2 22M on one benign string and one injection string, recording latency on CPU. Yoel requested HF access on Day 2; authenticate with `HF_TOKEN` from the settings. If HF access is still pending, record that and the fallback plan (spec §13) in `docs/api-notes.md`.
 8. **Git.** Commit.
    - If Yoel has run `! gh auth login`, create the **private** GitHub repo `fractalswarm`, add it as `origin`, and push `master` and this branch. Ask before pushing.
    - If gh is still not logged in, leave this step pending in the progress log.

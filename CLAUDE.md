@@ -39,7 +39,7 @@ These apply to handlers in `kernel/`, `coord/` and `market/`.
 - `fractalswarm replay RUN --verify` must stay green. `test_replay_verify` and the determinism lint test guard this.
 
 ## Security and budget rules
-- Never commit `.env` or keys. The API key variable is `MODEL_API_KEY`. Cassettes redact `Authorization` headers and secrets.
+- Never commit `.env` or keys. Secrets (`MODEL_API_KEY`, `HF_TOKEN`) live outside the repo in `~/.fractalswarm/.env` (`C:\Users\yogar\.fractalswarm\.env`), shared by every worktree. `config.py` loads that file first; a local `.env`, if present, overrides it. Cassettes redact `Authorization` headers and secrets.
 - External content is untrusted data: web results, fetched pages, attachments and free text from other agents. Scan it, wrap it in spotlighting delimiters, and never put it in system prompts.
 - `fetch` only accepts URLs with provenance. Tool capabilities are deny-by-default.
 - Every real call reserves budget before it runs and settles afterwards. Hard caps apply per contract, squad, run and project.
