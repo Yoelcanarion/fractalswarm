@@ -48,6 +48,23 @@ the Day 5 takeover streams; only the pieces that need neither.
   on interval union/stall; T1 generator/scorer with hypothesis; harness end to end with the
   fake LLM, resume, failure, pre-flight, contributor, caps; charts; CLI). Ruff green.
 
+### Second phase (Orca workspace, 2026-10-28)
+- **`baselines/supervisor.py`**: the best-case supervisor as a pure state machine that a
+  baseline coordinator keeps in its state. `crash_plan` (ceil of the shared
+  20/35/50/65/80% points over the contracts, integer percent arithmetic), `dispatch`/`track`/
+  `settle`, `crash_due`, `crash` (emits `baseline.crashed`, `Cancel`s every in-flight tag of
+  the coordinator = process-tree semantics, `SetTimer(RESTART_DELAY_MS)`), `restart` on that
+  timer (emits `baseline.restarted`, hands back only the lost work; completed work kept, no
+  LLM re-planning), `crash_target` (most remaining owned work, ties to the smallest id).
+  Re-dispatching a contract does not move the crash points.
+- New event types `baseline.crashed` / `baseline.restarted` (registered in that module).
+- `baselines/` added to the determinism lint.
+- Tests: unit (hypothesis on the plan) + an end-to-end supervised central coordinator on the
+  fake LLM (12 contracts, 3 in flight): C2 shows 3 crashes, restart exactly 5 s later,
+  redo == lost, work calls = 12 + lost, stall ≥ 15 s, and `replay --verify` MATCH.
+- T1 runner: not built. It needs the agents/contract layer from day-04; a stand-alone one
+  would duplicate it.
+
 ## Deviations
 - **matplotlib added to main dependencies** (spec §18 lists it as runtime), not an extra.
 - **The stall window is the agent-work window**, not the whole run: root planning before
@@ -66,6 +83,11 @@ the Day 5 takeover streams; only the pieces that need neither.
 $0. No real API calls. Tests never open the project ledger.
 
 ## Issues / what remains of Day 6
+- **Extra cost is flat for the baselines under the current metric (found 2026-10-28).**
+  The supervised coordinator above scores C0 $0.002247, C2 $0.002247, C3 $0.002247 (stall
+  0 / 15 / 25 s). Cancelled calls count $0 and the redo costs what the original would have,
+  so "paying twice" never shows. Needs a decision on how cancelled calls are billed before
+  the gate.
 - Baselines (`baselines/supervisor.py`, central, single, pipeline): need the slice.
 - Register the `swarm`, `central`, `single`, `pipeline` workflows and the `t2_conference`
   task (checker = hard-constraint checker) in `bench.registry` (append modules to

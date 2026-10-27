@@ -1,4 +1,4 @@
-"""Determinism lint for kernel/, coord/ and market/ (spec §3 and §19).
+"""Determinism lint for kernel/, coord/, market/ and baselines/ (spec §3 and §19).
 
 Replay must rebuild the log bit for bit, so code in these packages must not read the wall
 clock, draw unseeded randomness or call the built-in ``hash()``, which is salted per process.
@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 PACKAGE = Path(__file__).resolve().parents[2] / "src" / "fractalswarm"
-LINTED_DIRS = ("kernel", "coord", "market")
+LINTED_DIRS = ("kernel", "coord", "market", "baselines")
 ALLOW_PRAGMA = "# determinism: allow"
 
 CLOCK_FUNCTIONS = {
