@@ -130,6 +130,28 @@ def replay(
 
 
 @app.command()
+def calibrate(
+    sources: Annotated[
+        list[Path], typer.Argument(help="cassette or sample .jsonl files, or directories of them")
+    ],
+    out: Annotated[Path, typer.Option(help="where to write the fit")] = Path(
+        "config/fake_calibration.json"
+    ),
+) -> None:
+    """Fit the fake LLM's latency and reasoning tokens to real calls (no API calls)."""
+    from fractalswarm.llm.calibrate import calibrate_paths
+
+    fit = calibrate_paths(sources)
+    fit.save(out)
+    pooled = fit.latency["*"]
+    typer.echo(f"{fit.samples} real calls -> {out}")
+    typer.echo(
+        f"latency ~ {pooled.base_ms:.0f} ms + {pooled.per_output_token_ms:.2f} ms/output token"
+        f" (x lognormal sigma {pooled.log_sigma:.2f}); models: {', '.join(sorted(fit.latency))}"
+    )
+
+
+@app.command()
 def spend() -> None:
     """Show the project ledger: real spend against the project cap."""
     from rich.console import Console

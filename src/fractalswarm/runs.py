@@ -26,6 +26,7 @@ from fractalswarm.market.prices import PriceTable
 SCENARIOS = {
     "toy": "fractalswarm.actors.toy:TOY",
     "one-call": "fractalswarm.actors.toy:ONE_CALL",
+    "chaos-toy": "fractalswarm.actors.chaos_toy:CHAOS_TOY",
 }
 
 
