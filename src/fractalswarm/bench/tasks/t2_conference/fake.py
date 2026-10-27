@@ -55,7 +55,9 @@ def _turns(body: dict[str, Any]) -> list[list[tuple[str, dict[str, Any], Any]]]:
         kind = item.get("type")
         if kind == "function_call_output":
             call = calls[item["call_id"]]
-            current.append((call["name"], json.loads(call["arguments"]), json.loads(item["output"])))
+            current.append(
+                (call["name"], json.loads(call["arguments"]), json.loads(item["output"]))
+            )
         elif kind == "function_call" and previous == "function_call_output" and current:
             turns.append(current)
             current = []
@@ -438,7 +440,11 @@ def blurb(body: dict[str, Any]) -> FakeReply | str:
     first = ordered[0] if ordered else None
     text = (
         f"{session['track']} on day {session['day']} brings {len(ordered)} talks"
-        + (f", opening at {starts[first['slot']]} with \"{titles[first['talk_id']]}\"" if first else "")
+        + (
+            f', opening at {starts[first["slot"]]} with "{titles[first["talk_id"]]}"'
+            if first
+            else ""
+        )
         + ". Expect practical lessons, real numbers and time for questions."
     )
     if not _turns(body):

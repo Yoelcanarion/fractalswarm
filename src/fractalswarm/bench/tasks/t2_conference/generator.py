@@ -176,9 +176,7 @@ def pattern_cells(kind: str, day: int | None = None, time: str | None = None) ->
         return {(d, s) for d, s in every if s in AFTERNOON_SLOTS}
     if kind == "not_before":
         assert time is not None
-        return {
-            (d, s) for d, s in every if d != day or _minutes(SLOT_STARTS[s]) >= _minutes(time)
-        }
+        return {(d, s) for d, s in every if d != day or _minutes(SLOT_STARTS[s]) >= _minutes(time)}
     if kind == "leave_by":
         assert time is not None
         return {(d, s) for d, s in every if d != day or _minutes(slot_end(s)) <= _minutes(time)}

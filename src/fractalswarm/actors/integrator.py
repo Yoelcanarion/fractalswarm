@@ -46,7 +46,9 @@ def finish_goal(
         if report["hard_violations"]:
             status = "partial"
         commands.append(
-            Emit(type="task.result", payload={"task": task.name, "status": status, "report": report})
+            Emit(
+                type="task.result", payload={"task": task.name, "status": status, "report": report}
+            )
         )
         return commands
     body = {"goal_id": goal["id"], "status": status, "output": output, "gaps": gaps}

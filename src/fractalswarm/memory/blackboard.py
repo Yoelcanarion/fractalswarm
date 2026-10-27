@@ -45,7 +45,9 @@ class Fact(BaseModel):
 
     def text(self) -> str:
         value = self.value if isinstance(self.value, str) else canonical_json(self.value)
-        return f"{self.key} {self.subject} {value}"
+        # The key whole (exact-key queries) and split (so "S01 availability" finds it).
+        parts = self.key.replace(":", " ")
+        return f"{self.key} {parts} {self.subject} {value}"
 
 
 class Artifact(BaseModel):
@@ -99,7 +101,9 @@ class Blackboard:
         return fact
 
     def visible(self, fact: Fact, squad: str | None) -> bool:
-        return fact.status == "verified" or (fact.status == "draft" and fact.provenance.squad == squad)
+        return fact.status == "verified" or (
+            fact.status == "draft" and fact.provenance.squad == squad
+        )
 
     def search(self, query: str, *, k: int = 10, squad: str | None = None) -> list[Fact]:
         return [self.facts[key] for key in self.index.search(query, k=k, squad=squad)]

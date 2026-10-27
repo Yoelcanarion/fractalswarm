@@ -257,7 +257,7 @@ def _complete(state: dict[str, Any], gid: str, output: dict[str, Any], gaps: lis
     task = TASKS[state["task"]]
     commands = finish_goal(task, state["id"], entry, output, gaps)
     if entry["from"] is None:  # the root: the run's result is in, shut the tree down
-        commands += _shutdown(state) + [Stop(actor_id=BOARD, reason="done")]
+        commands += [Stop(actor_id=BOARD, reason="done"), *_shutdown(state)]
     return state, commands
 
 
@@ -274,7 +274,9 @@ def _start_contracts(state: dict[str, Any], gid: str, plan: dict[str, Any], fall
     entry = state["goals"][gid]
     contracts = task.contracts(entry["goal"], plan, state["id"], state["scope"])
     contracts = [
-        c.model_copy(update={"budget": c.budget.model_copy(update={"max_steps": state["max_steps"]})})
+        c.model_copy(
+            update={"budget": c.budget.model_copy(update={"max_steps": state["max_steps"]})}
+        )
         for c in contracts
     ]
     keys = {f"{gid}/{c.id}": c.priority for c in contracts}
@@ -409,8 +411,7 @@ def _judged(state: dict[str, Any], gid: str, cid: str, attempt: int, event: Even
     commands: list[Command] = [
         Emit(
             type="verify.judged",
-            payload={"goal_id": gid, "contract_id": cid, "attempt": attempt}
-            | verdict.model_dump(),
+            payload={"goal_id": gid, "contract_id": cid, "attempt": attempt} | verdict.model_dump(),
         )
     ]
     if verdict.verdict == "fail":

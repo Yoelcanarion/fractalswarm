@@ -425,7 +425,11 @@ class T2Task:
         by_kind = {contract.kind: contract for contract in plan.contracts}
         needs = {"place": "extract", "blurb": "place"}
         for kind, dep in needs.items():
-            if kind in by_kind and dep in by_kind and by_kind[dep].id not in by_kind[kind].depends_on:
+            if (
+                kind in by_kind
+                and dep in by_kind
+                and by_kind[dep].id not in by_kind[kind].depends_on
+            ):
                 errors.append(f"{kind} must depend on {dep}")
         for contract in plan.contracts:
             unknown = [d for d in contract.depends_on if d not in ids or d == contract.id]
@@ -557,7 +561,9 @@ class T2Task:
             value = {"talk_id": talk, "speaker_id": speaker, "session": goal["id"]}
             value |= {"day": day, "slot": slot, "room": room}
             writes.append({"key": f"cell:d{day}:s{slot}:{room}", "expected": 0, "value": value})
-            writes.append({"key": f"speaker:{speaker}:d{day}:s{slot}", "expected": 0, "value": value})
+            writes.append(
+                {"key": f"speaker:{speaker}:d{day}:s{slot}", "expected": 0, "value": value}
+            )
         return writes
 
     def conflict_feedback(self, conflicts: list[dict[str, Any]]) -> list[str]:

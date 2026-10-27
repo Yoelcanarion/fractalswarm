@@ -152,7 +152,11 @@ def _tool(board: Blackboard, body: dict[str, Any], view: View):
             artifact = board.read(args.path)
             if artifact is None:
                 return {"error": f"no file {args.path}"}, []
-            return {"path": artifact.path, "version": artifact.version, "content": artifact.content}, []
+            return {
+                "path": artifact.path,
+                "version": artifact.version,
+                "content": artifact.content,
+            }, []
         assert isinstance(args, WriteArgs)
         if len(args.content.encode("utf-8")) > MAX_ARTIFACT_BYTES:
             return {"error": f"content is over {MAX_ARTIFACT_BYTES} bytes"}, []

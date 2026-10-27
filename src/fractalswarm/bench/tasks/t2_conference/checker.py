@@ -151,6 +151,8 @@ def soft_score(placements: list[Placement], corpus: dict[str, Any], truth: dict[
         if preference is None or speaker not in talks_of:
             continue
         scored += 1
-        wanted = (lambda s: s in morning) if preference == "morning" else (lambda s: s not in morning)
+        wanted = (
+            (lambda s: s in morning) if preference == "morning" else (lambda s: s not in morning)
+        )
         honored += all(wanted(item.slot) for item in talks_of[speaker])
     return round(honored / scored, 4) if scored else 1.0
