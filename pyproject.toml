@@ -20,6 +20,15 @@ dependencies = [
 [project.scripts]
 fractalswarm = "fractalswarm.cli:app"
 
+[project.optional-dependencies]
+# llamafirewall 1.0.3 imports huggingface_hub.HfFolder, which huggingface-hub 1.0 removed,
+# and transformers 5 needs huggingface-hub >= 1.31. See docs/api-notes.md.
+safety = [
+    "huggingface-hub>=0.30.2,<1",
+    "llamafirewall>=1.0.3",
+    "transformers>=4.51.3,<5",
+]
+
 [build-system]
 requires = ["uv_build>=0.12.19,<0.13.0"]
 build-backend = "uv_build"
