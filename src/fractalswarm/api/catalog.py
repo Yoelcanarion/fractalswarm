@@ -39,9 +39,7 @@ class RunEntry:
 
 
 def _is_run_dir(path: Path) -> bool:
-    return path.is_dir() and (
-        (path / "events.sqlite").exists() or (path / "events.jsonl").exists()
-    )
+    return path.is_dir() and ((path / "events.sqlite").exists() or (path / "events.jsonl").exists())
 
 
 class Catalog:
@@ -114,7 +112,9 @@ class Catalog:
         info = self.listing(entry)
         counts = Counter(event["type"] for event in events)
         chain = self.verify_chain(entry)
-        completed = events[-1]["payload"] if events and events[-1]["type"] == "run.completed" else {}
+        completed = (
+            events[-1]["payload"] if events and events[-1]["type"] == "run.completed" else {}
+        )
         started = events[0]["payload"] if events and events[0]["type"] == "run.started" else {}
         return info | {
             "params": started.get("params", {}),

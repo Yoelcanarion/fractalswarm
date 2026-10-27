@@ -130,14 +130,15 @@ def receive_all(socket) -> tuple[dict, list[dict], dict]:
 
 
 def test_ws_replays_a_finished_run_paced_by_virtual_time(client: TestClient) -> None:
-    started = time.monotonic()
-    with client.websocket_connect("/api/runs/demo-toy/events?speed=20") as socket:
+    started = time.perf_counter()
+    with client.websocket_connect("/api/runs/demo-toy/events?speed=5") as socket:
         hello, events, end = receive_all(socket)
-    elapsed = time.monotonic() - started
-    assert hello["run"]["id"] == "demo-toy" and hello["speed"] == 20
+    elapsed = time.perf_counter() - started
+    assert hello["run"]["id"] == "demo-toy" and hello["speed"] == 5
     assert [event["seq"] for event in events] == list(range(1, 57))
     assert end["last_seq"] == 56
-    assert elapsed >= 1.692 / 20 * 0.8  # the toy run spans 1692 virtual ms
+    # The toy run spans 1692 virtual ms; Windows timers are coarse (~16 ms), hence the margin.
+    assert elapsed >= 1.692 / 5 * 0.6
 
 
 def test_ws_resumes_from_seq(client: TestClient) -> None:

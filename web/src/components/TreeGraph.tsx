@@ -43,7 +43,7 @@ const ActorCard = memo(function ActorCard({ data }: NodeProps<Node<ActorData>>) 
       <div className="actor__id">{actor.id}</div>
       <div className="actor__meta">
         <span>{actor.kind}</span>
-        {actor.llmCalls > 0 && <span>· {actor.llmCalls} calls</span>}
+        {actor.llmCalls > 0 && <span>· {actor.llmCalls} {actor.llmCalls === 1 ? "call" : "calls"}</span>}
       </div>
       {rootDuty && <div className="actor__duty">ROOT</div>}
       {actor.adoptedBy && <div className="actor__adopted">adopted by {actor.adoptedBy}</div>}

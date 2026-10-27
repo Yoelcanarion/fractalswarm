@@ -1,18 +1,42 @@
 import { useEffect, useState } from "react";
 
 import { VerifyBadge } from "./components/VerifyBadge";
+import { SPEEDS } from "./lib/playback";
 import { ChartsPage } from "./pages/ChartsPage";
 import { RunPage } from "./pages/RunPage";
 import { RunsPage } from "./pages/RunsPage";
 import { useRun } from "./store";
 
-type Route = { page: "run"; runId: string | null } | { page: "charts" } | { page: "runs" };
+// `#/run/<id>?at=end|<event count>&speed=<1-20>&play` opens a replay at a given point, for
+// shareable links and the video.
+interface Playback {
+  at: string | null;
+  speed: number | null;
+  play: boolean;
+}
+
+type Route = { page: "run"; runId: string | null; playback: Playback } | { page: "charts" } | { page: "runs" };
 
 function parseHash(hash: string): Route {
-  const parts = hash.replace(/^#\/?/, "").split("/");
+  const [path, query = ""] = hash.replace(/^#\/?/, "").split("?");
+  const parts = path.split("/");
   if (parts[0] === "charts") return { page: "charts" };
   if (parts[0] === "runs") return { page: "runs" };
-  return { page: "run", runId: parts[0] === "run" && parts[1] ? decodeURIComponent(parts[1]) : null };
+  const params = new URLSearchParams(query);
+  const speed = Number(params.get("speed"));
+  return {
+    page: "run",
+    runId: parts[0] === "run" && parts[1] ? decodeURIComponent(parts[1]) : null,
+    playback: { at: params.get("at"), speed: SPEEDS.includes(speed as never) ? speed : null, play: params.has("play") },
+  };
+}
+
+function applyPlayback({ at, speed, play }: Playback) {
+  const s = useRun.getState();
+  if (speed) s.setSpeed(speed);
+  if (at === "end") s.seek(s.events.length);
+  else if (at && Number.isFinite(Number(at))) s.seek(Number(at));
+  if (play) s.setPlaying(true);
 }
 
 export function App() {
@@ -33,7 +57,9 @@ export function App() {
     if (wanted && wanted !== runId) {
       void openRun(wanted).then(() => {
         const s = useRun.getState();
-        if (!s.live && s.runId === wanted) void s.runVerify();
+        if (s.live || s.runId !== wanted) return;
+        applyPlayback(route.playback);
+        void s.runVerify();
       });
     }
   }, [route, runs, runId, openRun]);
