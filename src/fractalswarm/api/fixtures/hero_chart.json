@@ -1,0 +1,59 @@
+{
+  "schema": "fractalswarm.hero/v1",
+  "task": "T2",
+  "fixture": true,
+  "note": "Placeholder numbers for UI development only. bench/charts.py replaces this file with measured results.",
+  "x": [0, 1, 3, 5],
+  "workflows": [
+    {
+      "id": "swarm",
+      "label": "FractalSwarm",
+      "points": [
+        {"coordinators_killed": 0, "profile": "C0", "stall_s": 0.0, "extra_cost_pct": 0.0, "completion_rate": 1.0, "validity_rate": 1.0, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 1, "profile": "C1", "stall_s": 0.6, "extra_cost_pct": 1.5, "completion_rate": 1.0, "validity_rate": 1.0, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 3, "profile": "C2", "stall_s": 1.1, "extra_cost_pct": 3.0, "completion_rate": 1.0, "validity_rate": 1.0, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 5, "profile": "C3", "stall_s": 1.8, "extra_cost_pct": 4.5, "completion_rate": 1.0, "validity_rate": 1.0, "coordination_tokens": 0, "runs": []}
+      ]
+    },
+    {
+      "id": "central",
+      "label": "Central supervisor",
+      "points": [
+        {"coordinators_killed": 0, "profile": "C0", "stall_s": 0.0, "extra_cost_pct": 0.0, "completion_rate": 1.0, "validity_rate": 1.0, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 1, "profile": "C1", "stall_s": 7.5, "extra_cost_pct": 9.0, "completion_rate": 1.0, "validity_rate": 1.0, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 3, "profile": "C2", "stall_s": 22.0, "extra_cost_pct": 27.0, "completion_rate": 1.0, "validity_rate": 0.97, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 5, "profile": "C3", "stall_s": 38.0, "extra_cost_pct": 46.0, "completion_rate": 1.0, "validity_rate": 0.95, "coordination_tokens": 0, "runs": []}
+      ]
+    },
+    {
+      "id": "pipeline",
+      "label": "Pipeline",
+      "points": [
+        {"coordinators_killed": 0, "profile": "C0", "stall_s": 0.0, "extra_cost_pct": 0.0, "completion_rate": 1.0, "validity_rate": 1.0, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 1, "profile": "C1", "stall_s": 6.0, "extra_cost_pct": 7.0, "completion_rate": 1.0, "validity_rate": 1.0, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 3, "profile": "C2", "stall_s": 18.5, "extra_cost_pct": 21.0, "completion_rate": 1.0, "validity_rate": 0.96, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 5, "profile": "C3", "stall_s": 31.0, "extra_cost_pct": 35.0, "completion_rate": 0.98, "validity_rate": 0.94, "coordination_tokens": 0, "runs": []}
+      ]
+    },
+    {
+      "id": "single",
+      "label": "Single agent",
+      "points": [
+        {"coordinators_killed": 0, "profile": "C0", "stall_s": 0.0, "extra_cost_pct": 0.0, "completion_rate": 1.0, "validity_rate": 0.92, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 1, "profile": "C1", "stall_s": 8.0, "extra_cost_pct": 12.0, "completion_rate": 1.0, "validity_rate": 0.9, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 3, "profile": "C2", "stall_s": 25.0, "extra_cost_pct": 33.0, "completion_rate": 1.0, "validity_rate": 0.88, "coordination_tokens": 0, "runs": []},
+        {"coordinators_killed": 5, "profile": "C3", "stall_s": 42.0, "extra_cost_pct": 55.0, "completion_rate": 0.97, "validity_rate": 0.86, "coordination_tokens": 0, "runs": []}
+      ]
+    },
+    {
+      "id": "langgraph",
+      "label": "LangGraph teams",
+      "points": [
+        {"coordinators_killed": 0, "profile": "C0", "stall_s": 0.0, "extra_cost_pct": 0.0, "completion_rate": 1.0, "validity_rate": 1.0, "coordination_tokens": 4200, "runs": []},
+        {"coordinators_killed": 1, "profile": "C1", "stall_s": 9.0, "extra_cost_pct": 14.0, "completion_rate": 1.0, "validity_rate": 1.0, "coordination_tokens": 6100, "runs": []},
+        {"coordinators_killed": 3, "profile": "C2", "stall_s": 27.0, "extra_cost_pct": 38.0, "completion_rate": 1.0, "validity_rate": 0.97, "coordination_tokens": 9800, "runs": []},
+        {"coordinators_killed": 5, "profile": "C3", "stall_s": 46.0, "extra_cost_pct": 61.0, "completion_rate": 1.0, "validity_rate": 0.95, "coordination_tokens": 13500, "runs": []}
+      ]
+    }
+  ]
+}

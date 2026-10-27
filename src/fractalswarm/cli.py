@@ -156,3 +156,78 @@ def spend() -> None:
                 row.key, str(row.calls), f"{row.actual_usd:.4f}", f"{row.reserved_usd:.4f}"
             )
         console.print(table)
+
+
+def _serve(runs_dir: Path, host: str, port: int, open_run: str | None, browser: bool) -> None:
+    import threading
+    import webbrowser
+
+    import uvicorn
+
+    from fractalswarm.api.app import create_app
+
+    url = f"http://{host}:{port}/" + (f"#/run/{open_run}" if open_run else "")
+    typer.echo(f"FractalSwarm UI on {url}  (Ctrl+C to stop)")
+    if browser:
+        threading.Timer(1.0, webbrowser.open, args=(url,)).start()
+    uvicorn.run(create_app(runs_dir), host=host, port=port, log_level="warning")
+
+
+@app.command()
+def serve(
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    run: Annotated[str | None, typer.Option(help="run id to open in the UI")] = None,
+    browser: Annotated[bool, typer.Option(help="open the UI in a browser")] = False,
+) -> None:
+    """Serve the API and the web UI (your runs under runs/, bundled runs under demo/)."""
+    _serve(_settings().runs_dir, host, port, run, browser)
+
+
+def _demo_bundle(bundle: str | None) -> Path:
+    from fractalswarm.api.app import DEMO_DIR
+
+    names = [bundle] if bundle else ["backup", "toy"]
+    for name in names:
+        path = DEMO_DIR / name
+        if (path / "events.jsonl").exists() or (path / "events.sqlite").exists():
+            return path
+    raise typer.BadParameter(f"no demo bundle {' or '.join(names)} in {DEMO_DIR}")
+
+
+@app.command()
+def demo(
+    verify: Annotated[bool, typer.Option(help="first replay the bundled run, check its hash")] = (
+        False
+    ),
+    bundle: Annotated[str | None, typer.Option(help="bundle under demo/")] = None,
+    serve_ui: Annotated[bool, typer.Option("--serve/--no-serve", help="serve the UI")] = True,
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    browser: Annotated[bool, typer.Option(help="open the UI in a browser")] = True,
+) -> None:
+    """Replay the bundled real run in the UI: no API key and no Node needed."""
+    import asyncio
+
+    from fractalswarm.api.catalog import DEMO_PREFIX
+    from fractalswarm.runs import replay_run
+
+    path = _demo_bundle(bundle)
+    if verify:
+        report = asyncio.run(replay_run(path))
+        head_file = path / "HEAD"
+        expected = head_file.read_text(encoding="utf-8").strip() if head_file.exists() else None
+        if report.ok and expected in (None, report.replayed_head):
+            typer.echo(
+                f"MATCH  {path.name}: {report.replayed_events} events, head {report.replayed_head}"
+            )
+        else:
+            typer.echo(f"MISMATCH  {path.name}: first divergence at seq {report.first_divergence}")
+            typer.echo(report.detail)
+            typer.echo(
+                f"recorded head {report.recorded_head}, HEAD file {expected}, "
+                f"replayed {report.replayed_head}"
+            )
+            raise typer.Exit(1)
+    if serve_ui:
+        _serve(_settings().runs_dir, host, port, DEMO_PREFIX + path.name, browser)
