@@ -47,6 +47,12 @@ END: `uv run pytest`, `uv run ruff check`, `uv run ruff format --check` green; c
 - `bench/matrix.yaml` (v1, 32 cells, Contributor on), `bench/matrix-smoke.yaml`, `bench/REPORT.md` skeleton.
 - Deviations (see the notes): matplotlib in main deps; stall time only inside the agent-work window; cancelled calls count as $0 extra cost; `breaker.tripped` counted by name, not registered; C-profiles in `bench/profiles.py`.
 
+## Done in the Orca workspace (2026-10-28, commits b74d4b8 and 3ed5bf3; 143 tests, ruff clean, $0)
+- Item 1 below: `baselines/supervisor.py` (pure, tested end to end with replay verify).
+- Item 2 below was skipped: a T1 runner needs the contract/agent layer from day-04.
+- Scoring: cancelled and never-closed LLM calls are now billed (input + output so far), so
+  "paying twice" shows in extra cost. Yoel chose this; details in the notes.
+
 ## Remaining (rest of Day 6; most of it needs the day-04 and day-05 merges)
 Work that can be done now, without the slice:
 1. Baseline semantics that are independent of the T2 actors: the supervisor restart policy (crash → restart 5 s later, 0 s restart, completed work kept, crash cancels in-flight worker calls) as a pure, tested module in `baselines/` that the runners will use.
