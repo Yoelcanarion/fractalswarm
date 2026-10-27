@@ -112,6 +112,10 @@ async def replay(
 async def _advance(runtime: Runtime, recorded: Event | None, replayers: Mapping[str, Replayer]):
     assert recorded is not None
     if recorded.actor == ENV and recorded.type == "effect.completed":
+        # Completions enter only once the queue is empty, so deliver what is still queued:
+        # those deliveries appended nothing, but they move their actors' Lamport clocks.
+        while runtime.step():
+            pass
         effect_id = recorded.payload["effect_id"]
         started = runtime.inflight.get(effect_id)
         if started is None:

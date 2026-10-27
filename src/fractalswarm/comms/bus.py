@@ -440,10 +440,9 @@ def _release(ep: Endpoint, now: int) -> list[Delivery]:
 
 
 def _to_delivery(ep: Endpoint, env: Envelope) -> Delivery | None:
-    if env.kind == "reply":
-        if ep.requests.pop(env.correlation_id or "", None) is None:
-            ep.count("late_reply")
-            return None
+    if env.kind == "reply" and ep.requests.pop(env.correlation_id or "", None) is None:
+        ep.count("late_reply")
+        return None
     return Delivery(env.kind, env.topic, env.sender, env.payload, env.correlation_id, env)
 
 

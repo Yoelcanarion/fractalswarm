@@ -353,6 +353,7 @@ class MonkeyState:
     coordinator_role: str
     agent_kinds: tuple[str, ...]
     poll_ms: int
+    until_ms: int | None = None  # stop polling then, even if progress stalls
     next_action: int = 0
     agents_killed: int = 0
     partitions: dict[str, str] = field(default_factory=dict)  # id -> isolated member
@@ -374,6 +375,7 @@ class ChaosMonkey:
             coordinator_role=args.get("coordinator_role", "coordinator"),
             agent_kinds=tuple(args.get("agent_kinds", ["agent"])),
             poll_ms=int(args.get("poll_ms", 250)),
+            until_ms=args.get("until_ms"),
         )
 
     def handle(self, state: MonkeyState, event: Event, view: View):
@@ -400,7 +402,8 @@ class ChaosMonkey:
             action = actions[state.next_action]
             state.next_action += 1
             commands += self._act(state, action, fraction, view)
-        if state.next_action < len(actions) and not progress.complete():
+        more = state.next_action < len(actions) and not progress.complete()
+        if more and (state.until_ms is None or view.now < state.until_ms):
             commands.append(SetTimer(delay_ms=state.poll_ms, tag="chaos.poll"))
         return state, commands
 

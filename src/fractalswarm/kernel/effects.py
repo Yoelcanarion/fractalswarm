@@ -4,7 +4,7 @@ Effects (LLM calls, tools, timers) run as asyncio tasks outside the deterministi
 one turns an ``effect.started`` event into an ``EffectOutcome``; the driver appends it as an
 ``effect.completed`` event:
 
-- ``live``: in arrival order, stamped with the live clock;
+- ``live``: in arrival order, stamped with the live clock, each once the queue is empty;
 - ``sim``: in order of virtual completion time (start + latency, ties by start seq), after
   every running effect has reported, so the order never depends on the event loop.
 
@@ -125,17 +125,19 @@ async def _drive_live(runtime: Runtime, runner: EffectRunner, clock: Clock) -> N
         effect_id = event.payload["effect_id"]
         runtime.complete(effect_id, outcome.status, outcome.result, clock.now())
 
+    # A completion is appended only when the delivery queue is empty, one at a time, as in
+    # sim mode: a delivery that appends nothing still moves its actor's Lamport clock, and
+    # replay can only place such deliveries by draining the queue before each completion.
     launch()
     while True:
         if runtime.step():
             launch()
             await asyncio.sleep(0)
-        while not arrived.empty():
-            complete(*arrived.get_nowait())
-        launch()
-        if runtime.queue:
             continue
-        if not runtime.inflight:
+        if not arrived.empty():
+            complete(*arrived.get_nowait())
+        elif not runtime.inflight:
             return
-        complete(*await arrived.get())
+        else:
+            complete(*await arrived.get())
         launch()

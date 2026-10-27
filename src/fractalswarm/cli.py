@@ -39,9 +39,10 @@ def _resolve_run_dir(run: str) -> Path:
 
 @app.command()
 def toy(
-    scenario: Annotated[str, typer.Option(help="toy | one-call")] = "toy",
+    scenario: Annotated[str, typer.Option(help="toy | one-call | chaos-toy")] = "toy",
     seed: str = "0",
     rounds: int = 2,
+    chaos: Annotated[str, typer.Option(help="chaos-toy: profile C0-C3")] = "C2",
     clock: Annotated[str, typer.Option(help="sim | live")] = "sim",
     speed: Annotated[float, typer.Option(help="live clock speed-up")] = 1.0,
     backend: Annotated[str, typer.Option(help="fake | real")] = "fake",
@@ -76,6 +77,14 @@ def toy(
     if clock not in ("sim", "live"):
         raise typer.BadParameter("--clock must be sim or live")
 
+    params: dict = {"rounds": rounds} if scenario == "toy" else {}
+    if scenario == "chaos-toy":
+        from fractalswarm.actors.chaos_toy import plan_from
+        from fractalswarm.llm.transport import ApiFaults, FaultyBackend
+
+        params = {"chaos": {"profile": chaos, "seed": seed}}
+        llm = FaultyBackend(llm, ApiFaults(seed=seed, rate=plan_from(params).api_fault_rate))
+
     run_id = run_id or f"{scenario}-{datetime.now():%Y%m%d-%H%M%S}"
     result = asyncio.run(
         record_run(
@@ -84,7 +93,7 @@ def toy(
             run_dir=settings.runs_dir / run_id,
             backend=llm,
             seed=seed,
-            params={"rounds": rounds} if scenario == "toy" else {},
+            params=params,
             clock=clock,  # type: ignore[arg-type]
             speed=speed,
             project_ledger=project_ledger,
