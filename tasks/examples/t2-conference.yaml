@@ -1,0 +1,21 @@
+# T2: a two-day conference program from messy inputs (spec §15.3), at depth 2:
+# root -> 3 track orchestrators -> 6 session orchestrators, 2 agents per session.
+#
+#   uv run fractalswarm run tasks/examples/t2-conference.yaml          # fake LLM, $0
+#   uv run fractalswarm run tasks/examples/t2-conference.yaml --backend real --confirm-real-spend
+goal: >
+  Build the two-day program of the conference from the talk submissions and the speakers'
+  emails. Place every talk on the rooms x slots grid of one day, in its own track, with no
+  room or speaker double-booked, every speaker available at their slot, every room big
+  enough for its expected audience, and never two talks of one track at the same time.
+  Honor the speakers' time preferences where possible, and write a short blurb per session.
+task: t2_conference
+inputs:
+  fixture: tasks/fixtures/t2/seed-1
+  generate_seed: 1
+seed: "1"
+budget_usd: 2.0
+scaling:
+  mode: exact
+  fanout: [3, 2]
+  agents_per_leaf: 2

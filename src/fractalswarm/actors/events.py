@@ -1,0 +1,170 @@
+"""Event types of the orchestrator tree, the agents and the blackboard (spec §5.1).
+
+Kept apart from ``kernel/events.py`` so the kernel stays task-agnostic; importing the actors
+registers them.
+"""
+
+from typing import Any
+
+from fractalswarm.kernel.events import Payload, register
+
+
+@register("plan.proposed")
+class PlanProposed(Payload):
+    goal_id: str
+    plan: dict[str, Any]
+    plan_hash: str
+    fallback: bool = False
+
+
+@register("plan.approved")
+class PlanApproved(Payload):
+    goal_id: str
+    scope_token: str
+    by: str  # auto (bench mode) | human
+
+
+@register("plan.refined")
+class PlanRefined(Payload):
+    """A non-root orchestrator split its subgoal into children or contracts."""
+
+    goal_id: str
+    owner: str
+    children: list[str]
+    plan: dict[str, Any]
+    fallback: bool = False
+
+
+@register("plan.rejected")
+class PlanRejected(Payload):
+    goal_id: str
+    attempt: int
+    errors: list[str]
+
+
+@register("ownership.assigned")
+class OwnershipAssigned(Payload):
+    group: str  # the parent whose child group owns the key
+    key: str
+    owner: str
+    member_epoch: int = 0
+
+
+@register("contract.created")
+class ContractCreated(Payload):
+    contract: dict[str, Any]
+
+
+@register("contract.dispatched")
+class ContractDispatched(Payload):
+    goal_id: str
+    contract_id: str
+    attempt: int
+    assignee: str
+    idem_key: str
+
+
+@register("contract.completed")
+class ContractCompleted(Payload):
+    goal_id: str
+    contract_id: str
+    attempt: int
+    agent: str
+    status: str
+    steps: int = 0
+
+
+@register("contract.verified")
+class ContractVerified(Payload):
+    goal_id: str
+    contract_id: str
+    attempt: int
+
+
+@register("contract.rejected")
+class ContractRejected(Payload):
+    goal_id: str
+    contract_id: str
+    attempt: int
+    stage: str  # agent | checks | judge | booking
+    reasons: list[str]
+
+
+@register("contract.failed")
+class ContractFailed(Payload):
+    goal_id: str
+    contract_id: str
+    attempt: int
+    reasons: list[str]
+
+
+@register("verify.judged")
+class VerifyJudged(Payload):
+    goal_id: str
+    contract_id: str
+    attempt: int
+    verdict: str
+    score: float
+    reasons: list[str]
+
+
+@register("fact.published")
+class FactPublished(Payload):
+    key: str
+    subject: str
+    status: str
+    squad: str
+    agent: str
+    contract: str
+    version: int
+
+
+@register("fact.promoted")
+class FactPromoted(Payload):
+    key: str
+    by: str
+
+
+@register("artifact.written")
+class ArtifactWritten(Payload):
+    path: str
+    version: int
+    author: str
+    size: int
+
+
+@register("lease.booked")
+class LeaseBooked(Payload):
+    holder: str
+    goal_id: str
+    keys: list[str]
+
+
+@register("collision.detected")
+class CollisionDetected(Payload):
+    kind: str  # temporal (slot keys) | goal
+    goal_id: str
+    holder: str
+    conflicts: list[dict[str, Any]]
+
+
+@register("collision.resolved")
+class CollisionResolved(Payload):
+    kind: str
+    goal_id: str
+    resolution: str
+
+
+@register("goal.completed")
+class GoalCompleted(Payload):
+    goal_id: str
+    owner: str
+    status: str  # ok | partial | failed
+    gaps: list[str] = []
+
+
+@register("task.result")
+class TaskResult(Payload):
+    task: str
+    status: str
+    report: dict[str, Any]
