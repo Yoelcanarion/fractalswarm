@@ -104,4 +104,10 @@ The adopted `place` result of track-hci/d2 then failed its booking, because spea
 - **A kill is an actor crash inside one Python process.** The kernel stops the actor, so its memory and in-flight calls are gone and it never writes again. But the kernel and its log keep running. Recovering after the whole Python process dies (spec §8, process crash) is a separate, open piece of work. It is not claimed here.
 - **The log is centralized** (spec §12). The orchestrators coordinate without a leader, but they share one hash-chained log.
 - **No call was in flight at any kill in this run**, so it does not exercise "cancelled and redone". The fake-LLM tests and the C3 runs do.
+- **The machine was not idle.** Another agent's full test suite (fake LLM, sim clock) ran on the same machine from about 18:45 to 18:53 CET, which overlaps this recording (18:47 to 18:50 CET). The log shows no sign that the run was starved of CPU:
+  - the 13 suspicions were all about members that had been killed;
+  - no death verdict was false;
+  - no live member's heartbeats were more than 1.08 s apart (the period is 1 s).
+
+  The detection delays and the run's timing can still carry some noise from that load.
 - **The `encrypted_content` blobs** in `events.jsonl` and `cassette.jsonl` are opaque reasoning state returned by the API. Six of them happen to contain substrings shaped like `hf_…` or `sk-…`. They are not credentials.
