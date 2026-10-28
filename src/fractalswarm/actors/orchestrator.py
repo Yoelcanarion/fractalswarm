@@ -791,13 +791,9 @@ def _audit(state: dict[str, Any], gid: str, cid: str, view: View):
     if found is not None:
         outcome = cross_audit.read_audit(*found)
         return _audited(state, gid, cid, outcome, view, reused=True)
-    if any(
-        _orchestrator_live(state, view, who) for who in [*audits.asked(key), *audits.working(key)]
-    ):
-        return (
-            state,
-            [],
-        )  # a live auditor has it: its answer comes back, or it dies and we ask again
+    holders = [*audits.asked(key), *audits.working(key)]
+    if any(_orchestrator_live(state, view, who) for who in holders):
+        return state, []  # a live auditor has it: its answer comes, or it dies and we ask again
     auditor = cross_audit.pick_auditor(work, contract.attempt, _audit_pool(state, view))
     if auditor is None:
         return _audited(state, gid, cid, cross_audit.skipped("no live auditor"), view)

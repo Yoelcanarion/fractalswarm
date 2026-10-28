@@ -100,7 +100,7 @@ class ContractRejected(Payload):
     goal_id: str
     contract_id: str
     attempt: int
-    stage: str  # agent | checks | judge | booking
+    stage: str  # agent | checks | judge | audit | booking
     reasons: list[str]
     fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
