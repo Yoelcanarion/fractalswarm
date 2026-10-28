@@ -26,6 +26,7 @@ from fractalswarm.comms.channel_breakers import (
 )
 from fractalswarm.comms.topics import Lane
 from fractalswarm.config import CONFIG_DIR
+from fractalswarm.planning.taskspec import TaskSpec
 
 S = 1000
 POLICY = ChannelPolicy()
@@ -550,3 +551,12 @@ def test_a_guard_is_made_from_a_run_param() -> None:
     custom = Guard.create("a", {"channel": {"max_msgs": 3}, "storm": {"max_msgs": 7}})
     assert custom.policy.channel.max_msgs == 3 and custom.policy.storm.max_msgs == 7
     assert custom.policy.channel.max_bytes == 65_536
+
+
+def test_the_taskspec_flag_is_off_unless_the_yaml_turns_it_on(tmp_path) -> None:
+    assert TaskSpec(goal="x").channel_breakers is False
+    path = tmp_path / "spec.yaml"
+    path.write_text("goal: x\nchannel_breakers: true\n", encoding="utf-8")
+    assert TaskSpec.load(path).channel_breakers is True
+    path.write_text("goal: x\n", encoding="utf-8")
+    assert TaskSpec.load(path).channel_breakers is False
