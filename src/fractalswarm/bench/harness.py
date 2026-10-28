@@ -87,7 +87,7 @@ class Matrix(BaseModel):
     contributor_wonder: Literal["standard", "spark"] = "standard"
     out_dir: str
     budget: MatrixBudget = MatrixBudget()
-    chart_task: str | None = None  # task drawn in the hero chart (default: the first one)
+    chart_task: str | None = None  # task drawn in the hero or scaling chart (default: the first)
     notes: str = ""
 
     @field_validator("agents")
