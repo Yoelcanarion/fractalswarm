@@ -363,6 +363,7 @@ describe("Escalations", () => {
       ["esc-2", "open"],
     ]);
     expect(escalations.human[0].resolution).toBe("skip");
+    expect(escalations.human[1]).toMatchObject({ goalId: "track-ai/d2", text: "parent failed", actor: "o0" });
     expect(openEscalations(escalations).map((h) => h.id)).toEqual(["esc-2"]);
     expect(escalations.other.map((row) => row.type)).toEqual(["replan.notice"]);
   });

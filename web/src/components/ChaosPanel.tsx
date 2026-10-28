@@ -10,6 +10,14 @@ interface Props {
   live: boolean;
 }
 
+const NET_LABELS = [
+  ["drop", "dropped"],
+  ["delay", "delayed"],
+  ["duplicate", "duplicated"],
+  ["reorder", "reordered"],
+  ["partition_drop", "cut"],
+] as const;
+
 export function ChaosPanel({ runId, view, live }: Props) {
   const [result, setResult] = useState<ControlResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,6 +69,11 @@ export function ChaosPanel({ runId, view, live }: Props) {
         <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>
           {result.status === 501 ? "Not wired yet — " : ""}
           {result.detail}
+        </div>
+      )}
+      {Object.keys(view.netFaults).length > 0 && (
+        <div className="chaos__net mono" title="the chaos network's faults are counted, not listed; the Events tab has each one">
+          network: {NET_LABELS.filter(([key]) => view.netFaults[key]).map(([key, label]) => `${view.netFaults[key].toLocaleString("en")} ${label}`).join(" · ")}
         </div>
       )}
       {view.chaos.length > 0 && (

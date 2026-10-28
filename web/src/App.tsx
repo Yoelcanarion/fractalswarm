@@ -3,19 +3,29 @@ import { useEffect, useState } from "react";
 import { VerifyBadge } from "./components/VerifyBadge";
 import { SPEEDS } from "./lib/playback";
 import { ChartsPage } from "./pages/ChartsPage";
+import { EventsPage } from "./pages/EventsPage";
+import { PanelsPage } from "./pages/PanelsPage";
+import { ResultsPage } from "./pages/ResultsPage";
 import { RunPage } from "./pages/RunPage";
 import { RunsPage } from "./pages/RunsPage";
 import { useRun } from "./store";
 
-// `#/run/<id>?at=end|<event count>&speed=<1-20>&play` opens a replay at a given point, for
-// shareable links and the video.
+// `#/run/<id>[/panels|results|events]?at=end|<event count>&speed=<1-20>&play` opens a replay at
+// a given point, for shareable links and the video. Every view of a run shares the playhead.
 interface Playback {
   at: string | null;
   speed: number | null;
   play: boolean;
 }
 
-type Route = { page: "run"; runId: string | null; playback: Playback } | { page: "charts" } | { page: "runs" };
+const RUN_VIEWS = ["overview", "panels", "results", "events"] as const;
+type RunView = (typeof RUN_VIEWS)[number];
+const VIEW_TITLES: Record<RunView, string> = { overview: "Run", panels: "Panels", results: "Results", events: "Events" };
+
+type Route =
+  | { page: "run"; runId: string | null; view: RunView; playback: Playback }
+  | { page: "charts" }
+  | { page: "runs" };
 
 function parseHash(hash: string): Route {
   const [path, query = ""] = hash.replace(/^#\/?/, "").split("?");
@@ -27,9 +37,13 @@ function parseHash(hash: string): Route {
   return {
     page: "run",
     runId: parts[0] === "run" && parts[1] ? decodeURIComponent(parts[1]) : null,
+    view: RUN_VIEWS.find((view) => view === parts[2]) ?? "overview",
     playback: { at: params.get("at"), speed: SPEEDS.includes(speed as never) ? speed : null, play: params.has("play") },
   };
 }
+
+const viewHash = (runId: string | null, view: RunView): string =>
+  `#/run/${runId === null ? "" : encodeURIComponent(runId)}${view === "overview" ? "" : `/${view}`}`;
 
 function applyPlayback({ at, speed, play }: Playback) {
   const s = useRun.getState();
@@ -74,9 +88,15 @@ export function App() {
           FractalSwarm
         </a>
         <nav className="tabs">
-          <a className={route.page === "run" ? "tab tab--on" : "tab"} href={`#/run/${runId ?? ""}`}>
-            Run
-          </a>
+          {RUN_VIEWS.map((view) => (
+            <a
+              key={view}
+              className={route.page === "run" && route.view === view ? "tab tab--on" : "tab"}
+              href={viewHash(runId, view)}
+            >
+              {VIEW_TITLES[view]}
+            </a>
+          ))}
           <a className={route.page === "charts" ? "tab tab--on" : "tab"} href="#/charts">
             Charts
           </a>
@@ -89,7 +109,7 @@ export function App() {
             <select
               value={runId}
               onChange={(e) => {
-                window.location.hash = `#/run/${encodeURIComponent(e.target.value)}`;
+                window.location.hash = viewHash(e.target.value, route.view);
               }}
               aria-label="run"
             >
@@ -106,7 +126,10 @@ export function App() {
         )}
       </header>
       <main className="content">
-        {route.page === "run" && <RunPage />}
+        {route.page === "run" && route.view === "overview" && <RunPage />}
+        {route.page === "run" && route.view === "panels" && <PanelsPage />}
+        {route.page === "run" && route.view === "results" && <ResultsPage />}
+        {route.page === "run" && route.view === "events" && <EventsPage />}
         {route.page === "charts" && <ChartsPage />}
         {route.page === "runs" && <RunsPage />}
       </main>

@@ -68,7 +68,8 @@ export interface HumanEscalation {
   seq: number;
   ts: number;
   actor: string;
-  text: string;
+  goalId: string;
+  text: string; // why a human is needed: the event's reason, else a digest of its payload
   status: "open" | "resolved";
   resolvedSeq?: number;
   resolution?: string;
@@ -167,7 +168,8 @@ function foldHuman(state: EscalationsState, event: RunEvent): EscalationsState {
       seq: event.seq,
       ts: event.ts_virtual,
       actor: event.actor,
-      text: genericEntry(event).text,
+      goalId: asString(p.goal_id),
+      text: asString(p.reason ?? p.message ?? p.summary ?? p.detail) || genericEntry(event).text,
       status: "open",
     };
     return { ...state, human: [...state.human.filter((h) => h.id !== id), entry] };
