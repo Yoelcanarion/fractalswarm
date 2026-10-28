@@ -56,6 +56,8 @@ class TaskSpec(BaseModel):
     max_attempts: int = Field(default=6, ge=1)
     contributor_opt_in: bool = False
     auto_approve: bool = True  # bench mode; the plan-approval UI comes later
+    cross_audit: bool = False  # a sibling audits sampled contracts (spec §11.3)
+    feasibility_report: bool = False  # emit the feasibility report at plan approval (§12)
 
     @classmethod
     def load(cls, path: Path) -> "TaskSpec":

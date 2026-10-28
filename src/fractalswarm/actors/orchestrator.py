@@ -65,17 +65,20 @@ from fractalswarm.kernel.scheduler import (
     Stop,
     View,
 )
+from fractalswarm.planning import feasibility
 from fractalswarm.planning import scope as scoping
 from fractalswarm.planning.contracts import Contract
 from fractalswarm.planning.dag import Dag
+from fractalswarm.planning.risk import contract_risk
 from fractalswarm.safety.firewall import Verdict, quarantine_stub, scan_request
+from fractalswarm.verify import cross_audit
 from fractalswarm.verify.checks import run_checks
 from fractalswarm.verify.judge import judge_request, read_verdict
 
 TASKS = {T2.name: T2}
 MAX_PLAN_ATTEMPTS = 3
 MAX_FEEDBACK_LINES = 20
-ACTIVE = ("running", "judging", "booking")
+ACTIVE = ("running", "judging", "auditing", "booking")
 # One orchestrator under the best-case supervisor (spec §15.1); the last two have one worker.
 CENTRAL_MODES = ("central", "single", "pipeline")
 SERIAL_MODES = ("single", "pipeline")
@@ -130,6 +133,8 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "membership": bool(args.get("membership")),
         "relay": args.get("relay"),
         "contributor": bool(args.get("contributor")),
+        "audit": bool(args.get("audit")),  # the cross-squad audit (verify/cross_audit.py)
+        "feasibility": bool(args.get("feasibility")),  # the report at plan approval
         "spawned": len(children),  # agents spawned so far, for replacement names
         "respawned": 0,  # orchestrators spawned into dead sibling groups
         "squads": 0,  # central: squads handed out to leaf goals so far
@@ -185,6 +190,8 @@ def _handle(state: dict[str, Any], event: Event, view: View):
             payload = event.payload
             text = payload["result"].get("output_text", "")
             return _judged(state, tag[1], tag[2], int(tag[3]), payload["status"], text, view)
+        if tag[0] == cross_audit.TAG:
+            return _audit_done(state, tag[1], tag[2], int(tag[3]), event, view)
         return state, []
     if kind != "msg.sent":
         return state, []
@@ -197,6 +204,10 @@ def _handle(state: dict[str, Any], event: Event, view: View):
         return _contract_result(state, body, view)
     if topic == "book.result":
         return _booked(state, body, view)
+    if topic == cross_audit.TOPIC_REQUEST:
+        return _audit_requested(state, body, view)
+    if topic == cross_audit.TOPIC_RESULT:
+        return _audit_result(state, body, view)
     if topic == "shutdown":
         return state, [Stop(reason="shutdown")]
     return state, []
@@ -209,6 +220,7 @@ def _spawned(state: dict[str, Any], view: View):
     commands: list[Command] = []
     passed = {"membership": state["membership"], "relay": state["relay"]}
     passed["contributor"] = state["contributor"]
+    passed |= _opt_ins(state)
     for child in state["children"]:
         if state["leaf"] or state["mode"] in CENTRAL_MODES:
             commands.append(Spawn(actor_id=child, kind="agent", args=_agent_args(state)))
@@ -391,6 +403,8 @@ def _planned(state: dict[str, Any], gid: str, attempt: int, event: Event, view: 
         state = {**state, "scope": token}
         proposed = {"goal_id": gid, "plan": plan, "plan_hash": token, "fallback": fallback}
         commands.append(_emit(state, gid, "plan.proposed", proposed))
+        if state["feasibility"]:
+            commands += _feasibility(state, gid, task, goal, plan, envelope, view)
         approved = {"goal_id": gid, "scope_token": token, "by": "auto"}
         approved["envelope"] = envelope.model_dump(mode="json")
         commands.append(_emit(state, gid, "plan.approved", approved))
@@ -677,7 +691,7 @@ def _contract_result(state: dict[str, Any], body: dict[str, Any], view: View):
     if task.needs_judge(contract):
         state, more = _judge(state, gid, cid, view)
     else:
-        state, more = _accept(state, gid, cid, view)
+        state, more = _vet(state, gid, cid, view)
     return state, commands + more
 
 
@@ -724,12 +738,198 @@ def _judged(
         reasons = verdict.reasons or ["the judge failed it"]
         state, more = _retry(state, gid, cid, "judge", reasons, view)
         return state, commands + more
-    state, more = _accept(state, gid, cid, view)
+    state, more = _vet(state, gid, cid, view)
     return state, commands + more
 
 
 def _reused(reused: bool) -> dict[str, Any]:
     return {"reused": True} if reused else {}
+
+
+# -- the cross-squad audit (verify/cross_audit.py) ----------------------------------------
+
+
+def _vet(state: dict[str, Any], gid: str, cid: str, view: View):
+    """The last gate before booking: when the run asks for the audit, sample the contract and
+    have a sibling audit it. Off, this is just ``_accept``."""
+    audits = view.views.get("audit")
+    if not state["audit"] or audits is None:
+        return _accept(state, gid, cid, view)
+    contract = Contract.model_validate(state["goals"][gid]["contracts"][cid])
+    work = f"{gid}/{cid}"
+    sampled = audits.sampled.get((work, contract.attempt))  # the log's copy, if it has one
+    commands: list[Command] = []
+    if sampled is None:
+        risk = contract_risk(contract, view.views.get("role_history"))
+        forced = audits.failed_before(work, contract.attempt)
+        found = cross_audit.sample(
+            view.seed, work, contract.attempt, risk.r, contract.critical_path, forced
+        )
+        sampled = {"goal_id": gid, "contract_id": cid, "attempt": contract.attempt, "work": work}
+        sampled |= {"risk": round(risk.r, 6), "critical_path": contract.critical_path}
+        sampled |= {"terms": {k: round(v, 6) for k, v in risk.terms.model_dump().items()}}
+        sampled |= found.model_dump()
+        idem = f"verify.sampled:{work}:{contract.attempt}"
+        commands.append(_emit(state, gid, "verify.sampled", sampled, idem))
+    if not sampled["selected"]:
+        state, more = _accept(state, gid, cid, view)
+        return state, commands + more
+    state = _set_status(state, gid, cid, "auditing")
+    state, more = _audit(state, gid, cid, view)
+    return state, commands + more
+
+
+def _audit(state: dict[str, Any], gid: str, cid: str, view: View):
+    """Have a sibling audit the contract, or take the verdict the log already holds (a dead
+    owner's request, or an auditor that died after answering)."""
+    entry = state["goals"][gid]
+    contract = Contract.model_validate(entry["contracts"][cid])
+    audits = view.views["audit"]
+    work = f"{gid}/{cid}"
+    key = (work, contract.attempt)
+    found = audits.verdicts.get(key)
+    if found is not None:
+        outcome = cross_audit.read_audit(*found)
+        return _audited(state, gid, cid, outcome, view, reused=True)
+    if any(
+        _orchestrator_live(state, view, who) for who in [*audits.asked(key), *audits.working(key)]
+    ):
+        return (
+            state,
+            [],
+        )  # a live auditor has it: its answer comes back, or it dies and we ask again
+    auditor = cross_audit.pick_auditor(work, contract.attempt, _audit_pool(state, view))
+    if auditor is None:
+        return _audited(state, gid, cid, cross_audit.skipped("no live auditor"), view)
+    output = entry["pending"][cid]["output"]
+    request = cross_audit.audit_request(contract, output, contract.inputs.get("data", {}))
+    body = {"goal_id": gid, "contract_id": cid, "attempt": contract.attempt, "owner": state["id"]}
+    body |= {"idem_key": contract.idem_key, "request": request}
+    return state, [Send(to=auditor, topic=cross_audit.TOPIC_REQUEST, body=body)]
+
+
+def _audit_pool(state: dict[str, Any], view: View) -> list[str]:
+    """Who may audit this orchestrator's contracts: its live siblings (the other children of
+    its current parent, so adopted groups count), else any other live orchestrator."""
+    tree, me = view.views["tree"], state["id"]
+    parent = tree.parents.get(me, state["parent"])
+    siblings = tree.child_actors(parent, "orchestrator") if parent is not None else []
+    pool = [who for who in siblings if who != me and _orchestrator_live(state, view, who)]
+    if pool:
+        return pool
+    everyone = [who for who, kind in sorted(tree.kinds.items()) if kind == "orchestrator"]
+    return [who for who in everyone if who != me and _orchestrator_live(state, view, who)]
+
+
+def _orchestrator_live(state: dict[str, Any], view: View, actor: str) -> bool:
+    """Alive as the log sees it: not declared dead (membership on), else still running."""
+    members = view.views.get("members")
+    if state["membership"] and members is not None:
+        return not members.is_gone(actor)
+    return actor in view.alive
+
+
+def _audit_requested(state: dict[str, Any], body: dict[str, Any], view: View):
+    """A sibling asks this orchestrator to audit one of its contracts: one LLM call, billed to
+    the audited squad. A call already running or answered (in the log) is not asked twice."""
+    audits = view.views.get("audit")
+    key = (f"{body['goal_id']}/{body['contract_id']}", body["attempt"])
+    if audits is None or key in audits.verdicts or audits.working(key):
+        return state, []
+    tag = f"{cross_audit.TAG}|{body['goal_id']}|{body['contract_id']}|{body['attempt']}"
+    effect = StartEffect(
+        kind="llm",
+        request=_route(state, body["request"]),
+        tag=tag,
+        scopes={"contract": body["idem_key"], "squad": body["owner"]},
+    )
+    return state, [effect]
+
+
+def _audit_done(state: dict[str, Any], gid: str, cid: str, attempt: int, event: Event, view: View):
+    """The audit call came back: tell the goal's current owner (an heir, if it changed)."""
+    tree = view.views.get("tree")
+    owner = tree.owner_of(gid) if tree is not None else None
+    if owner is None:
+        return state, []
+    payload = event.payload
+    body = {"goal_id": gid, "contract_id": cid, "attempt": attempt, "auditor": state["id"]}
+    body |= {"status": payload["status"], "text": payload["result"].get("output_text", "")}
+    return state, [Send(to=owner, topic=cross_audit.TOPIC_RESULT, body=body)]
+
+
+def _audit_result(state: dict[str, Any], body: dict[str, Any], view: View):
+    gid, cid = body["goal_id"], body["contract_id"]
+    entry = state["goals"].get(gid)
+    if entry is None or entry["phase"] != "running" or entry["status"].get(cid) != "auditing":
+        return state, []
+    if body["attempt"] != Contract.model_validate(entry["contracts"][cid]).attempt:
+        return state, []  # an earlier attempt's late answer
+    outcome = cross_audit.read_audit(body["status"], body["text"], body["auditor"])
+    return _audited(state, gid, cid, outcome, view)
+
+
+def _audited(
+    state: dict[str, Any],
+    gid: str,
+    cid: str,
+    outcome: cross_audit.AuditOutcome,
+    view: View,
+    reused: bool = False,
+):
+    """The verdict is in: ``fail`` puts the contract back on the replanning ladder (spec
+    §5.5, steps 1-2, with the auditor's reasons as feedback), anything else goes on to
+    booking."""
+    entry = state["goals"].get(gid)
+    if entry is None or entry["status"].get(cid) != "auditing":
+        return state, []
+    contract = Contract.model_validate(entry["contracts"][cid])
+    payload = {"goal_id": gid, "contract_id": cid, "attempt": contract.attempt}
+    payload |= outcome.model_dump() | _reused(reused)
+    idem = f"verify.audited:{gid}/{cid}:{contract.attempt}"
+    commands: list[Command] = [_emit(state, gid, "verify.audited", payload, idem)]
+    if outcome.verdict == "fail":
+        reasons = outcome.reasons or ["the audit failed it"]
+        state, more = _retry(state, gid, cid, "audit", reasons, view)
+        return state, commands + more
+    state, more = _accept(state, gid, cid, view)
+    return state, commands + more
+
+
+def _feasibility(
+    state: dict[str, Any],
+    gid: str,
+    task: Any,
+    goal: dict[str, Any],
+    plan: dict[str, Any],
+    envelope: Any,
+    view: View,
+) -> list[Command]:
+    """The feasibility report, an event between the proposed and the approved plan (§12)."""
+    report = feasibility.build(
+        task,
+        goal,
+        plan,
+        envelope,
+        fanout=state["fanout"],
+        max_steps=state["max_steps"],
+        max_attempts=state["max_attempts"],
+        contributor=state["contributor"],
+        audit=state["audit"],
+        config=view.views.get("run_config"),
+        scans=view.views["scope"].scans if view.views.get("scope") is not None else {},
+    )
+    if report is None:
+        return []
+    return [
+        _emit(
+            state,
+            gid,
+            "plan.feasibility",
+            report.model_dump(mode="json"),
+            f"plan.feasibility:{gid}",
+        )
+    ]
 
 
 def _accept(state: dict[str, Any], gid: str, cid: str, view: View):
@@ -1013,6 +1213,7 @@ def _respawn(state: dict[str, Any], level: int, group: str | None):
     args = {key: state[key] for key in ("fanout", "agents_per_leaf", "task", "max_attempts")}
     args |= {"max_steps": state["max_steps"], "level": level, "parent": group, "bare": True}
     args |= {"membership": True, "relay": state["relay"], "contributor": state["contributor"]}
+    args |= _opt_ins(state)
     state = {**state, "respawned": number}
     return state, [Spawn(actor_id=actor, kind="orchestrator", args=args)]
 
@@ -1068,7 +1269,13 @@ def _pull(state: dict[str, Any], gid: str, view: View):
         return state, commands
     for cid in sorted(entry["contracts"]):
         entry = state["goals"][gid]
-        if entry["phase"] != "running" or entry["status"].get(cid) != "running":
+        if entry["phase"] != "running":
+            continue
+        if entry["status"].get(cid) == "auditing":  # its auditor may have answered, or died
+            state, more = _audit(state, gid, cid, view)
+            commands += more
+            continue
+        if entry["status"].get(cid) != "running":
             continue
         contract = entry["contracts"][cid]
         logged = _logged(view, gid, cid)
@@ -1275,6 +1482,12 @@ def _dispatched_count(state: dict[str, Any]) -> int:
 def _agent_args(state: dict[str, Any]) -> dict[str, Any]:
     args = {"owner": state["id"], "squad": state["id"], "max_steps": state["max_steps"]}
     return args | {"contributor": state["contributor"]}
+
+
+def _opt_ins(state: dict[str, Any]) -> dict[str, Any]:
+    """The opt-in features this run turned on, for the orchestrators spawned below. They are
+    left out when off, so a run that did not ask for them logs the spawn args it always did."""
+    return {name: True for name in ("audit", "feasibility") if state[name]}
 
 
 def _route(state: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:

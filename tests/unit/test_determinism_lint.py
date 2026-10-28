@@ -27,7 +27,7 @@ LINTED_DIRS = (
     "baselines",
 )
 # verify/ also holds code of other streams; lint the files the swarm's handlers call.
-LINTED_FILES = ("verify/checks.py", "verify/judge.py")
+LINTED_FILES = ("verify/checks.py", "verify/judge.py", "verify/cross_audit.py")
 ALLOW_PRAGMA = "# determinism: allow"
 
 CLOCK_FUNCTIONS = {

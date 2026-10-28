@@ -36,7 +36,10 @@ from fractalswarm.comms.chaos import (
 from fractalswarm.coord.membership import MembersView
 from fractalswarm.coord.tree import ROLE, TreeView
 from fractalswarm.kernel.scheduler import ActorKind, Command, Spawn
+from fractalswarm.planning.feasibility import RunConfigView
+from fractalswarm.planning.risk import RoleHistoryView
 from fractalswarm.planning.scope import ScopeView
+from fractalswarm.verify.cross_audit import AuditView
 
 ROOT = "o0"
 CONTRACTS_PER_SESSION = 3  # extract, place, blurb
@@ -68,7 +71,16 @@ class SwarmScenario:
     }
 
     def reducers(self) -> list[Any]:
-        return [MembersView(), ProgressView(T2_PROGRESS), ActorsView(), TreeView(), ScopeView()]
+        return [
+            MembersView(),
+            ProgressView(T2_PROGRESS),
+            ActorsView(),
+            TreeView(),
+            ScopeView(),
+            RoleHistoryView(),
+            AuditView(),
+            RunConfigView(),
+        ]
 
     def boot(self, params: dict[str, Any]) -> list[Command]:
         spec = params["spec"]
@@ -98,6 +110,13 @@ class SwarmScenario:
             "relay": NET if membership and chaos is not None else None,
             "contributor": bool(params.get("contributor", spec.get("contributor_opt_in"))),
         }
+        # Off unless asked, and left out of the args when off, so a log that lacks the
+        # params (or runs without them) is the same log as before. The baselines have no
+        # sibling squad to audit them.
+        if self.mode == "swarm" and bool(params.get("cross_audit", spec.get("cross_audit"))):
+            args["audit"] = True
+        if bool(params.get("feasibility_report", spec.get("feasibility_report"))):
+            args["feasibility"] = True
         commands: list[Command] = [Spawn(actor_id=BOARD, kind="board", args={})]
         if args["relay"] is not None:
             commands.append(Spawn(actor_id=NET, kind=NET, args={}))
