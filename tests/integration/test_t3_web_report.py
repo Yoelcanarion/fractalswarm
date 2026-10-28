@@ -277,6 +277,26 @@ def test_cli_run_reports_a_clean_report_and_replays(
     assert not (tmp_path / "ledger.sqlite").exists()  # the fake never touches the ledger
 
 
+def test_the_report_survives_killing_half_the_orchestrators_without_paying_twice(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Five of the ten orchestrators die, the root among them. The orphans finish and are adopted,
+    so the web is searched and read exactly as often as in a run without kills."""
+    monkeypatch.setenv("FRACTALSWARM_RUNS_DIR", str(tmp_path))
+    monkeypatch.setenv("FRACTALSWARM_LEDGER_PATH", str(tmp_path / "ledger.sqlite"))
+    runner = CliRunner()
+    result = runner.invoke(app, ["run", str(TASKSPEC), "--chaos", "kill-half", "--run-id", "kill"])
+    assert result.exit_code == 0, result.output
+    assert "placed 6/6, hard violations 0" in result.output
+    with EventStore(tmp_path / "kill" / "events.sqlite") as store:
+        log = list(store.read())
+    assert len(of_type(log, "chaos.injected")) == 5 and len(of_type(log, "member.dead")) >= 5
+    assert len(of_type(log, "web.hits")) == 6 and len(of_type(log, "web.page")) == 18
+    assert len(started(log, "fetch")) == 18
+    verified = runner.invoke(app, ["replay", "kill", "--verify"])
+    assert verified.exit_code == 0 and verified.output.startswith("MATCH"), verified.output
+
+
 # -- hostile content and bad citations (one subject, one criterion) -------------------------
 
 
