@@ -1,0 +1,27 @@
+# Chart v1 / final: the LangGraph rows (spec §15.6 "LangGraph rows"): langgraph x T2 x C0-C3 x
+# 2 seeds = 8 runs, on the same task, profiles, seeds, run cap and Contributor routing as
+# bench/matrix.yaml, so its rows sit next to the other workflows' in the hero chart.
+# Run only after the $0 gate passes (a `--fake` run of this matrix is the gate for it):
+#   uv run fractalswarm bench bench/matrix-langgraph.yaml --dry-run
+#   uv run fractalswarm bench bench/matrix-langgraph.yaml --fake --out ../runs/bench-langgraph-fake
+#   uv run fractalswarm bench bench/matrix-langgraph.yaml --confirm-real-spend
+# It has its own out_dir; to draw all five workflows in one chart, copy this matrix's
+# cells/ and runs/ into the other matrix's out_dir, add langgraph to that matrix's workflows
+# and rerun it (finished cells are skipped; results.csv/json and the chart are rebuilt).
+name: chart-langgraph
+workflows: [langgraph]
+tasks: [t2_conference]
+profiles: [C0, C1, C2, C3]
+seeds: [1, 2]
+# Contributor routing (spec §7.5): synthetic tasks, explicit opt-in for the bench matrix.
+contributor: true
+out_dir: results/langgraph
+chart_task: t2_conference
+budget:
+  run_cap_usd: 0.50
+  matrix_cap_usd: 4.00  # 8 runs x the run cap
+notes: >
+  Fair failure semantics (spec §15.2): the same crashes at the same progress points and the
+  same share of agents killed, 5 s best-case restart, LangGraph checkpoints keep the completed
+  supersteps; a crash cancels the in-flight calls of the whole run (process tree). Team
+  supervisors route through the LLM (coord:route calls: coordination tokens).

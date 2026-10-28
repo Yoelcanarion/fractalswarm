@@ -9,6 +9,8 @@ authors = [{ name = "Yoelcanarion" }]
 requires-python = "==3.12.*"
 dependencies = [
     "httpx>=0.28.1",
+    "langchain-openai>=1.7.3",
+    "langgraph>=1.2.18",
     "matplotlib>=3.10",
     "openai>=3.40.0",
     "pydantic>=2.14.1",

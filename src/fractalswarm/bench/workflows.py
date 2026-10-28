@@ -1,18 +1,21 @@
-"""The ``t2_conference`` bench task and its workflows (spec §15.1): ``swarm`` and the
-in-house baselines ``central``, ``single`` and ``pipeline``.
+"""The ``t2_conference`` bench task and its workflows (spec §15.1): ``swarm``, the in-house
+baselines ``central``, ``single`` and ``pipeline``, and the LangGraph baseline ``langgraph``.
 
 Every workflow runs the scenario code of ``actors/swarm.py`` on the same T2 instance, so at
 C0 they make the same LLM calls. Under chaos they get the same plan (``build_plan`` with the
 cell's profile and seed: the same crash points, agent kills and network faults) and API
 faults from the same seed. The swarm runs with membership on at every profile, C0 included,
 so its C0 twin is the same system. The baselines are crashed by signal and restart 5 s
-later with their completed work kept (``actors/orchestrator.py``).
+later with their completed work kept (``actors/orchestrator.py``). ``langgraph`` runs the same
+chaos plan on LangGraph teams under the same supervisor semantics
+(``baselines/langgraph_teams.py``).
 
 A cell's seed picks the T2 instance (``tasks/fixtures/t2/seed-<n>``, generated when missing),
 the run's seed and the chaos seed.
 """
 
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -75,11 +78,18 @@ def t2_params(cell: Cell, contributor: bool) -> dict[str, Any]:
     return params
 
 
+async def record_langgraph(**kwargs: Any) -> None:
+    from fractalswarm.baselines.langgraph_teams import record_langgraph as record
+
+    await record(**kwargs)
+
+
 class T2Workflow:
     tasks = frozenset({"t2_conference"})
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, record: Callable[..., Awaitable[Any]] | None = None) -> None:
         self.name = name  # also the scenario: swarm | central | single | pipeline
+        self.record = record or partial(record_run, name)
 
     async def run(self, ctx: CellContext) -> None:
         from fractalswarm.llm.transport import ApiFaults, FaultyBackend
@@ -90,8 +100,7 @@ class T2Workflow:
         roles = RoleTable.load()
         if ctx.contributor:
             roles = roles.contributor_mode(ctx.contributor_wonder == "spark")
-        await record_run(
-            self.name,
+        await self.record(
             run_id=ctx.cell.id,
             run_dir=ctx.run_dir,
             backend=backend,
@@ -103,6 +112,10 @@ class T2Workflow:
             secrets=ctx.secrets,
             roles=roles,
         )
+
+    def team_requests(self, session: dict[str, Any], contracts: list[Any]) -> list[dict[str, Any]]:
+        """Calls a workflow makes per session besides the shared ones (none for the in-house)."""
+        return []
 
     def preflight(self, cell: Cell, contributor: bool) -> list[dict[str, Any]]:
         """Every planning call twice, every contract's agent loop at ``max_steps`` twice, every
@@ -124,6 +137,7 @@ class T2Workflow:
             for session in T2.split_children(track, T2.split_fallback(track)):
                 requests.append(T2.contracts_request(session, []))
                 contracts = T2.contracts(session, T2.contracts_fallback(session), "o", "scope")
+                requests += self.team_requests(session, contracts)
                 for contract in contracts:
                     prompt = contract_prompt(contract)
                     for step in range(spec.max_steps):
@@ -161,6 +175,25 @@ register_workflow(T2Workflow("swarm"))
 register_workflow(T2Workflow("central"))
 register_workflow(T2Workflow("single"))
 register_workflow(T2Workflow("pipeline"))
+
+
+class LangGraphWorkflow(T2Workflow):
+    """LangGraph teams: the shared calls, and each team supervisor's routing calls."""
+
+    def __init__(self) -> None:
+        super().__init__("langgraph", record_langgraph)
+
+    def team_requests(self, session: dict[str, Any], contracts: list[Any]) -> list[dict[str, Any]]:
+        from fractalswarm.baselines.langgraph_teams import route_request
+
+        state = {
+            "contracts": {c.id: c.model_dump() for c in contracts},
+            "status": {c.id: "pending" for c in contracts},
+        }
+        return [route_request(session, state, [contract.id]) for contract in contracts]
+
+
+register_workflow(LangGraphWorkflow())
 register_task(
     TaskDef(name="t2_conference", checker=t2_checker, description="T2 conference program")
 )

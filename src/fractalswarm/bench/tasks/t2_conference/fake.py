@@ -274,6 +274,12 @@ def judge(body: dict[str, Any]) -> str:
     return _answer({"verdict": "pass", "score": 0.9, "reasons": []})
 
 
+def route(body: dict[str, Any]) -> str:
+    """A team supervisor's routing call (the LangGraph baseline): the first ready contract."""
+    ready = read_blocks(_prompt(body))["ready"]
+    return _answer({"next": ready[0], "reason": "its dependencies are done"})
+
+
 # -- agent roles --------------------------------------------------------------------------
 
 
@@ -472,4 +478,5 @@ HANDLERS = {
     "t2_place": place,
     "t2_blurb": blurb,
     "judge_verdict": judge,
+    "lg_route": route,
 }

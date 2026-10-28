@@ -58,3 +58,10 @@ roles:
     L0: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
     L1: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
     L2: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
+
+  # LLM routing of a team supervisor in the LangGraph baseline (spec §15.1); the swarm has no
+  # such call. Its tokens are coordination tokens (bench/scoring.py).
+  supervisor:
+    L0: {model: muse-spark-1.3, effort: low, max_output_tokens: 2048}
+    L1: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 2048}
+    L2: {model: muse-spark-1.3, effort: minimal, max_output_tokens: 2048}
