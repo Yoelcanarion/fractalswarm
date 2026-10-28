@@ -483,7 +483,7 @@ class T1Task:
             }
         }
 
-    def check_context(self, goal: dict[str, Any]) -> dict[str, Any]:
+    def check_context(self, goal: dict[str, Any], view: Any = None) -> dict[str, Any]:
         data = goal["data"]
         return {
             "companies": goal["companies"],
@@ -609,7 +609,9 @@ class T1Task:
             "parts": parts,
         }
 
-    def final_report(self, goal: dict[str, Any], output: dict[str, Any]) -> dict[str, Any]:
+    def final_report(
+        self, goal: dict[str, Any], output: dict[str, Any], view: Any = None
+    ) -> dict[str, Any]:
         table = table_of(output["records"])
         result = score(table, goal["truth"])
         bad = check_formats(table)
