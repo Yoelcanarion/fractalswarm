@@ -7,7 +7,6 @@ differs from the recorded one, which is how replay proves the handlers asked the
 """
 
 import json
-import re
 from collections.abc import Awaitable, Callable, Iterable
 from pathlib import Path
 from typing import Any
@@ -15,8 +14,8 @@ from typing import Any
 from pydantic import BaseModel
 
 from fractalswarm.kernel.ids import canonical_json
+from fractalswarm.safety.scanners import REDACTED, SECRET_PATTERNS, redact_secrets
 
-REDACTED = "[REDACTED]"
 SENSITIVE_KEYS = {
     "authorization",
     "proxy-authorization",
@@ -28,12 +27,8 @@ SENSITIVE_KEYS = {
     "model_api_key",
     "hf_token",
 }
-SECRET_PATTERNS = (
-    re.compile(r"(?i)(bearer\s+)[^\s\"']+"),
-    re.compile(r"LLM_\d+_[A-Za-z0-9_\-]+"),  # Meta Model API keys
-    re.compile(r"hf_[A-Za-z0-9]{20,}"),  # Hugging Face tokens
-    re.compile(r"sk-[A-Za-z0-9_\-]{20,}"),
-)
+# Re-exported: the secret patterns live in safety/scanners.py, shared with the scanners.
+__all__ = ["REDACTED", "SECRET_PATTERNS", "SENSITIVE_KEYS", "redact"]
 
 
 def redact(value: Any, secrets: Iterable[str] = ()) -> Any:
@@ -51,11 +46,7 @@ def _redact(value: Any, secrets: list[str]) -> Any:
     if isinstance(value, list | tuple):
         return [_redact(item, secrets) for item in value]
     if isinstance(value, str):
-        for secret in secrets:
-            value = value.replace(secret, REDACTED)
-        for pattern in SECRET_PATTERNS:
-            value = pattern.sub(lambda m: (m.group(1) if m.groups() else "") + REDACTED, value)
-        return value
+        return redact_secrets(value, secrets)
     return value
 
 

@@ -111,11 +111,13 @@ async def replay(
 
 async def _advance(runtime: Runtime, recorded: Event | None, replayers: Mapping[str, Replayer]):
     assert recorded is not None
-    if recorded.actor == ENV and recorded.type == "effect.completed":
-        # Completions enter only once the queue is empty, so deliver what is still queued:
-        # those deliveries appended nothing, but they move their actors' Lamport clocks.
+    if recorded.actor == ENV:
+        # Outside events (completions, halts, shocks) enter only once the queue is empty, so
+        # deliver what is still queued: those deliveries appended nothing, but they move
+        # their actors' Lamport clocks.
         while runtime.step():
             pass
+    if recorded.actor == ENV and recorded.type == "effect.completed":
         effect_id = recorded.payload["effect_id"]
         started = runtime.inflight.get(effect_id)
         if started is None:
@@ -126,6 +128,13 @@ async def _advance(runtime: Runtime, recorded: Event | None, replayers: Mapping[
         else:
             status, result = await replayer(started, recorded)
         runtime.complete(effect_id, status, result, recorded.ts_virtual)
+    elif recorded.actor == ENV and recorded.type == "run.halted":
+        runtime.halt(recorded.payload["reason"], recorded.ts_virtual, recorded.payload["by"])
+    elif recorded.actor == ENV and recorded.type == "budget.shock":
+        shock = recorded.payload
+        runtime.shock(
+            shock["level"], shock["key"], shock["usd"], recorded.ts_virtual, shock["reason"]
+        )
     elif recorded.actor == ENV:
         raise Divergence(recorded.seq, f"unsupported outside event {recorded.type}")
     elif runtime.step():

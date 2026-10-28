@@ -175,3 +175,21 @@ class BudgetSettled(Payload):
     effect_id: str
     reserved_usd: float
     actual_usd: float
+
+
+@register("run.halted")
+class RunHalted(Payload):
+    """The kill switch (spec §13): no delivery and no new effect after it."""
+
+    reason: str
+    by: str = "human"
+
+
+@register("budget.shock")
+class BudgetShock(Payload):
+    """A new cap from outside (UI or API) in the middle of a run (spec §7.4)."""
+
+    level: str
+    key: str
+    usd: float = Field(ge=0)
+    reason: str = ""
