@@ -22,6 +22,7 @@ from fractalswarm.coord.hrw import assign
 from fractalswarm.kernel.scheduler import Command, Spawn, Stop, View
 from fractalswarm.market.bids import Estimates, committed, contract_estimate, unplanned
 from fractalswarm.market.scaling import (
+    DOWN_EPOCHS,
     Caps,
     SquadScale,
     affordable,
@@ -150,17 +151,17 @@ def squad(state: dict[str, Any], gid: str, ready: int, view: View, emit: Emitter
         params["rpm_per_agent"],
         caps.max_agents_per_orchestrator,
     )
-    why = f"{ready} ready, headroom {market.headroom(state['id'])}"
-    if ladder.scale_down:  # 80% spent: scale down at once (spec §7.4)
-        target, why = 1, f"budget ladder {ladder.level}: scale down"
+    headroom = market.headroom(state["id"])
+    forced = ladder.scale_down  # 80% spent: shrink at once, and never grow (spec §7.4)
+    if forced:
+        target = 1
     live = [agent for agent in entry["agents"] if _alive(view, tree, agent)]
     parent = entry["parent_gid"]
     epoch = market.epochs.get(parent, 0) if parent is not None else 0
-    scale = entry.get("scale") or SquadScale()
-    if ladder.scale_down:
-        scale, delta = SquadScale(), target - len(live) if len(live) > target else 0
+    if forced:
+        scale, delta = SquadScale(), min(target - len(live), 0)
     else:
-        scale, delta = step(scale, len(live), target, epoch)
+        scale, delta = step(entry.get("scale") or SquadScale(), len(live), target, epoch)
     entry = {**entry, "scale": scale}
     commands: list[Command] = []
     agents = list(entry["agents"])
@@ -174,6 +175,7 @@ def squad(state: dict[str, Any], gid: str, ready: int, view: View, emit: Emitter
             agents.append(agent)
             commands.append(Spawn(actor_id=agent, kind="agent", args=args))
         state = {**state, "spawned": spawned}
+        reason = f"{ready} ready, headroom {headroom}"
     elif delta < 0:
         busy = {
             c["assignee"] for cid, c in entry["contracts"].items() if entry["status"][cid] in BUSY
@@ -183,6 +185,9 @@ def squad(state: dict[str, Any], gid: str, ready: int, view: View, emit: Emitter
         agents = [agent for agent in agents if agent not in stopped]
         commands += [Stop(actor_id=agent, reason="scale-down") for agent in stopped]
         delta = -len(stopped)
+        reason = f"budget ladder {ladder.level}: scale down"
+        if not forced:
+            reason = f"above target {target} for {DOWN_EPOCHS} epochs"
     if delta:
         commands.append(
             _decided(
@@ -193,10 +198,10 @@ def squad(state: dict[str, Any], gid: str, ready: int, view: View, emit: Emitter
                 len(live),
                 len(live) + delta,
                 target=target,
-                reason=why if delta > 0 else f"above target {target} for {2} epochs: {why}",
+                reason=reason,
                 ready=ready,
                 epoch=epoch,
-                headroom_micros=market.headroom(state["id"]),
+                headroom_micros=headroom,
             )
         )
     entry = {**entry, "agents": agents}

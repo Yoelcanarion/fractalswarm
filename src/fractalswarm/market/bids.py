@@ -25,8 +25,8 @@ OPEN = ("pending", "running")  # a contract that is neither verified nor failed
 class Estimates:
     """What work is expected to cost, in micro-dollars, where the plan says nothing."""
 
-    plan: int = 30_000  # one planning call
-    contract: int = 100_000  # one contract (the planner's budget for it, if it declares one)
+    plan: int = 10_000  # one planning call
+    contract: int = 30_000  # a typical contract; a smaller budget declared in the plan wins
     contracts_per_leaf: int = 3
     fanout: tuple[int, ...] = (3, 2)  # children per level, for goals not split yet
     leaf_level: int = 2

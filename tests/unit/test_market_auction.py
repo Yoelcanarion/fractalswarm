@@ -133,9 +133,10 @@ def test_scarce_money_goes_to_the_densest_bid_after_the_floors() -> None:
 
 
 def test_ties_break_by_child_id() -> None:
-    bids = [Bid(child=name, q=500, value=2.0) for name in ("b", "a", "c")]
-    allocation = clear(1_000, bids, share=0.0)
-    assert allocation.grants_micros == {"a": 500, "b": 500, "c": 0}
+    # Equal density and only enough for one: the lowest id wins, whatever order bids arrive in.
+    bids = [Bid(child=name, q=500, value=2.0) for name in ("c", "b", "a")]
+    assert clear(500, bids, share=0.0).grants_micros == {"a": 500, "b": 0, "c": 0}
+    assert clear(1_000, bids, share=0.0).grants_micros == {"a": 500, "b": 500, "c": 0}
 
 
 def test_when_the_floors_do_not_all_fit_the_densest_children_get_theirs() -> None:
