@@ -114,3 +114,40 @@ uv run fractalswarm bench bench/matrix.yaml --dry-run      # cells + worst-case 
 uv run fractalswarm bench bench/matrix.yaml --confirm-real-spend
 uv run fractalswarm replay bench/results/v1/runs/<cell> --verify
 ```
+
+## 8. Scaling sweep (spec §15.6)
+
+`bench/matrix-scaling.yaml`: {swarm, central} × total agents {1, 2, 4, 8, 16} × T2 × C0 × 2 seeds
+= 20 runs, Contributor mode, run cap $0.50 (matrix cap $10). No chaos: it measures how makespan,
+cost and stall move with the number of agents. Exact scaling only.
+
+**How a total becomes a tree** (`src/fractalswarm/bench/scaling.py`). The tree stays at depth 2
+(T2 plans root → tracks → sessions) and holds exactly N agents: N = fanout[0] × fanout[1] ×
+agents_per_leaf. Squads of 2 (the demo's value; an odd total gets squads of 1) and two session
+orchestrators per track orchestrator (T2 has two days). The swarm grows its brains with its hands,
+and the 12-agent demo is a member of the family. Central gets the same numbers, so the two differ
+only in who leads: it has fanout[0] × fanout[1] squads of agents_per_leaf agents, led by one
+orchestrator, which hands one squad to each session, in turn when there are fewer squads than
+sessions.
+
+| Agents | Fanout | Agents per leaf | Swarm orchestrators | Central squads |
+|---|---|---|---|---|
+| 1 | [1, 1] | 1 | 3 | 1 of 1 |
+| 2 | [1, 1] | 2 | 3 | 1 of 2 |
+| 4 | [1, 2] | 2 | 4 | 2 of 2 |
+| 8 | [2, 2] | 2 | 7 | 4 of 2 |
+| 16 | [4, 2] | 2 | 13 | 8 of 2 |
+| *12 (demo)* | *[3, 2]* | *2* | *10* | *6 of 2* |
+
+**Read it knowing the ceiling.** T2 has six sessions, each a chain of three contracts (extract,
+place, blurb), so at most six agents can work at once. Past six the extra agents idle and the
+curves flatten; the chart marks the limit with a dotted line. At C0 stall is a few seconds at most
+for every workflow: the metric is built for crashes.
+
+Results: TBD (`bench/results/scaling/scaling-t2_conference.png`, one line per workflow).
+
+```sh
+uv run fractalswarm bench bench/matrix-scaling.yaml --fake             # $0, sim clock
+uv run fractalswarm bench bench/matrix-scaling.yaml --dry-run
+uv run fractalswarm bench bench/matrix-scaling.yaml --confirm-real-spend
+```

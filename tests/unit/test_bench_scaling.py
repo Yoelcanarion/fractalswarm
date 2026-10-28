@@ -9,10 +9,18 @@ from hypothesis import strategies as st
 from pydantic import ValidationError
 
 from fractalswarm.actors.orchestrator import _squad, orchestrator_init
-from fractalswarm.bench.harness import Matrix
+from fractalswarm.bench.charts import scaling_series
+from fractalswarm.bench.harness import (
+    RESULT_COLUMNS,
+    CellResult,
+    Matrix,
+    aggregate,
+    result_columns,
+)
 from fractalswarm.bench.profiles import profile
 from fractalswarm.bench.registry import Cell
 from fractalswarm.bench.scaling import tree_for
+from fractalswarm.bench.scoring import RunMetrics
 from fractalswarm.bench.workflows import t2_params, t2_spec
 
 REPO = Path(__file__).resolve().parents[2]
@@ -75,7 +83,8 @@ def test_a_cell_without_agents_keeps_the_taskspecs_tree() -> None:
     assert (scaling["fanout"], scaling["agents_per_leaf"]) == ([3, 2], 2)
     sweep = Cell("swarm", "t2_conference", profile("C0"), "1", agents=8)
     scaling = t2_params(sweep, False)["spec"]["scaling"]
-    assert scaling == {"mode": "exact", "fanout": [2, 2], "agents_per_leaf": 2}
+    assert scaling["mode"] == "exact"  # never autoscale: the sweep measures exact trees
+    assert (scaling["fanout"], scaling["agents_per_leaf"]) == ([2, 2], 2)
     assert t2_spec("1").scaling.fanout == [3, 2]  # the axis never leaks into the shared spec
 
 
@@ -124,3 +133,98 @@ def test_central_shares_squads_in_turns_when_it_has_fewer_than_sessions() -> Non
     eight = squads_handed_out(8)
     assert eight[4] == eight[0] and eight[5] == eight[1]
     assert len({tuple(squad) for squad in eight}) == 4
+
+
+# -- results and chart series ----------------------------------------------------------------
+
+INT_METRICS = (
+    "events",
+    "input_tokens",
+    "output_tokens",
+    "total_tokens",
+    "coordination_tokens",
+    "llm_calls",
+    "llm_errors",
+    "cancelled_llm_calls",
+    "work_calls",
+    "messages",
+    "breaker_trips",
+    "chaos_events",
+)
+
+
+def result(
+    workflow: str, name: str, seed: str, agents: int | None, cost: float, makespan: float
+) -> CellResult:
+    killed = {"C0": 0, "C3": 5}[name]
+    metrics = RunMetrics(
+        run_id="r",
+        completed=True,
+        valid=True,
+        score=1.0,
+        makespan_s=makespan,
+        stall_s=1.0,
+        work_window_s=makespan,
+        work_busy_s=makespan - 1.0,
+        cost_usd=cost,
+        **dict.fromkeys(INT_METRICS, 0),
+    )
+    suffix = "" if agents is None else f"__n{agents}"
+    return CellResult(
+        cell=f"{workflow}__t2__{name}__s{seed}{suffix}",
+        workflow=workflow,
+        task="t2",
+        profile=name,
+        coordinators_killed=killed,
+        seed=seed,
+        run_dir=f"runs/{workflow}-{name}-{seed}{suffix}",
+        metrics=metrics,
+        agents=agents,
+    )
+
+
+def test_extra_cost_is_measured_against_the_c0_run_with_the_same_agents() -> None:
+    results = [
+        result("central", "C0", "1", 2, cost=1.0, makespan=100),
+        result("central", "C0", "1", 4, cost=2.0, makespan=60),
+        result("central", "C3", "1", 2, cost=1.5, makespan=130),
+        result("central", "C3", "1", 4, cost=2.0, makespan=70),
+    ]
+    rows = {row["cell"]: row for row in aggregate(results)}
+    assert rows["central__t2__C3__s1__n2"]["extra_cost_pct"] == pytest.approx(50.0)
+    assert rows["central__t2__C3__s1__n4"]["extra_cost_pct"] == pytest.approx(0.0)
+    assert rows["central__t2__C3__s1__n4"]["time_lost_s"] == pytest.approx(10.0)
+    assert [row["agents"] for row in rows.values()] == [2, 4, 2, 4]
+
+
+def test_results_without_agents_keep_their_rows_and_columns() -> None:
+    rows = aggregate([result("swarm", "C0", "1", None, cost=1.0, makespan=60)])
+    assert set(rows[0]) == set(RESULT_COLUMNS)  # no agents key: the hero rows are as before
+    assert result_columns(rows) == RESULT_COLUMNS
+    with_agents = aggregate([result("swarm", "C0", "1", 8, cost=1.0, makespan=60)])
+    columns = result_columns(with_agents)
+    assert (
+        columns[columns.index("seed") + 1] == "agents" and len(columns) == len(RESULT_COLUMNS) + 1
+    )
+
+
+def test_scaling_series_averages_seeds_per_workflow_and_total() -> None:
+    results = [
+        result("swarm", "C0", "1", 4, cost=1.0, makespan=100),
+        result("swarm", "C0", "2", 4, cost=3.0, makespan=60),
+        result("swarm", "C0", "1", 2, cost=2.0, makespan=150),
+        result("central", "C0", "1", 4, cost=2.0, makespan=90),
+        result("swarm", "C3", "1", 4, cost=9.0, makespan=900),  # another profile: not drawn
+        result("swarm", "C0", "1", None, cost=9.0, makespan=900),  # no agents axis: not drawn
+    ]
+    data = scaling_series(aggregate(results), "t2")
+    assert sorted(data) == ["central", "swarm"]
+    assert [point["x"] for point in data["swarm"]] == [2, 4]
+    four = data["swarm"][1]
+    assert four["makespan_s"] == pytest.approx(80.0)
+    assert (four["makespan_s_min"], four["makespan_s_max"]) == (60.0, 100.0)
+    assert four["cost_usd"] == pytest.approx(2.0) and four["seeds"] == ["1", "2"]
+    assert four["runs"] == ["runs/swarm-C0-1__n4", "runs/swarm-C0-2__n4"]
+    assert four["completion_rate"] == 100.0 and four["validity_rate"] == 100.0
+    assert scaling_series(aggregate(results), "t2", "C3")["swarm"][0]["cost_usd"] == 9.0
+    assert scaling_series(aggregate(results), "no-such-task") == {}
