@@ -247,6 +247,9 @@ class LLMClient:
         }
         if attempt.status != 200 or not isinstance(attempt.body, dict):
             error = attempt.error or error_message(attempt.body)
+            retry_after = parse_retry_after_ms(attempt.headers)
+            if retry_after is not None:  # for the model breaker (comms/breakers.py)
+                common["retry_after_ms"] = retry_after
             return EffectOutcome(
                 status="error",
                 result=common | {"error": error, "cost_usd": 0.0},

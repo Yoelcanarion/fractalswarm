@@ -39,9 +39,10 @@ def _resolve_run_dir(run: str) -> Path:
 
 @app.command()
 def toy(
-    scenario: Annotated[str, typer.Option(help="toy | one-call")] = "toy",
+    scenario: Annotated[str, typer.Option(help="toy | one-call | chaos-toy")] = "toy",
     seed: str = "0",
     rounds: int = 2,
+    chaos: Annotated[str, typer.Option(help="chaos-toy: profile C0-C3")] = "C2",
     clock: Annotated[str, typer.Option(help="sim | live")] = "sim",
     speed: Annotated[float, typer.Option(help="live clock speed-up")] = 1.0,
     backend: Annotated[str, typer.Option(help="fake | real")] = "fake",
@@ -76,6 +77,14 @@ def toy(
     if clock not in ("sim", "live"):
         raise typer.BadParameter("--clock must be sim or live")
 
+    params: dict = {"rounds": rounds} if scenario == "toy" else {}
+    if scenario == "chaos-toy":
+        from fractalswarm.actors.chaos_toy import plan_from
+        from fractalswarm.llm.transport import ApiFaults, FaultyBackend
+
+        params = {"chaos": {"profile": chaos, "seed": seed}}
+        llm = FaultyBackend(llm, ApiFaults(seed=seed, rate=plan_from(params).api_fault_rate))
+
     run_id = run_id or f"{scenario}-{datetime.now():%Y%m%d-%H%M%S}"
     result = asyncio.run(
         record_run(
@@ -84,7 +93,7 @@ def toy(
             run_dir=settings.runs_dir / run_id,
             backend=llm,
             seed=seed,
-            params={"rounds": rounds} if scenario == "toy" else {},
+            params=params,
             clock=clock,  # type: ignore[arg-type]
             speed=speed,
             project_ledger=project_ledger,
@@ -211,6 +220,28 @@ def replay(
     typer.echo(f"replayed {report.replayed_events} events, head {report.replayed_head}")
     typer.echo(f"first divergence at seq {report.first_divergence}:\n{report.detail}")
     raise typer.Exit(1)
+
+
+@app.command()
+def calibrate(
+    sources: Annotated[
+        list[Path], typer.Argument(help="cassette or sample .jsonl files, or directories of them")
+    ],
+    out: Annotated[Path, typer.Option(help="where to write the fit")] = Path(
+        "config/fake_calibration.json"
+    ),
+) -> None:
+    """Fit the fake LLM's latency and reasoning tokens to real calls (no API calls)."""
+    from fractalswarm.llm.calibrate import calibrate_paths
+
+    fit = calibrate_paths(sources)
+    fit.save(out)
+    pooled = fit.latency["*"]
+    typer.echo(f"{fit.samples} real calls -> {out}")
+    typer.echo(
+        f"latency ~ {pooled.base_ms:.0f} ms + {pooled.per_output_token_ms:.2f} ms/output token"
+        f" (x lognormal sigma {pooled.log_sigma:.2f}); models: {', '.join(sorted(fit.latency))}"
+    )
 
 
 @app.command()

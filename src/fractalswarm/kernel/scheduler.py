@@ -14,6 +14,11 @@ Which events reach which actor:
 - ``msg.sent`` goes to ``payload.to``;
 - ``effect.completed`` goes to the actor that started the effect.
 Deliveries to a stopped or unknown actor are dropped.
+
+Reducers (spec §5.1) are views of the log that a scenario may install: every appended event
+updates them, handlers read them through ``View.views``, and they may refuse an actor's
+``Emit`` (a stale fencing token becomes ``write.fenced``). An ``Emit`` whose explicit
+``idem_key`` is already in the log is skipped: the first such event in the log wins.
 """
 
 import heapq
@@ -21,6 +26,7 @@ import importlib
 import random
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -102,6 +108,9 @@ class View:
     now: int
     lamport: int
     alive: tuple[str, ...]
+    member_epoch: int = 0
+    # The scenario's reducers by name: read-only views of the log so far.
+    views: Mapping[str, Any] = field(default_factory=dict)
 
     def rng(self, purpose: str) -> random.Random:
         return random.Random(f"{self.seed}:{self.actor_id}:{purpose}")
@@ -116,8 +125,36 @@ class ActorKind:
     handle: Handler
 
 
+@dataclass(frozen=True)
+class Admission:
+    """A reducer's answer to an actor's ``Emit``.
+
+    ``accept=False`` drops the event; ``instead`` names the event to append in its place
+    (for example ``write.fenced``). ``bump_member_epoch`` marks a membership change.
+    """
+
+    accept: bool = True
+    bump_member_epoch: bool = False
+    instead: tuple[str, dict[str, Any]] | None = None
+
+
+class Reducer(Protocol):
+    """A view of the log, rebuilt on replay because it only ever sees appended events."""
+
+    name: str
+
+    def admit(self, actor: str, event_type: str, payload: dict[str, Any]) -> Admission | None:
+        """Judge an actor's ``Emit`` before it is appended; ``None`` means no opinion."""
+        ...
+
+    def apply(self, event: Event) -> None: ...
+
+
 class Scenario(Protocol):
-    """What a run executes: the actor kinds it uses and the commands that boot it."""
+    """What a run executes: the actor kinds it uses and the commands that boot it.
+
+    A scenario may also define ``reducers() -> list[Reducer]``, returning fresh instances.
+    """
 
     kinds: Mapping[str, ActorKind]
 
@@ -195,6 +232,9 @@ class Runtime:
         self.cancelled: list[str] = []  # effect ids the driver should stop
         self.started_event: Event | None = None
         self.completed_event: Event | None = None
+        make_reducers = getattr(self.scenario, "reducers", None)
+        self.reducers: list[Reducer] = list(make_reducers()) if make_reducers else []
+        self.views: Mapping[str, Any] = MappingProxyType({r.name: r for r in self.reducers})
 
     # -- run lifecycle ------------------------------------------------------------------
 
@@ -260,6 +300,8 @@ class Runtime:
                 now=self.vtime,
                 lamport=slot.lamport,
                 alive=tuple(sorted(self.actors)),
+                member_epoch=self.member_epoch,
+                views=self.views,
             )
             kind = self.scenario.kinds[slot.kind]
             slot.state, commands = kind.handle(slot.state, event, view)
@@ -317,6 +359,15 @@ class Runtime:
     def _apply(self, reaction: Reaction, command: Command) -> None:
         match command:
             case Emit():
+                if command.idem_key is not None and self.store.has_idem_key(command.idem_key):
+                    return  # the first such event in the log wins
+                admission = self._admit(reaction.actor, command)
+                if not admission.accept:
+                    if admission.instead is not None:
+                        self._react(reaction, *admission.instead)
+                    return
+                if admission.bump_member_epoch:
+                    self.member_epoch += 1
                 self._react(
                     reaction,
                     command.type,
@@ -366,6 +417,17 @@ class Runtime:
                 self.ledger.set_cap(command.level, command.key, command.usd)
             case _:
                 raise TypeError(f"unknown command {command!r}")
+
+    def _admit(self, actor: str, command: Emit) -> Admission:
+        bump = False
+        for reducer in self.reducers:
+            admission = reducer.admit(actor, command.type, command.payload)
+            if admission is None:
+                continue
+            if not admission.accept:
+                return admission
+            bump = bump or admission.bump_member_epoch
+        return Admission(bump_member_epoch=bump)
 
     def _start_effect(self, reaction: Reaction, command: StartEffect) -> None:
         effect_id = f"eff-{reaction.cause.seq}.{len(reaction.appended)}"
@@ -477,7 +539,10 @@ class Runtime:
             idem_key=idem_key,
             payload=payload,
         )
-        return self.store.append(draft)
+        event = self.store.append(draft)
+        for reducer in self.reducers:
+            reducer.apply(event)
+        return event
 
     def _enqueue(self, event: Event, target: str) -> None:
         heapq.heappush(self.queue, (event.ts_virtual, event.lamport, event.seq, target))

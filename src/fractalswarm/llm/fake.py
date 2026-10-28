@@ -2,8 +2,9 @@
 
 Replies, token counts and latencies depend only on the request body and the attempt number,
 never on time or process. A script can return text or a ``FakeReply`` (including errors with
-``Retry-After``, to exercise retries). The latency model is a hook: Day 5 swaps the default
-for one calibrated from real cassettes (spec §14).
+``Retry-After``, to exercise retries). The latency model and the reasoning-token model are
+hooks: ``llm/calibrate.py`` fits both from real cassettes (spec §14). Without a reasoning
+model, reasoning tokens come from the fixed ``REASONING_TOKENS`` table.
 """
 
 import random
@@ -62,6 +63,10 @@ class LinearLatency:
         return self.base_ms + int(cost) + rng.randrange(self.jitter_ms + 1)
 
 
+class ReasoningModel(Protocol):
+    def __call__(self, model: str, effort: str, rng: random.Random) -> int: ...
+
+
 def default_script(body: dict[str, Any], attempt: int) -> str:
     return f"[fake {body['model']}] {digest(body['input'])[:12]}"
 
@@ -74,6 +79,7 @@ def count_tokens(value: Any) -> int:
 class FakeBackend:
     script: Script = default_script
     latency: LatencyModel = field(default_factory=LinearLatency)
+    reasoning: ReasoningModel | None = None
     calls: int = 0
     attempts: dict[str, int] = field(default_factory=dict)
 
@@ -91,7 +97,13 @@ class FakeBackend:
         output_tokens = reply.output_tokens or count_tokens(reply.text)
         if reply.tool_calls and reply.output_tokens is None:
             output_tokens += count_tokens(reply.tool_calls)
-        latency = self.latency(body["model"], input_tokens, output_tokens, rng)
+        effort = (body.get("reasoning") or {}).get("effort", "low")
+        if self.reasoning is None:
+            reasoning = REASONING_TOKENS.get(effort, 0)
+            latency = self.latency(body["model"], input_tokens, output_tokens, rng)
+        else:
+            reasoning = self.reasoning(body["model"], effort, random.Random(f"fake-tokens:{key}"))
+            latency = self.latency(body["model"], input_tokens, output_tokens + reasoning, rng)
         await sleep(latency)
 
         if reply.status != 200:
@@ -104,8 +116,6 @@ class FakeBackend:
                 status=reply.status, headers=headers, body={"error": error}, latency_ms=latency
             )
 
-        effort = (body.get("reasoning") or {}).get("effort", "low")
-        reasoning = REASONING_TOKENS.get(effort, 0)
         limit = body.get("max_output_tokens") or 1 << 30
         total_output = reasoning + output_tokens
         incomplete = total_output > limit
