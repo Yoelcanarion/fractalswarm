@@ -194,4 +194,10 @@ async def replay_run(run_dir: Path) -> ReplayReport:
     paths = RunPaths(run_dir)
     cassette = Cassette(paths.cassette)
     with paths.open_log() as recorded:
+        first = recorded.get(1)
+        if first is not None and first.payload.get("scenario") == "langgraph":
+            # A framework program, not actors: it replays by running again (baselines/).
+            from fractalswarm.baselines.langgraph_teams import replay_langgraph
+
+            return await replay_langgraph(recorded, cassette)
         return await replay(recorded, replay_setup(cassette))

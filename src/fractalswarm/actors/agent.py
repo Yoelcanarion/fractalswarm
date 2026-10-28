@@ -90,7 +90,8 @@ def agent_handle(state: dict[str, Any], event: Event, view: View):
     if event.type == "msg.sent":
         topic, body = event.payload["topic"], event.payload["body"]
         if topic == "contract":
-            state = {**state, "queue": [*state["queue"], body["contract"]]}
+            level = body.get("level", "L0")  # the model ladder's level (spec §7.4)
+            state = {**state, "queue": [*state["queue"], body["contract"]], "level": level}
             return _next(state)
         if topic == "tool.result":
             return _tool_result(state, body)
@@ -115,6 +116,8 @@ def _next(state: dict[str, Any]) -> tuple[dict[str, Any], list[Command]]:
 
 def _call(state: dict[str, Any], contract: Contract, cur: dict[str, Any]) -> StartEffect:
     request = llm_request(contract, cur["items"])
+    if state.get("level", "L0") != "L0":
+        request = request | {"level": state["level"]}
     return StartEffect(
         kind="llm",
         request=request | {"contributor": True} if state.get("contributor") else request,

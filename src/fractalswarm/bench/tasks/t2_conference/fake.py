@@ -359,6 +359,12 @@ def _audit_blurb(data: dict[str, Any], output: dict[str, Any]) -> list[str]:
 AUDITS = {"extract": _audit_extract, "place": _audit_place, "blurb": _audit_blurb}
 
 
+def route(body: dict[str, Any]) -> str:
+    """A team supervisor's routing call (the LangGraph baseline): the first ready contract."""
+    ready = read_blocks(_prompt(body))["ready"]
+    return _answer({"next": ready[0], "reason": "its dependencies are done"})
+
+
 # -- agent roles --------------------------------------------------------------------------
 
 
@@ -558,4 +564,5 @@ HANDLERS = {
     "t2_blurb": blurb,
     "judge_verdict": judge,
     "audit_verdict": audit,
+    "lg_route": route,
 }

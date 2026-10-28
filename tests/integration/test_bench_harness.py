@@ -121,17 +121,17 @@ def test_preflight_prices_worst_cases_and_lists_unregistered(tmp_path: Path) -> 
     # A run cannot commit more than its cap, so neither can its cell's worst case.
     assert all(0 < (c.worst_case_usd or 0) <= v1.budget.run_cap_usd for c in plan.cells)
 
-    later = v1.model_copy(update={"workflows": ["swarm", "langgraph"]})
+    later = v1.model_copy(update={"workflows": ["swarm", "autogen"]})
     plan = preflight(later, tmp_path)
-    assert plan.unregistered == ["workflow langgraph"]
+    assert plan.unregistered == ["workflow autogen"]
     # Only the registered cells are priced.
     assert plan.worst_case_usd == pytest.approx(sum(c.worst_case_usd or 0 for c in plan.cells))
     assert all(c.worst_case_usd is None for c in plan.cells if not c.registered)
 
 
 async def test_running_an_unregistered_matrix_is_refused(tmp_path: Path) -> None:
-    later = Matrix.load(V1).model_copy(update={"workflows": ["swarm", "langgraph"]})
-    with pytest.raises(ValueError, match="workflow langgraph"):
+    later = Matrix.load(V1).model_copy(update={"workflows": ["swarm", "autogen"]})
+    with pytest.raises(ValueError, match="workflow autogen"):
         await run_matrix(later, tmp_path, options())
 
 
@@ -316,7 +316,7 @@ def test_cli_refuses_to_run_unregistered_workflows(tmp_path: Path) -> None:
     later = tmp_path / "later.yaml"
     text = V1.read_text(encoding="utf-8")
     later.write_text(
-        text.replace("workflows: [swarm, central, single, pipeline]", "workflows: [langgraph]"),
+        text.replace("workflows: [swarm, central, single, pipeline]", "workflows: [autogen]"),
         encoding="utf-8",
     )
     result = CliRunner().invoke(app, ["bench", str(later), "--fake", "--out", str(tmp_path)])

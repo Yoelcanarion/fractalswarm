@@ -42,6 +42,7 @@ the swarm, so they plan as well as it does.
 
 from typing import Any
 
+from fractalswarm.actors import autoscale, market_maker
 from fractalswarm.actors.board import BOARD
 from fractalswarm.actors.integrator import finish_goal, leaf_outcome, merge_children
 from fractalswarm.baselines.supervisor import RESTART_TAG
@@ -68,6 +69,7 @@ from fractalswarm.kernel.scheduler import (
     Stop,
     View,
 )
+from fractalswarm.market.ladder import critical_closure, request_level
 from fractalswarm.planning import feasibility
 from fractalswarm.planning import scope as scoping
 from fractalswarm.planning.contracts import Contract
@@ -111,7 +113,9 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
     if mode in CENTRAL_MODES:
         count = 1 if mode in SERIAL_MODES else agents_per_leaf * leaf_count(fanout)
         children = [f"{actor_id}.a{i}" for i in range(1, count + 1)]
-    elif args.get("bare"):  # a member respawned into a dead group: it inherits, spawns none
+    elif args.get("bare") or args.get("autoscale") is not None:
+        # Respawned into a dead group (it inherits, spawns none), or autoscale (spawned on
+        # demand, once the plan is known).
         children = []
     elif leaf:
         children = [f"{actor_id}.a{i}" for i in range(1, agents_per_leaf + 1)]
@@ -139,6 +143,12 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "channel_breakers": args.get("channel_breakers"),
         "audit": bool(args.get("audit")),  # the cross-squad audit (verify/cross_audit.py)
         "feasibility": bool(args.get("feasibility")),  # the report at plan approval
+        "market": args.get("market"),  # the economy's settings; None: no epochs (the default)
+        "autoscale": args.get("autoscale"),  # the caps of scaling.mode: autoscale; None: exact
+        "spend": {"trips": 0, "open": False},  # the global spend breaker trips this one reported
+        "rung": "L0",  # the model ladder's level (spec §7.4), from the market view
+        "ladder_seen": 0,  # budget.threshold changes this one has reported
+        "mk": {},  # goal -> epoch bookkeeping of the markets this orchestrator makes
         "spawned": len(children),  # agents spawned so far, for replacement names
         "respawned": 0,  # orchestrators spawned into dead sibling groups
         "squads": 0,  # central: squads handed out to leaf goals so far
@@ -158,6 +168,16 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
 
 
 def orchestrator_handle(state: dict[str, Any], event: Event, view: View):
+    if state["market"] is not None:
+        state = {**state, "rung": market_maker.ladder(state, view).level}
+    state, commands = _handle_event(state, event, view)
+    if state["market"] is not None and not (state["det"] and _zombie(state, view)):
+        state, more = market_maker.on_event(state, event, view, _emitter(state))
+        commands = [*commands, *more]
+    return state, commands
+
+
+def _handle_event(state: dict[str, Any], event: Event, view: View):
     if state["mode"] in CENTRAL_MODES:
         return _central(state, event, view)
     det = state["det"]
@@ -197,6 +217,8 @@ def _handle(state: dict[str, Any], event: Event, view: View):
             return _judged(state, tag[1], tag[2], int(tag[3]), payload["status"], text, view)
         if tag[0] == cross_audit.TAG:
             return _audit_done(state, tag[1], tag[2], int(tag[3]), event, view)
+        if tag[0] == market_maker.BREAKER_TAG:
+            return _woken(state, tag[1], view)
         return state, []
     if kind != "msg.sent":
         return state, []
@@ -228,6 +250,8 @@ def _spawned(state: dict[str, Any], view: View):
     if state["channel_breakers"]:
         passed["channel_breakers"] = state["channel_breakers"]
     passed |= _opt_ins(state)
+    if state["market"] is not None:
+        passed["market"] = state["market"]
     for child in state["children"]:
         if state["leaf"] or state["mode"] in CENTRAL_MODES:
             commands.append(Spawn(actor_id=child, kind="agent", args=_agent_args(state)))
@@ -342,7 +366,8 @@ def _squad(state: dict[str, Any]) -> list[str]:
     if state["mode"] != "central":  # a leaf's agents, or the one worker of single and pipeline
         return list(state["children"])
     size = state["agents_per_leaf"]
-    first = state["squads"] * size
+    squads = max(1, len(state["children"]) // size)
+    first = state["squads"] % squads * size  # fewer squads than sessions (a scaling cell): turns
     return list(state["children"][first : first + size])
 
 
@@ -465,12 +490,16 @@ def _ancestors(state: dict[str, Any], gid: str, view: View) -> list[str]:
 
 def _assign_children(state: dict[str, Any], gid: str, children: list[dict[str, Any]], view: View):
     entry = state["goals"][gid]
+    scaled: list[Command] = []
+    if autoscale.enabled(state):
+        state, scaled = autoscale.group(state, gid, len(children), view, _emitter(state))
+        scaled += _recursion(state, gid, entry["goal"])
     group = _child_group(state, entry, view)
     # epsilon 0 at plan time: with no more subgoals than members, one each (parallel squads);
     # takeover remaps use the spec's epsilon (coord/tree.py).
     keys = {child["id"]: child["priority"] for child in children}
     owners = assign(keys, group, epsilon=0.0)
-    commands: list[Command] = []
+    commands: list[Command] = scaled
     tracked = {}
     child_of = dict(state["child_of"])
     level = entry["level"] + 1
@@ -489,7 +518,8 @@ def _assign_children(state: dict[str, Any], gid: str, children: list[dict[str, A
             commands += more
         else:
             commands.append(Send(to=owners[child["id"]], topic="assign", body=body))
-    return state, commands
+    state, started = market_maker.start(state, gid, view)
+    return state, [*commands, *started]
 
 
 def _child_group(state: dict[str, Any], entry: dict[str, Any], view: View) -> list[str]:
@@ -499,6 +529,8 @@ def _child_group(state: dict[str, Any], entry: dict[str, Any], view: View) -> li
     members = view.views.get("members")
     if state["membership"] and members is not None:
         alive = members.alive(role=ROLE, group=entry["group"])
+        if autoscale.enabled(state):  # spawned by this very handler call: not joined yet
+            alive = sorted({*alive, *(c for c in state["children"] if _alive(view, c))})
         return alive or [state["id"]]
     return list(state["children"])
 
@@ -561,7 +593,9 @@ def _start_contracts(
         )
         for c in contracts
     ]
-    commands: list[Command] = []
+    commands: list[Command] = (
+        _recursion(state, gid, entry["goal"]) if autoscale.enabled(state) else []
+    )
     state, agents, spawned = _live_agents(state, gid, view)
     commands += spawned
     keys = {f"{gid}/{c.id}": c.priority for c in contracts}
@@ -625,21 +659,42 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
     busy = [cid for cid, s in status.items() if s != "pending"]
     commands: list[Command] = []
     ready = dag.ready(done, busy)
+    ladder = market_maker.ladder(state, view)
+    if ready and (ladder.critical_only or ladder.stop):
+        skipped = (
+            ready if ladder.stop else [c for c in ready if c not in critical_closure(contracts)]
+        )
+        if skipped:  # at L2 only the critical path continues; at the stop, nothing new starts
+            commands, state = _drop(state, gid, skipped, ladder, view)
+            state, more = _dispatch(state, gid, view)
+            return state, commands + more
+    until = market_maker.paused_until(state, view) if ready else None
+    if until is not None:  # the global spend breaker is open: no new contracts (spec §8)
+        ready = []
     if state["mode"] in SERIAL_MODES and ready:
         if _serial_busy(state) or not _work_open(state):
             return state, []  # one worker: the session waits its turn (_serial_next)
         ready = ready[:1]
     agents: list[str] = []
     if ready:
+        if autoscale.enabled(state):
+            state, scaled = autoscale.squad(state, gid, len(ready), view, _emitter(state))
+            commands += scaled
         state, agents, spawned = _live_agents(state, gid, view)
         entry = state["goals"][gid]
         commands += spawned
+    several = autoscale.enabled(state) and len(ready) > 1
+    spread = autoscale.spread(gid, ready, contracts, agents) if several else {}
+    if ready:
+        commands += market_maker.request_topup(state, gid, [contracts[cid] for cid in ready], view)
     for cid in ready:
         contract = Contract.model_validate(contracts[cid])
         deps = {dep: entry["outputs"][dep] for dep in contract.depends_on}
         inputs = task.contract_inputs(entry["goal"], contract, deps)
         update: dict[str, Any] = {"inputs": inputs, "owner": state["id"]}
-        if contract.assignee not in agents:
+        if f"{gid}/{cid}" in spread:
+            update["assignee"] = spread[f"{gid}/{cid}"]
+        elif contract.assignee not in agents:
             update["assignee"] = rank(f"{gid}/{cid}:{contract.attempt}", agents)[0]
         contract = contract.model_copy(update=update)
         contracts[cid] = contract.model_dump()
@@ -653,17 +708,42 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
             "work": f"{gid}/{cid}",
         }
         commands.append(_emit(state, gid, "contract.dispatched", dispatched))
-        commands.append(
-            Send(to=contract.assignee, topic="contract", body={"contract": contracts[cid]})
-        )
+        body = {"contract": contracts[cid]} | market_maker.level_body(state)
+        commands.append(Send(to=contract.assignee, topic="contract", body=body))
     entry = {**entry, "status": status, "contracts": contracts}
     state = _put_goal(state, gid, entry)
     if commands:
         return state, commands
     if any(s in ACTIVE for s in status.values()):
         return state, []
+    if until is not None:  # nothing runs and the breaker holds the rest: wait for it to close
+        return market_maker.wake(state, gid, until, view)
     output, gaps = leaf_outcome(task, entry, dag)
     return _complete(state, gid, output, gaps, view)
+
+
+def _drop(state: dict[str, Any], gid: str, cids: list[str], ladder: Any, view: View):
+    """The model ladder drops contracts (spec §7.4): they fail with the reason, which the goal's
+    result lists as gaps. Nothing is spent on them and no attempt is consumed."""
+    entry = state["goals"][gid]
+    reason = f"budget ladder {ladder.level}: "
+    reason += "no new contracts at 95% spent" if ladder.stop else "only the critical path continues"
+    status, commands = dict(entry["status"]), []
+    for cid in cids:
+        attempt = entry["contracts"][cid]["attempt"]
+        failed = {"goal_id": gid, "contract_id": cid, "attempt": attempt, "reasons": [reason]}
+        commands.append(_emit(state, gid, "contract.failed", failed | {"work": f"{gid}/{cid}"}))
+        commands += market_maker.completed(state, gid, view)
+        status[cid] = "failed"
+    return commands, _put_goal(state, gid, {**entry, "status": status})
+
+
+def _woken(state: dict[str, Any], gid: str, view: View):
+    """The global spend breaker's pause may be over: dispatch what it held back."""
+    entry = state["goals"].get(gid)
+    if entry is None or entry["phase"] != "running":
+        return state, []
+    return _dispatch(_put_goal(state, gid, {**entry, "wake": None}), gid, view)
 
 
 def _contract_result(state: dict[str, Any], body: dict[str, Any], view: View):
@@ -995,6 +1075,7 @@ def _verified(state: dict[str, Any], gid: str, cid: str, view: View):
         resolution = f"re-placed after {entry['collisions'][cid]} booking conflict(s)"
         payload = {"kind": "temporal", "goal_id": gid, "resolution": resolution}
         commands.append(_emit(state, gid, "collision.resolved", payload))
+    commands += market_maker.completed(state, gid, view)
     state, more = _dispatch(state, gid, view)
     return state, commands + more
 
@@ -1024,6 +1105,7 @@ def _retry(state: dict[str, Any], gid: str, cid: str, stage: str, reasons: list[
         failed = {"goal_id": gid, "contract_id": cid, "attempt": contract.attempt}
         failed |= {"reasons": reasons, "work": f"{gid}/{cid}"}
         commands.append(_emit(state, gid, "contract.failed", failed))
+        commands += market_maker.completed(state, gid, view)
         state = _set_status(state, gid, cid, "failed")
         state, more = _dispatch(state, gid, view)
         return state, commands + more
@@ -1160,6 +1242,9 @@ def _adopt(state: dict[str, Any], gid: str, view: View):
         entry |= {"phase": "running", "children": tracked}
         state = {**state, "child_of": state["child_of"] | dict.fromkeys(tracked, gid)}
     state = _put_goal(state, gid, entry)
+    resumed: list[Command] = []
+    if not leaf and entry["phase"] == "running":
+        state, resumed = market_maker.adopt(state, gid, view)
 
     group = members.get(previous).group if members.get(previous) is not None else None
     remapped = {"group": group, "key": gid, "owner": me, "previous": previous}
@@ -1178,6 +1263,7 @@ def _adopt(state: dict[str, Any], gid: str, view: View):
         idem = f"tree.adopted:{takeover}"
         commands.append(_emit(state, gid, "tree.adopted", payload | {"duties": duties}, idem))
 
+    commands += resumed
     if not state["scope"] and view.views.get("scope") is not None:
         state = {**state, "scope": view.views["scope"].latest}
     if entry["phase"] == "planning":  # the plan died with its owner: plan it again
@@ -1220,6 +1306,10 @@ def _respawn(state: dict[str, Any], level: int, group: str | None):
     if state["channel_breakers"]:
         args["channel_breakers"] = state["channel_breakers"]
     args |= _opt_ins(state)
+    if state["market"] is not None:
+        args["market"] = state["market"]
+    if state["autoscale"] is not None:
+        args["autoscale"] = state["autoscale"]
     state = {**state, "respawned": number}
     return state, [Spawn(actor_id=actor, kind="orchestrator", args=args)]
 
@@ -1497,8 +1587,19 @@ def _opt_ins(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _route(state: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
-    """Contributor routing, when the run opted in (spec §7.5; the client still gates it)."""
+    """The ladder's level (spec §7.4) and Contributor routing, when the run opted in (spec
+    §7.5; the client still gates it)."""
+    if state["rung"] != "L0":
+        request = request | {"level": request_level(state["rung"])}
     return request | {"contributor": True} if state["contributor"] else request
+
+
+def _recursion(state: dict[str, Any], gid: str, goal: dict[str, Any]) -> list[Command]:
+    """Autoscale: log the decision to split this goal further, or to stop here."""
+    complexity = getattr(TASKS[state["task"]], "complexity", None)
+    if complexity is None:
+        return []
+    return [autoscale.recursion(state, gid, complexity(goal), _emitter(state))]
 
 
 def _is_leaf(state: dict[str, Any], entry: dict[str, Any]) -> bool:
@@ -1518,6 +1619,15 @@ def _emit(
     if det is not None and entry is not None:
         payload = payload | {"fence": membership.token(det, entry["epoch"], gid)}
     return Emit(type=event_type, payload=payload, idem_key=idem_key)
+
+
+def _emitter(state: dict[str, Any]):
+    """``_emit`` for the market maker: the same fenced, owner-scoped write."""
+
+    def emit(gid: str, event_type: str, payload: dict[str, Any], idem_key: str | None = None):
+        return _emit(state, gid, event_type, payload, idem_key)
+
+    return emit
 
 
 def _fenced(state: dict[str, Any], gid: str, command: Command) -> Command:

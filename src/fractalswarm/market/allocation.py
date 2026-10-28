@@ -55,14 +55,23 @@ def allocate_proportional(
     envelope_usd: float, asks_usd: Mapping[str, float], *, share: float = CHILD_RESERVE_SHARE
 ) -> Allocation:
     """Split ``envelope_usd`` among children asking ``asks_usd`` (estimated cost each)."""
-    if envelope_usd < 0 or not 0 <= share < 1:
+    if envelope_usd < 0 or any(ask < 0 for ask in asks_usd.values()):
+        raise ValueError("the envelope and every ask must be >= 0")
+    asks = {child: to_micros(asks_usd[child]) for child in sorted(asks_usd)}
+    return allocate_micros(to_micros(envelope_usd), asks, share=share)
+
+
+def allocate_micros(
+    envelope: int, asks: Mapping[str, int], *, share: float = CHILD_RESERVE_SHARE
+) -> Allocation:
+    """``allocate_proportional`` on integer units, for callers that already count in micros."""
+    if envelope < 0 or not 0 <= share < 1:
         raise ValueError("the envelope must be >= 0 and the reserve share in [0, 1)")
-    if any(ask < 0 for ask in asks_usd.values()):
+    if any(ask < 0 for ask in asks.values()):
         raise ValueError("an ask cannot be negative")
-    envelope = to_micros(envelope_usd)
     reserve = envelope * round(share * 10_000) // 10_000
     available = envelope - reserve
-    asks = {child: to_micros(asks_usd[child]) for child in sorted(asks_usd)}
+    asks = {child: asks[child] for child in sorted(asks)}
     total = sum(asks.values())
 
     if total <= available:

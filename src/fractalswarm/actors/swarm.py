@@ -7,7 +7,9 @@
 - ``"membership"``: failure detection and takeover (default: on with chaos);
 - ``"channel_breakers"``: the bus's channel and topic-storm breakers on every orchestrator's
   endpoint (``comms/channel_breakers.py``): ``True``, or a dict of ``GuardPolicy`` overrides
-  (default: the spec's ``channel_breakers``, off). Nothing is recorded for a run without it.
+  (default: the spec's ``channel_breakers``, off). Nothing is recorded for a run without it;
+- ``"market"``: the economy's settings (``planning/taskspec.py: market_params``). Present
+  only when the epoch auction or autoscale is on; a log without it replays as off.
 
 ``central`` is the central baseline (spec §15.1) on the same task, the same LLM calls and the
 same chaos: one orchestrator plans every level and leads every squad, under the best-case
@@ -40,10 +42,12 @@ from fractalswarm.comms.chaos import (
 from fractalswarm.coord.membership import MembersView
 from fractalswarm.coord.tree import ROLE, TreeView
 from fractalswarm.kernel.scheduler import ActorKind, Command, Spawn
+from fractalswarm.market.view import MarketView
 from fractalswarm.memory.sources import SourcesView
 from fractalswarm.planning.feasibility import RunConfigView
 from fractalswarm.planning.risk import RoleHistoryView
 from fractalswarm.planning.scope import ScopeView
+from fractalswarm.planning.taskspec import AUTOSCALE_KEYS
 from fractalswarm.verify.cross_audit import CrossAuditView
 
 ROOT = "o0"
@@ -89,14 +93,20 @@ class SwarmScenario:
             RoleHistoryView(),
             CrossAuditView(),
             RunConfigView(),
+            MarketView(),
         ]
 
     def boot(self, params: dict[str, Any]) -> list[Command]:
         spec = params["spec"]
         scaling = spec["scaling"]
-        if scaling["mode"] != "exact":
-            raise ValueError("only exact scaling is implemented (autoscale is a fallback item)")
-        if len(scaling["fanout"]) != 2:
+        autoscale = None
+        if scaling["mode"] == "autoscale":
+            if self.mode != "swarm" or params.get("market") is None:
+                raise ValueError("autoscale runs on the swarm, with the economy's params")
+            autoscale = {key: scaling[key] for key in AUTOSCALE_KEYS}
+            width = [autoscale["max_orchestrators_per_group"]] * autoscale["max_depth"]
+            scaling = scaling | {"fanout": width}
+        elif len(scaling["fanout"]) != 2:
             raise ValueError("the T2 slice runs at depth 2: fanout [tracks, sessions-owners]")
         root_goal = {
             "id": "root",
@@ -129,6 +139,11 @@ class SwarmScenario:
             args["audit"] = True
         if bool(params.get("feasibility_report", spec.get("feasibility_report"))):
             args["feasibility"] = True
+        market = params.get("market") if self.mode == "swarm" else None
+        if market is not None:
+            args["market"] = market
+        if autoscale is not None:
+            args["autoscale"] = autoscale
         commands: list[Command] = [Spawn(actor_id=BOARD, kind="board", args={})]
         if args["relay"] is not None:
             commands.append(Spawn(actor_id=NET, kind=NET, args={}))

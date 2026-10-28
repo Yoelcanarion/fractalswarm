@@ -2,9 +2,11 @@
 
 A **workflow** (swarm, central, single, pipeline, langgraph, or the ``toy`` stand-in) records
 one run of one task into a run directory and lists the worst-case LLM requests of a run, for
-the cost pre-flight. A **task** (t1_extraction, t2_conference, ...) supplies the checker that
-turns a run's log into completion and validity. Runners and tasks built later register
-themselves here with ``register_workflow`` and ``register_task``.
+the cost pre-flight. A workflow that can vary its total number of agents (the matrix's
+``agents`` axis, ``bench/scaling.py``) sets ``scalable = True``. A **task** (t1_extraction,
+t2_conference, ...) supplies the checker that turns a run's log into completion and
+validity. Runners and tasks built later register themselves here with ``register_workflow``
+and ``register_task``.
 """
 
 from dataclasses import dataclass, field
@@ -23,10 +25,12 @@ class Cell:
     task: str
     profile: ChaosProfile
     seed: str
+    agents: int | None = None  # total agents of a scaling-sweep cell; None: the workflow's own
 
     @property
     def id(self) -> str:
-        return f"{self.workflow}__{self.task}__{self.profile.name}__s{self.seed}"
+        base = f"{self.workflow}__{self.task}__{self.profile.name}__s{self.seed}"
+        return base if self.agents is None else f"{base}__n{self.agents}"
 
 
 @dataclass(frozen=True)
@@ -63,6 +67,9 @@ class TaskDef:
     name: str
     checker: Checker = default_checker
     description: str = ""
+    # Most agent contracts the task can have in flight at once, when it bounds that (the
+    # scaling chart marks it: agents beyond it have nothing to do).
+    parallelism: int | None = None
 
 
 WORKFLOWS: dict[str, Workflow] = {}
@@ -85,6 +92,11 @@ def get_workflow(name: str) -> Workflow | None:
 def get_task(name: str) -> TaskDef | None:
     _load_builtins()
     return TASKS.get(name)
+
+
+def scales_with_agents(workflow: Workflow) -> bool:
+    """Whether the workflow honors ``Cell.agents`` (a ``scalable = True`` class attribute)."""
+    return bool(getattr(workflow, "scalable", False))
 
 
 # Modules that register workflows and tasks when imported. Later days add theirs here.

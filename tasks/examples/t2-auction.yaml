@@ -1,0 +1,27 @@
+# T2 with the epoch auction (spec §7.2): every parent clears an auction among its children
+# each epoch (15 s of virtual time or 10 contract completions), over $ and RPM/TPM slices.
+# The default market is `proportional`: no epochs, money flows as before.
+#
+#   uv run fractalswarm run tasks/examples/t2-auction.yaml                # fake LLM, $0
+#   uv run fractalswarm run tasks/examples/t2-auction.yaml --chaos C3
+goal: >
+  Build the two-day program of the conference from the talk submissions and the speakers'
+  emails. Place every talk on the rooms x slots grid of one day, in its own track, with no
+  room or speaker double-booked, every speaker available at their slot, every room big
+  enough for its expected audience, and never two talks of one track at the same time.
+  Honor the speakers' time preferences where possible, and write a short blurb per session.
+task: t2_conference
+inputs:
+  fixture: tasks/fixtures/t2/seed-1
+  generate_seed: 1
+seed: "1"
+budget_usd: 2.0
+scaling:
+  mode: exact
+  fanout: [3, 2]
+  agents_per_leaf: 2
+market:
+  mode: auction
+  epoch_interval_s: 15
+  epoch_max_completions: 10
+  floor_usd: 0.08

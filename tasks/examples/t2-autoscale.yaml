@@ -1,0 +1,26 @@
+# T2 with autoscale (spec §7.3): the tree sizes itself from the plan and the budget.
+# Orchestrators per group: min(#subgoals, cap, affordable). A squad's agents: clamp(min(ready
+# contracts, $alloc / est cost, rpm_alloc / rpm per agent), 1, cap); scale-up is immediate,
+# scale-down waits for two epochs. The default scaling is `exact`.
+#
+#   uv run fractalswarm run tasks/examples/t2-autoscale.yaml              # fake LLM, $0
+goal: >
+  Build the two-day program of the conference from the talk submissions and the speakers'
+  emails. Place every talk on the rooms x slots grid of one day, in its own track, with no
+  room or speaker double-booked, every speaker available at their slot, every room big
+  enough for its expected audience, and never two talks of one track at the same time.
+  Honor the speakers' time preferences where possible, and write a short blurb per session.
+task: t2_conference
+inputs:
+  fixture: tasks/fixtures/t2/seed-1
+  generate_seed: 1
+seed: "1"
+budget_usd: 2.0
+scaling:
+  mode: autoscale
+  max_orchestrators_per_group: 6
+  max_agents_per_orchestrator: 4
+  max_depth: 2
+  complexity_threshold: 1
+market:
+  mode: auction

@@ -55,8 +55,24 @@ async def replay(
     setup: Callable[[Event], ReplaySetup],
     store: EventStore | None = None,
 ) -> ReplayReport:
+    _, report = await replay_runtime(recorded, setup, store or EventStore())
+    return report
+
+
+async def replay_runtime(
+    recorded: EventStore,
+    setup: Callable[[Event], ReplaySetup],
+    replayed: EventStore,
+    *,
+    resuming: bool = False,
+) -> tuple[Runtime | None, ReplayReport]:
+    """Replay into ``replayed`` and also return the runtime as it stands at the end of the log.
+
+    ``resuming`` is for a log that a killed process left behind (``resume.py``). Its last
+    reaction may be cut in half: the events the replay appends beyond the recorded tail finish
+    it, and the run need not be idle. Everything inside the recorded log must still match.
+    """
     chain = recorded.verify_chain()
-    replayed = store or EventStore()
     report = ReplayReport(
         ok=False,
         chain_ok=chain.ok,
@@ -68,12 +84,12 @@ async def replay(
     if not chain.ok:
         report.first_divergence = chain.first_bad_seq
         report.detail = f"the recorded log is corrupt: {chain.reason}"
-        return report
+        return None, report
 
     first = recorded.get(1)
     if first is None or first.type != "run.started":
         report.detail = "the recorded log does not start with run.started"
-        return report
+        return None, report
     started = first.payload
     tools = setup(first)
     runtime = Runtime(
@@ -92,13 +108,13 @@ async def replay(
     checked = 0
     try:
         runtime.start()
-        checked = _compare(recorded, replayed, checked)
+        checked = _compare(recorded, replayed, checked, resuming)
         while replayed.last_seq < recorded.last_seq:
             await _advance(runtime, recorded.get(replayed.next_seq), tools.replayers)
             runtime.outbox.clear()
             runtime.cancelled.clear()
-            checked = _compare(recorded, replayed, checked)
-        if not runtime.idle:
+            checked = _compare(recorded, replayed, checked, resuming)
+        if not resuming and not runtime.idle:
             raise Divergence(replayed.next_seq, "the recorded log ends but the replay has work")
     except Divergence as exc:
         report.first_divergence = exc.seq
@@ -109,8 +125,9 @@ async def replay(
 
     report.replayed_events = replayed.last_seq
     report.replayed_head = replayed.head_hash
-    report.ok = report.first_divergence is None and replayed.head_hash == recorded.head_hash
-    return report
+    matches = resuming or replayed.head_hash == recorded.head_hash
+    report.ok = report.first_divergence is None and matches
+    return runtime, report
 
 
 async def _advance(runtime: Runtime, recorded: Event | None, replayers: Mapping[str, Replayer]):
@@ -139,6 +156,8 @@ async def _advance(runtime: Runtime, recorded: Event | None, replayers: Mapping[
         runtime.shock(
             shock["level"], shock["key"], shock["usd"], recorded.ts_virtual, shock["reason"]
         )
+    elif recorded.actor == ENV and recorded.type == "run.resumed":
+        runtime.resume(recorded.payload, recorded.ts_virtual)
     elif recorded.actor == ENV:
         raise Divergence(recorded.seq, f"unsupported outside event {recorded.type}")
     elif runtime.step():
@@ -149,10 +168,14 @@ async def _advance(runtime: Runtime, recorded: Event | None, replayers: Mapping[
         raise Divergence(recorded.seq, f"replay stalled; the log expects {recorded.type}")
 
 
-def _compare(recorded: EventStore, replayed: EventStore, checked: int) -> int:
+def _compare(
+    recorded: EventStore, replayed: EventStore, checked: int, resuming: bool = False
+) -> int:
     for event in replayed.read(checked + 1):
         original = recorded.get(event.seq)
         if original is None:
+            if resuming:  # past the tail of a killed process: the reaction it did not finish
+                break
             raise Divergence(event.seq, f"replay produced an extra {event.type}")
         if original.hash != event.hash:
             raise Divergence(event.seq, _diff(original, event))

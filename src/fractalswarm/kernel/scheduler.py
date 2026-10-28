@@ -326,6 +326,37 @@ class Runtime:
                 self._enqueue(event, actor_id)
         return event
 
+    def resume(self, resumed: dict[str, Any], ts_virtual: int) -> Event:
+        """Record that a dead process was replaced (spec §8, docs/resume.md) and put every
+        effect that was in flight into the outbox, for the driver to run again.
+
+        ``resumed`` is the ``run.resumed`` payload. Like a completion it is an outside event, so
+        it enters only when the delivery queue is empty. The effects it calls ambiguous may have
+        run before the crash; each gets an ``effect.reissued``.
+        """
+        self.vtime = max(self.vtime, ts_virtual)
+        self.kernel_lamport = lamport_tick(self.kernel_lamport)
+        event = self._append(
+            "run.resumed",
+            ENV,
+            resumed,
+            self.kernel_lamport,
+            idem_key=f"run.resumed:{resumed['attempt']}",
+        )
+        reaction = Reaction(KERNEL, event)
+        for effect_id in resumed["ambiguous"]:
+            reservation = self.ledger.open.get(effect_id)
+            payload = {
+                "effect_id": effect_id,
+                "kind": self.inflight[effect_id].payload["kind"],
+                "ambiguous": True,
+                "reserved_usd": reservation.usd if reservation else 0.0,
+                "reason": "sent before the crash and no reply was recorded",
+            }
+            self._react(reaction, "effect.reissued", payload, correlation_id=effect_id)
+        self.outbox = sorted(self.inflight.values(), key=lambda started: started.seq)
+        return event
+
     @property
     def idle(self) -> bool:
         return not self.queue and not self.inflight
@@ -495,8 +526,17 @@ class Runtime:
             bump = bump or admission.bump_member_epoch
         return Admission(bump_member_epoch=bump)
 
+    @staticmethod
+    def _origin(reaction: Reaction) -> str:
+        """What the keys and effect ids a reaction makes start with: the cause's seq. A budget
+        shock reaches every actor, so each one's reaction adds its own id and none collide."""
+        cause = reaction.cause
+        if cause.type == "budget.shock" and reaction.actor != KERNEL:
+            return f"{cause.seq}.{reaction.actor}"
+        return str(cause.seq)
+
     def _start_effect(self, reaction: Reaction, command: StartEffect) -> None:
-        effect_id = f"eff-{reaction.cause.seq}.{len(reaction.appended)}"
+        effect_id = f"eff-{self._origin(reaction)}.{len(reaction.appended)}"
         router = self.routers.get(command.kind)
         routing = router(command.request) if router else None
         if routing is not None:  # every Contributor routing decision is audited (spec §7.5)
@@ -584,7 +624,7 @@ class Runtime:
             lamport,
             causation_id=reaction.cause.seq,
             correlation_id=correlation_id,
-            idem_key=idem_key or f"{reaction.cause.seq}.{len(reaction.appended)}",
+            idem_key=idem_key or f"{self._origin(reaction)}.{len(reaction.appended)}",
         )
         reaction.appended.append(event)
         return event

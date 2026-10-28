@@ -1,0 +1,19 @@
+# T2 with the global spend breaker (spec §8): when the run burns more than 20% of its remaining
+# budget in a minute of virtual time, new contracts pause for 30 s, then it closes on its own.
+# At $2 this run never trips it; at $1 it does, twice. The program is the same, only later.
+#
+#   uv run fractalswarm run tasks/examples/t2-breaker.yaml                # fake LLM, $0
+goal: >
+  Build the two-day program of the conference from the talk submissions and the speakers'
+  emails. Place every talk on the rooms x slots grid of one day, in its own track, with no
+  room or speaker double-booked, every speaker available at their slot, every room big
+  enough for its expected audience, and never two talks of one track at the same time.
+  Honor the speakers' time preferences where possible, and write a short blurb per session.
+task: t2_conference
+inputs:
+  fixture: tasks/fixtures/t2/seed-1
+  generate_seed: 1
+seed: "1"
+budget_usd: 1.0
+market:
+  breaker: true
