@@ -13,6 +13,24 @@ A multi-agent LLM runtime for the Meta Global AI Developer Hackathon (Indie trac
 - **Day prompts:** `.plans/days/`, one chat and one branch per day.
 - **API facts:** `docs/api-notes.md`, written by the Day 2 spike. Trust it over memory for Meta Model API details.
 
+## Phase 2 "Arena" (Oct 29 – Nov 4)
+- **Source of truth:** `.plans/arena-spec.md`. It wins over the original spec and the day prompts where they disagree.
+- **Briefs** live in `.plans/arena/`:
+  - `coordinator.md`;
+  - `w1-rival.md` … `w5-ui-arena.md`;
+  - `backend-design.md`.
+- **How the work runs:**
+  - an Orca coordinator works in the `arena` workspace;
+  - workers branch from `Yoelcanarion/arena`, not from `master`;
+  - workers write their notes to `.plans/notes/arena-<name>.md`;
+  - only the coordinator edits `.plans/progress.md`.
+- **Money:** the phase cap is **$50**, counted from Oct 28. The hard stop is **$61.8** of settled project spend. Only the coordinator makes real calls, in quiet windows (workers hold their heavy commands).
+- **Replay safety:** never add a field to an existing event payload model, because old runs would stop replaying. Use new event types, and gate new behaviour by new modes or params.
+- **Handler freeze:** Sun Nov 1, 20:00 CET.
+- **Claims:** they come only from `docs/claims.md`. "No supervisor needed" is not "simpler", "cheaper" or "more reliable".
+- **Private data:** live input typed by Yoel stays in `~/.fractalswarm/private`, never in git.
+- **Pushes:** a nightly push of the working branches to the private origin is pre-approved. `master` and publishing still need Yoel's OK.
+
 ## Hard constraints
 - **Deadline:** Wed Nov 4, 21:00 ET = Thu Nov 5, 03:00 CET. Internal target: submitted by Nov 4, 20:00 CET.
 - **Language:** everything in English (code, UI, docs, video).
@@ -67,7 +85,7 @@ These commands exist from the Day 2 bootstrap onwards.
   - golden replays for determinism.
 
 ## Daily ritual
-1. **Start.** Create the worktree/branch `day-XX-<topic>` from `master`. Read this file, the spec sections listed in the day prompt, and the last entry of `.plans/progress.md`.
+1. **Start.** Create the worktree/branch `day-XX-<topic>` from `master` (in Phase 2, the coordinator creates the worker worktrees from `Yoelcanarion/arena`). Read this file, the spec sections listed in the day prompt or brief, and the last entry of `.plans/progress.md`.
 2. **Work in priority order:** crown-jewel and video-critical work first, then MVI, then polish.
 3. **End.**
    - Get `uv run pytest` and `uv run ruff check` green.

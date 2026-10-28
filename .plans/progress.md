@@ -909,3 +909,59 @@ uv run fractalswarm run tasks/examples/t2-conference.yaml --backend real --confi
 - **Crashed runs look alive in the UI:** a crashed run shows "running" forever (`api/catalog.py: _status`).
 - **Live-clock runs are sensitive to load:** at high speed on a loaded machine they produce false suspicions.
 - **Two workers ran full suites during paid recordings**, after reading the hold notice too late. Checked: no sign of CPU starvation. Live heartbeats were at most 1.28 s apart, and there were no false deaths beyond what the chaos profiles inject.
+
+### Phase 2 plan "Arena": Wed Oct 28, 23:40 CET
+**Planned in an interview with Yoel** (four rounds, plus two corrections), in the `Inicio-plan` chat.
+- **Spec:** `.plans/arena-spec.md`.
+- **Briefs:** `.plans/arena/` (coordinator, W1–W5, and the backend design).
+- **Workspace:** the Orca workspace `arena`, branch `Yoelcanarion/arena`, from day-09 b07fa0c, as a child of day-09.
+
+**Why a new phase:**
+- **Prove the system is worth it against a well-designed conventional architecture.**
+- **Make Meta's models visibly carry value.**
+- **Polish the UI around a live real input.**
+- **Ship a 3-minute video and the form texts.**
+
+**The north star (Yoel's correction):** in three minutes the jury must understand what problem FractalSwarm solves, why Meta's models matter, and what evidence shows that recovery works. It is not a feature tour.
+
+**Forensic finding** (read-only, from `runs/*/events.jsonl`): the old central C3 run lost 27 calls.
+
+| Cause | Calls |
+|---|---|
+| Its own workers, killed by its process-tree stop | 19 |
+| Its own plan and judge calls | 5 |
+| Chaos agent kills | 3 |
+
+Its restart re-dispatched 22 contracts, because `TreeView` never registers central goals. **So the old cost gap is mostly a design artifact.** New rivals:
+- **`durable-max`:** workers survive, and its own calls are durable;
+- **`durable`:** realistic, so its own in-flight calls are lost.
+
+**Decisions:**
+- **Two pre-defined outcomes:**
+  - **A:** recovery stays local to the subtree;
+  - **B:** comparable resilience without a central coordinator.
+- **Claims discipline:** "no supervisor" is not "simpler", "cheaper" or "more reliable".
+- **The rival's assumptions are stated plainly,** and a sensitivity sweep checks them. I added the per-process failure model to the plan: with equal per-process rates the swarm's 10 coordinators fail more often than one supervisor, so it is reported too.
+- **Live input:** typed in English, small, with a fixed 3×2 shape. The Muse intake reading is approved by Yoel and becomes the checker's truth.
+- **Meta visibility, in order:** intake, lens, ablation, Wonder arbitration.
+- **The arena:** side by side.
+- **The video:** director mode, captured by Playwright at 1080p, with a word-for-word English script (`docs/video-script.md` v0).
+- **Scope:** nothing cut from the build.
+- **Money:** $50 total cap for the phase. The hard stop is $61.8 settled.
+- **Agents:** an Opus 5.5 max coordinator, plus 4–5 Sonnet 5.5 max workers.
+- **Pushes:** a nightly push of the working branches to the private origin. `master` and publishing still need Yoel's OK.
+- **Publishing:** the repo goes public on Nov 3, after recording.
+- **Most Viral post:** no.
+- **The form:** Yoel picks the track and the problem statement on Nov 4.
+
+**The design review** (a Plan agent, read-only, against `day-09-integration`): `.plans/arena/backend-design.md`. Key rule: **never add a field to an existing event payload model.** `validate_payload` writes the defaults into the log, so old runs would stop replaying.
+
+**Spend:** $0 in this planning session. Settled stays at $11.8194, with $2.9458 reserved.
+
+**Next:** the coordinator runs Phase 0 (spec §K):
+1. shared evidence;
+2. the `day-09-integration` merge, with the $0 reference comparison;
+3. the v1 tail, or superseding it;
+4. the known issues.
+
+Then it brings Yoel one message of Phase 0 decisions, and starts W1–W4.
