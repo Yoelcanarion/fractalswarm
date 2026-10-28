@@ -21,6 +21,7 @@ from fractalswarm.bench.harness import (
 from fractalswarm.bench.profiles import CRASH_POINTS, RESTART_DELAY_MS, profile
 from fractalswarm.bench.registry import Cell, get_task, get_workflow
 from fractalswarm.bench.scoring import load_events
+from fractalswarm.bench.tasks.t1_extraction import generate
 from fractalswarm.bench.workflows import fake_backend, t1_params
 from fractalswarm.comms.chaos import plan_from
 from fractalswarm.planning.taskspec import TaskSpec, run_params
@@ -134,6 +135,59 @@ def test_the_single_agent_and_the_pipeline_pay_for_their_serial_work_in_stall(ga
     swarm = row(report, "swarm", "C0")
     for workflow in ("single", "pipeline"):
         assert row(report, workflow, "C0")["makespan_s"] > 2 * swarm["makespan_s"]
+
+
+def test_the_resolved_table_reaches_the_blackboard_as_one_fact_per_company(gate) -> None:
+    _, out = gate
+    events = load_events(cell_dir(out, "swarm", "C0"))
+    companies = generate(1).companies
+    published = [e.payload for e in events if e.type == "fact.published"]
+    assert sorted(p["key"] for p in published) == sorted(f"company:{c}" for c in companies)
+    assert sum(e.type == "fact.promoted" for e in events) == len(companies)  # all verified
+    written = sorted(e.payload["path"] for e in events if e.type == "artifact.written")
+    assert written == [f"sessions/g{g}/b{b}/audit.md" for g in (1, 2, 3) for b in (1, 2)]
+
+
+def models_by_role(events: list) -> dict[str, set[str]]:
+    roles = {
+        e.payload["effect_id"]: e.payload["request"]["role"]
+        for e in events
+        if e.type == "effect.started" and e.payload["kind"] == "llm"
+    }
+    found: dict[str, set[str]] = {}
+    for e in events:
+        if (
+            e.type == "effect.completed"
+            and e.payload["kind"] == "llm"
+            and e.payload["status"] == "ok"
+        ):
+            found.setdefault(roles[e.payload["effect_id"]], set()).add(e.payload["result"]["model"])
+    return found
+
+
+async def test_under_contributor_routing_every_spark_call_of_t1_stays_on_contributor(
+    tmp_path: Path,
+) -> None:
+    """Nothing in a T1 prompt, or in what the fake answers, reads as PII or a secret to the
+    gate (the audit note once wrote ``doc-18 (2023-10-07)``, which looks like a phone number),
+    so only the root plan, which has no Contributor variant, is billed at Standard."""
+    matrix = Matrix(
+        name="t1-contributor",
+        workflows=["swarm"],
+        tasks=["t1_extraction"],
+        profiles=["C0"],
+        seeds=["1", "2"],
+        contributor=True,
+        out_dir=str(tmp_path),
+    )
+    options = HarnessOptions(backend_factory=fake_backend, clock="sim")
+    report = await run_matrix(matrix, tmp_path, options, charts=False)
+    assert report.failed == {} and len(report.rows) == 2
+    for r in report.rows:
+        found = models_by_role(load_events(tmp_path / r["run_dir"]))
+        assert found.pop("root_planner") == {"muse-wonder-1.0"}
+        assert set(found) == {"sub_planner", "agent", "judge"}
+        assert all(models == {"muse-spark-1.3-contributor"} for models in found.values()), found
 
 
 # -- safety: the documents are scanned before any prompt carries them -----------------------

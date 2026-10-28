@@ -166,13 +166,16 @@ RESOLVE_GUIDE = [
     "that states it: a newer document wins over an older one. doc_dates gives each date.",
     "Give exactly one record per company and field, with the id of the document the value "
     "comes from. Every field of every company must be there.",
-    "Publish each record with memory.publish_fact (key company:<company>:<field>, subject the "
-    "company, value_json the value as a JSON string, sources [the doc id]), then answer.",
+    "Publish one fact per company with memory.publish_fact (key company:<company>, subject the "
+    "company, value_json an object of its values by field, sources the ids of the documents "
+    "they come from), all in one turn, then answer.",
 ]
 
+# "doc-18 on 2023-10-07", not "doc-18 (2023-10-07)": the second reads as a phone number to the
+# Contributor gate (spec §7.5), which would keep the call on the Standard model.
 REPORT_GUIDE = [
-    "Write a short note for the audit trail, at most six lines: per company, the documents "
-    "its values come from and their dates.",
+    "Write a short note for the audit trail, at most six lines, one per company: "
+    "'<company>: doc-NN on YYYY-MM-DD, doc-NN on YYYY-MM-DD', the documents its values come from.",
     "Save the note with workspace.write to the path given in the data, then answer.",
 ]
 

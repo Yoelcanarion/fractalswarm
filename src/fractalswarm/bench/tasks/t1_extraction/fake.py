@@ -203,16 +203,18 @@ def resolve(body: dict[str, Any]) -> FakeReply | str:
     blocks = read_blocks(_prompt(body))
     records = newest(blocks["mentions"], blocks["doc_dates"])
     if not _turns(body):
-        calls = [
-            _call(
-                "memory.publish_fact",
-                key=f"company:{r['company']}:{r['field']}",
-                subject=r["company"],
-                value_json=json.dumps(r["value"]),
-                sources=[r["doc_id"]],
+        calls = []
+        for company in sorted({r["company"] for r in records}):
+            mine = [r for r in records if r["company"] == company]
+            calls.append(
+                _call(
+                    "memory.publish_fact",
+                    key=f"company:{company}",
+                    subject=company,
+                    value_json=json.dumps({r["field"]: r["value"] for r in mine}, sort_keys=True),
+                    sources=sorted({r["doc_id"] for r in mine}),
+                )
             )
-            for r in records
-        ]
         return FakeReply(tool_calls=calls)
     return _answer({"records": records})
 
@@ -224,7 +226,7 @@ def report(body: dict[str, Any]) -> FakeReply | str:
     for record in blocks["records"]:
         used.setdefault(record["company"], set()).add(record["doc_id"])
     lines = [
-        f"{company}: " + ", ".join(f"{doc} ({dates[doc]})" for doc in sorted(used[company]))
+        f"{company}: " + ", ".join(f"{doc} on {dates[doc]}" for doc in sorted(used[company]))
         for company in sorted(used)
     ]
     note = "\n".join(lines[:6]) or "no records"
