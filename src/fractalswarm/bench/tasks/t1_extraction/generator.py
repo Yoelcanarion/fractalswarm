@@ -15,6 +15,7 @@ import json
 import random
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -246,6 +247,21 @@ def write_instance(instance: T1Instance, out_dir: Path) -> tuple[Path, Path]:
         "companies": instance.companies,
         "docs": [doc.model_dump() for doc in instance.docs],
     }
-    docs_path.write_text(json.dumps(visible, indent=2), encoding="utf-8")
-    truth_path.write_text(json.dumps(instance.truth, indent=2, sort_keys=True), encoding="utf-8")
+    docs_path.write_text(json.dumps(visible, indent=2) + "\n", encoding="utf-8", newline="\n")
+    truth = json.dumps(instance.truth, indent=2, sort_keys=True) + "\n"
+    truth_path.write_text(truth, encoding="utf-8", newline="\n")
     return docs_path, truth_path
+
+
+def write_fixture(root: Path, seed: int) -> Path:
+    """``<root>/seed-<n>/{docs,truth}.json``: the instance a TaskSpec points at."""
+    out = root / f"seed-{seed}"
+    write_instance(generate(seed), out)
+    return out
+
+
+def load_fixture(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """(corpus, truth): the corpus is ``docs.json``, which has no ground truth."""
+    corpus = json.loads((path / "docs.json").read_text(encoding="utf-8"))
+    truth = json.loads((path / "truth.json").read_text(encoding="utf-8"))
+    return corpus, truth

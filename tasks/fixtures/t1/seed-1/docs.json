@@ -1,0 +1,267 @@
+{
+  "seed": "1",
+  "fields": [
+    "ceo",
+    "headquarters",
+    "founded_year",
+    "employees",
+    "revenue_musd",
+    "ticker",
+    "industry",
+    "product"
+  ],
+  "companies": [
+    "Arbor Foods",
+    "Brightline Energy",
+    "Cobalt Dynamics",
+    "Fjord Foods",
+    "Granite Systems",
+    "Iris Analytics",
+    "Juniper Labs",
+    "Meridian Systems",
+    "Orchard Systems",
+    "Pinnacle Analytics"
+  ],
+  "docs": [
+    {
+      "id": "doc-01",
+      "date": "2023-10-21",
+      "title": "Brightline Energy: update of 2023-10-21",
+      "text": "Brightline Energy now employs 4,117 people. Annual revenue reached $454 million. Its flagship product is Echo 8. The report covers the last 39 months of activity. Brightline Energy was founded in 2009. Shares of Brightline Energy (BRIQ) rose this week. Cobalt Dynamics posted $1967 million in revenue."
+    },
+    {
+      "id": "doc-02",
+      "date": "2024-08-16",
+      "title": "Arbor Foods: update of 2024-08-16",
+      "text": "Analysts expect the market to grow by 61% next year. Annual revenue reached $3884 million. Arbor Foods was founded in 1995. Competitor Orchard Systems is based in Oslo. Arbor Foods is a satellite data company. From its head office in Tallinn, Arbor Foods serves customers in many countries. Arbor Foods trades under the ticker ARBZ."
+    },
+    {
+      "id": "doc-03",
+      "date": "2023-07-04",
+      "title": "Iris Analytics: update of 2023-07-04",
+      "text": "Cobalt Dynamics competes with its own product, Relay 2. Iris Analytics trades under the ticker IRIZ. Its flagship product is Glide 3. The company's headcount stands at 17,865 employees. Iris Analytics works in satellite data. Annual revenue reached $225 million. Analysts expect the market to grow by 65% next year."
+    },
+    {
+      "id": "doc-04",
+      "date": "2023-04-11",
+      "title": "Granite Systems: update of 2023-04-11",
+      "text": "Granite Systems trades under the ticker GRAX. Granite Systems is a logistics software company. Competitor Fjord Foods is based in Leipzig. Since its founding in 1983, Granite Systems has grown. Analysts expect the market to grow by 55% next year. The company's headcount stands at 20,947 employees. Granite Systems is headquartered in Nantes."
+    },
+    {
+      "id": "doc-05",
+      "date": "2024-03-06",
+      "title": "Cobalt Dynamics: update of 2024-03-06",
+      "text": "Cobalt Dynamics is a precision agriculture company. Cobalt Dynamics sells Beacon 2, its best-known product. Cobalt Dynamics trades under the ticker COBZ. Cobalt Dynamics now employs 19,948 people. From its head office in Lisbon, Cobalt Dynamics serves customers in many countries. Pinnacle Analytics competes with its own product, Glide 2. The company opened 3 new offices in the region."
+    },
+    {
+      "id": "doc-06",
+      "date": "2024-10-16",
+      "title": "Fjord Foods: update of 2024-10-16",
+      "text": "The company opened 82 new offices in the region. Fjord Foods is led by chief executive Chiara Nakamura. Fjord Foods is a logistics software company. Fjord Foods is headquartered in Osaka. Fjord Foods trades under the ticker FJOY. Fjord Foods reported revenue of $1740 million for the year. Juniper Labs posted $15 million in revenue."
+    },
+    {
+      "id": "doc-07",
+      "date": "2023-01-24",
+      "title": "Brightline Energy: update of 2023-01-24",
+      "text": "Cobalt Dynamics competes with its own product, Nova 3. Brightline Energy trades under the ticker BRIQ. Brightline Energy is headquartered in Leipzig. Brightline Energy sells Glide 8, its best-known product. Since its founding in 2009, Brightline Energy has grown. Analysts expect the market to grow by 48% next year. Brightline Energy works in satellite data."
+    },
+    {
+      "id": "doc-08",
+      "date": "2024-08-19",
+      "title": "Arbor Foods: update of 2024-08-19",
+      "text": "Arbor Foods is led by chief executive Quentin Alvarez. Arbor Foods is headquartered in Tallinn. The company's headcount stands at 14,652 employees. Arbor Foods was founded in 1995. The report covers the last 11 months of activity. Its flagship product is Delta 3. Rival Orchard Systems has 17,185 staff."
+    },
+    {
+      "id": "doc-09",
+      "date": "2024-01-11",
+      "title": "Fjord Foods: update of 2024-01-11",
+      "text": "Competitor Juniper Labs is based in Utrecht. The report covers the last 43 months of activity. Fjord Foods sells Atlas 8, its best-known product. Fjord Foods reported revenue of $958 million for the year. The company's headcount stands at 10,013 employees. Fjord Foods was founded in 2013. Fjord Foods is headquartered in Osaka."
+    },
+    {
+      "id": "doc-10",
+      "date": "2023-05-22",
+      "title": "Brightline Energy: update of 2023-05-22",
+      "text": "About 37 customers attended the annual conference. Brightline Energy sells Harbor 6, its best-known product. Brightline Energy is headquartered in Lyon. Brightline Energy now employs 4,117 people. Competitor Iris Analytics is based in Cork. Brightline Energy is led by chief executive Sven Ivanova. Brightline Energy reported revenue of $454 million for the year."
+    },
+    {
+      "id": "doc-11",
+      "date": "2025-05-27",
+      "title": "Meridian Systems: update of 2025-05-27",
+      "text": "Since its founding in 1980, Meridian Systems has grown. Rival Granite Systems has 16,125 staff. Meridian Systems now employs 5,358 people. Meridian Systems is a precision agriculture company. The company opened 56 new offices in the region. From its head office in Turin, Meridian Systems serves customers in many countries. CEO Quentin Ivanova said Meridian Systems expects a busy year."
+    },
+    {
+      "id": "doc-12",
+      "date": "2023-03-18",
+      "title": "Fjord Foods: update of 2023-03-18",
+      "text": "Fjord Foods works in logistics software. From its head office in Osaka, Fjord Foods serves customers in many countries. The company opened 75 new offices in the region. Rival Juniper Labs has 16,586 staff. Annual revenue reached $958 million. The company's headcount stands at 10,013 employees. CEO Tomas Goldberg said Fjord Foods expects a busy year."
+    },
+    {
+      "id": "doc-13",
+      "date": "2023-09-01",
+      "title": "Pinnacle Analytics: update of 2023-09-01",
+      "text": "Brightline Energy competes with its own product, Orbit 7. CEO Jonas Ferreira said Pinnacle Analytics expects a busy year. Shares of Pinnacle Analytics (PINX) rose this week. Pinnacle Analytics now employs 9,316 people. From its head office in Porto, Pinnacle Analytics serves customers in many countries. Analysts expect the market to grow by 72% next year. Pinnacle Analytics sells Beacon 2, its best-known product."
+    },
+    {
+      "id": "doc-14",
+      "date": "2024-06-26",
+      "title": "Pinnacle Analytics: update of 2024-06-26",
+      "text": "Since its founding in 1985, Pinnacle Analytics has grown. Pinnacle Analytics is a payments company. Analysts expect the market to grow by 64% next year. Pinnacle Analytics sells Beacon 2, its best-known product. The company's headcount stands at 9,316 employees. From its head office in Lyon, Pinnacle Analytics serves customers in many countries. Competitor Brightline Energy is based in Osaka."
+    },
+    {
+      "id": "doc-15",
+      "date": "2023-02-15",
+      "title": "Granite Systems: update of 2023-02-15",
+      "text": "The company opened 10 new offices in the region. The company's headcount stands at 11,929 employees. Rival Orchard Systems has 10,835 staff. Granite Systems is led by chief executive Omar Lindqvist. Since its founding in 1983, Granite Systems has grown. Granite Systems trades under the ticker GRAX. Annual revenue reached $2841 million."
+    },
+    {
+      "id": "doc-16",
+      "date": "2024-05-28",
+      "title": "Meridian Systems: update of 2024-05-28",
+      "text": "CEO Nadia Okafor said Meridian Systems expects a busy year. Annual revenue reached $2023 million. From its head office in Oslo, Meridian Systems serves customers in many countries. Orchard Systems posted $2081 million in revenue. About 45 customers attended the annual conference. Shares of Meridian Systems (MERQ) rose this week. Meridian Systems sells Mosaic 7, its best-known product."
+    },
+    {
+      "id": "doc-17",
+      "date": "2025-02-11",
+      "title": "Pinnacle Analytics: update of 2025-02-11",
+      "text": "Competitor Arbor Foods is based in Lyon. About 37 customers attended the annual conference. Pinnacle Analytics now employs 9,316 people. From its head office in Lyon, Pinnacle Analytics serves customers in many countries. CEO Jonas Ferreira said Pinnacle Analytics expects a busy year. Pinnacle Analytics is a payments company. Pinnacle Analytics trades under the ticker PINX."
+    },
+    {
+      "id": "doc-18",
+      "date": "2023-10-07",
+      "title": "Granite Systems: update of 2023-10-07",
+      "text": "Cobalt Dynamics posted $2393 million in revenue. The report covers the last 57 months of activity. Annual revenue reached $1104 million. Granite Systems is a logistics software company. The company's headcount stands at 20,947 employees. Shares of Granite Systems (GRAX) rose this week. Granite Systems is led by chief executive Nadia Eriksen."
+    },
+    {
+      "id": "doc-19",
+      "date": "2024-05-01",
+      "title": "Iris Analytics: update of 2024-05-01",
+      "text": "Iris Analytics reported revenue of $225 million for the year. Rival Cobalt Dynamics has 22,498 staff. From its head office in Valencia, Iris Analytics serves customers in many countries. The report covers the last 35 months of activity. The company's headcount stands at 17,865 employees. Iris Analytics is a satellite data company. Shares of Iris Analytics (IRIZ) rose this week."
+    },
+    {
+      "id": "doc-20",
+      "date": "2023-04-25",
+      "title": "Juniper Labs: update of 2023-04-25",
+      "text": "Juniper Labs is a payments company. Since its founding in 2004, Juniper Labs has grown. Juniper Labs is led by chief executive Quentin Haddad. Meridian Systems posted $1565 million in revenue. The company opened 38 new offices in the region. Juniper Labs reported revenue of $2183 million for the year. Juniper Labs now employs 19,979 people."
+    },
+    {
+      "id": "doc-21",
+      "date": "2023-02-12",
+      "title": "Iris Analytics: update of 2023-02-12",
+      "text": "The report covers the last 33 months of activity. Iris Analytics is led by chief executive Sven Alvarez. Iris Analytics is headquartered in Toronto. Pinnacle Analytics posted $2527 million in revenue. Iris Analytics was founded in 1986. Its flagship product is Glide 3. Annual revenue reached $225 million."
+    },
+    {
+      "id": "doc-22",
+      "date": "2024-06-19",
+      "title": "Juniper Labs: update of 2024-06-19",
+      "text": "Analysts expect the market to grow by 24% next year. Juniper Labs is led by chief executive Priya Jensen. Juniper Labs works in payments. Rival Cobalt Dynamics has 11,539 staff. Juniper Labs now employs 19,979 people. Juniper Labs sells Harbor 6, its best-known product. Shares of Juniper Labs (JUNZ) rose this week."
+    },
+    {
+      "id": "doc-23",
+      "date": "2025-05-22",
+      "title": "Pinnacle Analytics: update of 2025-05-22",
+      "text": "Shares of Pinnacle Analytics (PINX) rose this week. Pinnacle Analytics is headquartered in Lyon. Pinnacle Analytics reported revenue of $2427 million for the year. Rival Cobalt Dynamics has 17,666 staff. CEO Jonas Ferreira said Pinnacle Analytics expects a busy year. The report covers the last 54 months of activity. The company's headcount stands at 8,119 employees. Pinnacle Analytics works in payments."
+    },
+    {
+      "id": "doc-24",
+      "date": "2023-11-04",
+      "title": "Cobalt Dynamics: update of 2023-11-04",
+      "text": "About 82 customers attended the annual conference. Cobalt Dynamics works in precision agriculture. Its rival Brightline Energy, by contrast, is run by Farid Lindqvist. Annual revenue reached $287 million. Cobalt Dynamics sells Beacon 2, its best-known product. Shares of Cobalt Dynamics (COBZ) rose this week. Cobalt Dynamics is led by chief executive Ines Okafor."
+    },
+    {
+      "id": "doc-25",
+      "date": "2024-07-21",
+      "title": "Fjord Foods: update of 2024-07-21",
+      "text": "Fjord Foods is a logistics software company. Fjord Foods is headquartered in Osaka. Its flagship product is Atlas 8. Cobalt Dynamics competes with its own product, Cascade 7. Fjord Foods was founded in 2013. The report covers the last 50 months of activity. The company's headcount stands at 10,013 employees."
+    },
+    {
+      "id": "doc-26",
+      "date": "2023-09-28",
+      "title": "Brightline Energy: update of 2023-09-28",
+      "text": "Orchard Systems posted $1634 million in revenue. Brightline Energy trades under the ticker BRIQ. Since its founding in 2009, Brightline Energy has grown. Brightline Energy sells Echo 8, its best-known product. Brightline Energy works in satellite data. Annual revenue reached $454 million. The company opened 85 new offices in the region."
+    },
+    {
+      "id": "doc-27",
+      "date": "2025-02-09",
+      "title": "Orchard Systems: update of 2025-02-09",
+      "text": "Orchard Systems was founded in 1978. Shares of Orchard Systems (ORCY) rose this week. Annual revenue reached $1058 million. Orchard Systems sells Keystone 8, its best-known product. From its head office in Denver, Orchard Systems serves customers in many countries. Analysts expect the market to grow by 68% next year. Granite Systems posted $3071 million in revenue."
+    },
+    {
+      "id": "doc-28",
+      "date": "2023-06-20",
+      "title": "Granite Systems: update of 2023-06-20",
+      "text": "From its head office in Turin, Granite Systems serves customers in many countries. Granite Systems works in logistics software. Granite Systems was founded in 1983. Orchard Systems competes with its own product, Ion 8. The report covers the last 22 months of activity. Granite Systems trades under the ticker GRAX. Its flagship product is Harbor 7."
+    },
+    {
+      "id": "doc-29",
+      "date": "2024-11-15",
+      "title": "Meridian Systems: update of 2024-11-15",
+      "text": "Pinnacle Analytics posted $2517 million in revenue. Shares of Meridian Systems (MERQ) rose this week. Meridian Systems is a precision agriculture company. From its head office in Turin, Meridian Systems serves customers in many countries. Meridian Systems sells Flux 4, its best-known product. Analysts expect the market to grow by 76% next year. Meridian Systems reported revenue of $1683 million for the year."
+    },
+    {
+      "id": "doc-30",
+      "date": "2024-04-26",
+      "title": "Juniper Labs: update of 2024-04-26",
+      "text": "Its flagship product is Keystone 7. The report covers the last 11 months of activity. Juniper Labs now employs 19,979 people. Juniper Labs is headquartered in Cork. Since its founding in 2004, Juniper Labs has grown. Juniper Labs is led by chief executive Priya Jensen. Rival Orchard Systems has 16,856 staff."
+    },
+    {
+      "id": "doc-31",
+      "date": "2025-02-22",
+      "title": "Orchard Systems: update of 2025-02-22",
+      "text": "Orchard Systems trades under the ticker ORCY. Orchard Systems reported revenue of $1058 million for the year. The company's headcount stands at 78 employees. The company opened 77 new offices in the region. Orchard Systems is a battery storage company. Competitor Arbor Foods is based in Tallinn. From its head office in Denver, Orchard Systems serves customers in many countries."
+    },
+    {
+      "id": "doc-32",
+      "date": "2023-11-19",
+      "title": "Cobalt Dynamics: update of 2023-11-19",
+      "text": "Cobalt Dynamics is headquartered in Lisbon. Cobalt Dynamics sells Beacon 2, its best-known product. Cobalt Dynamics trades under the ticker COBZ. Competitor Brightline Energy is based in Austin. Annual revenue reached $287 million. Analysts expect the market to grow by 89% next year. Cobalt Dynamics now employs 19,948 people."
+    },
+    {
+      "id": "doc-33",
+      "date": "2024-08-06",
+      "title": "Orchard Systems: update of 2024-08-06",
+      "text": "Orchard Systems now employs 78 people. The company opened 52 new offices in the region. Since its founding in 1978, Orchard Systems has grown. Orchard Systems works in battery storage. Rival Meridian Systems has 23,720 staff. Orchard Systems is led by chief executive Dmitri Lindqvist. Orchard Systems trades under the ticker ORCY."
+    },
+    {
+      "id": "doc-34",
+      "date": "2024-05-27",
+      "title": "Juniper Labs: update of 2024-05-27",
+      "text": "Juniper Labs works in payments. Since its founding in 2004, Juniper Labs has grown. CEO Priya Jensen said Juniper Labs expects a busy year. The company opened 48 new offices in the region. Competitor Fjord Foods is based in Lyon. Juniper Labs now employs 19,979 people. Juniper Labs is headquartered in Cork."
+    },
+    {
+      "id": "doc-35",
+      "date": "2023-07-21",
+      "title": "Iris Analytics: update of 2023-07-21",
+      "text": "Iris Analytics was founded in 1986. Iris Analytics trades under the ticker IRIZ. Its rival Pinnacle Analytics, by contrast, is run by Marta Haddad. Iris Analytics is led by chief executive Sven Alvarez. The company's headcount stands at 17,865 employees. Iris Analytics is headquartered in Valencia. About 58 customers attended the annual conference."
+    },
+    {
+      "id": "doc-36",
+      "date": "2024-05-26",
+      "title": "Meridian Systems: update of 2024-05-26",
+      "text": "Shares of Meridian Systems (MERQ) rose this week. From its head office in Oslo, Meridian Systems serves customers in many countries. Its flagship product is Mosaic 7. Its rival Granite Systems, by contrast, is run by Hugo Kowalski. CEO Nadia Okafor said Meridian Systems expects a busy year. The company opened 89 new offices in the region. Meridian Systems reported revenue of $2023 million for the year."
+    },
+    {
+      "id": "doc-37",
+      "date": "2023-12-02",
+      "title": "Orchard Systems: update of 2023-12-02",
+      "text": "Orchard Systems is headquartered in Oslo. Orchard Systems was founded in 1978. Its flagship product is Nova 4. About 8 customers attended the annual conference. Competitor Granite Systems is based in Oslo. Orchard Systems trades under the ticker ORCY. CEO Dmitri Lindqvist said Orchard Systems expects a busy year."
+    },
+    {
+      "id": "doc-38",
+      "date": "2024-05-06",
+      "title": "Arbor Foods: update of 2024-05-06",
+      "text": "Rival Granite Systems has 1,722 staff. Since its founding in 1995, Arbor Foods has grown. Arbor Foods now employs 19,778 people. From its head office in Tallinn, Arbor Foods serves customers in many countries. Arbor Foods works in satellite data. Shares of Arbor Foods (ARBZ) rose this week. About 11 customers attended the annual conference."
+    },
+    {
+      "id": "doc-39",
+      "date": "2023-08-21",
+      "title": "Arbor Foods: update of 2023-08-21",
+      "text": "The report covers the last 82 months of activity. Arbor Foods is headquartered in Tallinn. Its rival Fjord Foods, by contrast, is run by Sven Moreau. Arbor Foods is led by chief executive Bruno Moreau. Annual revenue reached $3884 million. Arbor Foods was founded in 1995. Shares of Arbor Foods (ARBZ) rose this week."
+    },
+    {
+      "id": "doc-40",
+      "date": "2023-04-12",
+      "title": "Cobalt Dynamics: update of 2023-04-12",
+      "text": "Cobalt Dynamics trades under the ticker COBZ. Analysts expect the market to grow by 44% next year. Cobalt Dynamics works in precision agriculture. Its flagship product is Beacon 2. Cobalt Dynamics is led by chief executive Ines Okafor. Its rival Pinnacle Analytics, by contrast, is run by Dmitri Brandt. Cobalt Dynamics was founded in 2012. Cobalt Dynamics is headquartered in Oslo."
+    }
+  ]
+}

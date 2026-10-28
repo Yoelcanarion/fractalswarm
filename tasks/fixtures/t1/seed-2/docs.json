@@ -1,0 +1,267 @@
+{
+  "seed": "2",
+  "fields": [
+    "ceo",
+    "headquarters",
+    "founded_year",
+    "employees",
+    "revenue_musd",
+    "ticker",
+    "industry",
+    "product"
+  ],
+  "companies": [
+    "Arbor Robotics",
+    "Arbor Systems",
+    "Halcyon Dynamics",
+    "Iris Energy",
+    "Iris Foods",
+    "Juniper Analytics",
+    "Kestrel Dynamics",
+    "Lumen Foods",
+    "Meridian Works",
+    "Pinnacle Dynamics"
+  ],
+  "docs": [
+    {
+      "id": "doc-01",
+      "date": "2023-04-16",
+      "title": "Pinnacle Dynamics: update of 2023-04-16",
+      "text": "Analysts expect the market to grow by 74% next year. Annual revenue reached $868 million. Since its founding in 1986, Pinnacle Dynamics has grown. CEO Elena Jensen said Pinnacle Dynamics expects a busy year. The company's headcount stands at 23,057 employees. Rival Iris Energy has 4,769 staff. Pinnacle Dynamics trades under the ticker PINQ."
+    },
+    {
+      "id": "doc-02",
+      "date": "2024-10-02",
+      "title": "Lumen Foods: update of 2024-10-02",
+      "text": "Lumen Foods trades under the ticker LUMX. CEO Hugo Haddad said Lumen Foods expects a busy year. Annual revenue reached $2377 million. Iris Energy posted $3650 million in revenue. Lumen Foods is headquartered in Lisbon. The report covers the last 89 months of activity. Lumen Foods was founded in 2004."
+    },
+    {
+      "id": "doc-03",
+      "date": "2023-05-11",
+      "title": "Kestrel Dynamics: update of 2023-05-11",
+      "text": "The company opened 86 new offices in the region. From its head office in Osaka, Kestrel Dynamics serves customers in many countries. Since its founding in 2016, Kestrel Dynamics has grown. Kestrel Dynamics works in plant-based foods. Kestrel Dynamics trades under the ticker KESQ. Halcyon Dynamics competes with its own product, Quill 2. Its flagship product is Mosaic 3."
+    },
+    {
+      "id": "doc-04",
+      "date": "2024-12-18",
+      "title": "Halcyon Dynamics: update of 2024-12-18",
+      "text": "About 75 customers attended the annual conference. Halcyon Dynamics trades under the ticker HALQ. Annual revenue reached $3619 million. Halcyon Dynamics sells Echo 2, its best-known product. Halcyon Dynamics is a industrial robotics company. Halcyon Dynamics was founded in 1984. Meridian Works posted $480 million in revenue."
+    },
+    {
+      "id": "doc-05",
+      "date": "2025-04-11",
+      "title": "Arbor Systems: update of 2025-04-11",
+      "text": "Meridian Works competes with its own product, Mosaic 7. The report covers the last 62 months of activity. Shares of Arbor Systems (ARBZ) rose this week. Arbor Systems sells Lattice 2, its best-known product. Arbor Systems works in logistics software. CEO Bruno Ivanova said Arbor Systems expects a busy year. From its head office in Turin, Arbor Systems serves customers in many countries."
+    },
+    {
+      "id": "doc-06",
+      "date": "2024-02-25",
+      "title": "Pinnacle Dynamics: update of 2024-02-25",
+      "text": "Pinnacle Dynamics is led by chief executive Dmitri Eriksen. Arbor Robotics competes with its own product, Cascade 3. Pinnacle Dynamics is headquartered in Tallinn. Pinnacle Dynamics works in medical imaging. Pinnacle Dynamics sells Cascade 3, its best-known product. Analysts expect the market to grow by 39% next year. Shares of Pinnacle Dynamics (PINQ) rose this week."
+    },
+    {
+      "id": "doc-07",
+      "date": "2025-03-03",
+      "title": "Kestrel Dynamics: update of 2025-03-03",
+      "text": "Since its founding in 2016, Kestrel Dynamics has grown. Kestrel Dynamics is a plant-based foods company. Its rival Meridian Works, by contrast, is run by Ada Ferreira. Kestrel Dynamics reported revenue of $1673 million for the year. Shares of Kestrel Dynamics (KESQ) rose this week. Kestrel Dynamics is led by chief executive Nadia Eriksen. Analysts expect the market to grow by 40% next year."
+    },
+    {
+      "id": "doc-08",
+      "date": "2024-08-20",
+      "title": "Halcyon Dynamics: update of 2024-08-20",
+      "text": "From its head office in Leipzig, Halcyon Dynamics serves customers in many countries. Halcyon Dynamics trades under the ticker HALQ. The report covers the last 35 months of activity. Its flagship product is Echo 2. Halcyon Dynamics is led by chief executive Hugo Okafor. Annual revenue reached $738 million. Arbor Robotics competes with its own product, Atlas 4."
+    },
+    {
+      "id": "doc-09",
+      "date": "2025-01-14",
+      "title": "Iris Energy: update of 2025-01-14",
+      "text": "Iris Energy works in industrial robotics. Iris Energy trades under the ticker IRIX. Iris Energy now employs 16,784 people. Competitor Arbor Robotics is based in Toronto. From its head office in Valencia, Iris Energy serves customers in many countries. Iris Energy sells Orbit 7, its best-known product. About 53 customers attended the annual conference."
+    },
+    {
+      "id": "doc-10",
+      "date": "2025-01-15",
+      "title": "Halcyon Dynamics: update of 2025-01-15",
+      "text": "Arbor Systems competes with its own product, Beacon 5. Annual revenue reached $3619 million. Halcyon Dynamics now employs 4,290 people. Halcyon Dynamics is headquartered in Toronto. Its flagship product is Lattice 5. Halcyon Dynamics is led by chief executive Hugo Okafor. The report covers the last 36 months of activity."
+    },
+    {
+      "id": "doc-11",
+      "date": "2024-03-30",
+      "title": "Iris Foods: update of 2024-03-30",
+      "text": "Competitor Lumen Foods is based in Lisbon. Iris Foods sells Relay 5, its best-known product. Iris Foods is led by chief executive Sven Moreau. Iris Foods now employs 10,407 people. About 60 customers attended the annual conference. From its head office in Lyon, Iris Foods serves customers in many countries. Iris Foods reported revenue of $228 million for the year."
+    },
+    {
+      "id": "doc-12",
+      "date": "2023-02-11",
+      "title": "Arbor Robotics: update of 2023-02-11",
+      "text": "Arbor Robotics reported revenue of $3365 million for the year. The report covers the last 48 months of activity. Arbor Robotics trades under the ticker ARBQ. Arbor Robotics is a precision agriculture company. The company's headcount stands at 21,635 employees. Rival Halcyon Dynamics has 2,196 staff. Arbor Robotics was founded in 2005."
+    },
+    {
+      "id": "doc-13",
+      "date": "2025-03-14",
+      "title": "Arbor Systems: update of 2025-03-14",
+      "text": "Arbor Systems works in logistics software. Arbor Systems trades under the ticker ARBZ. Arbor Systems reported revenue of $1090 million for the year. Rival Lumen Foods has 19,571 staff. Analysts expect the market to grow by 17% next year. Arbor Systems now employs 16,904 people. Arbor Systems was founded in 1996."
+    },
+    {
+      "id": "doc-14",
+      "date": "2025-04-01",
+      "title": "Iris Foods: update of 2025-04-01",
+      "text": "Since its founding in 1977, Iris Foods has grown. From its head office in Lyon, Iris Foods serves customers in many countries. Competitor Arbor Robotics is based in Lisbon. The company opened 87 new offices in the region. Iris Foods works in battery storage. Annual revenue reached $542 million. Shares of Iris Foods (IRIX) rose this week."
+    },
+    {
+      "id": "doc-15",
+      "date": "2023-08-28",
+      "title": "Juniper Analytics: update of 2023-08-28",
+      "text": "Juniper Analytics is led by chief executive Rosa Alvarez. The company's headcount stands at 15,770 employees. Arbor Systems competes with its own product, Glide 8. Its flagship product is Flux 5. Annual revenue reached $1957 million. The report covers the last 70 months of activity. From its head office in Porto, Juniper Analytics serves customers in many countries. Juniper Analytics trades under the ticker JUNX."
+    },
+    {
+      "id": "doc-16",
+      "date": "2023-04-14",
+      "title": "Juniper Analytics: update of 2023-04-14",
+      "text": "The company opened 61 new offices in the region. From its head office in Porto, Juniper Analytics serves customers in many countries. Competitor Arbor Systems is based in Leipzig. Juniper Analytics is a battery storage company. Juniper Analytics sells Flux 5, its best-known product. Juniper Analytics was founded in 2015. Juniper Analytics is led by chief executive Rosa Alvarez."
+    },
+    {
+      "id": "doc-17",
+      "date": "2023-09-10",
+      "title": "Arbor Systems: update of 2023-09-10",
+      "text": "Competitor Pinnacle Dynamics is based in Osaka. Arbor Systems trades under the ticker ARBZ. Analysts expect the market to grow by 79% next year. Annual revenue reached $1090 million. From its head office in Nantes, Arbor Systems serves customers in many countries. CEO Jonas Alvarez said Arbor Systems expects a busy year. Its flagship product is Lattice 2."
+    },
+    {
+      "id": "doc-18",
+      "date": "2023-04-22",
+      "title": "Iris Energy: update of 2023-04-22",
+      "text": "Iris Energy reported revenue of $2275 million for the year. Its flagship product is Orbit 7. Juniper Analytics competes with its own product, Relay 2. The company opened 56 new offices in the region. Since its founding in 1998, Iris Energy has grown. The company's headcount stands at 16,784 employees. Shares of Iris Energy (IRIX) rose this week."
+    },
+    {
+      "id": "doc-19",
+      "date": "2023-06-12",
+      "title": "Iris Foods: update of 2023-06-12",
+      "text": "The report covers the last 59 months of activity. Iris Foods reported revenue of $228 million for the year. CEO Sven Moreau said Iris Foods expects a busy year. Iris Foods trades under the ticker IRIX. Iris Foods was founded in 1977. Its rival Meridian Works, by contrast, is run by Farid Jensen. Iris Foods works in battery storage."
+    },
+    {
+      "id": "doc-20",
+      "date": "2024-08-05",
+      "title": "Iris Foods: update of 2024-08-05",
+      "text": "Since its founding in 1977, Iris Foods has grown. Iris Foods is headquartered in Lyon. Pinnacle Dynamics competes with its own product, Ion 5. The company opened 59 new offices in the region. The company's headcount stands at 5,841 employees. Its flagship product is Quill 3. Iris Foods reported revenue of $213 million for the year."
+    },
+    {
+      "id": "doc-21",
+      "date": "2025-04-05",
+      "title": "Meridian Works: update of 2025-04-05",
+      "text": "Meridian Works now employs 13,050 people. Meridian Works reported revenue of $1054 million for the year. Meridian Works is a industrial robotics company. Meridian Works was founded in 2014. Its flagship product is Beacon 2. About 82 customers attended the annual conference. Rival Pinnacle Dynamics has 24,829 staff."
+    },
+    {
+      "id": "doc-22",
+      "date": "2025-03-05",
+      "title": "Iris Energy: update of 2025-03-05",
+      "text": "Its rival Kestrel Dynamics, by contrast, is run by Dmitri Jensen. Iris Energy is a industrial robotics company. The company opened 34 new offices in the region. CEO Sven Petrov said Iris Energy expects a busy year. Iris Energy now employs 16,784 people. Annual revenue reached $3562 million. Iris Energy is headquartered in Valencia. Since its founding in 1998, Iris Energy has grown."
+    },
+    {
+      "id": "doc-23",
+      "date": "2025-06-17",
+      "title": "Kestrel Dynamics: update of 2025-06-17",
+      "text": "The company's headcount stands at 3,346 employees. Since its founding in 2016, Kestrel Dynamics has grown. Kestrel Dynamics is led by chief executive Nadia Eriksen. Its rival Halcyon Dynamics, by contrast, is run by Luis Okafor. Kestrel Dynamics reported revenue of $2138 million for the year. Analysts expect the market to grow by 66% next year. Kestrel Dynamics works in plant-based foods."
+    },
+    {
+      "id": "doc-24",
+      "date": "2025-06-13",
+      "title": "Meridian Works: update of 2025-06-13",
+      "text": "Meridian Works is a industrial robotics company. Its rival Juniper Analytics, by contrast, is run by Tomas Nakamura. Shares of Meridian Works (MERZ) rose this week. The report covers the last 13 months of activity. Its flagship product is Beacon 2. CEO Sven Nakamura said Meridian Works expects a busy year. Since its founding in 2014, Meridian Works has grown."
+    },
+    {
+      "id": "doc-25",
+      "date": "2023-01-27",
+      "title": "Juniper Analytics: update of 2023-01-27",
+      "text": "Analysts expect the market to grow by 30% next year. CEO Rosa Alvarez said Juniper Analytics expects a busy year. Juniper Analytics works in battery storage. The company's headcount stands at 15,770 employees. Halcyon Dynamics competes with its own product, Nova 5. Juniper Analytics was founded in 2015. Its flagship product is Flux 5."
+    },
+    {
+      "id": "doc-26",
+      "date": "2023-02-15",
+      "title": "Iris Energy: update of 2023-02-15",
+      "text": "Iris Energy reported revenue of $2275 million for the year. Iris Energy works in industrial robotics. Meridian Works posted $704 million in revenue. Iris Energy trades under the ticker IRIX. From its head office in Valencia, Iris Energy serves customers in many countries. The company opened 11 new offices in the region. Iris Energy now employs 16,784 people."
+    },
+    {
+      "id": "doc-27",
+      "date": "2023-05-02",
+      "title": "Lumen Foods: update of 2023-05-02",
+      "text": "Juniper Analytics posted $3644 million in revenue. The report covers the last 9 months of activity. Annual revenue reached $2377 million. Lumen Foods is headquartered in Lisbon. Lumen Foods sells Lattice 4, its best-known product. The company's headcount stands at 21,256 employees. Lumen Foods was founded in 2004."
+    },
+    {
+      "id": "doc-28",
+      "date": "2025-04-08",
+      "title": "Juniper Analytics: update of 2025-04-08",
+      "text": "Juniper Analytics is led by chief executive Rosa Eriksen. Juniper Analytics is headquartered in Osaka. The company opened 12 new offices in the region. Juniper Analytics trades under the ticker JUNX. Its flagship product is Relay 7. Rival Arbor Robotics has 10,575 staff. Juniper Analytics now employs 15,770 people."
+    },
+    {
+      "id": "doc-29",
+      "date": "2023-12-28",
+      "title": "Arbor Robotics: update of 2023-12-28",
+      "text": "About 60 customers attended the annual conference. Iris Foods posted $179 million in revenue. Arbor Robotics is headquartered in Valencia. Arbor Robotics is led by chief executive Marta Brandt. Arbor Robotics trades under the ticker ARBQ. Arbor Robotics reported revenue of $3365 million for the year. Arbor Robotics works in precision agriculture."
+    },
+    {
+      "id": "doc-30",
+      "date": "2024-01-15",
+      "title": "Lumen Foods: update of 2024-01-15",
+      "text": "Lumen Foods is headquartered in Lisbon. Analysts expect the market to grow by 47% next year. Lumen Foods works in plant-based foods. Kestrel Dynamics competes with its own product, Glide 3. Its flagship product is Lattice 4. Lumen Foods now employs 21,256 people. Lumen Foods trades under the ticker LUMX."
+    },
+    {
+      "id": "doc-31",
+      "date": "2023-08-07",
+      "title": "Kestrel Dynamics: update of 2023-08-07",
+      "text": "Kestrel Dynamics works in plant-based foods. Shares of Kestrel Dynamics (KESQ) rose this week. Kestrel Dynamics sells Mosaic 3, its best-known product. Kestrel Dynamics now employs 3,346 people. Kestrel Dynamics is led by chief executive Nadia Eriksen. Lumen Foods competes with its own product, Keystone 2. Analysts expect the market to grow by 4% next year."
+    },
+    {
+      "id": "doc-32",
+      "date": "2025-01-23",
+      "title": "Arbor Robotics: update of 2025-01-23",
+      "text": "Since its founding in 2005, Arbor Robotics has grown. From its head office in Tallinn, Arbor Robotics serves customers in many countries. Arbor Robotics now employs 21,635 people. The report covers the last 8 months of activity. Arbor Robotics reported revenue of $3365 million for the year. Arbor Robotics is a precision agriculture company. Competitor Iris Foods is based in Oslo."
+    },
+    {
+      "id": "doc-33",
+      "date": "2023-09-20",
+      "title": "Pinnacle Dynamics: update of 2023-09-20",
+      "text": "Kestrel Dynamics competes with its own product, Cascade 2. Pinnacle Dynamics sells Cascade 3, its best-known product. Pinnacle Dynamics was founded in 1986. The company opened 60 new offices in the region. Pinnacle Dynamics is led by chief executive Dmitri Eriksen. Pinnacle Dynamics trades under the ticker PINQ. The company's headcount stands at 3,526 employees."
+    },
+    {
+      "id": "doc-34",
+      "date": "2024-04-17",
+      "title": "Lumen Foods: update of 2024-04-17",
+      "text": "The company's headcount stands at 16,336 employees. Lumen Foods works in plant-based foods. Rival Pinnacle Dynamics has 167 staff. Annual revenue reached $2377 million. Analysts expect the market to grow by 84% next year. Lumen Foods trades under the ticker LUMX. Lumen Foods sells Lattice 4, its best-known product."
+    },
+    {
+      "id": "doc-35",
+      "date": "2024-11-23",
+      "title": "Arbor Robotics: update of 2024-11-23",
+      "text": "From its head office in Lyon, Arbor Robotics serves customers in many countries. Competitor Meridian Works is based in Nantes. Arbor Robotics now employs 21,635 people. Its flagship product is Relay 6. Arbor Robotics is led by chief executive Marta Brandt. About 84 customers attended the annual conference. Shares of Arbor Robotics (ARBQ) rose this week. Arbor Robotics reported revenue of $3365 million for the year."
+    },
+    {
+      "id": "doc-36",
+      "date": "2023-06-18",
+      "title": "Pinnacle Dynamics: update of 2023-06-18",
+      "text": "Pinnacle Dynamics is headquartered in Turin. About 69 customers attended the annual conference. The company's headcount stands at 23,057 employees. Its flagship product is Nova 5. Pinnacle Dynamics trades under the ticker PINQ. Competitor Arbor Robotics is based in Valencia. Pinnacle Dynamics works in medical imaging."
+    },
+    {
+      "id": "doc-37",
+      "date": "2023-07-21",
+      "title": "Meridian Works: update of 2023-07-21",
+      "text": "Meridian Works sells Jade 7, its best-known product. The company's headcount stands at 13,050 employees. Meridian Works is a industrial robotics company. From its head office in Lyon, Meridian Works serves customers in many countries. Halcyon Dynamics competes with its own product, Harbor 2. Analysts expect the market to grow by 29% next year. Meridian Works was founded in 2014."
+    },
+    {
+      "id": "doc-38",
+      "date": "2023-04-27",
+      "title": "Halcyon Dynamics: update of 2023-04-27",
+      "text": "The report covers the last 57 months of activity. Shares of Halcyon Dynamics (HALQ) rose this week. Since its founding in 1984, Halcyon Dynamics has grown. CEO Hugo Okafor said Halcyon Dynamics expects a busy year. Halcyon Dynamics is headquartered in Lyon. Juniper Analytics posted $2171 million in revenue. Halcyon Dynamics reported revenue of $738 million for the year."
+    },
+    {
+      "id": "doc-39",
+      "date": "2025-06-02",
+      "title": "Meridian Works: update of 2025-06-02",
+      "text": "The company opened 71 new offices in the region. Meridian Works trades under the ticker MERZ. Annual revenue reached $1054 million. Iris Energy posted $3390 million in revenue. Meridian Works is a industrial robotics company. Since its founding in 2014, Meridian Works has grown. Meridian Works sells Beacon 2, its best-known product."
+    },
+    {
+      "id": "doc-40",
+      "date": "2023-06-02",
+      "title": "Arbor Systems: update of 2023-06-02",
+      "text": "Annual revenue reached $1090 million. The report covers the last 34 months of activity. CEO Dmitri Ivanova said Arbor Systems expects a busy year. From its head office in Cork, Arbor Systems serves customers in many countries. Arbor Systems is a logistics software company. Its rival Juniper Analytics, by contrast, is run by Ada Brandt. Its flagship product is Lattice 5."
+    }
+  ]
+}
