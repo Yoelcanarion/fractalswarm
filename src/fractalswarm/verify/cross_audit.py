@@ -20,7 +20,7 @@ a contract's verification, after the deterministic checks and the judge:
 
 The audit is off unless the TaskSpec asks for it (``cross_audit: true``). The auditor's call
 and its answer are in the log, so a dead owner's heir adopts the verdict instead of asking
-again, and an owner whose auditor died asks the next one (``AuditView``).
+again, and an owner whose auditor died asks the next one (``CrossAuditView``).
 """
 
 import random
@@ -191,7 +191,7 @@ class VerifyAudited(Payload):
 # -- the audit as a view of the log -------------------------------------------------------
 
 
-class AuditView:
+class CrossAuditView:
     """What the log says about audits, for the owner, its heir and the auditors:
 
     - ``sampled``: the sampling decision of each (contract, attempt), the first one wins;
@@ -201,7 +201,7 @@ class AuditView:
     - ``failed``: the attempts whose audit failed, by contract.
     """
 
-    name = "audit"
+    name = "cross_audit"
 
     def __init__(self) -> None:
         self.sampled: dict[Key, dict[str, Any]] = {}

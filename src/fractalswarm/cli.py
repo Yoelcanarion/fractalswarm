@@ -128,6 +128,12 @@ def run(
             "real backend, heuristic with the fake one"
         ),
     ] = None,
+    cross_audit: Annotated[
+        bool, typer.Option(help="a sibling audits sampled contracts (spec §11.3); swarm only")
+    ] = False,
+    feasibility_report: Annotated[
+        bool, typer.Option(help="record the feasibility report at plan approval (spec §12)")
+    ] = False,
 ) -> None:
     """Run a task (fake LLM by default) into runs/<run_id>."""
     import asyncio
@@ -148,6 +154,10 @@ def run(
     settings = _settings()
     spec = TaskSpec.load(taskspec)
     params = run_params(spec)
+    if cross_audit:
+        params["cross_audit"] = True
+    if feasibility_report:
+        params["feasibility_report"] = True
     if chaos == "kill-half":
         params |= {"chaos": kill_half_plan(spec.seed), "membership": True}
     elif chaos in ("C0", "C1", "C2", "C3"):

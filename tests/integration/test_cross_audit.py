@@ -14,9 +14,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from typer.testing import CliRunner
 
 from fractalswarm.bench.scoring import RunMetrics, load_events, score_run
 from fractalswarm.bench.workflows import CALIBRATION, bench_script, fake_backend
+from fractalswarm.cli import app as cli
 from fractalswarm.comms.chaos import ChaosAction, ChaosPlan, plan_from
 from fractalswarm.kernel.events import Event
 from fractalswarm.llm.calibrate import Calibration
@@ -516,3 +518,47 @@ async def test_when_the_audited_squad_dies_its_heir_adopts_the_verdict_not_a_sec
     assert all(n == 1 for n in calls.values())
     report = await replay_run(run)
     assert report.ok, report.detail
+
+
+async def test_a_member_respawned_into_a_dead_group_audits_too(tmp_path: Path) -> None:
+    """Both session owners of a track die: the track lead spawns a new member into the group
+    (spec §5.3), and it must carry the opt-in, or its contracts would skip the audit."""
+    plan = ChaosPlan(
+        profile="audit-group",
+        seed="1",
+        actions=(
+            ChaosAction(at=0.30, kind="kill_coordinator", target="o2.1"),
+            ChaosAction(at=0.45, kind="kill_coordinator", target="o2.2"),
+        ),
+    )
+    params = params_for(chaos=plan.model_dump(mode="json"), membership=True)
+    run = await record(tmp_path / "group", params)
+    log = load_events(run)
+    check_the_audit(log)  # every verified contract has a sampling decision, whoever owned it
+    assert kills(log) == ["o2.1", "o2.2"]
+    (respawned,) = [
+        e.payload for e in of_type(log, "actor.spawned") if e.payload["actor_id"] == "o2.3"
+    ]
+    assert respawned["args"]["audit"] is True and respawned["args"]["bare"] is True
+    assert any(e.actor == "o2.3" for e in of_type(log, "contract.verified"))
+    report = await replay_run(run)
+    assert report.ok, report.detail
+
+
+def test_the_cli_turns_the_audit_and_the_report_on(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FRACTALSWARM_RUNS_DIR", str(tmp_path))
+    monkeypatch.setenv("FRACTALSWARM_LEDGER_PATH", str(tmp_path / "ledger.sqlite"))
+    flags = ["--cross-audit", "--feasibility-report"]
+    result = CliRunner().invoke(cli, ["run", str(TASKSPEC), "--run-id", "cli", *flags])
+    assert result.exit_code == 0, result.output
+    types = {e.type for e in load_events(tmp_path / "cli")}
+    assert types >= AUDIT_TYPES and "plan.feasibility" in types
+    verified = CliRunner().invoke(cli, ["replay", "cli", "--verify"])
+    assert verified.exit_code == 0 and verified.output.startswith("MATCH"), verified.output
+    plain = CliRunner().invoke(cli, ["run", str(TASKSPEC), "--run-id", "plain"])
+    assert plain.exit_code == 0, plain.output
+    assert not (AUDIT_TYPES | {"plan.feasibility"}) & {
+        e.type for e in load_events(tmp_path / "plain")
+    }

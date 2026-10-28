@@ -16,7 +16,7 @@ from fractalswarm.planning.planner import read_blocks
 from fractalswarm.verify.cross_audit import (
     HIGH_RISK,
     MID_RISK,
-    AuditView,
+    CrossAuditView,
     audit_rate,
     audit_request,
     draw,
@@ -231,7 +231,7 @@ def request_message(to: str, attempt: int = 0) -> Event:
 
 
 def test_the_view_follows_a_request_from_ask_to_verdict() -> None:
-    view = AuditView()
+    view = CrossAuditView()
     key = ("g/place", 0)
     view.apply(request_message("o1.2"))
     assert view.asked(key) == ["o1.2"] and view.working(key) == [] and key not in view.verdicts
@@ -245,7 +245,7 @@ def test_the_view_follows_a_request_from_ask_to_verdict() -> None:
 
 
 def test_a_killed_auditors_call_leaves_no_verdict_and_the_first_answer_wins() -> None:
-    view = AuditView()
+    view = CrossAuditView()
     key = ("g/place", 0)
     tag = "audit|g|place|0"
     view.apply(
@@ -270,7 +270,7 @@ def test_a_killed_auditors_call_leaves_no_verdict_and_the_first_answer_wins() ->
 
 
 def test_other_effects_and_other_attempts_are_not_audits() -> None:
-    view = AuditView()
+    view = CrossAuditView()
     view.apply(
         event(
             "effect.started",
@@ -286,7 +286,7 @@ def test_other_effects_and_other_attempts_are_not_audits() -> None:
 
 
 def test_the_view_keeps_the_first_sampling_decision_and_the_failed_attempts() -> None:
-    view = AuditView()
+    view = CrossAuditView()
     first = {"work": "g/place", "attempt": 0, "selected": True, "rate": 1.0}
     view.apply(event("verify.sampled", first))
     view.apply(event("verify.sampled", first | {"selected": False}))

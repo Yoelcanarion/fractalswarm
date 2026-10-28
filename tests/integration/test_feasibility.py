@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 
 from fractalswarm.api.app import create_app
 from fractalswarm.bench.scoring import load_events
+from fractalswarm.bench.tasks.t2_conference.generator import generate
 from fractalswarm.bench.workflows import fake_backend
 from fractalswarm.cli import app as cli
 from fractalswarm.comms.chaos import plan_from
@@ -106,6 +107,17 @@ def test_the_report_is_off_unless_the_taskspec_asks(runs) -> None:
     spec_log = load_events(runs["spec"])
     assert len(reports(spec_log)) == 1
     assert reports(spec_log)[0].payload == reports(load_events(runs["on"]))[0].payload
+
+
+async def test_a_quarantined_attachment_is_a_policy_flag(tmp_path: Path) -> None:
+    """The root scans every attachment before planning, so the report knows what was held."""
+    corpus, truth = generate(1, poison=1, wording="explicit")
+    params = run_params(TaskSpec.load(TASKSPEC)) | {"corpus": corpus, "truth": truth}
+    run = await record(tmp_path / "poisoned", params | {"feasibility_report": True})
+    (found,) = reports(load_events(run))
+    flags = FeasibilityReport.model_validate(found.payload).policy_flags
+    (email_id,) = truth["poisoned"]
+    assert any("1 attachment(s) were quarantined" in flag and email_id in flag for flag in flags)
 
 
 def test_the_flag_is_passed_down_so_an_heir_of_the_root_can_emit_it(runs) -> None:

@@ -39,7 +39,7 @@ from fractalswarm.kernel.scheduler import ActorKind, Command, Spawn
 from fractalswarm.planning.feasibility import RunConfigView
 from fractalswarm.planning.risk import RoleHistoryView
 from fractalswarm.planning.scope import ScopeView
-from fractalswarm.verify.cross_audit import AuditView
+from fractalswarm.verify.cross_audit import CrossAuditView
 
 ROOT = "o0"
 CONTRACTS_PER_SESSION = 3  # extract, place, blurb
@@ -78,7 +78,7 @@ class SwarmScenario:
             TreeView(),
             ScopeView(),
             RoleHistoryView(),
-            AuditView(),
+            CrossAuditView(),
             RunConfigView(),
         ]
 

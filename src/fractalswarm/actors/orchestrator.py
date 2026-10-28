@@ -752,7 +752,7 @@ def _reused(reused: bool) -> dict[str, Any]:
 def _vet(state: dict[str, Any], gid: str, cid: str, view: View):
     """The last gate before booking: when the run asks for the audit, sample the contract and
     have a sibling audit it. Off, this is just ``_accept``."""
-    audits = view.views.get("audit")
+    audits = view.views.get("cross_audit")
     if not state["audit"] or audits is None:
         return _accept(state, gid, cid, view)
     contract = Contract.model_validate(state["goals"][gid]["contracts"][cid])
@@ -784,7 +784,7 @@ def _audit(state: dict[str, Any], gid: str, cid: str, view: View):
     owner's request, or an auditor that died after answering)."""
     entry = state["goals"][gid]
     contract = Contract.model_validate(entry["contracts"][cid])
-    audits = view.views["audit"]
+    audits = view.views["cross_audit"]
     work = f"{gid}/{cid}"
     key = (work, contract.attempt)
     found = audits.verdicts.get(key)
@@ -832,7 +832,7 @@ def _orchestrator_live(state: dict[str, Any], view: View, actor: str) -> bool:
 def _audit_requested(state: dict[str, Any], body: dict[str, Any], view: View):
     """A sibling asks this orchestrator to audit one of its contracts: one LLM call, billed to
     the audited squad. A call already running or answered (in the log) is not asked twice."""
-    audits = view.views.get("audit")
+    audits = view.views.get("cross_audit")
     key = (f"{body['goal_id']}/{body['contract_id']}", body["attempt"])
     if audits is None or key in audits.verdicts or audits.working(key):
         return state, []
