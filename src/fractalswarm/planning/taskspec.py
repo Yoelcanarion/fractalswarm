@@ -11,8 +11,15 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from fractalswarm.config import CONFIG_DIR
+from fractalswarm.market.spend_breaker import SpendBreakerConfig
 
 REPO_ROOT = CONFIG_DIR.parent
+AUTOSCALE_KEYS = (
+    "max_orchestrators_per_group",
+    "max_agents_per_orchestrator",
+    "max_depth",
+    "complexity_threshold",
+)
 
 
 def _defaults() -> dict[str, Any]:
@@ -25,6 +32,11 @@ class Scaling(BaseModel):
     mode: Literal["exact", "autoscale"] = "exact"
     fanout: list[int] = Field(default_factory=lambda: [3, 2])
     agents_per_leaf: int = Field(default=2, ge=1)
+    # Autoscale only (spec §7.3); left out of an exact run's recorded spec.
+    max_orchestrators_per_group: int = Field(default=6, ge=1)
+    max_agents_per_orchestrator: int = Field(default=4, ge=1)
+    max_depth: int = Field(default=2, ge=1)
+    complexity_threshold: int = Field(default=1, ge=0)
 
     @field_validator("fanout")
     @classmethod
@@ -32,6 +44,21 @@ class Scaling(BaseModel):
         if not value or any(n < 1 for n in value):
             raise ValueError("fanout needs at least one level, each >= 1")
         return value
+
+
+class Market(BaseModel):
+    """How a parent splits its budget among its children (spec §7.2). ``proportional`` is the
+    default: no epochs run and money flows as before. ``auction`` runs the epoch auction."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["proportional", "auction"] = "proportional"
+    epoch_interval_s: float = Field(default=15.0, gt=0)
+    epoch_max_completions: int = Field(default=10, ge=1)
+    floor_usd: float = Field(default=0.05, gt=0)  # what a squad may always commit
+    # The global spend breaker (spec §8): burn above 20% of the remaining budget per minute
+    # pauses new contracts for 30 s. It needs the economy's view, so it turns the epochs on.
+    breaker: bool = False
 
 
 class TaskInputs(BaseModel):
@@ -57,6 +84,7 @@ class TaskSpec(BaseModel):
     seed: str = "1"
     budget_usd: float | None = Field(default=None, gt=0)
     scaling: Scaling = Field(default_factory=Scaling)
+    market: Market = Field(default_factory=Market)
     max_steps: int = Field(default=8, ge=1)
     max_attempts: int = Field(default=6, ge=1)
     contributor_opt_in: bool = False
@@ -78,6 +106,15 @@ class TaskSpec(BaseModel):
                 mode=defaults["scaling"]["mode"],
                 fanout=list(exact["fanout"]),
                 agents_per_leaf=int(exact["agents_per_leaf"]),
+                **defaults["scaling"]["autoscale"],
+            )
+        if "market" not in data:
+            spec.market = Market(
+                **{
+                    key: value
+                    for key, value in defaults["market"].items()
+                    if key in Market.model_fields
+                }
             )
         if spec.budget_usd is None:
             spec.budget_usd = float(defaults["budget"]["run_cap_usd"])
@@ -108,7 +145,7 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
         if spec.inputs.fixture and Path(spec.inputs.fixture).resolve().is_relative_to(REPO_ROOT):
             fixture = Path(spec.inputs.fixture).resolve().relative_to(REPO_ROOT)
             recorded["inputs"]["fixture"] = fixture.as_posix()  # no machine-specific paths
-        return {"spec": recorded, "corpus": corpus(spec), "truth": {}}
+        return _with_economy(spec, {"spec": recorded, "corpus": corpus(spec), "truth": {}})
     if spec.task not in ("t2_conference", "t1_extraction"):
         raise ValueError(
             f"task {spec.task!r} is not implemented yet (t2_conference, t1_extraction, t3_report)"
@@ -132,7 +169,22 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
     recorded = spec.model_dump(mode="json")
     if fixture.resolve().is_relative_to(REPO_ROOT):  # no machine-specific paths in the log
         recorded["inputs"]["fixture"] = fixture.resolve().relative_to(REPO_ROOT).as_posix()
-    return {"spec": recorded, "corpus": corpus, "truth": truth}
+    return _with_economy(spec, {"spec": recorded, "corpus": corpus, "truth": truth})
+
+
+def _with_economy(spec: TaskSpec, params: dict[str, Any]) -> dict[str, Any]:
+    """Leave the economy's defaults out of the recorded spec, so a default run's log stays as
+    it was, and add the economy's resolved numbers when it is on."""
+    recorded = params["spec"]
+    if spec.market == Market():  # opt-in settings stay out of a default run's log
+        del recorded["market"]
+    if spec.scaling.mode == "exact":
+        for key in AUTOSCALE_KEYS:
+            del recorded["scaling"][key]
+    economy = market_params(spec)
+    if economy is not None:
+        params["market"] = economy
+    return params
 
 
 def _t1_fixture(spec: TaskSpec, fixture: Path) -> tuple[dict[str, Any], dict[str, Any], Path]:
@@ -148,3 +200,41 @@ def _t1_fixture(spec: TaskSpec, fixture: Path) -> tuple[dict[str, Any], dict[str
     corpus, truth = load_fixture(fixture)
     groups, batches = spec.scaling.fanout
     return corpus | {"groups": groups, "batches": batches}, truth, fixture
+
+
+def market_params(spec: TaskSpec) -> dict[str, Any] | None:
+    """The economy's settings with every number resolved, or ``None`` when it is off.
+
+    The epoch machinery runs for ``market.mode: auction``, for autoscale (which needs the $ and
+    rate-limit allocations) and for the global spend breaker (which needs the view). The
+    numbers are recorded in the run's params, so replay never reads a config file.
+    """
+    if (
+        spec.market.mode != "auction"
+        and spec.scaling.mode != "autoscale"
+        and not spec.market.breaker
+    ):
+        return None
+    economy = _defaults()["market"]
+    limits = yaml.safe_load((CONFIG_DIR / "prices.yaml").read_text(encoding="utf-8"))["rate_limits"]
+    return {
+        "mode": spec.market.mode,
+        "epoch_interval_ms": round(spec.market.epoch_interval_s * 1000),
+        "epoch_max_completions": spec.market.epoch_max_completions,
+        "floor_usd": spec.market.floor_usd,
+        "plan_usd": economy["plan_usd"],
+        "contract_usd": economy["contract_usd"],
+        "contracts_per_leaf": economy["contracts_per_leaf"],
+        "rpm_per_agent": economy["rpm_per_agent"],
+        "tpm_per_agent": economy["tpm_per_agent"],
+        "fanout": list(spec.scaling.fanout),
+        "leaf_level": spec.scaling.max_depth
+        if spec.scaling.mode == "autoscale"
+        else len(spec.scaling.fanout),
+        "ladder": _defaults()["budget"]["ladder"],
+        "breaker": SpendBreakerConfig.load().model_dump() if spec.market.breaker else None,
+        "limits": {
+            model: {"limit_rpm": found["rpm"], "limit_tpm": found["tpm"]}
+            for model, found in sorted(limits.items())
+        },
+    }
