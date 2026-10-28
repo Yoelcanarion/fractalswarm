@@ -131,6 +131,7 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "crashes": 0,
         "pending_crashes": 0,
         "crashed_agents": [],
+        "dropped": [],  # goals dropped while the log called this incarnation dead
     }
     if state["membership"]:
         state["det"] = Detector(member=actor_id, role=ROLE, group=args.get("parent"))
@@ -863,10 +864,13 @@ def _zombie(state: dict[str, Any], view: View) -> bool:
 
 
 def _drop_goals(state: dict[str, Any]) -> dict[str, Any]:
-    """The log says this incarnation is dead: its goals belong to its heirs now."""
+    """The log says this incarnation is dead: its goals belong to its heirs now. They are
+    remembered: if this member is back (a new incarnation) before any heir took them, nobody
+    else ever will, so it takes them back from the log (``_reconcile``)."""
     if not state["goals"]:
         return state
-    return {**state, "goals": {}, "child_of": {}}
+    dropped = sorted(set(state["dropped"]) | set(state["goals"]))
+    return {**state, "goals": {}, "child_of": {}, "dropped": dropped}
 
 
 def _reconcile(state: dict[str, Any], view: View):
@@ -878,6 +882,12 @@ def _reconcile(state: dict[str, Any], view: View):
     me = state["id"]
     commands: list[Command] = []
     respawned: set[str | None] = set()
+    for gid in state["dropped"]:
+        record = tree.goals.get(gid)
+        if record is not None and not record.done and record.owner == me:
+            state, more = _adopt(state, gid, view)  # back alive and still the owner
+            commands += more
+    state = {**state, "dropped": []}
     for gid in sorted(tree.goals):
         record = tree.goals[gid]
         if record.done or gid in state["goals"] or not members.is_gone(record.owner):

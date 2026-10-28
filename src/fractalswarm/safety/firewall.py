@@ -218,6 +218,11 @@ class Firewall:
             findings=report.kinds,
         )
 
+    def warm(self) -> None:
+        """Load the model now. Loading takes seconds of CPU that would otherwise starve a live
+        run's event loop (a real C3 run missed heartbeats and declared a member dead)."""
+        self.backend.score("warm-up")
+
     def scan_sync(self, text: str, surface: Surface, source_id: str) -> Verdict:
         return self.verdict(text, surface, source_id, self.backend.score(text))
 

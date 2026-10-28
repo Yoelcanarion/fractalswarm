@@ -170,6 +170,7 @@ def run(
         llm = FaultyBackend(llm, ApiFaults(seed=spec.seed, rate=rate))
     hf_token = settings.hf_token.get_secret_value() if settings.hf_token else None
     scanner = Firewall(default_backend(hf_token) if firewall == "auto" else HeuristicBackend())
+    scanner.warm()  # before the clock starts
 
     run_id = run_id or f"{taskspec.stem}-{datetime.now():%Y%m%d-%H%M%S}"
     result = asyncio.run(
