@@ -330,7 +330,11 @@ class FrameworkRuntime:
         return tracked if self.mode == "live" else inline
 
     async def _quiesce(self) -> None:
-        """Let the program run until every task of it waits on an effect: nothing is ready."""
+        """Let the program run until every task of it waits on an effect: nothing is ready.
+
+        The test is the event loop's ready queue (``loop._ready``, which asyncio does not
+        expose): empty means no task of the program can take a step until a completion arrives.
+        """
         loop = asyncio.get_running_loop()
         for _ in range(QUIESCE_LIMIT):
             await asyncio.sleep(0.001 if self._executor_jobs else 0)

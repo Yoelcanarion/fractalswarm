@@ -198,23 +198,21 @@ def test_it_suffers_the_same_crashes_and_kills_as_the_central_baseline(tmp_path:
     assert not report.failed
 
     def injected(log: list[Event]) -> dict[str, list]:
-        found: dict[str, list] = {"crash": [], "kill": [], "first": []}
-        for e in of(log, "chaos.injected"):
-            fault, at = e.payload["fault"], e.payload["progress"]
-            if fault == "kill_coordinator":
-                found["crash"].append(at)
-            elif fault == "kill_agent":
-                found["kill"].append(e.payload["target"])
-                if at == min(x.payload["progress"] for x in of(log, "chaos.injected")):
-                    found["first"].append(e.payload["target"])
-        found["first"].sort()
-        return found
+        chaos = [e.payload for e in of(log, "chaos.injected")]
+        crashes = [c["progress"] for c in chaos if c["fault"] == "kill_coordinator"]
+        kills = [(c["progress"], c["target"]) for c in chaos if c["fault"] == "kill_agent"]
+        first = min(at for at, _ in kills)
+        return {
+            "crash": crashes,
+            "kill": kills,
+            "first": sorted(t for at, t in kills if at == first),
+        }
 
     central = injected(load_events(out / "runs" / "central__t2_conference__C3__s1"))
     langgraph = injected(load_events(c3[0]))
     assert langgraph["crash"] == central["crash"] and len(central["crash"]) == 5
     assert len(langgraph["kill"]) == len(central["kill"]) == 6
-    assert langgraph["first"] == central["first"]
+    assert len(langgraph["first"]) == 6 and langgraph["first"] == central["first"]
 
 
 def test_a_crash_cancels_the_whole_runs_calls_and_the_restart_comes_5_s_later(c3) -> None:
@@ -348,13 +346,26 @@ def test_the_bench_runs_it_as_a_registered_workflow() -> None:
     assert roles["supervisor"] > 0 and all(request["contributor"] for request in requests)
 
 
-def test_langsmith_tracing_stays_off_inside_the_run(tmp_path: Path, monkeypatch) -> None:
+@pytest.fixture
+def tracing_env(monkeypatch: pytest.MonkeyPatch):
+    """LANGSMITH_TRACING on; langsmith caches its environment lookups, so clear them around it."""
+    from langsmith import utils
+
+    utils.get_env_var.cache_clear()
+    monkeypatch.setenv("LANGSMITH_TRACING", "true")
+    yield
+    monkeypatch.undo()
+    utils.get_env_var.cache_clear()
+
+
+def test_langsmith_tracing_stays_off_inside_the_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, tracing_env
+) -> None:
     """A tracing environment must not send the run's prompts anywhere."""
     from langsmith.utils import tracing_is_enabled
 
     from fractalswarm.baselines import langgraph_teams
 
-    monkeypatch.setenv("LANGSMITH_TRACING", "true")
     assert tracing_is_enabled()
     seen: list[bool] = []
 
