@@ -139,6 +139,8 @@ class PromptGuardBackend:
 
     name = "promptguard2-22m"
     _lock = threading.Lock()
+    # The fast tokenizer is not thread-safe ("Already borrowed"): one inference at a time.
+    _infer = threading.Lock()
     _guard: Any = None
 
     def __init__(self, hf_token: str | None = None) -> None:
@@ -163,7 +165,8 @@ class PromptGuardBackend:
 
     def score(self, text: str) -> float:
         guard = self._load(self.hf_token)
-        return max(guard.get_jailbreak_score(window) for window in windows(text))
+        with self._infer:
+            return max(guard.get_jailbreak_score(window) for window in windows(text))
 
 
 def windows(text: str) -> list[str]:

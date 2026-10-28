@@ -174,3 +174,18 @@ def test_clip_wordings_promptguard() -> None:
             assert verdict.decision == "quarantine" and verdict.score > 0.99, wording
         else:
             assert verdict.allowed and verdict.score < 0.01, wording
+
+
+@pytest.mark.promptguard
+@pytest.mark.skipif(not promptguard_ready(), reason=f"{PROMPT_GUARD_MODEL} is not available")
+async def test_promptguard_scans_concurrently() -> None:
+    """A run scans every attachment at once, each in a worker thread (the first real T2 run
+    lost 16 emails to "Already borrowed" from the shared tokenizer)."""
+    import asyncio
+
+    firewall = Firewall(PromptGuardBackend())
+    texts = [f"{BENIGN} ({index})" for index in range(24)]
+    verdicts = await asyncio.gather(
+        *(firewall.scan(text, "attachment", f"email-{i}") for i, text in enumerate(texts))
+    )
+    assert all(verdict.allowed and verdict.score < 0.1 for verdict in verdicts)
