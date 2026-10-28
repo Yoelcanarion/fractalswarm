@@ -2,9 +2,8 @@
 # Run only after the $0 gate passes (test_bench_smoke):
 #   uv run fractalswarm bench bench/matrix.yaml --dry-run
 #   uv run fractalswarm bench bench/matrix.yaml --confirm-real-spend
-# The workflow runners (swarm, central, single, pipeline) and the t2_conference task
-# register themselves in fractalswarm.bench.registry; until they exist, --dry-run lists
-# them as NOT REGISTERED and a real run refuses to start.
+# The workflow runners and the t2_conference task register themselves in
+# fractalswarm.bench.registry; --dry-run lists any that don't as NOT REGISTERED.
 name: chart-v1
 workflows: [swarm, central, single, pipeline]
 tasks: [t2_conference]
@@ -16,7 +15,7 @@ out_dir: results/v1
 chart_task: t2_conference
 budget:
   run_cap_usd: 0.50
-  matrix_cap_usd: 8.00
+  matrix_cap_usd: 16.00  # 32 runs x the run cap; expected about $9 with Contributor routing
 notes: >
   Fair failure semantics (spec §15.2): same crashes at the same progress points, 5 s
   best-case restart for the baselines, completed work preserved.
