@@ -9,6 +9,7 @@ authors = [{ name = "Yoelcanarion" }]
 requires-python = "==3.12.*"
 dependencies = [
     "httpx>=0.28.1",
+    "matplotlib>=3.10",
     "openai>=3.40.0",
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.1",

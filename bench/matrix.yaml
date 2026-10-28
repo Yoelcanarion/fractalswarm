@@ -1,0 +1,22 @@
+# Chart v1 (spec §15.6, Day 6): 4 in-house workflows x T2 x C0-C3 x 2 seeds = 32 runs.
+# Run only after the $0 gate passes (test_bench_smoke):
+#   uv run fractalswarm bench bench/matrix.yaml --dry-run
+#   uv run fractalswarm bench bench/matrix.yaml --confirm-real-spend
+# The workflow runners (swarm, central, single, pipeline) and the t2_conference task
+# register themselves in fractalswarm.bench.registry; until they exist, --dry-run lists
+# them as NOT REGISTERED and a real run refuses to start.
+name: chart-v1
+workflows: [swarm, central, single, pipeline]
+tasks: [t2_conference]
+profiles: [C0, C1, C2, C3]
+seeds: [1, 2]
+# Contributor routing (spec §7.5): synthetic tasks, explicit opt-in for the bench matrix.
+contributor: true
+out_dir: results/v1
+chart_task: t2_conference
+budget:
+  run_cap_usd: 0.50
+  matrix_cap_usd: 8.00
+notes: >
+  Fair failure semantics (spec §15.2): same crashes at the same progress points, 5 s
+  best-case restart for the baselines, completed work preserved.

@@ -1,0 +1,12 @@
+# Plumbing smoke test: the kernel toy as a stand-in workflow, fake LLM, $0.
+#   uv run fractalswarm bench bench/matrix-smoke.yaml --fake
+# The toy ignores chaos, so its chart is flat by construction.
+name: smoke
+workflows: [toy]
+tasks: [toy]
+profiles: [C0, C1, C2, C3]
+seeds: [1, 2]
+contributor: false
+out_dir: ../runs/bench-smoke
+budget:
+  run_cap_usd: 0.25

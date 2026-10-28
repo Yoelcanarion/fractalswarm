@@ -1,5 +1,5 @@
 """Determinism lint for the handler code: kernel/, coord/, market/, the swarm actors, planning,
-memory, the contract checks and judge, and the T2 task (spec §3 and §19).
+memory, the contract checks and judge, the T2 task and baselines/ (spec §3 and §19).
 
 Replay must rebuild the log bit for bit, so code in these packages must not read the wall
 clock, draw unseeded randomness or call the built-in ``hash()``, which is salted per process.
@@ -24,6 +24,7 @@ LINTED_DIRS = (
     "planning",
     "memory",
     "bench/tasks/t2_conference",
+    "baselines",
 )
 # verify/ also holds code of other streams; lint the files the swarm's handlers call.
 LINTED_FILES = ("verify/checks.py", "verify/judge.py")
