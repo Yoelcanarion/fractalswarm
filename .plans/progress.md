@@ -663,7 +663,7 @@ finished in its own Orca workspace on Wed 28 Oct. Spend: $0 (fake LLM and record
 - The JS bundle is ~730 kB (220 kB gzip); fine for a local tool, could be split later.
 - The chaos buttons answer 501 on every run for now; on recorded runs the panel says so.
 
-## Day 9 — Wed 28 Oct 2026 — Integration of days 3–8, $0 gate, T2 attack, first real T2 runs (session paused)
+## Day 9 — Wed 28 Oct 2026 — Integration of days 3–8, $0 gate, T2 attack, real T2 runs (in progress)
 **Done:**
 - **Merged** into `Yoelcanarion/day-09`, in order: day-03-kernel, day-04-slice, day-05-coord-foundations, day-08-safety-economy, day-06-bench-foundations, day-07-ui; tests, ruff and the web build green after each.
 - **Leaderless takeover on T2** (`coord/tree.py` TreeView + HRW heir; orchestrators reconcile on each heartbeat tick, adopt orphan results from the log, root succession, respawn into a dead sibling group), **central baseline** (one orchestrator, process-tree crash, best-case 5 s restart keeping completed work), `Stop(cancel=True)`, chaos crash points shared with the bench, `bench/workflows.py` (swarm/central × t2_conference, calibrated fake, Contributor role table).
@@ -672,14 +672,31 @@ finished in its own Orca workspace on Wed 28 Oct. Spend: $0 (fake LLM and record
 - **CLI `run`:** `--scenario swarm|central`, `--chaos C0-C3|kill-half`, `--firewall auto|heuristic`.
 - **Secret scan of the full git history:** clean (real key values: 0 hits; pattern hits are test fixtures and minified CSS). `demo/` and `tests/golden/` cassettes are redacted.
 - **Deleted** the five `worktree-agent-*` branches (all at master 2440cc6, no worktrees).
-- **Tests:** 455 passed; ruff check and format green.
+- **Review fixes (8ac7536), each with a test that fails without it:**
+  - One idem key per takeover: `ownership.remapped` and `tree.adopted` (and the toy's remap) now key on (goal, previous, owner, member epoch). The old key (goal, previous) repeats when a member back from a false death owns the goal again. The kernel then drops the second takeover, and the goal stays with a dead owner (the toy re-emits and stalls forever). The real C3 swarm run came one death away from this: o1.1 inherited from o1.2 after a false death, and the root o0 died, rejoined and re-adopted itself.
+  - The LLM outcome logged in record mode is built from the redacted attempt that the cassette holds. Readable text that looks like a secret ("bearer of", the "sk-" in "risk-…") no longer breaks replay; this was the same mechanism as the `encrypted_content` incident.
+  - The root scans the sender, subject and body of each email. A quarantined email loses all three, where before it lost only the body and a subject injection still reached the planners.
+  - `run --backend real` defaults to `--firewall auto` (PromptGuard).
+- **Tests:** 459 passed; ruff check and format green; `demo --verify` MATCH.
 
 **Real runs (Yoel approved each):**
 - `t2-real-seed1` ($0.698): partial, 32/48. Our bug: 16 of 32 PromptGuard scans failed concurrently ("Already borrowed", the fast tokenizer is not thread-safe) and failed closed. Fixed (inference lock, test).
 - `t2-real-seed1b` ($0.454): **complete, 48/48, 0 hard violations, soft 1.0**, makespan 117 s, stall 8.9 s. Replay first diverged: the cassette's pattern redaction altered an `encrypted_content` blob that happened to contain `hf_` + 50 letters. Fixed (opaque blobs only get exact-secret redaction, test); the run's cassette was restored from its own log (backup `cassette.redacted-backup.jsonl`); **replay MATCH**.
 - `t2-real-c3-swarm-seed1` ($0.416, stopped by hand after ~33 min): never finished. Two bugs, both fixed in ffc1b47 with tests: (1) a member falsely declared dead that rejoined in the same millisecond had dropped `track-ai` as a zombie and nobody adopted it → rejoined members now take back their dropped goals; (2) loading PromptGuard (~6.7 s CPU) starved the live loop and caused false deaths at startup → the CLI warms the firewall before the clock starts. The central C3 run was not launched.
+- `t2-real-c3-swarm-seed1b` ($0.485): **complete, 48/48, 0 hard violations, soft 1.0.** Five orchestrators were killed (o2.1, o2.2, o3.1, o3.2, o3.3), with 9 death verdicts (some false, followed by rejoins) and 12 takeovers. Coordination tokens: 0. Replay MATCH at 8fddeba.
+- `t2-real-c3-central-seed1` ($0.455 settled): **complete, 48/48, 0 hard violations, soft 1.0.** Five crashes of o0. Replay MATCH at 8fddeba.
+- Bench metrics (same definitions as the hero chart; cost includes the bench's estimate for calls cancelled in flight):
 
-**Spend:** $1.6141 of $150, plus $0.0698 left reserved by the interrupted call (kept open on purpose, in case it was billed).
+  | run | makespan | stall | cost | LLM calls (cancelled) |
+  |---|---|---|---|---|
+  | swarm C0 (`t2-real-seed1b`) | 117.3 s | 8.9 s | $0.454 | 80 (0) |
+  | swarm C3 | 135.6 s | 9.8 s | $0.501 (+10 %) | 79 (3) |
+  | central C3 | 170.2 s | 29.7 s | $0.601 | 103 (27) |
+
+  A real central C0 was not run, so the central's extra cost against its own C0 is unknown; against the swarm's C0 it is +32 %.
+- **These runs verify at 8fddeba, not at HEAD.** 8ac7536 changes the scan request (the `From:` line) and the takeover keys, so replay now diverges at the first scan (seq 18), as expected; the recorded hash chains are intact. Committed recordings (`demo/toy`, `tests/golden/*`) have no scans or takeovers and still MATCH. The headline and demo runs must be recorded after the last handler change.
+
+**Spend:** $2.5547 of $150, plus $0.7778 left reserved: the worst case of the calls cancelled in flight, kept open on purpose in case they were billed. Most of it (+$0.65) comes from the 27 calls the central baseline lost at its crashes. The bench estimates their real cost at about $0.15.
 
 **Deviations:**
 - HRW at plan time uses ε = 0 (one subgoal per member); takeover keeps the spec's ε = 0.25.
@@ -688,10 +705,19 @@ finished in its own Orca workspace on Wed 28 Oct. Spend: $0 (fake LLM and record
 - The track planner lists extra work from inputs under `requests` (scope-checked, never executed); the scope token is the hash of the approved envelope, not of the raw root plan.
 - `record_run` scans attachments with the heuristic firewall by default; real CLI runs use `--firewall auto` (PromptGuard).
 - Contributor mode: Wonder has no Contributor variant; `Matrix.contributor_wonder` (standard | spark) is still Yoel's decision.
+- Takeover idem keys include the owner and the member epoch (one key per takeover), not just (goal, previous).
 
 **Where this session stopped (next):**
-1. Relaunch the two real C3 runs with the fixes (ask Yoel): `run tasks/examples/t2-conference.yaml --chaos C3 --backend real --confirm-real-spend --clock live --firewall auto --scenario swarm|central --run-id t2-real-c3-<scenario>-seed1b`, with a wall-clock timeout.
-2. Then, each with permission and `spend` before/after: chart v1 in Contributor mode (decide Wonder standard vs spark; `single` and `pipeline` workflows are not registered, v1 worst case $23.8 vs the $8 matrix cap), backup bundle (day 7), attack clip (ask which wording: polite / authority (recommended) / explicit / `explicit,authority` with `--poison 2` to show both layers) and the day-8 matrix.
-3. Day 9 tasks: make the repo public only after Yoel confirms; LangGraph baseline; headline runs; final demo bundle (T2 kill-half + poisoned email); supporting features.
-4. (Done: the stream notes are folded in above.)
-5. Ask before merging into `master` or pushing.
+1. (Done: both real C3 runs, above.)
+2. Then, each with permission and `spend` before and after:
+   - **Chart v1 in Contributor mode.** As written, `bench/matrix.yaml` refuses to start for two reasons: `single` and `pipeline` are not registered, and the pre-flight worst case of $23.8 exceeds the $8 matrix cap. The pre-flight counts 320–560 calls per cell, while a real T2 makes 80–103.
+     - Estimate from the real logs, re-priced with the Contributor gate: about $0.27–0.30 per run. About 60 % of the Spark calls pass the gate; the rest stay on Standard because their prompts carry the speakers' email addresses (plus 2 false `sk-` hits). That gives about $4.5–5 for the 16 swarm and central cells.
+     - The peak committed budget of a run would be $0.36–0.40, under the $0.50 run cap.
+     - Decide: drop `single` and `pipeline` for v1 (or build them), raise the matrix cap or make the pre-flight count realistic, and Wonder standard vs spark.
+   - Backup bundle (day 7).
+   - Attack clip. Ask which wording: polite, authority (recommended), explicit, or `explicit,authority` with `--poison 2` to show both layers. Narration: the email's ask surfaces as a planner request that is checked against the envelope and never becomes work; requests are never executed by design.
+   - The day-8 matrix.
+3. Gap found: nothing emits `security.routed` (spec §7.5: every Contributor routing decision is an audit event). The model each call used is in the log, and the gate is deterministic, so the decisions can be recomputed; the event is still to add.
+4. Day 9 tasks: make the repo public only after Yoel confirms; LangGraph baseline; headline runs; final demo bundle (T2 kill-half + poisoned email); supporting features.
+5. (Done: the stream notes are folded in above.)
+6. Ask before merging into `master` or pushing.
