@@ -115,17 +115,24 @@ def test_preflight_prices_worst_cases_and_lists_unregistered(tmp_path: Path) -> 
     v1 = Matrix.load(V1)
     assert len(v1.cells()) == 32 and v1.contributor is True
     plan = preflight(v1, tmp_path)
-    registered = {cell.cell.split("__")[0] for cell in plan.cells if cell.registered}
-    assert registered == {"swarm", "central"}
-    assert plan.unregistered == ["workflow pipeline", "workflow single"]
+    assert plan.unregistered == []
+    workflows = {cell.cell.split("__")[0] for cell in plan.cells}
+    assert workflows == {"swarm", "central", "single", "pipeline"}
+    # A run cannot commit more than its cap, so neither can its cell's worst case.
+    assert all(0 < (c.worst_case_usd or 0) <= v1.budget.run_cap_usd for c in plan.cells)
+
+    later = v1.model_copy(update={"workflows": ["swarm", "langgraph"]})
+    plan = preflight(later, tmp_path)
+    assert plan.unregistered == ["workflow langgraph"]
     # Only the registered cells are priced.
     assert plan.worst_case_usd == pytest.approx(sum(c.worst_case_usd or 0 for c in plan.cells))
     assert all(c.worst_case_usd is None for c in plan.cells if not c.registered)
 
 
 async def test_running_an_unregistered_matrix_is_refused(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="workflow pipeline"):
-        await run_matrix(Matrix.load(V1), tmp_path, options())
+    later = Matrix.load(V1).model_copy(update={"workflows": ["swarm", "langgraph"]})
+    with pytest.raises(ValueError, match="workflow langgraph"):
+        await run_matrix(later, tmp_path, options())
 
 
 def test_preflight_honors_the_contributor_opt_in(
@@ -148,6 +155,11 @@ def test_preflight_honors_the_contributor_opt_in(
     standard = preflight(base, tmp_path).worst_case_usd
     contributor = preflight(base.model_copy(update={"contributor": True}), tmp_path)
     assert 0 < contributor.worst_case_usd < standard / 5
+
+    capped = base.model_copy(update={"budget": MatrixBudget(run_cap_usd=0.01)})
+    plan = preflight(capped, tmp_path)
+    assert standard / len(plan.cells) > 0.01  # each cell would cost more than its cap
+    assert all(cell.worst_case_usd == 0.01 for cell in plan.cells)
 
 
 def test_preflight_skips_finished_cells_and_checks_the_cap(tmp_path: Path) -> None:
@@ -278,7 +290,7 @@ def test_chart_from_csv_round_trip(tmp_path: Path) -> None:
 def test_cli_dry_run_lists_the_v1_matrix() -> None:
     result = CliRunner().invoke(app, ["bench", str(V1), "--dry-run"])
     assert result.exit_code == 0, result.output
-    assert "32 cells" in result.output and "NOT REGISTERED" in result.output
+    assert "32 cells" in result.output and "NOT REGISTERED" not in result.output
     assert "contributor ON" in result.output
 
 
@@ -301,6 +313,12 @@ def test_cli_refuses_real_runs_without_confirmation(tmp_path: Path) -> None:
 
 
 def test_cli_refuses_to_run_unregistered_workflows(tmp_path: Path) -> None:
-    result = CliRunner().invoke(app, ["bench", str(V1), "--fake", "--out", str(tmp_path)])
+    later = tmp_path / "later.yaml"
+    text = V1.read_text(encoding="utf-8")
+    later.write_text(
+        text.replace("workflows: [swarm, central, single, pipeline]", "workflows: [langgraph]"),
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(app, ["bench", str(later), "--fake", "--out", str(tmp_path)])
     assert result.exit_code != 0
     assert "not registered" in result.output

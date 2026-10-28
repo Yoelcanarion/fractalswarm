@@ -33,6 +33,11 @@ owner-scoped writes carry fencing tokens.
 leads every squad, under the best-case supervisor (``baselines/supervisor.py``). A
 ``chaos.crash`` cancels everything in flight, its agents' calls included (process-tree
 semantics); it restarts ``RESTART_DELAY_MS`` later and redoes only the lost work.
+``single`` and ``pipeline`` are the same process with one worker: one contract is in flight
+across the run, each verified before the next. ``single`` is one agent that also plans, one
+LLM call at a time. ``pipeline`` plans every goal first (the planner), then works through the
+contracts (the sequential worker) and integrates. All three make the same planning calls as
+the swarm, so they plan as well as it does.
 """
 
 from typing import Any
@@ -71,6 +76,9 @@ TASKS = {T2.name: T2}
 MAX_PLAN_ATTEMPTS = 3
 MAX_FEEDBACK_LINES = 20
 ACTIVE = ("running", "judging", "booking")
+# One orchestrator under the best-case supervisor (spec §15.1); the last two have one worker.
+CENTRAL_MODES = ("central", "single", "pipeline")
+SERIAL_MODES = ("single", "pipeline")
 CENTRAL_TICK = "central.tick"
 CENTRAL_TICK_MS = 1000
 CENTRAL_REDO = "central.redo"
@@ -94,8 +102,8 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
     leaf = level == len(fanout)
     mode = args.get("mode", "swarm")
     agents_per_leaf = int(args["agents_per_leaf"])
-    if mode == "central":
-        count = agents_per_leaf * leaf_count(fanout)
+    if mode in CENTRAL_MODES:
+        count = 1 if mode in SERIAL_MODES else agents_per_leaf * leaf_count(fanout)
         children = [f"{actor_id}.a{i}" for i in range(1, count + 1)]
     elif args.get("bare"):  # a member respawned into a dead group: it inherits, spawns none
         children = []
@@ -140,7 +148,7 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
 
 
 def orchestrator_handle(state: dict[str, Any], event: Event, view: View):
-    if state["mode"] == "central":
+    if state["mode"] in CENTRAL_MODES:
         return _central(state, event, view)
     det = state["det"]
     if det is None:
@@ -202,7 +210,7 @@ def _spawned(state: dict[str, Any], view: View):
     passed = {"membership": state["membership"], "relay": state["relay"]}
     passed["contributor"] = state["contributor"]
     for child in state["children"]:
-        if state["leaf"] or state["mode"] == "central":
+        if state["leaf"] or state["mode"] in CENTRAL_MODES:
             commands.append(Spawn(actor_id=child, kind="agent", args=_agent_args(state)))
         else:
             args = {
@@ -248,7 +256,7 @@ def _start_goal(
     }
     if level == len(state["fanout"]):
         entry["agents"] = _squad(state)
-        if state["mode"] == "central":
+        if state["mode"] in CENTRAL_MODES:
             state = {**state, "squads": state["squads"] + 1}
     state = _put_goal(state, goal["id"], entry)
     return _begin(state, goal["id"])
@@ -259,6 +267,8 @@ def _begin(state: dict[str, Any], gid: str):
     entry = state["goals"][gid]
     attachments = TASKS[state["task"]].attachments(entry["goal"]) if entry["level"] == 0 else []
     if not attachments:
+        if state["mode"] == "single" and _serial_busy(state, but=gid):
+            return _put_goal(state, gid, {**entry, "phase": "queued"}), []  # one call at a time
         return state, [_plan_effect(state, gid)]
     state = _put_goal(state, gid, {**entry, "phase": "scanning", "scans": {}})
     return state, [
@@ -310,7 +320,7 @@ def _scanned(state: dict[str, Any], gid: str, source: str, event: Event):
 
 
 def _squad(state: dict[str, Any]) -> list[str]:
-    if state["mode"] != "central":
+    if state["mode"] != "central":  # a leaf's agents, or the one worker of single and pipeline
         return list(state["children"])
     size = state["agents_per_leaf"]
     first = state["squads"] * size
@@ -453,7 +463,7 @@ def _assign_children(state: dict[str, Any], gid: str, children: list[dict[str, A
     state = _put_goal({**state, "child_of": child_of}, gid, entry)
     for child in sorted(children, key=lambda c: c["id"]):
         body = {"goal": child, "scope_token": state["scope"], "parent": gid, "level": level}
-        if state["mode"] == "central":  # one process: the child goal starts in place
+        if state["mode"] in CENTRAL_MODES:  # one process: the child goal starts in place
             state, more = _start_goal(state, child, state["id"], gid, level, view)
             commands += more
         else:
@@ -463,7 +473,7 @@ def _assign_children(state: dict[str, Any], gid: str, children: list[dict[str, A
 
 def _child_group(state: dict[str, Any], entry: dict[str, Any], view: View) -> list[str]:
     """Who the goal's child subgoals go to: the live members of its child group."""
-    if state["mode"] == "central":
+    if state["mode"] in CENTRAL_MODES:
         return [state["id"]]
     members = view.views.get("members")
     if state["membership"] and members is not None:
@@ -501,7 +511,7 @@ def _complete(state: dict[str, Any], gid: str, output: dict[str, Any], gaps: lis
         others = [actor for actor in view.alive if actor != state["id"]]
         stops = [Stop(actor_id=actor, reason="done", cancel=True) for actor in others]
         return state, [*commands, *stops, Stop(reason="done", cancel=True)]
-    if state["mode"] == "central":
+    if state["mode"] in CENTRAL_MODES:
         state, more = _child_result(state, body, view)
         return state, commands + more
     target = _result_target(state, entry, view)
@@ -594,6 +604,10 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
     busy = [cid for cid, s in status.items() if s != "pending"]
     commands: list[Command] = []
     ready = dag.ready(done, busy)
+    if state["mode"] in SERIAL_MODES and ready:
+        if _serial_busy(state) or not _work_open(state):
+            return state, []  # one worker: the session waits its turn (_serial_next)
+        ready = ready[:1]
     agents: list[str] = []
     if ready:
         state, agents, spawned = _live_agents(state, gid, view)
@@ -1083,6 +1097,14 @@ def _logged(view: View, gid: str, cid: str):
 
 
 def _central(state: dict[str, Any], event: Event, view: View):
+    state, commands = _central_step(state, event, view)
+    if state["mode"] in SERIAL_MODES and state["up"]:
+        state, more = _serial_next(state, view)
+        commands = [*commands, *more]
+    return state, commands
+
+
+def _central_step(state: dict[str, Any], event: Event, view: View):
     if event.type == "actor.spawned":
         joined = {"member": state["id"], "incarnation": 0, "role": ROLE, "group": None}
         join = Emit(type="member.joined", payload=joined, idem_key=f"member.joined:{state['id']}:0")
@@ -1189,6 +1211,47 @@ def _redo(state: dict[str, Any], view: View):
         state = {**state, "pending_crashes": state["pending_crashes"] - 1}
         state, more = _crash(state, view)
         commands += more
+    return state, commands
+
+
+def _serial_busy(state: dict[str, Any], but: str | None = None) -> bool:
+    """Single and pipeline: is the one worker busy? A contract keeps it busy until verified.
+    In ``single`` the one agent also plans, so a planning call other than ``but``'s counts."""
+    for gid, entry in state["goals"].items():
+        if any(status in ACTIVE for status in entry.get("status", {}).values()):
+            return True
+        if state["mode"] == "single" and gid != but and entry["phase"] == "planning":
+            return True
+    return False
+
+
+def _work_open(state: dict[str, Any]) -> bool:
+    """The pipeline's worker starts once its planner has planned every goal."""
+    if state["mode"] != "pipeline":
+        return True
+    return all(entry["phase"] not in ("scanning", "planning") for entry in state["goals"].values())
+
+
+def _serial_next(state: dict[str, Any], view: View):
+    """Single and pipeline: give the free worker its next piece of work, in goal order: a
+    queued plan first (single only), else the next ready contract."""
+    commands: list[Command] = []
+    for gid in sorted(state["goals"]):
+        if _serial_busy(state):
+            return state, commands
+        entry = state["goals"][gid]
+        if entry["phase"] == "queued":
+            state = _put_goal(state, gid, {**entry, "phase": "planning"})
+            commands.append(_plan_effect(state, gid))
+    if _serial_busy(state) or not _work_open(state):
+        return state, commands
+    for gid in sorted(state["goals"]):
+        entry = state["goals"][gid]
+        if entry["phase"] == "running" and "pending" in entry.get("status", {}).values():
+            state, more = _dispatch(state, gid, view)
+            commands += more
+            if _serial_busy(state):
+                break
     return state, commands
 
 

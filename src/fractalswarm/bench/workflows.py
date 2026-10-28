@@ -1,11 +1,12 @@
-"""The ``t2_conference`` bench task and the ``swarm`` and ``central`` workflows (spec §15).
+"""The ``t2_conference`` bench task and its workflows (spec §15.1): ``swarm`` and the
+in-house baselines ``central``, ``single`` and ``pipeline``.
 
-Both workflows run the scenario code of ``actors/swarm.py`` on the same T2 instance, so at
+Every workflow runs the scenario code of ``actors/swarm.py`` on the same T2 instance, so at
 C0 they make the same LLM calls. Under chaos they get the same plan (``build_plan`` with the
 cell's profile and seed: the same crash points, agent kills and network faults) and API
 faults from the same seed. The swarm runs with membership on at every profile, C0 included,
-so its C0 twin is the same system. The central baseline is crashed by signal and restarts
-5 s later with its completed work kept (``actors/orchestrator.py``).
+so its C0 twin is the same system. The baselines are crashed by signal and restart 5 s
+later with their completed work kept (``actors/orchestrator.py``).
 
 A cell's seed picks the T2 instance (``tasks/fixtures/t2/seed-<n>``, generated when missing),
 the run's seed and the chaos seed.
@@ -78,7 +79,7 @@ class T2Workflow:
     tasks = frozenset({"t2_conference"})
 
     def __init__(self, name: str) -> None:
-        self.name = name  # also the scenario: swarm | central
+        self.name = name  # also the scenario: swarm | central | single | pipeline
 
     async def run(self, ctx: CellContext) -> None:
         from fractalswarm.llm.transport import ApiFaults, FaultyBackend
@@ -158,6 +159,8 @@ def t2_checker(events: Sequence[Event]) -> Outcome:
 
 register_workflow(T2Workflow("swarm"))
 register_workflow(T2Workflow("central"))
+register_workflow(T2Workflow("single"))
+register_workflow(T2Workflow("pipeline"))
 register_task(
     TaskDef(name="t2_conference", checker=t2_checker, description="T2 conference program")
 )

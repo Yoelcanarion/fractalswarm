@@ -176,6 +176,8 @@ def preflight(
         assert workflow is not None
         requests = workflow.preflight(cell, matrix.contributor)
         usd = sum(client.estimate(request) for request in requests)
+        if matrix.budget.run_cap_usd is not None:  # the kernel refuses the call that crosses it
+            usd = min(usd, matrix.budget.run_cap_usd)
         estimates.append(
             CellEstimate(
                 cell=cell.id, registered=True, calls=len(requests), worst_case_usd=usd, done=done

@@ -9,6 +9,7 @@
 ``central`` is the central baseline (spec §15.1) on the same task, the same LLM calls and the
 same chaos: one orchestrator plans every level and leads every squad, under the best-case
 supervisor. The monkey crashes it by signal (``chaos.crash``) instead of stopping it.
+``single`` and ``pipeline`` are the same process with one worker (``actors/orchestrator.py``).
 """
 
 from dataclasses import dataclass
@@ -17,7 +18,11 @@ from typing import Any
 from fractalswarm.actors import events as _events  # noqa: F401  (registers the event types)
 from fractalswarm.actors.agent import agent_handle, agent_init
 from fractalswarm.actors.board import BOARD, board_handle, board_init
-from fractalswarm.actors.orchestrator import orchestrator_handle, orchestrator_init
+from fractalswarm.actors.orchestrator import (
+    CENTRAL_MODES,
+    orchestrator_handle,
+    orchestrator_init,
+)
 from fractalswarm.comms.chaos import (
     CHAOS,
     CHAOS_MONKEY,
@@ -53,7 +58,7 @@ def expected_contracts(corpus: dict[str, Any]) -> int:
 
 @dataclass(frozen=True)
 class SwarmScenario:
-    mode: str = "swarm"  # swarm | central
+    mode: str = "swarm"  # swarm | central | single | pipeline
     kinds = {
         "board": ActorKind(board_init, board_handle),
         "orchestrator": ActorKind(orchestrator_init, orchestrator_handle),
@@ -102,7 +107,7 @@ class SwarmScenario:
                 "plan": plan_from(params).model_dump(mode="json"),
                 "coordinator_role": ROLE,
                 "agent_kinds": ["agent"],
-                "crash_mode": "signal" if self.mode == "central" else "stop",
+                "crash_mode": "signal" if self.mode in CENTRAL_MODES else "stop",
                 "expected_work": expected_contracts(params["corpus"]),
             }
             commands.append(Spawn(actor_id=CHAOS, kind=CHAOS, args=monkey))
@@ -111,3 +116,5 @@ class SwarmScenario:
 
 SWARM = SwarmScenario()
 CENTRAL = SwarmScenario(mode="central")
+SINGLE = SwarmScenario(mode="single")
+PIPELINE = SwarmScenario(mode="pipeline")
