@@ -1,0 +1,30 @@
+{
+  "name": "fractalswarm-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FractalSwarm UI: a pure projection of the run event stream (live and replay).",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "build": "tsc --noEmit -p . && vite build"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.12.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^3.10.1",
+    "zustand": "^5.0.16"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

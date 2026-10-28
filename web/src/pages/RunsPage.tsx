@@ -1,0 +1,73 @@
+import { useEffect, useState } from "react";
+
+import { postControl, type ControlResult } from "../lib/api";
+import { useRun } from "../store";
+
+export function RunsPage() {
+  const { runs, runsError, loadRuns } = useRun();
+  useEffect(() => {
+    void loadRuns();
+  }, [loadRuns]);
+
+  return (
+    <div className="runs">
+      <section className="panel">
+        <header className="panel__title">Runs</header>
+        {runsError && <div className="empty empty--bad">{runsError}</div>}
+        <table className="runs__table">
+          <thead>
+            <tr>
+              <th>run</th>
+              <th>source</th>
+              <th>scenario</th>
+              <th>status</th>
+              <th>events</th>
+              <th>virtual time</th>
+              <th>head</th>
+            </tr>
+          </thead>
+          <tbody>
+            {runs.map((run) => (
+              <tr key={run.id}>
+                <td>
+                  <a href={`#/run/${encodeURIComponent(run.id)}`}>{run.id}</a>
+                </td>
+                <td>{run.source}</td>
+                <td className="mono">{run.scenario}</td>
+                <td>{run.status === "running" ? <span className="badge badge--live">● live</span> : run.status}</td>
+                <td>{run.events}</td>
+                <td>{(run.duration_ms / 1000).toFixed(2)} s</td>
+                <td className="mono">{run.head?.slice(0, 12)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+      <NewTask />
+    </div>
+  );
+}
+
+// MVI fallback (day-07 plan): a TaskSpec YAML upload instead of a form.
+function NewTask() {
+  const [yaml, setYaml] = useState("");
+  const [result, setResult] = useState<ControlResult | null>(null);
+  return (
+    <section className="panel newtask">
+      <header className="panel__title">New task (TaskSpec YAML)</header>
+      <input
+        type="file"
+        accept=".yaml,.yml"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (file) setYaml(await file.text());
+        }}
+      />
+      <textarea value={yaml} onChange={(e) => setYaml(e.target.value)} placeholder="goal: ..." rows={8} spellCheck={false} />
+      <button className="btn" disabled={!yaml.trim()} onClick={async () => setResult(await postControl("api/tasks", { yaml }))}>
+        Submit for planning
+      </button>
+      {result && <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>{result.detail}</div>}
+    </section>
+  );
+}

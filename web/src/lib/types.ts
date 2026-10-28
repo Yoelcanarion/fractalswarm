@@ -1,0 +1,43 @@
+// The event envelope as the API sends it (spec §5.1; src/fractalswarm/kernel/events.py).
+export interface RunEvent {
+  seq: number;
+  run_id: string;
+  ts_virtual: number; // virtual milliseconds
+  lamport: number;
+  member_epoch: number;
+  market_epoch: number;
+  type: string;
+  actor: string;
+  causation_id: number | null;
+  correlation_id: string | null;
+  idem_key: string;
+  payload: Record<string, any>;
+  prev_hash: string;
+  hash: string;
+}
+
+export interface RunListing {
+  id: string;
+  source: "runs" | "demo";
+  run_id: string | null;
+  scenario: string | null;
+  seed: string | null;
+  clock: string | null;
+  events: number;
+  duration_ms: number;
+  status: "completed" | "running" | "empty";
+  head: string | null;
+}
+
+export interface VerifyReport {
+  ok: boolean;
+  chain_ok: boolean;
+  recorded_events: number;
+  replayed_events: number;
+  recorded_head: string;
+  replayed_head: string;
+  first_divergence: number | null;
+  detail: string;
+  bundle_head: string | null;
+  bundle_head_ok: boolean;
+}
