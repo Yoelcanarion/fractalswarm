@@ -271,6 +271,24 @@ def replay(
 
 
 @app.command()
+def feasibility(
+    run: Annotated[str, typer.Argument(help="run id under runs/, or a run directory")],
+) -> None:
+    """Show the feasibility report a run recorded at plan approval (feasibility_report: true)."""
+    from fractalswarm.planning.feasibility import render
+    from fractalswarm.runs import RunPaths
+
+    with RunPaths(_resolve_run_dir(run)).open_log() as log:
+        found = next((e.payload for e in log.read() if e.type == "plan.feasibility"), None)
+    if found is None:
+        typer.echo(
+            "this run has no feasibility report: set feasibility_report: true in the TaskSpec"
+        )
+        raise typer.Exit(1)
+    typer.echo(render(found))
+
+
+@app.command()
 def calibrate(
     sources: Annotated[
         list[Path], typer.Argument(help="cassette or sample .jsonl files, or directories of them")

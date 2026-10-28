@@ -89,6 +89,13 @@ def create_app(
             }
         return JSONResponse(verified[key])
 
+    async def feasibility(request: Request) -> JSONResponse:
+        """The feasibility report written at plan approval, which is early in the log."""
+        for event in catalog.read(entry(request), 1, 500):
+            if event["type"] == "plan.feasibility":
+                return JSONResponse(event["payload"])
+        raise HTTPException(404, "this run has no feasibility report (feasibility_report: true)")
+
     async def bench_results(request: Request) -> JSONResponse:
         for name in HERO_FILES:
             path = bench_dir / name
@@ -139,6 +146,7 @@ def create_app(
         Route("/api/runs/{run_id}/events", events_page),
         WebSocketRoute("/api/runs/{run_id}/events", websocket),
         Route("/api/runs/{run_id}/verify", verify_run, methods=["POST"]),
+        Route("/api/runs/{run_id}/feasibility", feasibility),
         Route("/api/bench/results", bench_results),
         Route("/api/tasks", not_wired("tasks", "the Day 4 T2 slice"), methods=["POST"]),
         Route(

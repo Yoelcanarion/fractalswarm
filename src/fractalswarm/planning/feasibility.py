@@ -343,7 +343,7 @@ def _price(
                 if track.split:
                     head.append((f"track plan {track.goal['id']}", split.seconds))
                 again = f" (x{waves}, one wave after another)" if waves > 1 else ""
-                path = head + [(name + again, band) for name, band in steps]
+                path = head + [(name + again, band.times(waves, waves)) for name, band in steps]
     if track_plans.calls.p50:
         stages["track plans"] = track_plans
     stages["session plans"] = session_plans
@@ -530,3 +530,39 @@ def _limitations(max_attempts: int) -> list[str]:
         "Durations assume no rate-limit queueing and no failure of an orchestrator.",
         "Prices are Standard; the Contributor routing gate is decided per call.",
     ]
+
+
+def render(report: dict[str, Any]) -> str:
+    """The report as text for the terminal: the ``plan.feasibility`` payload of a run's log."""
+    budget = report["budget_usd"]
+
+    def against(share: float | None) -> str:
+        return f" ({share:.0%} of ${budget:.2f})" if share is not None else ""
+
+    lines = [
+        f"Feasibility of {report['goal_id']}: {report['verdict']}",
+        f"  cost      P50 ${report['cost_p50_usd']:.3f}{against(report['p50_share'])}"
+        f"   P90 ${report['cost_p90_usd']:.3f}{against(report['p90_share'])}",
+        f"  duration  P50 {report['duration_p50_s']:.0f} s   P90 {report['duration_p90_s']:.0f} s"
+        f"   about {report['calls_p50']:.0f} LLM calls",
+        "",
+        f"  {'stage':<22}{'calls':>7}{'P50':>10}{'P90':>10}{'share':>8}",
+    ]
+    for line in report["breakdown"]:
+        lines.append(
+            f"  {line['stage']:<22}{line['calls']:>7.1f}{line['p50_usd']:>10.4f}"
+            f"{line['p90_usd']:>10.4f}{line['share']:>8.0%}"
+        )
+    sections = [
+        ("Critical path", report["critical_path"]),
+        ("Bottlenecks", report["bottlenecks"]),
+        ("Tools requested", [f"{k}: {', '.join(v)}" for k, v in report["tools_requested"].items()]),
+        ("Tools not allowed", report["tools_denied"] or ["none"]),
+        ("Policy flags", report["policy_flags"] or ["none"]),
+        ("The planner says", report["planner_notes"]),
+        ("Limitations", report["limitations"]),
+    ]
+    for title, items in sections:
+        if items:
+            lines += ["", title, *[f"  - {item}" for item in items]]
+    return "\n".join(lines)
