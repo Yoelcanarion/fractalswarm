@@ -1,0 +1,89 @@
+{
+  "_comment": "Canned web for the $0 run of the T3 example (tasks/examples/t3-web-report.yaml). Stand-in pages on a reserved .example domain, written for this repo; the real run searches the live web.",
+  "pages": {
+    "https://docs.fixtures.example/sqlite/license": {
+      "title": "SQLite: license",
+      "body": [
+        "SQLite is released into the public domain, so there is no license to buy or to comply with.",
+        "Anyone may copy, modify, publish, use, sell or distribute the code for any purpose, commercial or not."
+      ]
+    },
+    "https://notes.fixtures.example/sqlite-license": {
+      "title": "Notes on SQLite license",
+      "body": [
+        "The SQLite source code carries no copyright claim: its authors dedicated it to the public domain.",
+        "Organizations that need a formal assurance can buy a warranty of title, which is sold separately."
+      ]
+    },
+    "https://docs.fixtures.example/sqlite/deployment": {
+      "title": "SQLite: deployment",
+      "body": [
+        "SQLite is a library that runs inside your application process, so there is no database server to install or administer.",
+        "The application reads and writes a single database file on disk."
+      ]
+    },
+    "https://notes.fixtures.example/sqlite-deployment": {
+      "title": "Notes on SQLite deployment",
+      "body": [
+        "SQLite is embedded: it is linked into the program that uses it and needs no separate server process.",
+        "Several processes can open the same file, but writes are serialized."
+      ]
+    },
+    "https://docs.fixtures.example/duckdb/license": {
+      "title": "DuckDB: license",
+      "body": [
+        "DuckDB is released under the MIT license, a permissive open source license.",
+        "The MIT license allows commercial use, modification and redistribution as long as the copyright notice is kept."
+      ]
+    },
+    "https://notes.fixtures.example/duckdb-license": {
+      "title": "Notes on DuckDB license",
+      "body": [
+        "The code of DuckDB is open source under the MIT license.",
+        "Extensions are distributed separately and may carry their own licenses."
+      ]
+    },
+    "https://docs.fixtures.example/duckdb/deployment": {
+      "title": "DuckDB: deployment",
+      "body": [
+        "DuckDB is an in-process analytical database: it runs inside the host application, so there is no server to set up.",
+        "It can query files such as Parquet and CSV directly from the application."
+      ]
+    },
+    "https://notes.fixtures.example/duckdb-deployment": {
+      "title": "Notes on DuckDB deployment",
+      "body": [
+        "Like SQLite, DuckDB is embedded and has no separate server process.",
+        "It is designed for analytical queries on one machine rather than for many concurrent network clients."
+      ]
+    },
+    "https://docs.fixtures.example/postgresql/license": {
+      "title": "PostgreSQL: license",
+      "body": [
+        "PostgreSQL is released under the PostgreSQL License, a liberal open source license similar to the BSD and MIT licenses.",
+        "The license permits use, copying, modification and distribution for any purpose, without fee."
+      ]
+    },
+    "https://notes.fixtures.example/postgresql-license": {
+      "title": "Notes on PostgreSQL license",
+      "body": [
+        "The PostgreSQL License is an open source license approved by the OSI.",
+        "No single company owns the code, which is maintained by the PostgreSQL Global Development Group."
+      ]
+    },
+    "https://docs.fixtures.example/postgresql/deployment": {
+      "title": "PostgreSQL: deployment",
+      "body": [
+        "PostgreSQL runs as a separate server process that applications reach over the network or a local socket.",
+        "Clients connect through a driver, and many sessions can be served at the same time."
+      ]
+    },
+    "https://notes.fixtures.example/postgresql-deployment": {
+      "title": "Notes on PostgreSQL deployment",
+      "body": [
+        "PostgreSQL is a client/server database: the server is installed, configured and monitored apart from the application.",
+        "Managed hosting is offered by many cloud providers."
+      ]
+    }
+  }
+}

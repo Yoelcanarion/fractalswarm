@@ -2,7 +2,8 @@
 
 A check name is ``<check>`` or ``<check>:<argument>``. Each check returns a list of
 failures in plain English; they go back to the agent as feedback on a retry. Tasks add their
-own checks here (T2: the hard-constraint checker, which sees the ground truth).
+own checks here (T2: the hard-constraint checker, which sees the ground truth; T3: citation
+provenance, which sees the pages the run fetched).
 """
 
 from collections.abc import Callable
@@ -59,6 +60,13 @@ def nonempty_check(output: dict[str, Any], field: str, context: dict[str, Any]) 
     if value is None or (isinstance(value, str | list | dict) and not value):
         return [f"{field} is empty"]
     return []
+
+
+@register_check("t3.citations")
+def t3_citations(output: dict[str, Any], _: str, context: dict[str, Any]) -> list[str]:
+    from fractalswarm.bench.tasks.t3_report.checker import check_findings
+
+    return check_findings(output["findings"], context.get("sources"))
 
 
 @register_check("t2.extract_coverage")

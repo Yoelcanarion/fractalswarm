@@ -16,11 +16,13 @@ from typing import Any
 from pydantic import ValidationError
 
 from fractalswarm.actors.board import BOARD, TOOL_ARGS, TOOL_DESCRIPTIONS
+from fractalswarm.actors.web import WEB_TOOLS
 from fractalswarm.kernel.events import Event
 from fractalswarm.kernel.scheduler import Command, Send, StartEffect, Stop, View
 from fractalswarm.planning.contracts import Contract, ContractResult
 from fractalswarm.planning.planner import UNTRUSTED_NOTE, compose
 from fractalswarm.planning.schemas import OUTPUT_MODELS, function_tool, text_format
+from fractalswarm.safety.firewall import SPOTLIGHT_RULE
 
 AGENT_INSTRUCTIONS = """You are an agent of FractalSwarm. You execute one contract: reach its
 objective within its constraints, using only the tools offered. Call tools when you need
@@ -56,9 +58,13 @@ def contract_prompt(contract: Contract) -> str:
 
 def llm_request(contract: Contract, items: list[dict[str, Any]]) -> dict[str, Any]:
     schema = contract.produces[0].schema_name
+    instructions = f"{AGENT_INSTRUCTIONS}\n\n{UNTRUSTED_NOTE}"
+    if set(WEB_TOOLS) & set(contract.tools):
+        # Web results reach the agent as tool results between these markers (actors/web.py).
+        instructions += f"\n\n{SPOTLIGHT_RULE}"
     return {
         "role": contract.model_role,
-        "instructions": f"{AGENT_INSTRUCTIONS}\n\n{UNTRUSTED_NOTE}",
+        "instructions": instructions,
         "input": items,
         "text_format": text_format(schema, OUTPUT_MODELS[schema]),
         "tools": tool_defs(contract.tools),
@@ -164,6 +170,8 @@ def _llm_done(state: dict[str, Any], event: Event):
             "agent": state["id"],
             "contract": contract.idem_key,
         }
+        if name in WEB_TOOLS:  # the board checks the grant again before it reaches outside
+            body["tools"] = sorted(contract.tools)
         commands.append(Send(to=BOARD, topic="tool", body=body))
     cur = {
         **cur,

@@ -47,6 +47,7 @@ from fractalswarm.actors.integrator import finish_goal, leaf_outcome, merge_chil
 from fractalswarm.baselines.supervisor import RESTART_TAG
 from fractalswarm.bench.profiles import RESTART_DELAY_MS
 from fractalswarm.bench.tasks.t2_conference.task import T2
+from fractalswarm.bench.tasks.t3_report.task import T3
 from fractalswarm.comms.bus import Endpoint
 from fractalswarm.comms.chaos import CRASH_TOPIC
 from fractalswarm.coord import membership
@@ -72,7 +73,7 @@ from fractalswarm.safety.firewall import Verdict, quarantine_stub, scan_request
 from fractalswarm.verify.checks import run_checks
 from fractalswarm.verify.judge import judge_request, read_verdict
 
-TASKS = {T2.name: T2}
+TASKS = {T2.name: T2, T3.name: T3}
 MAX_PLAN_ATTEMPTS = 3
 MAX_FEEDBACK_LINES = 20
 ACTIVE = ("running", "judging", "booking")
@@ -505,7 +506,7 @@ def _complete(state: dict[str, Any], gid: str, output: dict[str, Any], gaps: lis
     entry = {**state["goals"][gid], "phase": "done"}
     state = _put_goal(state, gid, entry)
     task = TASKS[state["task"]]
-    events, body = finish_goal(task, state["id"], entry, output, gaps)
+    events, body = finish_goal(task, state["id"], entry, output, gaps, view)
     commands: list[Command] = [_fenced(state, gid, command) for command in events]
     if body is None:  # the root goal: the run's result is in, stop everything
         others = [actor for actor in view.alive if actor != state["id"]]
@@ -667,7 +668,8 @@ def _contract_result(state: dict[str, Any], body: dict[str, Any], view: View):
         return state, commands + more
     task = TASKS[state["task"]]
     output = body["output"]
-    failures = run_checks(contract.acceptance.checks, output, task.check_context(entry["goal"]))
+    context = task.check_context(entry["goal"], view)
+    failures = run_checks(contract.acceptance.checks, output, context)
     if failures:
         state, more = _retry(state, gid, cid, "checks", failures, view)
         return state, commands + more

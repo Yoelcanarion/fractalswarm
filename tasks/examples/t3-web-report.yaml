@@ -1,0 +1,33 @@
+# T3: a comparative report from the web, with checked citations (spec §15.3, §11), at depth 2:
+# root -> 3 subject orchestrators -> 6 research sessions (one per subject and criterion), 2 agents
+# each. The agents search the web and fetch pages; every finding in the report cites a page that
+# was fetched in this run, with a quote that is in that page. External text is scanned by the
+# firewall and reaches an agent only as spotlighted tool results.
+#
+#   uv run fractalswarm run tasks/examples/t3-web-report.yaml          # fake LLM on a canned web, $0
+#   uv run fractalswarm run tasks/examples/t3-web-report.yaml --backend real --confirm-real-spend \
+#       --clock live --firewall auto                                   # real model, live web search
+#   uv run fractalswarm replay <run id> --verify                       # MATCH, no key and no network
+#
+# The $0 run answers from tasks/fixtures/t3/databases (stand-in pages on a reserved .example
+# domain). A real run ignores the fixture: web_search is billed per query ($2.50 per 1k) on top
+# of the tokens.
+goal: >
+  Write a short comparative report on three databases: SQLite, DuckDB and PostgreSQL. For each
+  one, answer two questions: how it is licensed, and whether it runs embedded in the application
+  or as a separate server. Support every statement with a web page that was actually fetched,
+  and quote the page word for word.
+task: t3_report
+inputs:
+  subjects: [SQLite, DuckDB, PostgreSQL]
+  criteria:
+    license: How is it licensed?
+    deployment: Does it run embedded in the application, or as a separate server?
+  sources: []  # URLs the task itself provides; agents may fetch them without a search
+  fixture: tasks/fixtures/t3/databases  # the canned web of a $0 run
+seed: "1"
+budget_usd: 1.0
+scaling:
+  mode: exact
+  fanout: [3, 2]
+  agents_per_leaf: 2

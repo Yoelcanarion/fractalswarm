@@ -36,6 +36,7 @@ from fractalswarm.comms.chaos import (
 from fractalswarm.coord.membership import MembersView
 from fractalswarm.coord.tree import ROLE, TreeView
 from fractalswarm.kernel.scheduler import ActorKind, Command, Spawn
+from fractalswarm.memory.sources import SourcesView
 from fractalswarm.planning.scope import ScopeView
 
 ROOT = "o0"
@@ -52,7 +53,9 @@ T2_PROGRESS = ProgressSpec(
 
 
 def expected_contracts(corpus: dict[str, Any]) -> int:
-    """T2 has one session per (track, day) and three contracts per session."""
+    """T2 has one session per (track, day) and three contracts per session; T3 states its own."""
+    if "expected_work" in corpus:
+        return int(corpus["expected_work"])
     return len(corpus["tracks"]) * len(corpus["days"]) * CONTRACTS_PER_SESSION
 
 
@@ -68,7 +71,8 @@ class SwarmScenario:
     }
 
     def reducers(self) -> list[Any]:
-        return [MembersView(), ProgressView(T2_PROGRESS), ActorsView(), TreeView(), ScopeView()]
+        views = [MembersView(), ProgressView(T2_PROGRESS), ActorsView(), TreeView(), ScopeView()]
+        return [*views, SourcesView()]
 
     def boot(self, params: dict[str, Any]) -> list[Command]:
         spec = params["spec"]
