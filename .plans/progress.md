@@ -845,3 +845,67 @@ uv run fractalswarm run tasks/examples/t2-conference.yaml --backend real --confi
 **Next:**
 - After v1: merge scaling (`bench/charts.py`, and a central `_squad` fix that must not change single or pipeline mid-matrix) and langgraph (new dependencies).
 - Then restart `serve` and run the full suite.
+
+### Day 9 (continued): paused at 20:31 CET, Wed Oct 28
+**Paused at Yoel's request.** Nothing is running:
+- v1 and `serve` are stopped, and no Python process is left.
+- All Orca workers are done and released, and their terminals are closed.
+
+**v1** (`bench/matrix.yaml`, real, Standard with Contributor):
+- **Done:** 29 of 32 cells, all valid. The 29 cost $8.90.
+- **Left:** pipeline C2 s2, C3 s1 and C3 s2.
+- **Cut at 20:30:** pipeline C2 s2, at 6 of 18 contracts ($0.1680 settled, $0.0341 still reserved). Its run is in `runs/v1-interrupted/`, next to the single C1 s1 cut at 18:40.
+- **To resume:** `uv run fractalswarm bench bench/matrix.yaml --confirm-real-spend` skips the finished cells. The rest costs about $1; ask Yoel first.
+- **Spend:**
+  - $8.7600 before the 18:59 resume, $11.8194 now;
+  - $2.9458 reserved. The project ledger keeps the reservations of cancelled calls open (known issue), so "remaining" is understated.
+
+**Integration branch.** The four finished worker branches are merged into `Yoelcanarion/day-09-integration` (c14231c, from 2d23d1e). They are **not yet in day-09 and not yet tested**: ruff is clean, nothing else ran. Each branch says its default path is unchanged.
+
+| merge | branch | conflicts | resolution |
+|---|---|---|---|
+| adb58ef | scaling | `bench/workflows.py`, with T1's per-task helpers | `agents` goes through `_spec` for both tasks |
+| 993ecfe | langgraph | `bench/workflows.py`; `t2_conference/fake.py` | its `team_requests` hook is passed to the per-task preflights, and `LangGraphWorkflow` is T2-only; `fake.py` keeps both `audit` and `route`. It adds dependencies: `uv sync` after the ff |
+| f3c7c62 | resume | `cli.py` | keeps both `feasibility` and `resume` |
+| c14231c | economy | `orchestrator.py`, `swarm.py`, `scheduler.py`, `taskspec.py` | every conflict keeps both sides; `_route`, `_squad` and the handler wrapper were checked by hand |
+
+- **Resume, status:**
+  - opt-in prototype, 39 tests, 15 of which hard-kill a real Python process;
+  - after a crash, a request in flight is re-sent at least once, flagged in `run.resumed` and `effect.reissued`, and counted in `possible_extra_usd`. So "no duplicate calls" is not claimed for a process crash;
+  - recommendation: keep it out of the demo (`docs/resume.md`).
+- **Deviation (economy merge):** the economy keeps its default settings out of the recorded spec. That rule now also covers T3 (`_with_economy` in `run_params`); otherwise T3's `run.started` would have changed.
+
+**Next, in order:**
+1. **Resume v1** (3 cells, about $1), once Yoel says go.
+2. **Record $0 references twice and compare event by event.** Expect no difference.
+   - Record them first at day-09 HEAD:
+     - `fractalswarm run tasks/examples/t2-conference.yaml --chaos C0|kill-half|C3`;
+     - the T1 and T3 smokes;
+     - `bench bench/matrix.yaml --fake --out <dir>`.
+
+     Set `FRACTALSWARM_RUNS_DIR` and `FRACTALSWARM_LEDGER_PATH` to a scratch dir, never the real ledger.
+   - Then `git merge --ff-only Yoelcanarion/day-09-integration` and `uv sync`, and record the same runs again.
+3. **Checks:** `uv run pytest` (full; it includes the resume real-kill tests), ruff, and `demo --verify`.
+4. **Economy mutation checks.** Its 8 have no verdict yet. The list is in the economy report, and the script was saved next to the report in the coordinator's scratchpad.
+5. **Close the day:** progress entry, commit, and ask Yoel before merging into master or pushing.
+
+**Decisions for Yoel:**
+- Merge resume as opt-in, out of the demo? (recommended)
+- A real smoke test of resume (about $0.01 to $0.05)?
+- Delete the `worktree-agent-*` branches?
+- The next paid runs, one by one. Run the live-clock ones on a quiet machine.
+
+  | run | cost |
+  |---|---|
+  | T1 smoke and cells | about $2 |
+  | LangGraph rows | not estimated yet |
+  | scaling sweep | about $5.4–6 |
+  | T3 real | about $0.40 |
+  | final matrix | not estimated yet |
+  | optional real auction run for the final bundle | about $0.50 |
+
+**Issues:**
+- **PromptGuard 2 tokenizer warning** ("incorrect regex pattern"): check its scores before the attack clip.
+- **Crashed runs look alive in the UI:** a crashed run shows "running" forever (`api/catalog.py: _status`).
+- **Live-clock runs are sensitive to load:** at high speed on a loaded machine they produce false suspicions.
+- **Two workers ran full suites during paid recordings**, after reading the hold notice too late. Checked: no sign of CPU starvation. Live heartbeats were at most 1.28 s apart, and there were no false deaths beyond what the chaos profiles inject.
