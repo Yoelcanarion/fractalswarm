@@ -18,6 +18,7 @@ scaling:
     max_orchestrators_per_group: 6
     max_agents_per_orchestrator: 4
     max_depth: 2
+    complexity_threshold: 1     # a goal is split further while its complexity exceeds this
 
 contracts:
   max_steps: 8

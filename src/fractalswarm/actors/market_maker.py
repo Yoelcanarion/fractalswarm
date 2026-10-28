@@ -42,6 +42,7 @@ from fractalswarm.market.bids import (
     subtree_squads,
     usd_bid,
 )
+from fractalswarm.market.ladder import LadderState, Thresholds, ladder_state
 from fractalswarm.market.quotas import Quota, adapt
 
 EPOCH_TAG = "epoch"
@@ -52,7 +53,7 @@ def enabled(state: dict[str, Any]) -> bool:
     return state.get("market") is not None
 
 
-def _views(view: View) -> tuple[Any, Any] | None:
+def views(view: View) -> tuple[Any, Any] | None:
     market, tree = view.views.get("market"), view.views.get("tree")
     return None if market is None or tree is None else (market, tree)
 
@@ -97,7 +98,7 @@ def start(state: dict[str, Any], gid: str, view: View):
     first epoch closes at once (a 0 ms timer, so the assignments are in the log by then)."""
     if not enabled(state) or gid in state["mk"]:
         return state, []
-    seen = _views(view)
+    seen = views(view)
     if seen is None:
         return state, []
     market, tree = seen
@@ -112,7 +113,7 @@ def adopt(state: dict[str, Any], gid: str, view: View):
     the log. Its next epoch closes when the dead maker's would have."""
     if not enabled(state):
         return state, []
-    seen = _views(view)
+    seen = views(view)
     if seen is None:
         return state, []
     market, tree = seen
@@ -130,7 +131,7 @@ def adopt(state: dict[str, Any], gid: str, view: View):
 
 def on_event(state: dict[str, Any], event: Event, view: View, emit: Emitter):
     """Timers, completions, top-up requests, budget shocks, and the forced epochs."""
-    seen = _views(view)
+    seen = views(view)
     if not enabled(state) or not state["mk"] or seen is None:
         return state, []
     market, tree = seen
@@ -191,7 +192,7 @@ def _changed(state: dict[str, Any], gid: str, view: View, tree: Any) -> str | No
 
 def close_epoch(state: dict[str, Any], gid: str, reason: str, view: View, emit: Emitter):
     params = state["market"]
-    market, tree = _views(view)  # type: ignore[misc]
+    market, tree = views(view)  # type: ignore[misc]
     est = Estimates.from_args(params)
     level = state["goals"][gid]["level"]
     epoch = _next(state, market, gid)
@@ -265,7 +266,7 @@ def close_epoch(state: dict[str, Any], gid: str, reason: str, view: View, emit: 
         "base": committed_now,
     }
     commands.append(emit(gid, "market.cleared", cleared, f"market.cleared:{gid}:{epoch}"))
-    commands += _squad_caps(tree, market, children, usd, level, state)
+    commands += _squad_caps(tree, market, gid, children, usd, level, state)
 
     watched = _watch(state, view, tree, gid)
     watched["closed"] = epoch
@@ -275,17 +276,32 @@ def close_epoch(state: dict[str, Any], gid: str, reason: str, view: View, emit: 
 
 
 def _squad_caps(
-    tree: Any, market: Any, children: list[str], usd: Allocation, level: int, state: dict[str, Any]
+    tree: Any,
+    market: Any,
+    gid: str,
+    children: list[str],
+    usd: Allocation,
+    level: int,
+    state: dict[str, Any],
 ) -> list[Command]:
     """The grants of leaf goals become hard caps on their owners' squads: what the squad has
-    committed so far plus its grants. Intermediate goals pass their grant down as the
-    envelope of their own market (``MarketView.caps``)."""
+    committed so far plus its grants. A squad can own goals of several markets (autoscale with
+    fewer orchestrators than subgoals, an heir), so the grants it holds in the other markets
+    count too. Intermediate goals pass their grant down as the envelope of their own market
+    (``MarketView.caps``)."""
     if level + 1 < state["market"]["leaf_level"]:
         return []  # the children are intermediate: their grant is their own envelope
     totals: dict[str, int] = {}
     for child in children:
         owner = tree.owner_of(child)
         totals[owner] = totals.get(owner, 0) + usd.grants_micros[child]
+    for other, clearing in sorted(market.clearings.items()):
+        if other == gid:
+            continue
+        for child, grant in sorted(clearing.grants.items()):
+            owner = tree.owner_of(child)
+            if owner in totals and child in tree.goals and tree.goals[child].parent == other:
+                totals[owner] += grant
     commands: list[Command] = []
     for owner in sorted(totals):
         cap = market.committed(owner) + totals[owner]
@@ -409,7 +425,7 @@ def request_topup(
     """A leaf is about to dispatch ``contracts`` and its squad's headroom is less than they
     are budgeted at: ask the maker of the parent goal for the difference, in one message and
     before the first call reserves."""
-    seen = _views(view)
+    seen = views(view)
     if not enabled(state) or seen is None:
         return []
     market, tree = seen
@@ -428,7 +444,7 @@ def request_topup(
 
 def completed(state: dict[str, Any], gid: str, view: View) -> list[Command]:
     """A contract under leaf goal ``gid`` finished: tell the makers above it (epoch trigger)."""
-    seen = _views(view)
+    seen = views(view)
     if not enabled(state) or seen is None:
         return []
     _, tree = seen
@@ -440,6 +456,17 @@ def completed(state: dict[str, Any], gid: str, view: View) -> list[Command]:
             commands.append(Send(to=owner, topic="market.done", body={"goal_id": parent}))
         parent = tree.goals[parent].parent
     return commands
+
+
+def ladder(state: dict[str, Any], view: View) -> LadderState:
+    """Where the run is on the model ladder (spec §7.4), from what the log says it has
+    committed against the run cap."""
+    seen = views(view)
+    thresholds = Thresholds(**state["market"]["ladder"])
+    if seen is None or seen[0].run_cap is None:
+        return ladder_state(0.0, None, thresholds)
+    market = seen[0]
+    return ladder_state(to_usd(market.committed_total()), to_usd(market.run_cap), thresholds)
 
 
 # -- payloads -----------------------------------------------------------------------------

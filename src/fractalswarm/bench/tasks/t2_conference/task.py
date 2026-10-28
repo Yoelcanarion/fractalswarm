@@ -329,6 +329,15 @@ class T2Task:
             )
         return children
 
+    def complexity(self, goal: dict[str, Any]) -> int:
+        """How many pieces a goal splits into, for autoscale's recursion rule: the tracks of
+        the root, the days (sessions) of a track, and 1 for a session, which is a leaf."""
+        if "corpus" in goal:
+            return len(goal["corpus"]["tracks"])
+        if "day" in goal:
+            return 1
+        return len(goal["data"]["days"])
+
     # -- intermediate levels: track -> sessions -------------------------------------------
 
     def split_request(self, goal: dict[str, Any], feedback: list[str]) -> dict[str, Any]:

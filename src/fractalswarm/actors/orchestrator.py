@@ -42,7 +42,7 @@ the swarm, so they plan as well as it does.
 
 from typing import Any
 
-from fractalswarm.actors import market_maker
+from fractalswarm.actors import autoscale, market_maker
 from fractalswarm.actors.board import BOARD
 from fractalswarm.actors.integrator import finish_goal, leaf_outcome, merge_children
 from fractalswarm.baselines.supervisor import RESTART_TAG
@@ -106,7 +106,9 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
     if mode in CENTRAL_MODES:
         count = 1 if mode in SERIAL_MODES else agents_per_leaf * leaf_count(fanout)
         children = [f"{actor_id}.a{i}" for i in range(1, count + 1)]
-    elif args.get("bare"):  # a member respawned into a dead group: it inherits, spawns none
+    elif args.get("bare") or args.get("autoscale") is not None:
+        # Respawned into a dead group (it inherits, spawns none), or autoscale (spawned on
+        # demand, once the plan is known).
         children = []
     elif leaf:
         children = [f"{actor_id}.a{i}" for i in range(1, agents_per_leaf + 1)]
@@ -132,6 +134,7 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "relay": args.get("relay"),
         "contributor": bool(args.get("contributor")),
         "market": args.get("market"),  # the economy's settings; None: no epochs (the default)
+        "autoscale": args.get("autoscale"),  # the caps of scaling.mode: autoscale; None: exact
         "mk": {},  # goal -> epoch bookkeeping of the markets this orchestrator makes
         "spawned": len(children),  # agents spawned so far, for replacement names
         "respawned": 0,  # orchestrators spawned into dead sibling groups
@@ -457,12 +460,16 @@ def _ancestors(state: dict[str, Any], gid: str, view: View) -> list[str]:
 
 def _assign_children(state: dict[str, Any], gid: str, children: list[dict[str, Any]], view: View):
     entry = state["goals"][gid]
+    scaled: list[Command] = []
+    if autoscale.enabled(state):
+        state, scaled = autoscale.group(state, gid, len(children), view, _emitter(state))
+        scaled += _recursion(state, gid, entry["goal"])
     group = _child_group(state, entry, view)
     # epsilon 0 at plan time: with no more subgoals than members, one each (parallel squads);
     # takeover remaps use the spec's epsilon (coord/tree.py).
     keys = {child["id"]: child["priority"] for child in children}
     owners = assign(keys, group, epsilon=0.0)
-    commands: list[Command] = []
+    commands: list[Command] = scaled
     tracked = {}
     child_of = dict(state["child_of"])
     level = entry["level"] + 1
@@ -492,6 +499,8 @@ def _child_group(state: dict[str, Any], entry: dict[str, Any], view: View) -> li
     members = view.views.get("members")
     if state["membership"] and members is not None:
         alive = members.alive(role=ROLE, group=entry["group"])
+        if autoscale.enabled(state):  # spawned by this very handler call: not joined yet
+            alive = sorted({*alive, *(c for c in state["children"] if _alive(view, c))})
         return alive or [state["id"]]
     return list(state["children"])
 
@@ -554,7 +563,9 @@ def _start_contracts(
         )
         for c in contracts
     ]
-    commands: list[Command] = []
+    commands: list[Command] = (
+        _recursion(state, gid, entry["goal"]) if autoscale.enabled(state) else []
+    )
     state, agents, spawned = _live_agents(state, gid, view)
     commands += spawned
     keys = {f"{gid}/{c.id}": c.priority for c in contracts}
@@ -624,9 +635,14 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
         ready = ready[:1]
     agents: list[str] = []
     if ready:
+        if autoscale.enabled(state):
+            state, scaled = autoscale.squad(state, gid, len(ready), view, _emitter(state))
+            commands += scaled
         state, agents, spawned = _live_agents(state, gid, view)
         entry = state["goals"][gid]
         commands += spawned
+    several = autoscale.enabled(state) and len(ready) > 1
+    spread = autoscale.spread(gid, ready, contracts, agents) if several else {}
     if ready:
         commands += market_maker.request_topup(state, gid, [contracts[cid] for cid in ready], view)
     for cid in ready:
@@ -634,7 +650,9 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
         deps = {dep: entry["outputs"][dep] for dep in contract.depends_on}
         inputs = task.contract_inputs(entry["goal"], contract, deps)
         update: dict[str, Any] = {"inputs": inputs, "owner": state["id"]}
-        if contract.assignee not in agents:
+        if f"{gid}/{cid}" in spread:
+            update["assignee"] = spread[f"{gid}/{cid}"]
+        elif contract.assignee not in agents:
             update["assignee"] = rank(f"{gid}/{cid}:{contract.attempt}", agents)[0]
         contract = contract.model_copy(update=update)
         contracts[cid] = contract.model_dump()
@@ -1037,6 +1055,8 @@ def _respawn(state: dict[str, Any], level: int, group: str | None):
     args |= {"membership": True, "relay": state["relay"], "contributor": state["contributor"]}
     if state["market"] is not None:
         args["market"] = state["market"]
+    if state["autoscale"] is not None:
+        args["autoscale"] = state["autoscale"]
     state = {**state, "respawned": number}
     return state, [Spawn(actor_id=actor, kind="orchestrator", args=args)]
 
@@ -1304,6 +1324,14 @@ def _agent_args(state: dict[str, Any]) -> dict[str, Any]:
 def _route(state: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
     """Contributor routing, when the run opted in (spec §7.5; the client still gates it)."""
     return request | {"contributor": True} if state["contributor"] else request
+
+
+def _recursion(state: dict[str, Any], gid: str, goal: dict[str, Any]) -> list[Command]:
+    """Autoscale: log the decision to split this goal further, or to stop here."""
+    complexity = getattr(TASKS[state["task"]], "complexity", None)
+    if complexity is None:
+        return []
+    return [autoscale.recursion(state, gid, complexity(goal), _emitter(state))]
 
 
 def _is_leaf(state: dict[str, Any], entry: dict[str, Any]) -> bool:

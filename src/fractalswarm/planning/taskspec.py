@@ -13,6 +13,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from fractalswarm.config import CONFIG_DIR
 
 REPO_ROOT = CONFIG_DIR.parent
+AUTOSCALE_KEYS = (
+    "max_orchestrators_per_group",
+    "max_agents_per_orchestrator",
+    "max_depth",
+    "complexity_threshold",
+)
 
 
 def _defaults() -> dict[str, Any]:
@@ -25,6 +31,11 @@ class Scaling(BaseModel):
     mode: Literal["exact", "autoscale"] = "exact"
     fanout: list[int] = Field(default_factory=lambda: [3, 2])
     agents_per_leaf: int = Field(default=2, ge=1)
+    # Autoscale only (spec §7.3); left out of an exact run's recorded spec.
+    max_orchestrators_per_group: int = Field(default=6, ge=1)
+    max_agents_per_orchestrator: int = Field(default=4, ge=1)
+    max_depth: int = Field(default=2, ge=1)
+    complexity_threshold: int = Field(default=1, ge=0)
 
     @field_validator("fanout")
     @classmethod
@@ -83,6 +94,7 @@ class TaskSpec(BaseModel):
                 mode=defaults["scaling"]["mode"],
                 fanout=list(exact["fanout"]),
                 agents_per_leaf=int(exact["agents_per_leaf"]),
+                **defaults["scaling"]["autoscale"],
             )
         if "market" not in data:
             spec.market = Market(
@@ -134,6 +146,9 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
         recorded["inputs"]["fixture"] = fixture.resolve().relative_to(REPO_ROOT).as_posix()
     if spec.market == Market():  # opt-in settings stay out of a default run's log
         del recorded["market"]
+    if spec.scaling.mode == "exact":
+        for key in AUTOSCALE_KEYS:
+            del recorded["scaling"][key]
     params: dict[str, Any] = {"spec": recorded, "corpus": corpus, "truth": truth}
     economy = market_params(spec)
     if economy is not None:
@@ -163,7 +178,10 @@ def market_params(spec: TaskSpec) -> dict[str, Any] | None:
         "rpm_per_agent": economy["rpm_per_agent"],
         "tpm_per_agent": economy["tpm_per_agent"],
         "fanout": list(spec.scaling.fanout),
-        "leaf_level": len(spec.scaling.fanout),
+        "leaf_level": spec.scaling.max_depth
+        if spec.scaling.mode == "autoscale"
+        else len(spec.scaling.fanout),
+        "ladder": _defaults()["budget"]["ladder"],
         "limits": {
             model: {"limit_rpm": found["rpm"], "limit_tpm": found["tpm"]}
             for model, found in sorted(limits.items())

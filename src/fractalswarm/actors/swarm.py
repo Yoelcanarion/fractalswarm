@@ -40,6 +40,7 @@ from fractalswarm.coord.tree import ROLE, TreeView
 from fractalswarm.kernel.scheduler import ActorKind, Command, Spawn
 from fractalswarm.market.view import MarketView
 from fractalswarm.planning.scope import ScopeView
+from fractalswarm.planning.taskspec import AUTOSCALE_KEYS
 
 ROOT = "o0"
 CONTRACTS_PER_SESSION = 3  # extract, place, blurb
@@ -83,9 +84,14 @@ class SwarmScenario:
     def boot(self, params: dict[str, Any]) -> list[Command]:
         spec = params["spec"]
         scaling = spec["scaling"]
-        if scaling["mode"] != "exact":
-            raise ValueError("only exact scaling is implemented (autoscale is a fallback item)")
-        if len(scaling["fanout"]) != 2:
+        autoscale = None
+        if scaling["mode"] == "autoscale":
+            if self.mode != "swarm" or params.get("market") is None:
+                raise ValueError("autoscale runs on the swarm, with the economy's params")
+            autoscale = {key: scaling[key] for key in AUTOSCALE_KEYS}
+            width = [autoscale["max_orchestrators_per_group"]] * autoscale["max_depth"]
+            scaling = scaling | {"fanout": width}
+        elif len(scaling["fanout"]) != 2:
             raise ValueError("the T2 slice runs at depth 2: fanout [tracks, sessions-owners]")
         root_goal = {
             "id": "root",
@@ -111,6 +117,8 @@ class SwarmScenario:
         market = params.get("market") if self.mode == "swarm" else None
         if market is not None:
             args["market"] = market
+        if autoscale is not None:
+            args["autoscale"] = autoscale
         commands: list[Command] = [Spawn(actor_id=BOARD, kind="board", args={})]
         if args["relay"] is not None:
             commands.append(Spawn(actor_id=NET, kind=NET, args={}))
