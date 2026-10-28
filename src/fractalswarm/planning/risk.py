@@ -51,15 +51,21 @@ P90_EXTRA_STEPS = 1
 
 
 class RiskWeights(BaseModel):
-    """How much each term counts. The weights sum to 1, so r stays in [0, 1]."""
+    """How much each term counts. The weights sum to 1, so r stays in [0, 1].
+
+    The critical path counts little here because the audit samples all of it anyway: the
+    weights decide where the rest of the contracts fall. A non-critical contract reaches the
+    50% band (r >= 0.4) when its planner calls it very risky, and the 100% band (r >= 0.7)
+    only with a planner, a role history and tools that all say so.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     cost_uncertainty: float = 0.15
-    critical_path: float = 0.25
+    critical_path: float = 0.15
     tool: float = 0.15
-    planner: float = 0.25
-    role_failure: float = 0.20
+    planner: float = 0.30
+    role_failure: float = 0.25
 
     @model_validator(mode="after")
     def _sum_to_one(self) -> "RiskWeights":
