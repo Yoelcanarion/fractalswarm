@@ -19,7 +19,7 @@ from fractalswarm.kernel.replay import ReplayReport, ReplaySetup, replay
 from fractalswarm.kernel.scheduler import Runtime
 from fractalswarm.kernel.store import EventStore
 from fractalswarm.llm.cassette import Cassette, CassetteBackend
-from fractalswarm.llm.client import Backend, LLMClient
+from fractalswarm.llm.client import Backend, LLMClient, RetryPolicy
 from fractalswarm.llm.roles import RoleTable
 from fractalswarm.market.ledger import ProjectLedger
 from fractalswarm.market.prices import PriceTable
@@ -118,6 +118,7 @@ async def record_run(
     roles: RoleTable | None = None,
     prices: PriceTable | None = None,
     firewall: Firewall | None = None,
+    retry: RetryPolicy | None = None,
 ) -> RunResult:
     """Record a run. ``firewall`` scans attachments (default: the deterministic heuristic;
     real runs pass PromptGuard)."""
@@ -132,6 +133,7 @@ async def record_run(
         mode="record",
         cassette=cassette,
         project_ledger=project_ledger,
+        retry=retry,
     )
     with EventStore(paths.events) as store:
         runtime = Runtime(

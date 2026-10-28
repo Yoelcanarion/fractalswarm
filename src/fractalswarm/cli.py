@@ -128,12 +128,23 @@ def run(
             "real backend, heuristic with the fake one"
         ),
     ] = None,
+    budget_usd: Annotated[
+        float | None, typer.Option(help="the run cap in USD; default: the TaskSpec's budget_usd")
+    ] = None,
+    no_paid_retries: Annotated[
+        bool,
+        typer.Option(
+            help="retry only the rejections the API does not bill (429, 503), never a request "
+            "that may have run (no reply, 500)"
+        ),
+    ] = False,
 ) -> None:
     """Run a task (fake LLM by default) into runs/<run_id>."""
     import asyncio
     from datetime import datetime
 
     from fractalswarm.comms.chaos import plan_from
+    from fractalswarm.llm.client import UNBILLED_STATUSES, RetryPolicy
     from fractalswarm.llm.transport import ApiFaults, FaultyBackend
     from fractalswarm.market.ledger import ProjectLedger
     from fractalswarm.planning.taskspec import TaskSpec, run_params
@@ -145,9 +156,17 @@ def run(
     firewall = firewall or ("auto" if backend == "real" else "heuristic")
     if firewall not in ("auto", "heuristic"):
         raise typer.BadParameter("--firewall must be auto or heuristic")
+    if budget_usd is not None and budget_usd <= 0:
+        raise typer.BadParameter("--budget-usd must be above 0")
     settings = _settings()
     spec = TaskSpec.load(taskspec)
+    if budget_usd is not None:
+        spec = spec.model_copy(update={"budget_usd": budget_usd})
     params = run_params(spec)
+    retry = None
+    if no_paid_retries:
+        retry = RetryPolicy(statuses=UNBILLED_STATUSES)
+        params |= {"retry": retry.model_dump(mode="json")}
     if chaos == "kill-half":
         params |= {"chaos": kill_half_plan(spec.seed), "membership": True}
     elif chaos in ("C0", "C1", "C2", "C3"):
@@ -194,6 +213,7 @@ def run(
             run_cap_usd=spec.budget_usd,
             project_ledger=project_ledger,
             secrets=settings.secret_values(),
+            retry=retry,
         )
     )
     spent = result.completed.payload["spent_usd"]

@@ -15,9 +15,11 @@ from fractalswarm.llm.cassette import (
     redact,
 )
 from fractalswarm.llm.client import (
+    UNBILLED_STATUSES,
     LLMClient,
     LLMRequest,
     OpenAIBackend,
+    RetryPolicy,
     parse_rate_limits,
     parse_retry_after_ms,
 )
@@ -111,6 +113,30 @@ async def test_retries_honor_retry_after_and_record_every_attempt(tmp_path: Path
     assert backoffs[0] >= 7000
     assert 1000 <= backoffs[1] <= 2000 + 1000
     assert len(llm.cassette.get("eff-1").attempts) == 3
+
+
+async def test_no_paid_retries_never_resends_a_request_that_may_have_run(tmp_path: Path) -> None:
+    policy = RetryPolicy(statuses=UNBILLED_STATUSES)
+    for status in (0, 500):  # no reply, or a server error: the request may have been billed
+        reply = FakeReply(status=status, text="lost")
+        backend = FakeBackend(
+            script=lambda body, attempt, reply=reply: reply if attempt == 0 else ""
+        )
+        (tmp_path / str(status)).mkdir()
+        llm = client(backend, tmp_path / str(status), retry=policy)
+        outcome = await llm.call(
+            "eff-1", {"role": "judge", "input": "x"}, run_id="r", sleep=Sleeps()
+        )
+        assert outcome.status == "error"
+        assert outcome.result["attempts"] == 1
+
+    def script(body, attempt):
+        return FakeReply(status=429, error_type="rate_limit_error") if attempt == 0 else "fine"
+
+    llm = client(FakeBackend(script=script), tmp_path, retry=policy)
+    outcome = await llm.call("eff-1", {"role": "judge", "input": "x"}, run_id="r", sleep=Sleeps())
+    assert outcome.status == "ok"
+    assert outcome.result["attempts"] == 2  # a rejection never ran, so it is retried
 
 
 async def test_client_errors_are_not_retried(tmp_path: Path) -> None:

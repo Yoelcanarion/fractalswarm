@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from fractalswarm.bench.scoring import load_events
 from fractalswarm.bench.tasks.t2_conference.fake import t2_script
 from fractalswarm.cli import app
 from fractalswarm.kernel.events import Event
@@ -109,6 +110,25 @@ def test_cli_run_reports_a_clean_schedule_and_replays(
     assert verified.exit_code == 0, verified.output
     assert verified.output.startswith("MATCH")
     assert not (tmp_path / "ledger.sqlite").exists()  # the fake never touches the ledger
+
+
+def test_cli_run_records_its_cap_and_its_retry_policy(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FRACTALSWARM_RUNS_DIR", str(tmp_path))
+    monkeypatch.setenv("FRACTALSWARM_LEDGER_PATH", str(tmp_path / "ledger.sqlite"))
+    runner = CliRunner()
+    args = ["--run-id", "capped", "--budget-usd", "0.75", "--no-paid-retries"]
+    result = runner.invoke(app, ["run", str(TASKSPEC), *args])
+    assert result.exit_code == 0, result.output
+    started = next(e for e in load_events(tmp_path / "capped") if e.type == "run.started")
+    assert started.payload["run_cap_usd"] == 0.75
+    assert started.payload["params"]["spec"]["budget_usd"] == 0.75
+    assert started.payload["params"]["retry"]["statuses"] == [429, 503]
+    verified = runner.invoke(app, ["replay", "capped", "--verify"])
+    assert verified.output.startswith("MATCH"), verified.output
+    refused = runner.invoke(app, ["run", str(TASKSPEC), "--budget-usd", "0"])
+    assert refused.exit_code != 0
 
 
 def test_cli_run_refuses_real_spend_without_confirmation(

@@ -35,7 +35,10 @@ from fractalswarm.safety.scanners import RoutingDecision, contributor_gate
 Sleep = Callable[[int], Awaitable[None]]
 Mode = Literal["record", "live", "replay"]
 
-RETRYABLE_STATUSES = {0, 429, 500, 503}
+RETRYABLE_STATUSES = (0, 429, 500, 503)
+# Rejections the API does not bill: the request never ran. A request with no reply (0) or a
+# 500 may have run and been billed, so re-sending it could pay twice.
+UNBILLED_STATUSES = (429, 503)
 RATE_LIMIT_HEADERS = {
     "limit_requests": "x-ratelimit-limit-requests",
     "remaining_requests": "x-ratelimit-remaining-requests",
@@ -76,6 +79,7 @@ class RetryPolicy(BaseModel):
     base_delay_ms: int = 500
     max_attempts: int = 5
     max_jitter_ms: int = 1000
+    statuses: tuple[int, ...] = RETRYABLE_STATUSES  # the attempt statuses that are retried
 
 
 class Backend(Protocol):
@@ -243,7 +247,7 @@ class LLMClient:
             attempt = await self.backend.send(effect_id, body, sleep)
             entry.attempts.append(attempt)
             latency += attempt.latency_ms
-            if attempt.status not in RETRYABLE_STATUSES or number + 1 == self.retry.max_attempts:
+            if attempt.status not in self.retry.statuses or number + 1 == self.retry.max_attempts:
                 break
             delay = backoff_ms(self.retry, number, parse_retry_after_ms(attempt.headers), rng)
             await sleep(delay)
