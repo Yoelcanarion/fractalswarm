@@ -1,0 +1,102 @@
+{
+  "Arbor Robotics": {
+    "ceo": "Marta Brandt",
+    "employees": "21635",
+    "founded_year": "2005",
+    "headquarters": "Tallinn",
+    "industry": "precision agriculture",
+    "product": "Relay 6",
+    "revenue_musd": "3365",
+    "ticker": "ARBQ"
+  },
+  "Arbor Systems": {
+    "ceo": "Bruno Ivanova",
+    "employees": "16904",
+    "founded_year": "1996",
+    "headquarters": "Turin",
+    "industry": "logistics software",
+    "product": "Lattice 2",
+    "revenue_musd": "1090",
+    "ticker": "ARBZ"
+  },
+  "Halcyon Dynamics": {
+    "ceo": "Hugo Okafor",
+    "employees": "4290",
+    "founded_year": "1984",
+    "headquarters": "Toronto",
+    "industry": "industrial robotics",
+    "product": "Lattice 5",
+    "revenue_musd": "3619",
+    "ticker": "HALQ"
+  },
+  "Iris Energy": {
+    "ceo": "Sven Petrov",
+    "employees": "16784",
+    "founded_year": "1998",
+    "headquarters": "Valencia",
+    "industry": "industrial robotics",
+    "product": "Orbit 7",
+    "revenue_musd": "3562",
+    "ticker": "IRIX"
+  },
+  "Iris Foods": {
+    "ceo": "Sven Moreau",
+    "employees": "5841",
+    "founded_year": "1977",
+    "headquarters": "Lyon",
+    "industry": "battery storage",
+    "product": "Quill 3",
+    "revenue_musd": "542",
+    "ticker": "IRIX"
+  },
+  "Juniper Analytics": {
+    "ceo": "Rosa Eriksen",
+    "employees": "15770",
+    "founded_year": "2015",
+    "headquarters": "Osaka",
+    "industry": "battery storage",
+    "product": "Relay 7",
+    "revenue_musd": "1957",
+    "ticker": "JUNX"
+  },
+  "Kestrel Dynamics": {
+    "ceo": "Nadia Eriksen",
+    "employees": "3346",
+    "founded_year": "2016",
+    "headquarters": "Osaka",
+    "industry": "plant-based foods",
+    "product": "Mosaic 3",
+    "revenue_musd": "2138",
+    "ticker": "KESQ"
+  },
+  "Lumen Foods": {
+    "ceo": "Hugo Haddad",
+    "employees": "16336",
+    "founded_year": "2004",
+    "headquarters": "Lisbon",
+    "industry": "plant-based foods",
+    "product": "Lattice 4",
+    "revenue_musd": "2377",
+    "ticker": "LUMX"
+  },
+  "Meridian Works": {
+    "ceo": "Sven Nakamura",
+    "employees": "13050",
+    "founded_year": "2014",
+    "headquarters": "Lyon",
+    "industry": "industrial robotics",
+    "product": "Beacon 2",
+    "revenue_musd": "1054",
+    "ticker": "MERZ"
+  },
+  "Pinnacle Dynamics": {
+    "ceo": "Dmitri Eriksen",
+    "employees": "3526",
+    "founded_year": "1986",
+    "headquarters": "Tallinn",
+    "industry": "medical imaging",
+    "product": "Cascade 3",
+    "revenue_musd": "868",
+    "ticker": "PINQ"
+  }
+}

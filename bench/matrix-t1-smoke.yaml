@@ -1,0 +1,17 @@
+# One real T1 run before the paid final matrix: swarm, C0, seed 1, in Contributor mode and
+# capped like a cell of the final matrix. It reads the real model's answers on T1 for at most
+# $0.50; the final matrix then runs the other 31 T1 cells.
+#   uv run fractalswarm bench bench/matrix-t1-smoke.yaml --dry-run
+#   uv run fractalswarm bench bench/matrix-t1-smoke.yaml --confirm-real-spend
+# Then check the row (completed, valid, F1 = score) and the replay:
+#   uv run fractalswarm replay bench/results/t1-smoke/runs/swarm__t1_extraction__C0__s1 --verify
+name: t1-smoke
+workflows: [swarm]
+tasks: [t1_extraction]
+profiles: [C0]
+seeds: [1]
+contributor: true
+out_dir: results/t1-smoke
+budget:
+  run_cap_usd: 0.50
+  matrix_cap_usd: 0.50

@@ -1,0 +1,102 @@
+{
+  "Arbor Foods": {
+    "ceo": "Quentin Alvarez",
+    "employees": "14652",
+    "founded_year": "1995",
+    "headquarters": "Tallinn",
+    "industry": "satellite data",
+    "product": "Delta 3",
+    "revenue_musd": "3884",
+    "ticker": "ARBZ"
+  },
+  "Brightline Energy": {
+    "ceo": "Sven Ivanova",
+    "employees": "4117",
+    "founded_year": "2009",
+    "headquarters": "Lyon",
+    "industry": "satellite data",
+    "product": "Echo 8",
+    "revenue_musd": "454",
+    "ticker": "BRIQ"
+  },
+  "Cobalt Dynamics": {
+    "ceo": "Ines Okafor",
+    "employees": "19948",
+    "founded_year": "2012",
+    "headquarters": "Lisbon",
+    "industry": "precision agriculture",
+    "product": "Beacon 2",
+    "revenue_musd": "287",
+    "ticker": "COBZ"
+  },
+  "Fjord Foods": {
+    "ceo": "Chiara Nakamura",
+    "employees": "10013",
+    "founded_year": "2013",
+    "headquarters": "Osaka",
+    "industry": "logistics software",
+    "product": "Atlas 8",
+    "revenue_musd": "1740",
+    "ticker": "FJOY"
+  },
+  "Granite Systems": {
+    "ceo": "Nadia Eriksen",
+    "employees": "20947",
+    "founded_year": "1983",
+    "headquarters": "Turin",
+    "industry": "logistics software",
+    "product": "Harbor 7",
+    "revenue_musd": "1104",
+    "ticker": "GRAX"
+  },
+  "Iris Analytics": {
+    "ceo": "Sven Alvarez",
+    "employees": "17865",
+    "founded_year": "1986",
+    "headquarters": "Valencia",
+    "industry": "satellite data",
+    "product": "Glide 3",
+    "revenue_musd": "225",
+    "ticker": "IRIZ"
+  },
+  "Juniper Labs": {
+    "ceo": "Priya Jensen",
+    "employees": "19979",
+    "founded_year": "2004",
+    "headquarters": "Cork",
+    "industry": "payments",
+    "product": "Harbor 6",
+    "revenue_musd": "2183",
+    "ticker": "JUNZ"
+  },
+  "Meridian Systems": {
+    "ceo": "Quentin Ivanova",
+    "employees": "5358",
+    "founded_year": "1980",
+    "headquarters": "Turin",
+    "industry": "precision agriculture",
+    "product": "Flux 4",
+    "revenue_musd": "1683",
+    "ticker": "MERQ"
+  },
+  "Orchard Systems": {
+    "ceo": "Dmitri Lindqvist",
+    "employees": "78",
+    "founded_year": "1978",
+    "headquarters": "Denver",
+    "industry": "battery storage",
+    "product": "Keystone 8",
+    "revenue_musd": "1058",
+    "ticker": "ORCY"
+  },
+  "Pinnacle Analytics": {
+    "ceo": "Jonas Ferreira",
+    "employees": "8119",
+    "founded_year": "1985",
+    "headquarters": "Lyon",
+    "industry": "payments",
+    "product": "Beacon 2",
+    "revenue_musd": "2427",
+    "ticker": "PINX"
+  }
+}

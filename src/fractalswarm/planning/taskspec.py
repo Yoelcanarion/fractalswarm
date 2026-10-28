@@ -101,8 +101,6 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
 
     They are recorded in ``run.started``, so a run replays without the fixture files.
     """
-    from fractalswarm.bench.tasks.t2_conference.generator import load_fixture, write_fixture
-
     if spec.task == "t3_report":
         from fractalswarm.bench.tasks.t3_report.web import corpus
 
@@ -111,20 +109,42 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
             fixture = Path(spec.inputs.fixture).resolve().relative_to(REPO_ROOT)
             recorded["inputs"]["fixture"] = fixture.as_posix()  # no machine-specific paths
         return {"spec": recorded, "corpus": corpus(spec), "truth": {}}
-    if spec.task != "t2_conference":
-        raise ValueError(f"task {spec.task!r} is not implemented yet (t2_conference, t3_report)")
-    if spec.inputs.fixture is None:
-        raise ValueError("the TaskSpec needs inputs.fixture (a T2 fixture directory)")
-    fixture = Path(spec.inputs.fixture)
-    if not (fixture / "corpus.json").exists():
-        if spec.inputs.generate_seed is None:
-            raise FileNotFoundError(f"no T2 fixture in {fixture}")
-        inputs = spec.inputs
-        fixture = write_fixture(
-            fixture.parent, spec.inputs.generate_seed, inputs.poison, inputs.poison_wording
+    if spec.task not in ("t2_conference", "t1_extraction"):
+        raise ValueError(
+            f"task {spec.task!r} is not implemented yet (t2_conference, t1_extraction, t3_report)"
         )
-    corpus, truth = load_fixture(fixture)
+    if spec.inputs.fixture is None:
+        raise ValueError("the TaskSpec needs inputs.fixture (a fixture directory)")
+    fixture = Path(spec.inputs.fixture)
+    if spec.task == "t1_extraction":
+        corpus, truth, fixture = _t1_fixture(spec, fixture)
+    else:
+        from fractalswarm.bench.tasks.t2_conference.generator import load_fixture, write_fixture
+
+        if not (fixture / "corpus.json").exists():
+            if spec.inputs.generate_seed is None:
+                raise FileNotFoundError(f"no T2 fixture in {fixture}")
+            inputs = spec.inputs
+            fixture = write_fixture(
+                fixture.parent, spec.inputs.generate_seed, inputs.poison, inputs.poison_wording
+            )
+        corpus, truth = load_fixture(fixture)
     recorded = spec.model_dump(mode="json")
     if fixture.resolve().is_relative_to(REPO_ROOT):  # no machine-specific paths in the log
         recorded["inputs"]["fixture"] = fixture.resolve().relative_to(REPO_ROOT).as_posix()
     return {"spec": recorded, "corpus": corpus, "truth": truth}
+
+
+def _t1_fixture(spec: TaskSpec, fixture: Path) -> tuple[dict[str, Any], dict[str, Any], Path]:
+    """T1's corpus and truth. The tree's shape (groups x batches) is the TaskSpec's fanout."""
+    from fractalswarm.bench.tasks.t1_extraction.generator import load_fixture, write_fixture
+
+    if len(spec.scaling.fanout) != 2:
+        raise ValueError("T1 runs at depth 2: fanout [groups, batches]")
+    if not (fixture / "docs.json").exists():
+        if spec.inputs.generate_seed is None:
+            raise FileNotFoundError(f"no T1 fixture in {fixture}")
+        fixture = write_fixture(fixture.parent, spec.inputs.generate_seed)
+    corpus, truth = load_fixture(fixture)
+    groups, batches = spec.scaling.fanout
+    return corpus | {"groups": groups, "batches": batches}, truth, fixture

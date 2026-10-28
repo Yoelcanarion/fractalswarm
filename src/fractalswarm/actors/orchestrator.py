@@ -46,6 +46,7 @@ from fractalswarm.actors.board import BOARD
 from fractalswarm.actors.integrator import finish_goal, leaf_outcome, merge_children
 from fractalswarm.baselines.supervisor import RESTART_TAG
 from fractalswarm.bench.profiles import RESTART_DELAY_MS
+from fractalswarm.bench.tasks.t1_extraction.task import T1
 from fractalswarm.bench.tasks.t2_conference.task import T2
 from fractalswarm.bench.tasks.t3_report.task import T3
 from fractalswarm.comms.bus import Endpoint
@@ -77,7 +78,7 @@ from fractalswarm.verify import cross_audit
 from fractalswarm.verify.checks import run_checks
 from fractalswarm.verify.judge import judge_request, read_verdict
 
-TASKS = {T2.name: T2, T3.name: T3}
+TASKS = {T1.name: T1, T2.name: T2, T3.name: T3}
 MAX_PLAN_ATTEMPTS = 3
 MAX_FEEDBACK_LINES = 20
 ACTIVE = ("running", "judging", "auditing", "booking")

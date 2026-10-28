@@ -1,0 +1,24 @@
+# T1: multi-document extraction (spec §15.3), at depth 2:
+# root -> 3 group orchestrators -> 6 session orchestrators (2 batches per group), 2 agents each.
+# 40 documents about 10 companies, 8 fields each; the documents contradict each other and
+# mention rival companies. When they disagree, the newest document wins.
+#
+#   uv run fractalswarm run tasks/examples/t1-extraction.yaml          # fake LLM, $0
+#   uv run fractalswarm run tasks/examples/t1-extraction.yaml --backend real --confirm-real-spend
+goal: >
+  Extract the facts of every company from the documents: its CEO, headquarters, founding year,
+  number of employees, annual revenue in millions of dollars, stock ticker, industry and
+  flagship product. Each document is about the company named in its title; sentences about a
+  rival company, and numbers that are not one of these fields, are not facts of that company.
+  When documents contradict each other, the newest document wins. Report one value per company
+  and field, with the document it comes from.
+task: t1_extraction
+inputs:
+  fixture: tasks/fixtures/t1/seed-1
+  generate_seed: 1
+seed: "1"
+budget_usd: 0.5  # a real run costs about $0.1; the matrix caps each run at $0.50
+scaling:
+  mode: exact
+  fanout: [3, 2]
+  agents_per_leaf: 2

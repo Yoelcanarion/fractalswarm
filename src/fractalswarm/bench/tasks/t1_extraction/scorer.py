@@ -24,6 +24,7 @@ class T1Score(BaseModel):
     precision: float
     recall: float
     f1: float
+    missing: int = 0  # slots with no value at all (a subset of fn; the rest are wrong values)
 
 
 def normalize(value: Any) -> str:
@@ -40,7 +41,7 @@ def normalize(value: Any) -> str:
 def score(
     predictions: Mapping[str, Mapping[str, Any]], truth: Mapping[str, Mapping[str, Any]]
 ) -> T1Score:
-    tp = fp = fn = 0
+    tp = fp = fn = missing = 0
     true_slots = {
         (company.casefold(), field): normalize(value)
         for company, fields in truth.items()
@@ -56,6 +57,7 @@ def score(
         guess = predicted.get(slot)
         if guess is None:
             fn += 1
+            missing += 1
         elif guess == value:
             tp += 1
         else:
@@ -65,4 +67,4 @@ def score(
     precision = tp / (tp + fp) if tp + fp else 0.0
     recall = tp / (tp + fn) if tp + fn else 0.0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-    return T1Score(tp=tp, fp=fp, fn=fn, precision=precision, recall=recall, f1=f1)
+    return T1Score(tp=tp, fp=fp, fn=fn, precision=precision, recall=recall, f1=f1, missing=missing)

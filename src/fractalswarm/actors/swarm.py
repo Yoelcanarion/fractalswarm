@@ -23,6 +23,7 @@ from fractalswarm.actors.agent import agent_handle, agent_init
 from fractalswarm.actors.board import BOARD, board_handle, board_init
 from fractalswarm.actors.orchestrator import (
     CENTRAL_MODES,
+    TASKS,
     orchestrator_handle,
     orchestrator_init,
 )
@@ -46,7 +47,7 @@ from fractalswarm.planning.scope import ScopeView
 from fractalswarm.verify.cross_audit import CrossAuditView
 
 ROOT = "o0"
-CONTRACTS_PER_SESSION = 3  # extract, place, blurb
+CONTRACTS_PER_SESSION = 3  # T2: extract, place, blurb. T1: extract, resolve, report
 # A T2 contract's run-wide key is ``work`` (gid/cid); its owner is the session's owner.
 T2_PROGRESS = ProgressSpec(
     created=frozenset({"contract.created"}),
@@ -58,11 +59,12 @@ T2_PROGRESS = ProgressSpec(
 )
 
 
-def expected_contracts(corpus: dict[str, Any]) -> int:
-    """T2 has one session per (track, day) and three contracts per session; T3 states its own."""
+def expected_contracts(task: str, corpus: dict[str, Any]) -> int:
+    """Each task has one session per leaf goal and three contracts per session; T3 states its
+    own count."""
     if "expected_work" in corpus:
         return int(corpus["expected_work"])
-    return len(corpus["tracks"]) * len(corpus["days"]) * CONTRACTS_PER_SESSION
+    return TASKS[task].sessions(corpus) * CONTRACTS_PER_SESSION
 
 
 @dataclass(frozen=True)
@@ -137,7 +139,7 @@ class SwarmScenario:
                 "coordinator_role": ROLE,
                 "agent_kinds": ["agent"],
                 "crash_mode": "signal" if self.mode in CENTRAL_MODES else "stop",
-                "expected_work": expected_contracts(params["corpus"]),
+                "expected_work": expected_contracts(spec["task"], params["corpus"]),
             }
             commands.append(Spawn(actor_id=CHAOS, kind=CHAOS, args=monkey))
         return commands

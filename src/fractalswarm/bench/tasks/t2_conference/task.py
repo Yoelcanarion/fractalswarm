@@ -236,6 +236,10 @@ def _talk_lines(talks: list[dict[str, Any]], abstracts: bool = False) -> list[di
 class T2Task:
     name = NAME
 
+    def sessions(self, corpus: dict[str, Any]) -> int:
+        """Leaf goals of the tree: one session per (track, day)."""
+        return len(corpus["tracks"]) * len(corpus["days"])
+
     # -- level 0: root plan -------------------------------------------------------------
 
     def root_request(self, goal: dict[str, Any], feedback: list[str]) -> dict[str, Any]:
