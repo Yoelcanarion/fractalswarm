@@ -36,7 +36,9 @@ def append_line(path: str, line: dict[str, Any]) -> None:
 def signal(kind: str, **info: Any) -> None:
     path = os.environ.get("RESUME_SIGNAL")
     if path:
-        Path(path).write_text(json.dumps({"kind": kind, **info}), encoding="utf-8")
+        tmp = Path(path).with_suffix(".tmp")
+        tmp.write_text(json.dumps({"kind": kind, **info}), encoding="utf-8")
+        tmp.replace(path)
 
 
 class CountingBackend:

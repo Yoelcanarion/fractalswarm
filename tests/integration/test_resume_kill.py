@@ -19,6 +19,7 @@ the resume touches it:
 The children run in a sandbox home, so they see no secrets and no real project ledger.
 """
 
+import contextlib
 import json
 import os
 import shutil
@@ -234,10 +235,8 @@ def snapshot(box: Sandbox, name: str = "snapshot") -> Crash:
     cassette: set[str] = set()
     path = copy / "cassette.jsonl"
     for line in path.read_text(encoding="utf-8").splitlines() if path.exists() else []:
-        try:
+        with contextlib.suppress(ValueError):  # a torn last line: that call has no reply on record
             cassette.add(json.loads(line)["effect_id"])
-        except ValueError:  # a torn last line: that call has no reply on record
-            pass
     return Crash(events, cassette, box.served())
 
 
@@ -270,7 +269,9 @@ async def check_resumed(box: Sandbox, crash: Crash, attempt: int = 1) -> list[Ev
     assert {e.payload["effect_id"] for e in reissued} == set(resumed["ambiguous"])
     assert all(e.payload["ambiguous"] for e in reissued)
     # ...and counts it as possible extra cost: the worst case it reserved.
-    reserved = {e.payload["effect_id"]: e.payload["usd"] for e in events if e.type == "budget.reserved"}
+    reserved = {
+        e.payload["effect_id"]: e.payload["usd"] for e in events if e.type == "budget.reserved"
+    }
     owed = sum(reserved[effect_id] for effect_id in resumed["ambiguous"])
     assert resumed["possible_extra_usd"] == pytest.approx(owed, abs=1e-6)
     assert sum(e.payload["reserved_usd"] for e in reissued) == pytest.approx(owed, abs=1e-6)
@@ -319,3 +320,181 @@ async def test_a_kill_in_the_middle_of_a_run_resumes_to_the_same_program(box: Sa
     assert "already completed" in again
     assert box.served() == before
     assert len(read_log(box)) == len(events)
+
+
+def signalled_effect(box: Sandbox) -> str:
+    return json.loads(box.signal.read_text(encoding="utf-8"))["effect_id"]
+
+
+async def test_a_request_in_flight_is_sent_again_and_listed(box: Sandbox) -> None:
+    child = box.run(hold_at="20")  # the 20th request is received and never answered
+    wait_for(box, child, signalled(box), "a request to be held")
+    held = signalled_effect(box)
+    box.kill(child)
+    crash = snapshot(box)
+    assert held in crash.c  # sent (the provider counted it), no reply anywhere
+    assert crash.served[held] == 1
+
+    box.finish(box.resume())
+    events = await check_resumed(box, crash)
+    assert box.served()[held] == 2  # at-least-once: the request really went out twice
+    marker = next(e.payload for e in events if e.type == "run.resumed")
+    assert held in marker["ambiguous"]
+    assert marker["possible_extra_usd"] > 0
+
+
+async def test_a_reply_in_the_cassette_but_not_in_the_log_is_not_sent_again(box: Sandbox) -> None:
+    child = box.run(freeze_after_record="20")  # stop dead right after the 20th cassette record
+    wait_for(box, child, signalled(box), "a cassette record")
+    recorded = signalled_effect(box)
+    box.kill(child)
+    crash = snapshot(box)
+    # The window is real: the reply is on disk, the completion is not.
+    assert recorded in crash.cassette
+    assert recorded in crash.open_llm
+    assert recorded in crash.b
+    assert crash.served[recorded] == 1
+
+    box.finish(box.resume())
+    events = await check_resumed(box, crash)
+    assert box.served()[recorded] == 1  # answered from the cassette: no second request
+    marker = next(e.payload for e in events if e.type == "run.resumed")
+    assert recorded in marker["from_cassette"]
+    assert recorded not in marker["ambiguous"]
+    completed = [e for e in events if e.type == "effect.completed" and e.correlation_id == recorded]
+    assert [e.payload["status"] for e in completed] == ["ok"]
+
+
+@pytest.mark.parametrize("trigger", ["ownership.remapped", "tree.adopted"])
+async def test_a_kill_during_a_takeover_neither_repeats_nor_loses_it(
+    box: Sandbox, trigger: str
+) -> None:
+    child = box.run("--chaos", "kill-half")
+    wait_for(box, child, log_has(box, trigger), f"the first {trigger}")
+    box.kill(child)
+    crash = snapshot(box)
+    assert any(e.type == trigger for e in crash.events)
+    assert crash.events[-1].type != "run.completed"
+
+    box.finish(box.resume())
+    events = await check_resumed(box, crash)
+    killed = [
+        e.payload["target"]
+        for e in events
+        if e.type == "chaos.injected" and e.payload["fault"] == "kill_coordinator"
+    ]
+    assert killed == ["o0", "o2.1", "o1", "o3.2", "o2"]  # five brains, each killed once
+    remaps = [
+        (e.payload["key"], e.payload["previous"]) for e in events if e.type == "ownership.remapped"
+    ]
+    assert len(remaps) == len(set(remaps))  # every goal moved once per death
+    root = [
+        e.payload["owner"]
+        for e in events
+        if e.type == "ownership.remapped" and e.payload["key"] == "root"
+    ]
+    assert root and all(owner in ("o1", "o2", "o3") for owner in root)
+    assert any(
+        e.type == "tree.adopted" and "final integration" in e.payload["duties"] for e in events
+    )
+
+
+async def test_the_live_clock_does_not_count_the_time_the_process_was_dead(box: Sandbox) -> None:
+    speed = "10"  # 6 s of wall time are 60 s of virtual time: a whole T2 run is 70 s
+    child = box.run("--clock", "live", "--speed", speed, hold_at="30")
+    wait_for(box, child, signalled(box), "a request to be held")
+    held = signalled_effect(box)
+    box.kill(child)
+    crash = snapshot(box)
+    assert held in crash.c
+
+    time.sleep(6)
+    box.finish(box.resume("--speed", speed))
+    events = await check_resumed(box, crash)
+    assert box.served()[held] == 2
+    # Virtual time went on from the last event: the detectors never saw the gap, so nobody
+    # was declared dead. Had the downtime counted, every peer would have been silent for 60 s
+    # (a few false suspicions under load are possible, deaths need five missed heartbeats).
+    assert not [e for e in events if e.type == "member.dead"]
+    assert events[-1].ts_virtual < 105_000  # a counted downtime would give 130 000 and more
+
+
+async def test_a_second_crash_during_the_resume_is_resumed_in_turn(box: Sandbox) -> None:
+    child = box.run()
+    wait_for(box, child, log_reaches(box, 2500), "the log to reach 2500 events")
+    box.kill(child)
+    first = snapshot(box, "first")
+
+    second_child = box.resume(hold_at="3")  # the resumed process dies holding its 3rd request
+    wait_for(box, second_child, signalled(box), "the resumed process to hold a request")
+    held = signalled_effect(box)
+    box.signal.unlink()
+    box.kill(second_child)
+    second = snapshot(box, "second")
+    assert held in second.c
+    assert [e.payload["attempt"] for e in second.events if e.type == "run.resumed"] == [1]
+
+    box.finish(box.resume())
+    events = await check_resumed(box, second, attempt=2)
+    assert [e.payload["attempt"] for e in events if e.type == "run.resumed"] == [1, 2]
+    served = box.served()
+    assert served[held] == 2
+    # What was safe after the first crash was not sent in either resume.
+    for effect_id in first.a | first.b:
+        assert served[effect_id] == first.served[effect_id], effect_id
+
+
+def test_a_run_that_is_still_alive_is_not_resumed(box: Sandbox) -> None:
+    child = box.run(hold_at="20")
+    wait_for(box, child, signalled(box), "a request to be held")
+    served, events = box.served(), len(snapshot(box).events)
+
+    text = box.finish(box.resume(), expect=2)  # exit status 2: cannot be resumed
+    assert "another process has events.sqlite open" in text
+    assert box.served() == served
+    assert len(snapshot(box).events) == events
+
+    box.kill(child)  # once it is dead the same command goes ahead
+    box.finish(box.resume())
+
+
+def ledger_rows(path: Path) -> dict[str, tuple]:
+    conn = sqlite3.connect(path)
+    try:
+        query = "SELECT reservation_id, status, reserved_usd, actual_usd FROM entries"
+        return {row[0]: row[1:] for row in conn.execute(query)}
+    finally:
+        conn.close()
+
+
+async def test_the_lost_call_stays_reserved_in_the_project_ledger(box: Sandbox) -> None:
+    ledger = box.root / "ledger.sqlite"
+    child = box.run(hold_at="20", ledger=str(ledger))
+    wait_for(box, child, signalled(box), "a request to be held")
+    held = signalled_effect(box)
+    box.kill(child)
+    crash = snapshot(box)
+    assert held in crash.c
+
+    # The reservation was committed before the request left and never settled: the bill that
+    # may exist stays committed against the project cap.
+    before = ledger_rows(ledger)
+    stale = {key for key, row in before.items() if row[0] == "reserved"}
+    assert stale == {f"{RUN_ID}/{effect_id}" for effect_id in crash.c}
+
+    box.finish(box.resume(ledger=str(ledger)))
+    events = await check_resumed(box, crash)
+    after = ledger_rows(ledger)
+    # The lost call keeps its reservation; the second send has its own, and settles.
+    assert {key for key, row in after.items() if row[0] == "reserved"} == stale
+    for effect_id in crash.c | crash.d:
+        assert after[f"{RUN_ID}/{effect_id}#r1"][0] == "settled"
+    completed = [e for e in events if e.type == "effect.completed" and e.correlation_id == held]
+    assert [e.payload["status"] for e in completed] == ["ok"]  # sent again, not an error
+    # The log and the ledger agree on what the lost calls may have cost.
+    reserved = {
+        e.payload["effect_id"]: e.payload["usd"] for e in events if e.type == "budget.reserved"
+    }
+    assert sum(after[key][1] for key in stale) == pytest.approx(
+        sum(reserved[effect_id] for effect_id in crash.c)
+    )
