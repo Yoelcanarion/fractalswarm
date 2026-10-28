@@ -86,7 +86,7 @@ Each §24 item has three parts:
   - With hosted tools, `input_tokens` is cumulative across the model's internal iterations.
   - Function tools may not use the names `browser.search`, `browser.open` or `browser.find`.
 - **Live:** Chat Completions rejects both `tools: [{"type": "web_search"}]` and `web_search_options` (400). Responses ran one search (one `web_search_call` item, `action.query`, 10 raw results with `title`/`url`, empty `snippet`), 3.7 s, $0.0076 in total. `usage` has **no search counter** and `input_tokens` was 2,037 for a short prompt (cumulative, as documented). No `url_citation` annotations came back on this probe.
-- **For the runtime:** bill one query per `web_search_call` item until the live run shows a better field. The `fetch` provenance rule (spec §13) can take URLs from `url_citation` annotations and from `results`.
+- **For the runtime:** bill one query per `web_search_call` item until the live run shows a better field. The `fetch` provenance rule (spec §13) can take URLs from `url_citation` annotations and from `results`. `search_request()` asks for `include: ["web_search_call.results"]`, as the spike did, so the hits do not depend on what the model chooses to cite.
 
 ### 3. Reasoning effort
 - **Docs:**

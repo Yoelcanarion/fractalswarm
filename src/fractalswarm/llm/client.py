@@ -59,6 +59,7 @@ class LLMRequest(BaseModel):
     prompt_cache_key: str | None = None
     contributor: bool = False  # honored only where the role allows it (spec §7.5)
     keep_reasoning: bool = False  # ask for encrypted reasoning items, for multi-turn replay
+    include: list[str] = []  # more output to return, e.g. the raw results of web_search
 
 
 def contributor_allowed(request: LLMRequest) -> bool:
@@ -193,8 +194,11 @@ class LLMClient:
             body["max_tool_calls"] = request.max_tool_calls
         if request.prompt_cache_key is not None:
             body["prompt_cache_key"] = request.prompt_cache_key
+        include = list(request.include)
         if request.keep_reasoning:
-            body["include"] = ["reasoning.encrypted_content"]
+            include.append("reasoning.encrypted_content")
+        if include:
+            body["include"] = include
         return model, body, spec.max_output_tokens
 
     def estimate(self, request: dict[str, Any]) -> float:

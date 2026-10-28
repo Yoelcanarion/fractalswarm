@@ -131,9 +131,13 @@ def page_text(output: dict[str, Any]) -> str | None:
     return found.group(1) if found else None
 
 
-def answering_sentence(criterion: str, text: str) -> str | None:
+def answering_sentence(subject: str, criterion: str, text: str) -> str | None:
+    """The first real sentence about the criterion, from a page whose title names the subject."""
+    if subject.lower() not in text.splitlines()[0].lower():
+        return None
     pattern = re.compile(KEYWORDS.get(criterion, re.escape(criterion)), re.IGNORECASE)
-    return next((s for s in SENTENCE.split(text) if len(s) >= 20 and pattern.search(s)), None)
+    sentences = (s for s in SENTENCE.split(text) if len(s) >= 30 and s.endswith((".", "!", "?")))
+    return next((s for s in sentences if pattern.search(s)), None)
 
 
 def research(body: dict[str, Any]) -> FakeReply | str:
@@ -149,7 +153,7 @@ def research(body: dict[str, Any]) -> FakeReply | str:
     findings = []
     for name, _, output in turns[1] if len(turns) > 1 else []:
         text = page_text(output) if name == "fetch" else None
-        sentence = answering_sentence(task["criterion"], text) if text else None
+        sentence = answering_sentence(task["subject"], task["criterion"], text) if text else None
         if sentence:
             findings.append({"claim": sentence, "url": output["url"], "quote": sentence})
     notes = "" if findings else "no page answered the question"
