@@ -18,6 +18,8 @@ from fractalswarm.api.app import create_app
 from fractalswarm.cli import app as cli
 from fractalswarm.kernel.events import Event
 from fractalswarm.kernel.store import COLUMNS, EventStore, _to_row
+from fractalswarm.llm.fake import FakeBackend
+from fractalswarm.runs import RunPaths, record_run
 
 GOLDEN = Path(__file__).resolve().parents[1] / "golden"
 TOY_HEAD = (GOLDEN / "toy" / "HEAD").read_text(encoding="utf-8").strip()
@@ -102,8 +104,6 @@ def test_bench_results_fall_back_to_the_fixture(client: TestClient, dirs) -> Non
     [
         "/api/tasks",
         "/api/runs/demo-toy/approve",
-        "/api/runs/demo-toy/budget",
-        "/api/runs/demo-toy/halt",
         "/api/runs/demo-toy/escalations/e1",
     ],
 )
@@ -111,6 +111,124 @@ def test_control_endpoints_answer_501_until_wired(client: TestClient, path: str)
     response = client.post(path, json={})
     assert response.status_code == 501
     assert "not wired yet" in response.json()["detail"]
+
+
+@pytest.fixture
+def live(client: TestClient, dirs: dict[str, Path]) -> Path:
+    """A run that is still recording: its log has no end and no export yet."""
+    run_dir = dirs["runs"] / "live"
+    write_sqlite(run_dir / "events.sqlite", golden_events()[:10]).close()
+    return run_dir
+
+
+def test_halt_and_budget_drop_requests_into_the_live_runs_control_inbox(
+    client: TestClient, live: Path
+) -> None:
+    halt = client.post("/api/runs/live/halt", json={"reason": "operator pressed stop"})
+    assert halt.status_code == 200 and halt.json()["ok"]
+    shock = client.post("/api/runs/live/budget", json={"usd": 0.5})
+    assert shock.status_code == 200 and shock.json()["ok"]
+    squad = {"usd": 0, "level": "squad", "key": "o2", "reason": "too hot"}
+    assert client.post("/api/runs/live/budget", json=squad).status_code == 200
+    assert client.post("/api/runs/live/halt", json={}).status_code == 200
+    # The same requests ``fractalswarm halt`` and ``budget`` write, in the order they came.
+    assert RunPaths(live).poll_control() == [
+        {"op": "halt", "reason": "operator pressed stop", "by": "human"},
+        {"op": "budget", "level": "run", "key": None, "usd": 0.5, "reason": "budget shock"},
+        {"op": "budget", "level": "squad", "key": "o2", "usd": 0.0, "reason": "too hot"},
+        {"op": "halt", "reason": "kill switch", "by": "human"},
+    ]
+
+
+@pytest.mark.parametrize("action", ["halt", "budget"])
+def test_control_refuses_recordings_and_unknown_runs(
+    client: TestClient, dirs: dict[str, Path], action: str
+) -> None:
+    body = {"usd": 1}
+    assert client.post(f"/api/runs/demo-toy/{action}", json=body).status_code == 409
+    assert client.post(f"/api/runs/nope/{action}", json=body).status_code == 404
+    finished = dirs["runs"] / "finished"
+    shutil.copytree(GOLDEN / "toy", finished)
+    assert client.post(f"/api/runs/finished/{action}", json=body).status_code == 409
+    # A run whose log already ends is finished even before its export lands.
+    ended = dirs["runs"] / "ended"
+    write_sqlite(ended / "events.sqlite", golden_events()).close()
+    assert client.post(f"/api/runs/ended/{action}", json=body).status_code == 409
+    for refused in (dirs["demo"] / "toy", finished, ended):
+        assert not (refused / "control").exists()  # nothing was requested
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {},
+        {"usd": -1},
+        {"usd": "a lot"},
+        {"usd": True},
+        {"usd": 1, "level": "galaxy"},
+        {"usd": 1, "key": 7},
+    ],
+)
+def test_budget_shock_validates_its_body(client: TestClient, live: Path, body: dict) -> None:
+    response = client.post("/api/runs/live/budget", json=body)
+    assert response.status_code == 422
+    assert not (live / "control").exists()  # nothing was requested
+
+
+@pytest.mark.parametrize("raw", [b'{"usd": Infinity}', b'{"usd": NaN}'])
+def test_budget_shock_refuses_numbers_that_are_not_finite(
+    client: TestClient, live: Path, raw: bytes
+) -> None:
+    assert client.post("/api/runs/live/budget", content=raw).status_code == 422
+    assert not (live / "control").exists()
+
+
+def test_halt_and_budget_need_a_json_object(client: TestClient, live: Path) -> None:
+    assert client.post("/api/runs/live/halt", content=b"{nope").status_code == 422
+    assert client.post("/api/runs/live/budget", json=[1]).status_code == 422
+    assert not (live / "control").exists()
+
+
+@pytest.mark.parametrize(
+    ("action", "request_body"),
+    [
+        ("halt", {"reason": "operator pressed stop"}),
+        ("budget", {"usd": 0.0, "reason": "CFO says stop"}),
+    ],
+)
+async def test_the_endpoints_reach_a_run_that_is_recording(
+    tmp_path: Path, action: str, request_body: dict
+) -> None:
+    """What the endpoint writes is what the live driver polls: the run records the request."""
+    runs = tmp_path / "runs"
+    client = TestClient(create_app(runs, None, tmp_path / "bench", tmp_path / "static"))
+    answers: list[int] = []
+
+    def script(body, attempt):  # the UI presses the button while round 2 is in flight
+        if "item 2" in str(body["input"]) and not answers:
+            answers.append(client.post(f"/api/runs/live/{action}", json=request_body).status_code)
+        return "ok"
+
+    await record_run(
+        "toy",
+        run_id="live",
+        run_dir=runs / "live",
+        backend=FakeBackend(script=script),
+        params={"rounds": 3},
+    )
+    with RunPaths(runs / "live").open_log() as log:
+        events = list(log.read())
+    types = [event.type for event in events]
+    assert answers == [200]
+    if action == "halt":
+        halted = next(event for event in events if event.type == "run.halted")
+        assert halted.payload == {"reason": "operator pressed stop", "by": "human"}
+        assert "toy.done" not in types
+    else:
+        shock = next(event for event in events if event.type == "budget.shock")
+        capped = {"level": "run", "key": "live", "usd": 0.0, "reason": "CFO says stop"}
+        assert shock.payload == capped
+        assert "budget.refused" in types[types.index("budget.shock") :]
 
 
 def test_chaos_validates_its_kind(client: TestClient) -> None:

@@ -2,12 +2,15 @@
 
 REST under ``/api``; the event stream is a WebSocket (``api/ws.py``); everything else serves
 the web app from ``api/static/``. The UI is a pure projection of the event stream, so it
-needs only the read endpoints to show a live run or a replay. The control endpoints (tasks,
-approval, chaos, budget, halt, escalations) answer 501 until the runtime behind them lands.
+needs only the read endpoints to show a live run or a replay. The kill switch (``halt``) and the
+budget shock (``budget``) drop a request into the live run's control inbox, the same file
+``fractalswarm halt`` and ``budget`` write; the other control endpoints (tasks, approval, chaos,
+escalations) answer 501 until the runtime behind them lands.
 """
 
 import asyncio
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +34,7 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 # The first file found wins; bench/charts.py writes one of these.
 HERO_FILES = ("hero_chart.json", "hero.json", "charts.json")
 CHAOS_KINDS = ("kill_half", "kill_coordinator", "kill_agent", "api_storm", "net_fault")
+BUDGET_LEVELS = ("contract", "squad", "run", "project")
 MAX_PAGE = 5000
 
 
@@ -120,6 +124,43 @@ def create_app(
 
         return endpoint
 
+    def control_inbox(request: Request) -> Any:
+        """The control inbox of a run that is still recording. A finished run (its log is
+        exported) and a bundled recording are history: there is nothing left to control."""
+        from fractalswarm.runs import RunPaths
+
+        run = entry(request)
+        last = catalog.last(run)
+        if run.jsonl.exists() or (last is not None and last["type"] == "run.completed"):
+            raise HTTPException(409, f"run {run.id!r} is a recording, not a live run")
+        return RunPaths(run.path)
+
+    async def halt_run(request: Request) -> JSONResponse:
+        """The kill switch: the run records ``run.halted`` and stops everything."""
+        body = await _json_body(request)
+        inbox = control_inbox(request)
+        reason = str(body.get("reason") or "kill switch")
+        inbox.request_control({"op": "halt", "reason": reason, "by": "human"})
+        detail = "halt requested: the run stops at its next poll"
+        return JSONResponse({"ok": True, "detail": detail})
+
+    async def shock_budget(request: Request) -> JSONResponse:
+        """A budget shock: a new cap, recorded as ``budget.shock`` (default: the run's own cap)."""
+        body = await _json_body(request)
+        usd, level, key = body.get("usd"), body.get("level", "run"), body.get("key")
+        is_number = isinstance(usd, int | float) and not isinstance(usd, bool)
+        if not is_number or not math.isfinite(usd) or usd < 0:
+            raise HTTPException(422, "usd must be a number >= 0")
+        if level not in BUDGET_LEVELS:
+            raise HTTPException(422, f"level must be one of {', '.join(BUDGET_LEVELS)}")
+        if key is not None and not isinstance(key, str):
+            raise HTTPException(422, "key must be a string")
+        inbox = control_inbox(request)
+        reason = str(body.get("reason") or "budget shock")
+        request_ = {"op": "budget", "level": level, "key": key or None, "usd": float(usd)}
+        inbox.request_control(request_ | {"reason": reason})
+        return JSONResponse({"ok": True, "detail": f"cap requested: {level} ${usd:g}"})
+
     async def ui(request: Request) -> HTMLResponse:
         return HTMLResponse(
             "<h1>FractalSwarm</h1><p>The web UI is not built. Run "
@@ -151,16 +192,8 @@ def create_app(
             not_wired("chaos", "the Day 5 chaos injector and takeover"),
             methods=["POST"],
         ),
-        Route(
-            "/api/runs/{run_id}/budget",
-            not_wired("budget", "the live runtime (budget shock)"),
-            methods=["POST"],
-        ),
-        Route(
-            "/api/runs/{run_id}/halt",
-            not_wired("halt", "the live runtime (kill switch)"),
-            methods=["POST"],
-        ),
+        Route("/api/runs/{run_id}/budget", shock_budget, methods=["POST"]),
+        Route("/api/runs/{run_id}/halt", halt_run, methods=["POST"]),
         Route(
             "/api/runs/{run_id}/escalations/{eid}",
             not_wired("escalations", "the replanning ladder (step 5, human)"),
