@@ -120,8 +120,12 @@ def run(
         str, typer.Option(help="C0-C3, or kill-half: the root, two track leads, two sessions")
     ] = "C0",
     firewall: Annotated[
-        str, typer.Option(help="auto (PromptGuard 2 when installed) | heuristic")
-    ] = "heuristic",
+        str | None,
+        typer.Option(
+            help="auto (PromptGuard 2 when installed) | heuristic; default: auto with the "
+            "real backend, heuristic with the fake one"
+        ),
+    ] = None,
 ) -> None:
     """Run a task (fake LLM by default) into runs/<run_id>."""
     import asyncio
@@ -136,6 +140,7 @@ def run(
 
     if scenario not in ("swarm", "central"):
         raise typer.BadParameter("--scenario must be swarm or central")
+    firewall = firewall or ("auto" if backend == "real" else "heuristic")
     if firewall not in ("auto", "heuristic"):
         raise typer.BadParameter("--firewall must be auto or heuristic")
     settings = _settings()

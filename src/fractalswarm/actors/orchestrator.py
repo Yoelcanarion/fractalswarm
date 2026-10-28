@@ -946,15 +946,18 @@ def _adopt(state: dict[str, Any], gid: str, view: View):
     group = members.get(previous).group if members.get(previous) is not None else None
     remapped = {"group": group, "key": gid, "owner": me, "previous": previous}
     remapped |= {"works": works, "adopted_results": adopted}
+    # One key per takeover: a member back from a false death can own the same goal again, and
+    # the kernel drops an event whose key is already in the log.
+    takeover = f"{gid}:{previous}:{me}:{view.member_epoch}"
     commands: list[Command] = [
-        _emit(state, gid, "ownership.remapped", remapped, f"ownership.remapped:{gid}:{previous}")
+        _emit(state, gid, "ownership.remapped", remapped, f"ownership.remapped:{takeover}")
     ]
     duties = ["final integration", "top-level arbitration"] if record.level == 0 else []
     if not leaf and record.level > 0:
         duties = ["integration", "arbitration"]
     if children or duties:
         payload = {"dead": previous, "adopter": me, "goal_id": gid, "children": children}
-        idem = f"tree.adopted:{previous}:{gid}"
+        idem = f"tree.adopted:{takeover}"
         commands.append(_emit(state, gid, "tree.adopted", payload | {"duties": duties}, idem))
 
     if not state["scope"] and view.views.get("scope") is not None:

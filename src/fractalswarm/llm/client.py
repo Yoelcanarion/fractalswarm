@@ -241,7 +241,9 @@ class LLMClient:
         entry.cost_usd = outcome.result["cost_usd"]
         entry.usage = outcome.result.get("usage")
         self._settle_project(effect_id, run_id, entry.cost_usd)
-        self._record(entry)
+        recorded = self._record(entry)
+        if recorded is not None:  # the log holds the redacted reply, the one replay reads
+            outcome = self._outcome(model, recorded.attempts[-1], latency, len(recorded.attempts))
         return outcome
 
     def _outcome(self, model: str, attempt: Attempt, latency: int, attempts: int) -> EffectOutcome:
@@ -298,9 +300,10 @@ class LLMClient:
         if self.project_ledger is not None:
             self.project_ledger.settle(f"{run_id}/{effect_id}", cost_usd, at=_utc_now())
 
-    def _record(self, entry: CassetteEntry) -> None:
+    def _record(self, entry: CassetteEntry) -> CassetteEntry | None:
         if self.mode == "record":
-            self.cassette.record(entry)  # type: ignore[union-attr]
+            return self.cassette.record(entry)  # type: ignore[union-attr]
+        return None
 
     def effect(self) -> EffectFn:
         async def run(started: Event, ctx: EffectContext) -> EffectOutcome:

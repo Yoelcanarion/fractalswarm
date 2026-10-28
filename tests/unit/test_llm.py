@@ -181,6 +181,22 @@ async def test_cassette_replays_the_same_outcome_and_rejects_other_requests(
         await replayer.call("eff-9", request, run_id="r", sleep=Sleeps())
 
 
+async def test_the_log_holds_the_redacted_reply_that_replay_reads(tmp_path: Path) -> None:
+    # Readable text can look like a secret ("bearer of", the "sk-" in "risk-"): the cassette
+    # redacts it, so the outcome the run logs must be the redacted one or the run diverges.
+    text = "the bearer of the keynote; slug risk-assessment-for-distributed-systems"
+    llm = client(FakeBackend(script=lambda body, attempt: text), tmp_path)
+    request = {"role": "agent", "input": "x"}
+    recorded = await llm.call("eff-1", request, run_id="r", sleep=Sleeps())
+    assert recorded.result["output_text"] == f"the bearer {REDACTED} the keynote; slug ri{REDACTED}"
+
+    cassette = Cassette(tmp_path / "cassette.jsonl")
+    replayer = LLMClient(
+        CassetteBackend(cassette), roles=ROLES, prices=PRICES, mode="replay", cassette=cassette
+    )
+    assert await replayer.call("eff-1", request, run_id="r", sleep=Sleeps()) == recorded
+
+
 async def test_project_ledger_reserves_and_settles_real_spend(tmp_path: Path) -> None:
     ledger = ProjectLedger(tmp_path / "ledger.sqlite", cap_usd=1.0)
     llm = client(FakeBackend(), tmp_path, project_ledger=ledger)

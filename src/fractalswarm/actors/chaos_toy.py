@@ -226,7 +226,8 @@ def _take_over(state: CoordState, view: View) -> list[Command]:
             Emit(
                 type="toy.ownership.remapped",
                 payload=payload,
-                idem_key=f"toy.ownership.remapped:{key}:{item.owner}",
+                # One key per takeover: a member back from a false death can own it again.
+                idem_key=f"toy.ownership.remapped:{key}:{item.owner}:{me}:{view.member_epoch}",
             )
         )
     return commands

@@ -599,18 +599,21 @@ class T2Task:
     # -- safety: attachments and scope (spec §13) -----------------------------------------
 
     def attachments(self, goal: dict[str, Any]) -> list[tuple[str, str]]:
-        """The root goal's untrusted attachments, scanned before any prompt carries them."""
+        """The root goal's untrusted attachments, scanned before any prompt carries them:
+        every free-text field of an email that a prompt shows (sender, subject, body)."""
         return [
-            (email["id"], f"Subject: {email['subject']}\n\n{email['body']}")
+            (email["id"], f"From: {email['from']}\nSubject: {email['subject']}\n\n{email['body']}")
             for email in goal["corpus"]["emails"]
         ]
 
     def quarantine(self, goal: dict[str, Any], stubs: dict[str, str]) -> dict[str, Any]:
-        """The goal with each quarantined email's body replaced by its stub."""
+        """The goal with each quarantined email's free text replaced: the stub in the body,
+        and no sender or subject, since the verdict covered them too."""
         if not stubs:
             return goal
+        hidden = {"from": "[quarantined]", "subject": "[quarantined]"}
         emails = [
-            email | {"body": stubs[email["id"]]} if email["id"] in stubs else email
+            email | hidden | {"body": stubs[email["id"]]} if email["id"] in stubs else email
             for email in goal["corpus"]["emails"]
         ]
         return goal | {"corpus": goal["corpus"] | {"emails": emails}}
