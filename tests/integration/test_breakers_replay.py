@@ -281,3 +281,25 @@ async def test_the_same_params_give_the_same_run(tmp_path: Path, results) -> Non
     again = await record(tmp_path, "again", RUNS["default"])
     assert again.head_hash == results["default"].head_hash
     assert again.events == results["default"].events
+
+
+@pytest.mark.parametrize("speed", [400.0, 3000.0])
+async def test_a_run_on_the_live_clock_replays_too(tmp_path: Path, speed: float) -> None:
+    """Real timers fire early and late, so the breakers see times that no sim run gives them
+    (and a different run each time). Every decision still uses the recorded virtual time and
+    nothing else, so the log must replay."""
+    result = await record_run(
+        "breaker-toy",
+        run_id="live",
+        run_dir=tmp_path / "live",
+        backend=FakeBackend(),
+        seed="s",
+        params={},
+        clock="live",
+        speed=speed,
+        run_cap_usd=1.0,
+    )
+    assert opened(events_of(result), "channel:ping|pong")  # the ping-pong needs no timing
+    report = await replay_run(result.paths.root)
+    assert report.ok, report.detail
+    assert report.replayed_head == result.head_hash
