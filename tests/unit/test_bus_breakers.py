@@ -183,6 +183,20 @@ def test_heartbeats_and_acks_are_never_held_back_and_never_counted() -> None:
     assert set(ep.guard.channels) == {"b"}  # heartbeats to c did not even start a breaker for it
 
 
+def test_timer_jitter_must_not_push_a_track_leads_heartbeats_over_the_storm_threshold() -> None:
+    """A track lead beats 5 peers (parent, 2 siblings, 2 children) every second: exactly 50 frames
+    in any 10 s of exact virtual time, the threshold itself. A live clock that fires a tick a
+    millisecond early puts 55 in the window, so a counted heartbeat would trip a healthy cluster."""
+    lead = guarded("o1")
+    peers = ["o0", "o2", "o3", "o1.1", "o1.2"]
+    for tick in range(40):
+        now = tick * 999  # every tick 1 ms early: 11 of them fall inside one 10 s window
+        for peer in peers:
+            out = bus.send(lead, view("o1", now), peer, "member.heartbeat", {}, lane=Lane.LOW)
+            assert len(wired(out)) == 1 and emitted(out) == []
+    assert lead.guard.storms == {} and lead.guard.channels == {}
+
+
 def test_it_recovers_by_itself_when_a_timer_fires_after_the_15_seconds() -> None:
     ep = guarded()
     commands = burst(ep, 21)
