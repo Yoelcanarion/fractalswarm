@@ -498,3 +498,68 @@ async def test_the_lost_call_stays_reserved_in_the_project_ledger(box: Sandbox) 
     assert sum(after[key][1] for key in stale) == pytest.approx(
         sum(reserved[effect_id] for effect_id in crash.c)
     )
+
+
+async def test_a_kill_that_tears_a_reaction_before_its_effect_started_is_completed(
+    box: Sandbox,
+) -> None:
+    # The 25th reservation is appended; the process stops before the effect.started that
+    # follows it in the same reaction. Its effect was never launched.
+    child = box.run(freeze_after_event="budget.reserved:25")
+    wait_for(box, child, signalled(box), "the 25th reservation to be appended")
+    box.kill(child)
+    crash = snapshot(box)
+    assert crash.events[-1].type == "budget.reserved"
+    unlaunched = crash.events[-1].payload["effect_id"]
+    assert unlaunched not in crash.started  # the log has its reservation, not its start
+    assert unlaunched not in crash.cassette and crash.served[unlaunched] == 0
+
+    box.finish(box.resume())
+    events = await check_resumed(box, crash)
+    marker = next(e.payload for e in events if e.type == "run.resumed")
+    assert marker["completed_tail"] >= 1  # the reaction was finished, not cut
+    started = [
+        e for e in events if e.type == "effect.started" and e.payload["effect_id"] == unlaunched
+    ]
+    assert [e.seq for e in started] == [crash.events[-1].seq + 1]  # right after the reservation
+    assert unlaunched not in marker["ambiguous"]  # it was never sent: not ambiguous
+    assert box.served()[unlaunched] == 1  # and it was sent exactly once
+
+
+async def test_a_kill_between_a_completion_and_its_settlement_finishes_the_pair(
+    box: Sandbox,
+) -> None:
+    # The 20th LLM completion is appended; the process stops before the budget.settled that
+    # Runtime.complete appends right after it.
+    child = box.run(freeze_after_event="effect.completed:20:llm")
+    wait_for(box, child, signalled(box), "the 20th LLM completion to be appended")
+    box.kill(child)
+    crash = snapshot(box)
+    assert crash.events[-1].type == "effect.completed"
+    done = crash.events[-1].payload["effect_id"]
+    assert done in crash.a  # completed: never to be sent again
+    assert not [
+        e for e in crash.events if e.type == "budget.settled" and e.payload["effect_id"] == done
+    ]
+
+    box.finish(box.resume())
+    events = await check_resumed(box, crash)
+    marker = next(e.payload for e in events if e.type == "run.resumed")
+    assert marker["completed_tail"] >= 1
+    settled = [e for e in events if e.type == "budget.settled" and e.payload["effect_id"] == done]
+    assert [e.causation_id for e in settled] == [crash.events[-1].seq]  # settled once, after it
+    assert box.served()[done] == crash.served[done]
+
+
+def test_the_real_backend_needs_the_spend_flag_and_a_key(box: Sandbox) -> None:
+    # The sandbox home has no .env, so there is no key and nothing could be billed anyway.
+    text = box.finish(box.spawn("resume", RUN_ID, "--backend", "real"), expect=2)
+    assert "add --confirm-real-spend" in text
+    flagged = box.spawn("resume", RUN_ID, "--backend", "real", "--confirm-real-spend")
+    assert "MODEL_API_KEY is not set" in box.finish(flagged, expect=2)
+    assert not box.counter.exists()  # nothing was sent
+
+
+def test_resume_says_so_when_there_is_no_such_run(box: Sandbox) -> None:
+    text = box.finish(box.resume(), expect=2)
+    assert "no run directory" in text

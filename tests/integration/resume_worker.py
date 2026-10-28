@@ -14,6 +14,9 @@ resumed one:
   answered: sent, no reply (class (c));
 - ``RESUME_FREEZE_AFTER_RECORD=n``: the process stops dead right after the n-th cassette record,
   before the completion reaches the log (class (b));
+- ``RESUME_FREEZE_AFTER_EVENT=type:n[:kind]``: the process stops dead right after the n-th
+  event of that type (of that effect kind, for effect events) is appended to the log, with
+  the rest of its reaction unwritten: a torn tail;
 - ``RESUME_SIGNAL``: a file created when a hold or a freeze starts;
 - ``RESUME_LEDGER``: a project ledger (SQLite) to use with the fake LLM, for the cost tests.
 """
@@ -80,6 +83,27 @@ def install_hooks() -> None:
             return result
 
         LLMClient._record = freezing_record  # type: ignore[method-assign]
+
+    freeze_event = os.environ.get("RESUME_FREEZE_AFTER_EVENT")
+    if freeze_event:
+        from fractalswarm.kernel.store import EventStore
+
+        event_type, nth, *kind = freeze_event.split(":")
+        append = EventStore.append
+        appended = 0
+
+        def freezing_append(self: Any, draft: Any) -> Any:
+            nonlocal appended
+            event = append(self, draft)
+            wanted = event.type == event_type and self.path != ":memory:"
+            if wanted and (not kind or event.payload.get("kind") == kind[0]):
+                appended += 1
+                if appended == int(nth):
+                    signal("appended", event_type=event_type, seq=event.seq)
+                    time.sleep(3600)  # the rest of the reaction is never written
+            return event
+
+        EventStore.append = freezing_append  # type: ignore[method-assign]
 
     ledger_path = os.environ.get("RESUME_LEDGER")
     if ledger_path:

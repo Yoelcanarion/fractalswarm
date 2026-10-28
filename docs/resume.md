@@ -71,8 +71,9 @@ Resume answers such an effect from the cassette with a replay-mode `LLMClient` o
 
 Nothing is written between "the request left" and `Cassette.record`. The reply of a request that
 was in flight when the process died is lost, and the provider may have run it, billed it, or
-neither. The API has no idempotency key (`docs/api-notes.md`), so the provider cannot recognise a
-repeat.
+neither. `docs/api-notes.md` documents no idempotency key, so none is sent and the provider
+cannot recognise a repeat. (If the API gains one, sending `run_id/effect_id` as the key would
+make this case exactly-once at the provider, with no other change here.)
 
 **Decision: send it again, loudly.** The alternative is to complete it with an error and let the
 actor's replanning ladder (spec §5.5) decide. That does not avoid a second call: the ladder's
@@ -120,8 +121,14 @@ in the cassette would work for every backend but would change the default run pa
 
 How wide is (d)? Effects are launched only after the whole reaction that started them is in the
 log (`launch()` runs after `runtime.step()` returns, `_drive_live`; `_drive_sim` takes the
-outbox the same way). So it is the time between the last event of a reaction and the first
-`send`, not the lifetime of the effect.
+outbox the same way, after it has drained every queued delivery). So under the live clock it
+is the time between the last event of a reaction and the first `send`, microseconds. Under the
+sim clock it is the rest of the current drain, so a kill during a drain leaves the effects that
+the drain started as (d).
+
+One kind of (d) *is* known: an effect started by the torn tail (section 4). The reaction that
+started it never finished, so it was never launched, and resume does not call it ambiguous. It
+is simply started, once, like an effect that a delivery starts after the resume.
 
 ### 3.5 Local effects
 
@@ -237,10 +244,12 @@ fractalswarm resume RUN [--backend fake|real] [--confirm-real-spend] [--speed 1.
 ```
 
 `RUN` is a run id under `runs/` or a directory. The clock mode, seed, scenario, parameters and
-role and price tables come from the log. `--backend real` needs `--confirm-real-spend` like
-`run`: re-sent effects are billed. Exit status: 0 for a completed run, 1 if the run has no
-result or hard violations, 2 if the run cannot be resumed (broken chain, divergence, a live
-writer, already completed).
+role and price tables come from the log. `--speed` is not in the log: pass the original one to
+keep the pace (virtual time does not depend on it). `--backend real` needs
+`--confirm-real-spend` like `run`: re-sent effects are billed. Exit status: 0 for a completed
+run, and for a run that was already completed (nothing to do); 1 if the run has a task and no
+result or hard violations; 2 if the run cannot be resumed (broken chain, divergence, a live
+writer, an empty log) or the options are wrong.
 
 ## 9. Status
 
