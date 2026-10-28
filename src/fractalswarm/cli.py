@@ -406,6 +406,36 @@ def audit_verify(
     raise typer.Exit(0 if report.ok else 1)
 
 
+@app.command()
+def takeover(
+    run: Annotated[str, typer.Argument(help="run id under runs/, or a run directory")],
+    json_path: Annotated[
+        Path | None, typer.Option("--json", help="write the full report here as JSON")
+    ] = None,
+    md_path: Annotated[
+        Path | None, typer.Option("--md", help="write the report here as Markdown")
+    ] = None,
+    replay: Annotated[bool, typer.Option(help="also replay the run and compare hashes")] = False,
+) -> None:
+    """Prove from the log alone what a run's kills did (read-only; exit 1 on a violation)."""
+    import asyncio
+
+    from fractalswarm.runs import replay_run
+    from fractalswarm.verify.takeover import check_run
+    from fractalswarm.verify.takeover_render import render_markdown, render_text
+
+    run_dir = _resolve_run_dir(run)
+    replayed = asyncio.run(replay_run(run_dir)) if replay else None
+    report = check_run(run_dir, replay=replayed)
+    typer.echo(render_text(report))
+    if json_path is not None:
+        json_path.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    if md_path is not None:
+        command = f"fractalswarm takeover {run}" + (" --replay" if replay else "")
+        md_path.write_text(render_markdown(report, command) + "\n", encoding="utf-8")
+    raise typer.Exit(0 if report.ok else 1)
+
+
 def _control(run: str, request: dict) -> None:
     from fractalswarm.runs import RunPaths
 
