@@ -1,12 +1,15 @@
 """The bench tasks ``t2_conference`` and ``t1_extraction`` and their workflows (spec §15.1):
-``swarm`` and the in-house baselines ``central``, ``single`` and ``pipeline``.
+``swarm``, the in-house baselines ``central``, ``single`` and ``pipeline``, and the LangGraph
+baseline ``langgraph`` (T2 only).
 
 Every workflow runs the scenario code of ``actors/swarm.py`` on the same task instance, so at
 C0 they make the same LLM calls. Under chaos they get the same plan (``build_plan`` with the
 cell's profile and seed: the same crash points, agent kills and network faults) and API
 faults from the same seed. The swarm runs with membership on at every profile, C0 included,
 so its C0 twin is the same system. The baselines are crashed by signal and restart 5 s
-later with their completed work kept (``actors/orchestrator.py``).
+later with their completed work kept (``actors/orchestrator.py``). ``langgraph`` runs the same
+chaos plan on LangGraph teams under the same supervisor semantics
+(``baselines/langgraph_teams.py``).
 
 A cell's seed picks the task instance (``tasks/fixtures/<t2|t1>/seed-<n>``, generated when
 missing), the run's seed and the chaos seed. A cell's ``agents`` (the scaling sweep) picks the
@@ -14,7 +17,8 @@ tree of ``swarm`` and ``central`` through ``bench/scaling.py``; without it they 
 TaskSpec's.
 """
 
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -109,12 +113,19 @@ def t1_params(cell: Cell, contributor: bool) -> dict[str, Any]:
     return _params(t1_spec(cell.seed, cell.agents), cell, contributor)
 
 
+async def record_langgraph(**kwargs: Any) -> None:
+    from fractalswarm.baselines.langgraph_teams import record_langgraph as record
+
+    await record(**kwargs)
+
+
 class BenchWorkflow:
     tasks = frozenset({"t2_conference", "t1_extraction"})
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, record: Callable[..., Awaitable[Any]] | None = None) -> None:
         self.name = name  # also the scenario: swarm | central | single | pipeline
         self.scalable = name in ("swarm", "central")  # the other two have one worker by design
+        self.record = record or partial(record_run, name)
 
     async def run(self, ctx: CellContext) -> None:
         from fractalswarm.llm.transport import ApiFaults, FaultyBackend
@@ -125,8 +136,7 @@ class BenchWorkflow:
         roles = RoleTable.load()
         if ctx.contributor:
             roles = roles.contributor_mode(ctx.contributor_wonder == "spark")
-        await record_run(
-            self.name,
+        await self.record(
             run_id=ctx.cell.id,
             run_dir=ctx.run_dir,
             backend=backend,
@@ -139,8 +149,19 @@ class BenchWorkflow:
             roles=roles,
         )
 
+    def team_requests(self, session: dict[str, Any], contracts: list[Any]) -> list[dict[str, Any]]:
+        """Calls a workflow makes per session besides the shared ones (none for the in-house)."""
+        return []
+
     def preflight(self, cell: Cell, contributor: bool) -> list[dict[str, Any]]:
-        return TASK_PREFLIGHTS[cell.task](cell, contributor)
+        return TASK_PREFLIGHTS[cell.task](cell, contributor, self.team_requests)
+
+
+TeamRequests = Callable[[dict[str, Any], list[Contract]], list[dict[str, Any]]]
+
+
+def _no_team_requests(session: dict[str, Any], contracts: list[Contract]) -> list[dict[str, Any]]:
+    return []
 
 
 def _agent_steps(contract: Contract, max_steps: int) -> list[dict[str, Any]]:
@@ -174,9 +195,12 @@ def _worst_case(
     return requests
 
 
-def t2_preflight(cell: Cell, contributor: bool) -> list[dict[str, Any]]:
+def t2_preflight(
+    cell: Cell, contributor: bool, team_requests: TeamRequests = _no_team_requests
+) -> list[dict[str, Any]]:
     """Every planning call twice, every contract's agent loop at ``max_steps`` twice, every
-    judge call twice, and each coordinator crash redoing one contract per session."""
+    judge call twice, and each coordinator crash redoing one contract per session.
+    ``team_requests`` adds the calls a workflow makes per session besides the shared ones."""
     from fractalswarm.verify.judge import judge_request
 
     spec = t2_spec(cell.seed)
@@ -193,6 +217,7 @@ def t2_preflight(cell: Cell, contributor: bool) -> list[dict[str, Any]]:
         for session in T2.split_children(track, T2.split_fallback(track)):
             requests.append(T2.contracts_request(session, []))
             contracts = T2.contracts(session, T2.contracts_fallback(session), "o", "scope")
+            requests += team_requests(session, contracts)
             for contract in contracts:
                 agent_calls += _agent_steps(contract, spec.max_steps)
                 if T2.needs_judge(contract):
@@ -222,7 +247,9 @@ def _t1_worst_case(
     return T1.contract_inputs(session, contract, {"dep": deps[contract.kind]}), {"records": records}
 
 
-def t1_preflight(cell: Cell, contributor: bool) -> list[dict[str, Any]]:
+def t1_preflight(
+    cell: Cell, contributor: bool, team_requests: TeamRequests = _no_team_requests
+) -> list[dict[str, Any]]:
     """As T2's, with each contract's real inputs: the session's documents, and the largest
     outputs of the contracts it depends on."""
     from fractalswarm.verify.judge import judge_request
@@ -241,6 +268,7 @@ def t1_preflight(cell: Cell, contributor: bool) -> list[dict[str, Any]]:
         for session in T1.split_children(group, T1.split_fallback(group)):
             requests.append(T1.contracts_request(session, []))
             contracts = T1.contracts(session, T1.contracts_fallback(session), "o", "scope")
+            requests += team_requests(session, contracts)
             for contract in contracts:
                 inputs, output = _t1_worst_case(session, contract)
                 contract = contract.model_copy(update={"inputs": inputs})
@@ -280,8 +308,27 @@ def t1_checker(events: Sequence[Event]) -> Outcome:
     return make_checker(truth, _final_table)(events)
 
 
+class LangGraphWorkflow(BenchWorkflow):
+    """LangGraph teams: the shared calls, and each team supervisor's routing calls."""
+
+    tasks = frozenset({"t2_conference"})
+
+    def __init__(self) -> None:
+        super().__init__("langgraph", record_langgraph)
+
+    def team_requests(self, session: dict[str, Any], contracts: list[Any]) -> list[dict[str, Any]]:
+        from fractalswarm.baselines.langgraph_teams import route_request
+
+        state = {
+            "contracts": {c.id: c.model_dump() for c in contracts},
+            "status": {c.id: "pending" for c in contracts},
+        }
+        return [route_request(session, state, [contract.id]) for contract in contracts]
+
+
 for _name in ("swarm", "central", "single", "pipeline"):
     register_workflow(BenchWorkflow(_name))
+register_workflow(LangGraphWorkflow())
 register_task(
     TaskDef(
         name="t2_conference",
