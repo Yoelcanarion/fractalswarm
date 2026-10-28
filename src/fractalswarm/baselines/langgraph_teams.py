@@ -789,7 +789,7 @@ async def coordinate(rt: FrameworkRuntime) -> None:
     params = rt.params
     proc = Teams(rt, params)
     progress = next(r for r in rt.reducers if isinstance(r, ProgressView))
-    chaos = Chaos(plan_from(params), rt.seed, expected_contracts(params["corpus"]))
+    chaos = Chaos(plan_from(params), rt.seed, expected_contracts(T2.name, params["corpus"]))
     graph = proc.graph = build_graph(proc, InMemorySaver())
     config = {"configurable": {"thread_id": rt.run_id}, "recursion_limit": RECURSION_LIMIT}
     start = {"goal": proc.root}
