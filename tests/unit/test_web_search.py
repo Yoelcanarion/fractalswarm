@@ -2,7 +2,7 @@
 
 import pytest
 
-from fractalswarm.llm.client import LLMClient
+from fractalswarm.llm.client import LLMClient, LLMRequest
 from fractalswarm.llm.fake import FakeBackend
 from fractalswarm.llm.roles import RoleTable
 from fractalswarm.market.prices import PriceTable
@@ -82,3 +82,21 @@ def test_hits_feed_provenance() -> None:
     assert provenance.source_of("https://example.org/other") is None
     wrapped = spotlight_hits(hits)
     assert wrapped.count("<<untrusted source=web_search:") == 2
+
+
+def test_the_search_asks_for_its_raw_results_so_the_hits_do_not_depend_on_citations() -> None:
+    """Without ``include`` the hosted tool returns URLs only in the citations the model writes."""
+    request = search_request("speakers", GRANTED)
+    assert request["include"] == ["web_search_call.results"]
+    client = LLMClient(FakeBackend(), roles=RoleTable.load(), prices=PriceTable.load(), mode="live")
+    _, body, _ = client.build(LLMRequest.model_validate(request))
+    assert body["include"] == ["web_search_call.results"]
+    # A request that already kept encrypted reasoning keeps asking for it, after the new items.
+    both = LLMRequest.model_validate(request | {"keep_reasoning": True})
+    assert client.build(both)[1]["include"] == [
+        "web_search_call.results",
+        "reasoning.encrypted_content",
+    ]
+    plain = LLMRequest.model_validate({"role": "agent", "input": "x", "keep_reasoning": True})
+    assert client.build(plain)[1]["include"] == ["reasoning.encrypted_content"]  # as before
+    assert "include" not in client.build(LLMRequest(role="agent", input="x"))[1]

@@ -45,8 +45,11 @@ class FetchResult(BaseModel):
     status: int
     content_type: str
     bytes: int
-    text: str
+    text: (
+        str  # at most FetchLimits.max_text_chars: what an agent is shown and a quote is checked in
+    )
     provenance: str
+    truncated: bool = False
 
 
 class _TextExtractor(HTMLParser):
@@ -174,18 +177,22 @@ class Fetcher:
             chunks.append(chunk)
         raw = b"".join(chunks).decode(response.encoding or "utf-8", errors="replace")
         is_html = content_type.split(";")[0].strip().lower() == "text/html"
+        text = html_to_text(raw) if is_html else raw
         return FetchResult(
             url=url,
             final_url=final_url,
             status=response.status_code,
             content_type=content_type,
             bytes=size,
-            text=html_to_text(raw) if is_html else raw,
+            text=text[: self.limits.max_text_chars],
             provenance=source,
+            truncated=len(text) > self.limits.max_text_chars,
         )
 
     def effect(self) -> EffectFn:
-        """The ``fetch`` effect. Request: ``{url, tools: [granted tools of the contract]}``.
+        """The ``fetch`` effect. Request: ``{url, tools: [granted tools of the contract]}``, and
+        ``source``: the provenance the requesting actor found for the URL in the log (the
+        actor checks it first, so the effect's own provenance agrees with the log's).
 
         A refusal is an ``error`` completion with ``blocked`` set to the policy code.
         """
@@ -193,6 +200,8 @@ class Fetcher:
         async def run(started: Event, ctx: EffectContext) -> EffectOutcome:
             request = started.payload["request"]
             grants = Capabilities(granted=frozenset(request.get("tools", [])))
+            if request.get("source"):
+                self.provenance.add(request["url"], request["source"])
             try:
                 result = await self.fetch(request["url"], grants)
             except FetchBlocked as exc:

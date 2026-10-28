@@ -28,7 +28,7 @@ from fractalswarm.bench.tasks.t2_conference.fake import t2_script
 from fractalswarm.bench.tasks.t2_conference.task import T2
 from fractalswarm.comms.chaos import plan_from
 from fractalswarm.kernel.events import Event
-from fractalswarm.llm.fake import FakeBackend, FakeReply, default_script
+from fractalswarm.llm.fake import FakeBackend, FakeReply, Script, default_script
 from fractalswarm.llm.roles import RoleTable
 from fractalswarm.planning.taskspec import REPO_ROOT, TaskSpec, run_params
 from fractalswarm.runs import record_run
@@ -49,14 +49,15 @@ def bench_script(body: dict[str, Any], attempt: int) -> FakeReply | str:
     return reply
 
 
-def fake_backend() -> FakeBackend:
+def fake_backend(script: Script = bench_script) -> FakeBackend:
     """The fake LLM with latencies and reasoning tokens fitted to real calls, when a fit
-    exists (the $0 gate runs on calibrated latencies, spec §15.6)."""
+    exists (the $0 gate runs on calibrated latencies, spec §15.6). ``script`` is the model's
+    answers: the bench's T2 script unless a task brings its own (T3)."""
     if CALIBRATION.exists():
         from fractalswarm.llm.calibrate import Calibration
 
-        return Calibration.load(CALIBRATION).backend(script=bench_script)
-    return FakeBackend(script=bench_script)
+        return Calibration.load(CALIBRATION).backend(script=script)
+    return FakeBackend(script=script)
 
 
 def t2_spec(seed: str) -> TaskSpec:

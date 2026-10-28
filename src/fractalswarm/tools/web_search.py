@@ -46,6 +46,9 @@ def search_request(
         "input": query,
         "tools": [{"type": "web_search"}],
         "max_tool_calls": max_searches,
+        # Raw results are opt-in: without them the URLs come only from the citations the model
+        # chooses to write (docs/api-notes.md item 2).
+        "include": ["web_search_call.results"],
     }
 
 

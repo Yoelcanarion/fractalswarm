@@ -552,7 +552,7 @@ class T2Task:
             "untrusted": {"talks": _talk_lines(data["talks"])},
         }
 
-    def check_context(self, goal: dict[str, Any]) -> dict[str, Any]:
+    def check_context(self, goal: dict[str, Any], view: Any = None) -> dict[str, Any]:
         data = goal["data"]
         return {
             "corpus": {key: data[key] for key in ("days", "slots", "rooms")},
@@ -714,7 +714,9 @@ class T2Task:
             "parts": parts,
         }
 
-    def final_report(self, goal: dict[str, Any], output: dict[str, Any]) -> dict[str, Any]:
+    def final_report(
+        self, goal: dict[str, Any], output: dict[str, Any], view: Any = None
+    ) -> dict[str, Any]:
         report = check(output["placements"], goal["corpus"], goal["truth"])
         return {
             "hard_violations": len(report.hard_violations),

@@ -191,6 +191,11 @@ def run(
         raise typer.BadParameter("--backend must be fake or real")
     if clock not in ("sim", "live"):
         raise typer.BadParameter("--clock must be sim or live")
+    extra_effects = None
+    if spec.task == "t3_report":  # the web task brings its fetch tool; $0 runs get a canned web
+        from fractalswarm.bench.tasks.t3_report.web import web_run
+
+        llm, extra_effects = web_run(spec, llm, fake=backend == "fake")
     rate = plan_from(params).api_fault_rate
     if rate:
         llm = FaultyBackend(llm, ApiFaults(seed=spec.seed, rate=rate))
@@ -214,6 +219,7 @@ def run(
             project_ledger=project_ledger,
             secrets=settings.secret_values(),
             retry=retry,
+            extra_effects=extra_effects,
         )
     )
     spent = result.completed.payload["spent_usd"]

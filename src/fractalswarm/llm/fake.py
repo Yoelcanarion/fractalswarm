@@ -36,6 +36,10 @@ class FakeReply(BaseModel):
     output_tokens: int | None = None
     # Function calls, as Responses ``function_call`` items: {"name", "arguments"} each.
     tool_calls: list[dict[str, str]] = []
+    # What the hosted web_search tool adds: ``web_search_call`` items before the message, and
+    # ``url_citation`` annotations on its text (docs/api-notes.md item 2).
+    output_items: list[dict[str, Any]] = []
+    annotations: list[dict[str, Any]] = []
 
 
 Script = Callable[[dict[str, Any], int], "FakeReply | str"]
@@ -125,7 +129,7 @@ class FakeBackend:
             "id": f"msg_fake_{key[:12]}",
             "role": "assistant",
             "status": "incomplete" if incomplete else "completed",
-            "content": [{"type": "output_text", "text": text, "annotations": []}],
+            "content": [{"type": "output_text", "text": text, "annotations": reply.annotations}],
         }
         calls = [
             {
@@ -138,7 +142,7 @@ class FakeBackend:
             }
             for n, call in enumerate(reply.tool_calls if not incomplete else [])
         ]
-        output = [*calls, message] if text or not calls else calls
+        output = [*reply.output_items, *calls, message] if text or not calls else calls
         output_billed = min(total_output, limit)
         response = {
             "id": f"resp_fake_{key[:16]}",

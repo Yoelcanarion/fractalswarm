@@ -5,6 +5,7 @@ fixtures and bundles) and ``cassette.jsonl`` (every LLM call, redacted).
 """
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -13,7 +14,7 @@ import yaml
 
 from fractalswarm.config import CONFIG_DIR
 from fractalswarm.kernel.clock import LiveClock, ManualClock
-from fractalswarm.kernel.effects import EffectContext, EffectRunner, drive
+from fractalswarm.kernel.effects import EffectContext, EffectFn, EffectRunner, drive
 from fractalswarm.kernel.events import Event
 from fractalswarm.kernel.replay import ReplayReport, ReplaySetup, replay
 from fractalswarm.kernel.scheduler import Runtime
@@ -119,9 +120,11 @@ async def record_run(
     prices: PriceTable | None = None,
     firewall: Firewall | None = None,
     retry: RetryPolicy | None = None,
+    extra_effects: Mapping[str, EffectFn] | None = None,
 ) -> RunResult:
     """Record a run. ``firewall`` scans attachments (default: the deterministic heuristic;
-    real runs pass PromptGuard)."""
+    real runs pass PromptGuard). ``extra_effects`` are the effect kinds a task adds, such as the
+    web task's ``fetch``; replay reuses their recorded completions."""
     paths = RunPaths(run_dir)
     if paths.events.exists() or paths.cassette.exists():
         raise FileExistsError(f"{run_dir} already holds a run")
@@ -151,6 +154,7 @@ async def record_run(
         )
         run_clock = ManualClock("sim") if clock == "sim" else LiveClock(speed)
         effects = {"llm": client.effect(), "firewall": (firewall or Firewall()).effect()}
+        effects |= extra_effects or {}
         runner = EffectRunner(effects, EffectContext(run_id, run_clock))
         completed = await drive(runtime, runner, control=paths.poll_control)
         store.export_jsonl(paths.events_jsonl)

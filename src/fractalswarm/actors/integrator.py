@@ -35,16 +35,22 @@ def merge_children(
 
 
 def finish_goal(
-    task: Any, owner: str, entry: dict[str, Any], output: dict[str, Any], gaps: list[str]
+    task: Any,
+    owner: str,
+    entry: dict[str, Any],
+    output: dict[str, Any],
+    gaps: list[str],
+    view: Any = None,
 ) -> tuple[list[Command], dict[str, Any] | None]:
     """The goal's completion events, and the result body for its parent goal's owner
-    (``None`` for the root goal, whose owner writes the run's ``task.result``)."""
+    (``None`` for the root goal, whose owner writes the run's ``task.result``). ``view`` is the
+    owner's view of the log, for a task whose final check reads it (T3: the fetched pages)."""
     goal = entry["goal"]
     status = "ok" if not gaps else "partial"
     payload = {"goal_id": goal["id"], "owner": owner, "status": status, "gaps": gaps}
     commands: list[Command] = [Emit(type="goal.completed", payload=payload)]
     if entry["from"] is None:
-        report = task.final_report(goal, output) | {"gaps": gaps}
+        report = task.final_report(goal, output, view) | {"gaps": gaps}
         if report["hard_violations"]:
             status = "partial"
         commands.append(

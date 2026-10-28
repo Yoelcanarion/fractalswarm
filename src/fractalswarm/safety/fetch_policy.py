@@ -8,7 +8,8 @@
   again right before the request; a changed answer (DNS rebinding) is refused.
 - **robots.txt** is respected for our user agent; an unreadable robots.txt (401/403/5xx or a
   network error) means "disallow", a missing one (404) means "allow".
-- **Limits**: GET only, 2 MB, 10 s, text/html or text/plain.
+- **Limits**: GET only, 2 MB, 10 s, text/html or text/plain. The extracted text an agent gets
+  is cut at ``max_text_chars``.
 """
 
 import asyncio
@@ -31,6 +32,7 @@ class FetchLimits(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     max_bytes: int = 2 * 1024 * 1024
+    max_text_chars: int = 8_000  # of the extracted text: an agent's context budget
     timeout_s: float = 10.0
     content_types: frozenset[str] = frozenset({"text/html", "text/plain"})
     schemes: frozenset[str] = frozenset({"http", "https"})

@@ -41,6 +41,11 @@ class TaskInputs(BaseModel):
     generate_seed: int | None = None  # generate the fixture if the directory is missing
     poison: int = Field(default=0, ge=0)  # poisoned speaker emails (spec §13 attack demo)
     poison_wording: str = "polite"  # a generator POISON_WORDINGS key, or several with commas
+    # T3 (web report). The run records them in its corpus, not in the spec, so the recorded
+    # params of a T2 run stay as they were. ``fixture`` is then the canned web of a $0 run.
+    subjects: list[str] = Field(default_factory=list, exclude=True)  # what the report compares
+    criteria: dict[str, str] = Field(default_factory=dict, exclude=True)  # id -> question
+    sources: list[str] = Field(default_factory=list, exclude=True)  # URLs the task provides
 
 
 class TaskSpec(BaseModel):
@@ -95,8 +100,16 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
     """
     from fractalswarm.bench.tasks.t2_conference.generator import load_fixture, write_fixture
 
+    if spec.task == "t3_report":
+        from fractalswarm.bench.tasks.t3_report.web import corpus
+
+        recorded = spec.model_dump(mode="json")
+        if spec.inputs.fixture and Path(spec.inputs.fixture).resolve().is_relative_to(REPO_ROOT):
+            fixture = Path(spec.inputs.fixture).resolve().relative_to(REPO_ROOT)
+            recorded["inputs"]["fixture"] = fixture.as_posix()  # no machine-specific paths
+        return {"spec": recorded, "corpus": corpus(spec), "truth": {}}
     if spec.task != "t2_conference":
-        raise ValueError(f"task {spec.task!r} is not implemented yet (only t2_conference)")
+        raise ValueError(f"task {spec.task!r} is not implemented yet (t2_conference, t3_report)")
     if spec.inputs.fixture is None:
         raise ValueError("the TaskSpec needs inputs.fixture (a T2 fixture directory)")
     fixture = Path(spec.inputs.fixture)

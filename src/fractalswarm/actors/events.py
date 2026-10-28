@@ -152,6 +152,28 @@ class ArtifactWritten(Payload):
     size: int
 
 
+@register("web.hits")
+class WebHits(Payload):
+    """Search results that passed the firewall: their URLs may be fetched from now on."""
+
+    source: str  # web_search:<effect id>, the provenance of each URL
+    query: str
+    urls: list[str]
+
+
+@register("web.page")
+class WebPage(Payload):
+    """A fetched page that passed the firewall and reached an agent: the run's citable evidence.
+    ``text`` is what the agent saw, so a quote can be checked against it."""
+
+    url: str
+    final_url: str
+    source: str  # the provenance of the URL: task | web_search:<effect id>
+    chars: int
+    truncated: bool = False
+    text: str
+
+
 @register("lease.booked")
 class LeaseBooked(Payload):
     holder: str
