@@ -4,7 +4,10 @@
 ``{"spec": TaskSpec as a dict, "corpus": ..., "truth": ...}``, and optionally:
 - ``"chaos"``: a chaos plan, or ``{"profile": "C2", "seed": "1"}`` (spec §15.4). It spawns
   the chaos network and the monkey, and turns membership on;
-- ``"membership"``: failure detection and takeover (default: on with chaos).
+- ``"membership"``: failure detection and takeover (default: on with chaos);
+- ``"channel_breakers"``: the bus's channel and topic-storm breakers on every orchestrator's
+  endpoint (``comms/channel_breakers.py``): ``True``, or a dict of ``GuardPolicy`` overrides
+  (default: the spec's ``channel_breakers``, off). Nothing is recorded for a run without it.
 
 ``central`` is the central baseline (spec §15.1) on the same task, the same LLM calls and the
 same chaos: one orchestrator plans every level and leads every squad, under the best-case
@@ -98,6 +101,9 @@ class SwarmScenario:
             "relay": NET if membership and chaos is not None else None,
             "contributor": bool(params.get("contributor", spec.get("contributor_opt_in"))),
         }
+        breakers = params.get("channel_breakers", spec.get("channel_breakers"))
+        if breakers:  # only when on: a run that never asked for them records nothing new
+            args["channel_breakers"] = breakers
         commands: list[Command] = [Spawn(actor_id=BOARD, kind="board", args={})]
         if args["relay"] is not None:
             commands.append(Spawn(actor_id=NET, kind=NET, args={}))

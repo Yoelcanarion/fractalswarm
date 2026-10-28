@@ -48,6 +48,7 @@ from fractalswarm.baselines.supervisor import RESTART_TAG
 from fractalswarm.bench.profiles import RESTART_DELAY_MS
 from fractalswarm.bench.tasks.t2_conference.task import T2
 from fractalswarm.comms.bus import Endpoint
+from fractalswarm.comms.channel_breakers import Guard
 from fractalswarm.comms.chaos import CRASH_TOPIC
 from fractalswarm.coord import membership
 from fractalswarm.coord.hrw import assign, rank
@@ -130,6 +131,7 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "membership": bool(args.get("membership")),
         "relay": args.get("relay"),
         "contributor": bool(args.get("contributor")),
+        "channel_breakers": args.get("channel_breakers"),
         "spawned": len(children),  # agents spawned so far, for replacement names
         "respawned": 0,  # orchestrators spawned into dead sibling groups
         "squads": 0,  # central: squads handed out to leaf goals so far
@@ -143,7 +145,8 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
     }
     if state["membership"]:
         state["det"] = Detector(member=actor_id, role=ROLE, group=args.get("parent"))
-        state["ep"] = Endpoint(owner=actor_id, relay=args.get("relay"))
+        guard = Guard.create(actor_id, state["channel_breakers"])
+        state["ep"] = Endpoint(owner=actor_id, relay=args.get("relay"), guard=guard)
     return state
 
 
@@ -209,6 +212,8 @@ def _spawned(state: dict[str, Any], view: View):
     commands: list[Command] = []
     passed = {"membership": state["membership"], "relay": state["relay"]}
     passed["contributor"] = state["contributor"]
+    if state["channel_breakers"]:
+        passed["channel_breakers"] = state["channel_breakers"]
     for child in state["children"]:
         if state["leaf"] or state["mode"] in CENTRAL_MODES:
             commands.append(Spawn(actor_id=child, kind="agent", args=_agent_args(state)))
@@ -1013,6 +1018,8 @@ def _respawn(state: dict[str, Any], level: int, group: str | None):
     args = {key: state[key] for key in ("fanout", "agents_per_leaf", "task", "max_attempts")}
     args |= {"max_steps": state["max_steps"], "level": level, "parent": group, "bare": True}
     args |= {"membership": True, "relay": state["relay"], "contributor": state["contributor"]}
+    if state["channel_breakers"]:
+        args["channel_breakers"] = state["channel_breakers"]
     state = {**state, "respawned": number}
     return state, [Spawn(actor_id=actor, kind="orchestrator", args=args)]
 
