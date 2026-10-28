@@ -165,3 +165,36 @@ Append one entry per day, newest last. Keep each entry short: done, decisions an
 - **Live spike done:** `scripts/spike_api.py --yes`, about 45 probes, $0.0454. Evidence in `runs/spike/spike-20261027T214932Z-live.{json,md}` (gitignored). The spike does not go through the project ledger, so its spend was entered by hand as reservation `spike-20261027T214932Z`.
 - **Spend so far:** $0.0459 of $150 (`fractalswarm spend`).
 - From here on, the work runs as parallel streams, each in its own worktree; see the next entries.
+
+## Day 9 — Wed 28 Oct 2026 — Integration of days 3–8, $0 gate, T2 attack, first real T2 runs (session paused)
+**Done:**
+- **Merged** into `Yoelcanarion/day-09`, in order: day-03-kernel, day-04-slice, day-05-coord-foundations, day-08-safety-economy, day-06-bench-foundations, day-07-ui; tests, ruff and the web build green after each.
+- **Leaderless takeover on T2** (`coord/tree.py` TreeView + HRW heir; orchestrators reconcile on each heartbeat tick, adopt orphan results from the log, root succession, respawn into a dead sibling group), **central baseline** (one orchestrator, process-tree crash, best-case 5 s restart keeping completed work), `Stop(cancel=True)`, chaos crash points shared with the bench, `bench/workflows.py` (swarm/central × t2_conference, calibrated fake, Contributor role table).
+- **$0 gate passed (not flat).** `bench/matrix-gate.yaml --fake`, C0–C3 × seeds 1–2, all 16 cells complete and valid. At C3: swarm stall 0–0.3 s and extra cost ≈ 1 % (−6 % on seed 2); central stall 26–53 s and extra cost 49–76 %. Guarded by `test_bench_smoke`, `test_kill_half` (5 of 10 orchestrators incl. the root and track leads; same agent calls as C0, no stall, replay MATCH), `test_central_baseline`, `test_tree`.
+- **T2 attack (day 8 remainder):** generator `--poison k --wording w` (TaskSpec `inputs.poison`, `poison_wording`), root scans every email as a `firewall` effect before any prompt carries it (quarantine stubs, fail closed), `planning/scope.py` (ApprovedPlan envelope = scope token, recorded in `plan.approved`; track/session plans checked; extra work an email asks for is listed as `requests` and blocked with `scope.violation` + evidence {source, firewall score, branch}). `test_t2_attack` (`test_task_splitting_blocked` on the real slice, explicit wording quarantined, defense in depth with the firewall off, replay). `tasks/examples/t2-attack.yaml`.
+- **CLI `run`:** `--scenario swarm|central`, `--chaos C0-C3|kill-half`, `--firewall auto|heuristic`.
+- **Secret scan of the full git history:** clean (real key values: 0 hits; pattern hits are test fixtures and minified CSS). `demo/` and `tests/golden/` cassettes are redacted.
+- **Deleted** the five `worktree-agent-*` branches (all at master 2440cc6, no worktrees).
+- **Tests:** 455 passed; ruff check and format green.
+
+**Real runs (Yoel approved each):**
+- `t2-real-seed1` ($0.698): partial, 32/48. Our bug: 16 of 32 PromptGuard scans failed concurrently ("Already borrowed", the fast tokenizer is not thread-safe) and failed closed. Fixed (inference lock, test).
+- `t2-real-seed1b` ($0.454): **complete, 48/48, 0 hard violations, soft 1.0**, makespan 117 s, stall 8.9 s. Replay first diverged: the cassette's pattern redaction altered an `encrypted_content` blob that happened to contain `hf_` + 50 letters. Fixed (opaque blobs only get exact-secret redaction, test); the run's cassette was restored from its own log (backup `cassette.redacted-backup.jsonl`); **replay MATCH**.
+- `t2-real-c3-swarm-seed1` ($0.416, stopped by hand after ~33 min): never finished. Two bugs, both fixed in ffc1b47 with tests: (1) a member falsely declared dead that rejoined in the same millisecond had dropped `track-ai` as a zombie and nobody adopted it → rejoined members now take back their dropped goals; (2) loading PromptGuard (~6.7 s CPU) starved the live loop and caused false deaths at startup → the CLI warms the firewall before the clock starts. The central C3 run was not launched.
+
+**Spend:** $1.6141 of $150, plus $0.0698 left reserved by the interrupted call (kept open on purpose, in case it was billed).
+
+**Deviations:**
+- HRW at plan time uses ε = 0 (one subgoal per member); takeover keeps the spec's ε = 0.25.
+- Chaos: crash k happens at the k-th shared crash point; the progress clock divides by the task's expected work; partitions do not spare the central baseline's crash signal.
+- Re-booking identical values is a no-op; the log withdraws a detector's fenced verdict.
+- The track planner lists extra work from inputs under `requests` (scope-checked, never executed); the scope token is the hash of the approved envelope, not of the raw root plan.
+- `record_run` scans attachments with the heuristic firewall by default; real CLI runs use `--firewall auto` (PromptGuard).
+- Contributor mode: Wonder has no Contributor variant; `Matrix.contributor_wonder` (standard | spark) is still Yoel's decision.
+
+**Where this session stopped (next):**
+1. Relaunch the two real C3 runs with the fixes (ask Yoel): `run tasks/examples/t2-conference.yaml --chaos C3 --backend real --confirm-real-spend --clock live --firewall auto --scenario swarm|central --run-id t2-real-c3-<scenario>-seed1b`, with a wall-clock timeout.
+2. Then, each with permission and `spend` before/after: chart v1 in Contributor mode (decide Wonder standard vs spark; `single` and `pipeline` workflows are not registered, v1 worst case $23.8 vs the $8 matrix cap), backup bundle (day 7), attack clip (ask which wording: polite / authority (recommended) / explicit / `explicit,authority` with `--poison 2` to show both layers) and the day-8 matrix.
+3. Day 9 tasks: make the repo public only after Yoel confirms; LangGraph baseline; headline runs; final demo bundle (T2 kill-half + poisoned email); supporting features.
+4. Fold `.plans/notes/*.md` into this file.
+5. Ask before merging into `master` or pushing.
