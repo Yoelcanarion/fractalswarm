@@ -97,6 +97,90 @@ def toy(
 
 
 @app.command()
+def run(
+    taskspec: Annotated[Path, typer.Argument(help="a TaskSpec YAML, e.g. tasks/examples/...")],
+    clock: Annotated[str, typer.Option(help="sim | live")] = "sim",
+    speed: Annotated[float, typer.Option(help="live clock speed-up")] = 1.0,
+    backend: Annotated[str, typer.Option(help="fake | real")] = "fake",
+    confirm_real_spend: Annotated[
+        bool, typer.Option(help="required with --backend real: the calls are billed")
+    ] = False,
+    run_id: Annotated[str | None, typer.Option(help="default: a timestamped id")] = None,
+) -> None:
+    """Run a task through the swarm (fake LLM by default) into runs/<run_id>."""
+    import asyncio
+    from datetime import datetime
+
+    from fractalswarm.market.ledger import ProjectLedger
+    from fractalswarm.planning.taskspec import TaskSpec, run_params
+    from fractalswarm.runs import record_run
+
+    settings = _settings()
+    spec = TaskSpec.load(taskspec)
+    project_ledger = None
+    if backend == "real":
+        from fractalswarm.llm.client import OpenAIBackend
+
+        if not confirm_real_spend:
+            raise typer.BadParameter("real calls are billed: add --confirm-real-spend")
+        if settings.model_api_key is None:
+            raise typer.BadParameter("MODEL_API_KEY is not set in ~/.fractalswarm/.env")
+        llm = OpenAIBackend(settings.model_api_key.get_secret_value(), settings.model_api_base_url)
+        project_ledger = ProjectLedger(settings.ledger_path, settings.project_cap_usd)
+    elif backend == "fake":
+        from fractalswarm.bench.tasks.t2_conference.fake import t2_script
+        from fractalswarm.llm.fake import FakeBackend
+
+        llm = FakeBackend(script=t2_script)
+    else:
+        raise typer.BadParameter("--backend must be fake or real")
+    if clock not in ("sim", "live"):
+        raise typer.BadParameter("--clock must be sim or live")
+
+    run_id = run_id or f"{taskspec.stem}-{datetime.now():%Y%m%d-%H%M%S}"
+    result = asyncio.run(
+        record_run(
+            "swarm",
+            run_id=run_id,
+            run_dir=settings.runs_dir / run_id,
+            backend=llm,
+            seed=spec.seed,
+            params=run_params(spec),
+            clock=clock,  # type: ignore[arg-type]
+            speed=speed,
+            run_cap_usd=spec.budget_usd,
+            project_ledger=project_ledger,
+            secrets=settings.secret_values(),
+        )
+    )
+    spent = result.completed.payload["spent_usd"]
+    typer.echo(f"run {result.run_id}: {result.events} events, head {result.head_hash}")
+    typer.echo(f"run dir {result.paths.root}  spent ${spent:.6f} ({backend} LLM)")
+    outcome = task_outcome(result.paths)
+    if outcome is None:
+        typer.echo("no task.result: the run ended without a result")
+        raise typer.Exit(1)
+    report = outcome["report"]
+    typer.echo(
+        f"result {outcome['status']}: placed {report['placed']}/{report['expected']}, "
+        f"hard violations {report['hard_violations']}, soft score {report['soft_score']}"
+    )
+    for violation in report["violations"]:
+        typer.echo(f"  {violation['kind']}: {violation['detail']}")
+    for gap in report["gaps"]:
+        typer.echo(f"  gap: {gap}")
+    if report["hard_violations"]:
+        raise typer.Exit(1)
+
+
+def task_outcome(paths) -> dict | None:
+    """The payload of the run's ``task.result`` event, if any."""
+    with paths.open_log() as log:
+        results = [event.payload for event in log.read() if event.type == "task.result"]
+    return results[-1] if results else None
+
+
+@app.command()
 def replay(
     run: Annotated[str, typer.Argument(help="run id under runs/, or a run directory")],
     verify: Annotated[bool, typer.Option(help="re-run the actors and compare hashes")] = False,

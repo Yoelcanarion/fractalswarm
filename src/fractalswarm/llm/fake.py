@@ -33,6 +33,8 @@ class FakeReply(BaseModel):
     error_type: str = "api_error"
     retry_after_s: float | None = None
     output_tokens: int | None = None
+    # Function calls, as Responses ``function_call`` items: {"name", "arguments"} each.
+    tool_calls: list[dict[str, str]] = []
 
 
 Script = Callable[[dict[str, Any], int], "FakeReply | str"]
@@ -87,6 +89,8 @@ class FakeBackend:
         rng = random.Random(f"fake-latency:{key}")
         input_tokens = count_tokens([body.get("instructions"), body["input"]])
         output_tokens = reply.output_tokens or count_tokens(reply.text)
+        if reply.tool_calls and reply.output_tokens is None:
+            output_tokens += count_tokens(reply.tool_calls)
         latency = self.latency(body["model"], input_tokens, output_tokens, rng)
         await sleep(latency)
 
@@ -113,6 +117,18 @@ class FakeBackend:
             "status": "incomplete" if incomplete else "completed",
             "content": [{"type": "output_text", "text": text, "annotations": []}],
         }
+        calls = [
+            {
+                "type": "function_call",
+                "id": f"fc_fake_{key[:8]}_{n}",
+                "call_id": f"call_fake_{key[:8]}_{n}",
+                "name": call["name"],
+                "arguments": call["arguments"],
+                "status": "completed",
+            }
+            for n, call in enumerate(reply.tool_calls if not incomplete else [])
+        ]
+        output = [*calls, message] if text or not calls else calls
         output_billed = min(total_output, limit)
         response = {
             "id": f"resp_fake_{key[:16]}",
@@ -120,7 +136,7 @@ class FakeBackend:
             "model": body["model"],
             "status": "incomplete" if incomplete else "completed",
             "incomplete_details": {"reason": "max_output_tokens"} if incomplete else None,
-            "output": [message],
+            "output": output,
             "usage": {
                 "input_tokens": input_tokens,
                 "input_tokens_details": {"cached_tokens": 0},

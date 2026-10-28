@@ -1,4 +1,5 @@
-"""Determinism lint for kernel/, coord/ and market/ (spec §3 and §19).
+"""Determinism lint for the handler code: kernel/, coord/, market/, the swarm actors, planning,
+memory, the contract checks and judge, and the T2 task (spec §3 and §19).
 
 Replay must rebuild the log bit for bit, so code in these packages must not read the wall
 clock, draw unseeded randomness or call the built-in ``hash()``, which is salted per process.
@@ -15,7 +16,17 @@ from pathlib import Path
 import pytest
 
 PACKAGE = Path(__file__).resolve().parents[2] / "src" / "fractalswarm"
-LINTED_DIRS = ("kernel", "coord", "market")
+LINTED_DIRS = (
+    "kernel",
+    "coord",
+    "market",
+    "actors",
+    "planning",
+    "memory",
+    "bench/tasks/t2_conference",
+)
+# verify/ also holds code of other streams; lint the files the swarm's handlers call.
+LINTED_FILES = ("verify/checks.py", "verify/judge.py")
 ALLOW_PRAGMA = "# determinism: allow"
 
 CLOCK_FUNCTIONS = {
@@ -95,12 +106,13 @@ def test_linted_packages_exist() -> None:
         assert (PACKAGE / directory / "__init__.py").is_file(), directory
 
 
-def test_kernel_coord_and_market_are_deterministic() -> None:
+def test_handler_code_is_deterministic() -> None:
+    paths = [path for d in LINTED_DIRS for path in sorted((PACKAGE / d).rglob("*.py"))]
+    paths += [PACKAGE / name for name in LINTED_FILES]
     violations = []
-    for directory in LINTED_DIRS:
-        for path in sorted((PACKAGE / directory).rglob("*.py")):
-            source = path.read_text(encoding="utf-8")
-            violations += find_violations(source, path.relative_to(PACKAGE).as_posix())
+    for path in paths:
+        source = path.read_text(encoding="utf-8")
+        violations += find_violations(source, path.relative_to(PACKAGE).as_posix())
     assert not violations, "\n".join(violations)
 
 
