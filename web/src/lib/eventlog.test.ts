@@ -13,10 +13,14 @@ describe("which panel claims an event type", () => {
     expect(claimedBy("market.epoch.closed")).toBe("market");
     expect(claimedBy("budget.epoch")).toBe("market");
     expect(claimedBy("topup.requested")).toBe("market");
-    expect(claimedBy("feasibility.reported")).toBe("market");
-    expect(claimedBy("risk.scored")).toBe("market");
-    expect(claimedBy("plan.feasibility")).toBe("market");
-    expect(claimedBy("contract.risk")).toBe("market");
+    expect(claimedBy("feasibility.reported")).toBe("plan");
+    expect(claimedBy("risk.scored")).toBe("plan");
+    expect(claimedBy("plan.feasibility")).toBe("plan");
+    expect(claimedBy("contract.risk")).toBe("plan");
+    expect(claimedBy("plan.proposed")).toBe("plan");
+    expect(claimedBy("security.scanned")).toBe("security");
+    expect(claimedBy("scope.violation")).toBe("security");
+    expect(claimedBy("scaling.decided")).toBe("market");
     expect(claimedBy("breaker.opened")).toBe("breakers");
     expect(claimedBy("breaker.channel.opened")).toBe("breakers");
     expect(claimedBy("quota.adjusted")).toBe("limits");
@@ -30,7 +34,7 @@ describe("which panel claims an event type", () => {
   });
 
   it("leaves every other family to the event list", () => {
-    for (const type of ["msg.sent", "actor.spawned", "member.dead", "contract.rejected", "security.scanned"]) {
+    for (const type of ["msg.sent", "actor.spawned", "member.dead", "contract.rejected", "chaos.injected"]) {
       expect(claimedBy(type)).toBeNull();
     }
   });

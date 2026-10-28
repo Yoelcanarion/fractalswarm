@@ -7,7 +7,16 @@
 // A panel claims a type when the first segment of the type is one of its roots, or any segment
 // is one of its words (``market.epoch.closed``, ``budget.epoch``, ``breaker.channel.opened``).
 
-export type PanelId = "market" | "limits" | "breakers" | "memory" | "collisions" | "escalations" | "results";
+export type PanelId =
+  | "market"
+  | "limits"
+  | "breakers"
+  | "memory"
+  | "collisions"
+  | "escalations"
+  | "results"
+  | "plan"
+  | "security";
 
 interface Claim {
   roots: readonly string[];
@@ -28,11 +37,14 @@ const CLAIMS: readonly (readonly [PanelId, Claim])[] = [
   ["memory", { roots: ["fact", "artifact", "memory", "blackboard"], words: ["memory"] }],
   ["escalations", { roots: ["escalation", "replan"], words: ["escalation", "replan"] }],
   ["results", { roots: ["task", "audit", "result"], words: ["audit"] }],
+  ["security", { roots: ["security", "scope"], words: [] }],
+  // The plan, and the feasibility report and risk scores that come with it (spec §12).
+  ["plan", { roots: ["plan", "feasibility", "risk"], words: ["feasibility", "risk"] }],
   [
     "market",
     {
-      roots: ["budget", "market", "epoch", "auction", "bid", "topup", "ledger", "price", "feasibility", "risk", "scaling"],
-      words: ["epoch", "bid", "bids", "auction", "topup", "allocation", "feasibility", "risk"],
+      roots: ["budget", "market", "epoch", "auction", "bid", "topup", "ledger", "price", "scaling"],
+      words: ["epoch", "bid", "bids", "auction", "topup", "allocation"],
     },
   ],
 ];

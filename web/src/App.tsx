@@ -5,12 +5,14 @@ import { SPEEDS } from "./lib/playback";
 import { ChartsPage } from "./pages/ChartsPage";
 import { EventsPage } from "./pages/EventsPage";
 import { PanelsPage } from "./pages/PanelsPage";
+import { PlanPage } from "./pages/PlanPage";
 import { ResultsPage } from "./pages/ResultsPage";
 import { RunPage } from "./pages/RunPage";
 import { RunsPage } from "./pages/RunsPage";
+import { SecurityPage } from "./pages/SecurityPage";
 import { useRun } from "./store";
 
-// `#/run/<id>[/panels|results|events]?at=end|<event count>&speed=<1-20>&play` opens a replay at
+// `#/run/<id>[/plan|panels|security|results|events]?at=end|<event count>&speed=<1-20>&play` opens a replay at
 // a given point, for shareable links and the video. Every view of a run shares the playhead.
 interface Playback {
   at: string | null;
@@ -18,9 +20,16 @@ interface Playback {
   play: boolean;
 }
 
-const RUN_VIEWS = ["overview", "panels", "results", "events"] as const;
+const RUN_VIEWS = ["overview", "plan", "panels", "security", "results", "events"] as const;
 type RunView = (typeof RUN_VIEWS)[number];
-const VIEW_TITLES: Record<RunView, string> = { overview: "Run", panels: "Panels", results: "Results", events: "Events" };
+const VIEW_TITLES: Record<RunView, string> = {
+  overview: "Run",
+  plan: "Plan",
+  panels: "Panels",
+  security: "Security",
+  results: "Results",
+  events: "Events",
+};
 
 type Route =
   | { page: "run"; runId: string | null; view: RunView; playback: Playback }
@@ -56,6 +65,7 @@ function applyPlayback({ at, speed, play }: Playback) {
 export function App() {
   const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
   const { runs, runId, view, live, loadRuns, openRun } = useRun();
+  const blocked = view.panels.security.quarantines.length + view.panels.security.violations.length;
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash(window.location.hash));
@@ -88,13 +98,18 @@ export function App() {
           FractalSwarm
         </a>
         <nav className="tabs">
-          {RUN_VIEWS.map((view) => (
+          {RUN_VIEWS.map((name) => (
             <a
-              key={view}
-              className={route.page === "run" && route.view === view ? "tab tab--on" : "tab"}
-              href={viewHash(runId, view)}
+              key={name}
+              className={route.page === "run" && route.view === name ? "tab tab--on" : "tab"}
+              href={viewHash(runId, name)}
             >
-              {VIEW_TITLES[view]}
+              {VIEW_TITLES[name]}
+              {name === "security" && blocked > 0 && (
+                <span className="tab__count" title="quarantined emails and blocked subgoals">
+                  {blocked}
+                </span>
+              )}
             </a>
           ))}
           <a className={route.page === "charts" ? "tab tab--on" : "tab"} href="#/charts">
@@ -127,7 +142,9 @@ export function App() {
       </header>
       <main className="content">
         {route.page === "run" && route.view === "overview" && <RunPage />}
+        {route.page === "run" && route.view === "plan" && <PlanPage />}
         {route.page === "run" && route.view === "panels" && <PanelsPage />}
+        {route.page === "run" && route.view === "security" && <SecurityPage />}
         {route.page === "run" && route.view === "results" && <ResultsPage />}
         {route.page === "run" && route.view === "events" && <EventsPage />}
         {route.page === "charts" && <ChartsPage />}

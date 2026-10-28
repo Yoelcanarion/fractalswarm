@@ -1,4 +1,4 @@
-// The supporting panels' state: one fold per panel (spec §16, Day 9), run on every event
+// The supporting panels' and the Security view's state: one fold per panel (spec §16), run on every event
 // beside the tree and the schedule. Each fold returns its input unchanged for an event it does
 // not read, so replay snapshots share whatever did not change.
 
@@ -9,7 +9,9 @@ import { emptyEconomy, foldEconomy, type EconomyState } from "./economy";
 import { emptyEscalations, foldEscalations, type EscalationsState } from "./escalations";
 import { emptyLimits, foldLimits, type LimitsState } from "./limits";
 import { emptyMemory, foldMemory, type MemoryState } from "./memory";
+import { emptyPlan, foldPlan, type PlanState } from "./plan";
 import { emptyResults, foldResults, type ResultsState } from "./results";
+import { emptySecurity, foldSecurity, type SecurityState } from "./security";
 import type { RunEvent } from "./types";
 
 export interface PanelsState {
@@ -21,6 +23,8 @@ export interface PanelsState {
   collisions: CollisionsState;
   escalations: EscalationsState;
   results: ResultsState;
+  security: SecurityState;
+  plan: PlanState;
 }
 
 export const emptyPanels = (): PanelsState => ({
@@ -32,6 +36,8 @@ export const emptyPanels = (): PanelsState => ({
   collisions: emptyCollisions(),
   escalations: emptyEscalations(),
   results: emptyResults(),
+  security: emptySecurity(),
+  plan: emptyPlan(),
 });
 
 export function foldPanels(state: PanelsState, event: RunEvent): PanelsState {
@@ -44,6 +50,8 @@ export function foldPanels(state: PanelsState, event: RunEvent): PanelsState {
     collisions: foldCollisions(state.collisions, event),
     escalations: foldEscalations(state.escalations, event),
     results: foldResults(state.results, event),
+    security: foldSecurity(state.security, event),
+    plan: foldPlan(state.plan, event),
   };
   const same = (Object.keys(next) as (keyof PanelsState)[]).every((key) => next[key] === state[key]);
   return same ? state : next;
