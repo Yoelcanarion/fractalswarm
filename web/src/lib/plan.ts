@@ -5,10 +5,14 @@
 //   plan.approved   {goal_id, scope_token, by, envelope}          by: auto (bench mode) | human
 //   plan.rejected   {goal_id, attempt, errors}                    a planner's reply failed its schema
 //   plan.refined    {goal_id, owner, children, plan, fallback}    an orchestrator split its subgoal
+//   plan.feasibility  the report of spec §12, written between plan.proposed and plan.approved: cost
+//                   P50/P90 against the budget, a verdict (fits | tight | over | unbudgeted), the
+//                   stages, the duration, bottlenecks, tools not allowed, policy flags, limitations.
+//                   Its fields are shown as they come (KeyValues), so the report can grow.
 //
 // Today the runtime approves every plan at once (TaskSpec ``auto_approve``, bench mode), so a plan
 // is "awaiting approval" only in a run that waits for a human, which the runtime does not do yet.
-// ``feasibility.*`` and ``risk.*`` (the report of spec §12) show as generic rows.
+// Other ``feasibility.*`` and ``risk.*`` types show as generic rows.
 
 import { claimedBy } from "./families";
 import { appendCapped, asNumber, asRecord, asString, asStrings, GENERIC_CAP, genericEntry, type GenericEntry } from "./generic";
@@ -50,12 +54,20 @@ export interface Refinement {
   fallback: boolean;
 }
 
+export interface Feasibility {
+  seq: number;
+  ts: number;
+  actor: string;
+  payload: Record<string, unknown>;
+}
+
 export interface PlanState {
   proposals: Record<string, Proposal>;
   proposalOrder: string[];
   approvals: Record<string, Approval>;
   rejections: PlanRejection[];
   refinements: Refinement[];
+  feasibility: Feasibility | null;
   other: GenericEntry[];
 }
 
@@ -65,10 +77,11 @@ export const emptyPlan = (): PlanState => ({
   approvals: {},
   rejections: [],
   refinements: [],
+  feasibility: null,
   other: [],
 });
 
-const PLAN_TYPES: ReadonlySet<string> = new Set(["plan.proposed", "plan.approved", "plan.rejected", "plan.refined"]);
+const PLAN_TYPES: ReadonlySet<string> = new Set(["plan.proposed", "plan.approved", "plan.rejected", "plan.refined", "plan.feasibility"]);
 
 export function foldPlan(state: PlanState, event: RunEvent): PlanState {
   const p = event.payload;
@@ -102,6 +115,8 @@ export function foldPlan(state: PlanState, event: RunEvent): PlanState {
           { ...at, goalId: asString(p.goal_id), owner: asString(p.owner, event.actor), children: asStrings(p.children), fallback: p.fallback === true },
         ],
       };
+    case "plan.feasibility":
+      return { ...state, feasibility: { ...at, actor: event.actor, payload: p } };
     default:
       if (claimedBy(event.type) === "plan" && !PLAN_TYPES.has(event.type)) {
         return { ...state, other: appendCapped(state.other, genericEntry(event), GENERIC_CAP) };

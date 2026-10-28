@@ -36,7 +36,8 @@ const CLAIMS: readonly (readonly [PanelId, Claim])[] = [
   ["collisions", { roots: ["collision", "lease", "arbitration", "arbiter", "conflict"], words: ["collision", "arbitration"] }],
   ["memory", { roots: ["fact", "artifact", "memory", "blackboard"], words: ["memory"] }],
   ["escalations", { roots: ["escalation", "replan"], words: ["escalation", "replan"] }],
-  ["results", { roots: ["task", "audit", "result"], words: ["audit"] }],
+  // verify.judged (the judge), verify.sampled and verify.audited (the cross-squad audit, spec §11).
+  ["results", { roots: ["task", "audit", "result", "verify"], words: ["audit", "audited"] }],
   ["security", { roots: ["security", "scope"], words: [] }],
   // The plan, and the feasibility report and risk scores that come with it (spec §12).
   ["plan", { roots: ["plan", "feasibility", "risk"], words: ["feasibility", "risk"] }],

@@ -1679,6 +1679,26 @@ textarea {
   color: var(--text-secondary);
 }
 
+/* a payload as a table (the feasibility report) */
+.kv__key {
+  width: 36%;
+  color: var(--text-secondary);
+}
+
+.kv--nested {
+  margin: 2px 0;
+}
+
+.kv--nested td {
+  border-bottom: none;
+  padding: 1px 6px;
+}
+
+.kv__list {
+  margin: 0;
+  padding-left: 16px;
+}
+
 /* plan approval */
 .plan {
   flex: 1;

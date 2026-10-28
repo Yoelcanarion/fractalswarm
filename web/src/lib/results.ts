@@ -7,8 +7,10 @@
 //   goal.completed     {goal_id, owner, status, gaps}
 //   contract.*         created, dispatched, completed, verified, rejected, failed
 //   verify.judged      {goal_id, contract_id, attempt, verdict, score, reused}
+//   verify.sampled     one per contract attempt: whether the cross-squad audit draws it (spec §11.3)
+//   verify.audited     {verdict: pass | fail | skipped, reused?}  the audit's answer
 //
-// The cross-squad audit (spec §11.3) is a family of its own (audit.*): it shows as generic rows.
+// Other audit events (audit.*, verify.*) show as generic rows.
 
 import { claimedBy } from "./families";
 import {
@@ -47,6 +49,7 @@ export interface ResultsState {
   goalOrder: string[];
   contracts: { created: number; dispatched: number; completed: number; verified: number; rejected: number; failed: number };
   judged: { count: number; passed: number; scoreSum: number; reused: number };
+  audits: { sampled: number; count: number; passed: number; failed: number; skipped: number; reused: number };
   other: GenericEntry[];
 }
 
@@ -56,6 +59,7 @@ export const emptyResults = (): ResultsState => ({
   goalOrder: [],
   contracts: { created: 0, dispatched: 0, completed: 0, verified: 0, rejected: 0, failed: 0 },
   judged: { count: 0, passed: 0, scoreSum: 0, reused: 0 },
+  audits: { sampled: 0, count: 0, passed: 0, failed: 0, skipped: 0, reused: 0 },
   other: [],
 });
 
@@ -69,6 +73,8 @@ const RESULT_TYPES: ReadonlySet<string> = new Set([
   "contract.rejected",
   "contract.failed",
   "verify.judged",
+  "verify.sampled",
+  "verify.audited",
 ]);
 
 const CONTRACT_COUNTERS: Record<string, keyof ResultsState["contracts"]> = {
@@ -122,6 +128,23 @@ export function foldResults(state: ResultsState, event: RunEvent): ResultsState 
           passed: judged.passed + (asString(p.verdict) === "pass" ? 1 : 0),
           scoreSum: judged.scoreSum + (asNumber(p.score) ?? 0),
           reused: judged.reused + (p.reused === true ? 1 : 0),
+        },
+      };
+    }
+    case "verify.sampled":
+      return { ...state, audits: { ...state.audits, sampled: state.audits.sampled + 1 } };
+    case "verify.audited": {
+      const verdict = asString(p.verdict);
+      const audits = state.audits;
+      return {
+        ...state,
+        audits: {
+          ...audits,
+          count: audits.count + 1,
+          passed: audits.passed + (verdict === "pass" ? 1 : 0),
+          failed: audits.failed + (verdict === "fail" ? 1 : 0),
+          skipped: audits.skipped + (verdict === "skipped" ? 1 : 0),
+          reused: audits.reused + (p.reused === true ? 1 : 0),
         },
       };
     }

@@ -84,7 +84,7 @@ export function ResultsView({ view }: { view: ViewState }) {
   // A report that is a document (the T3 web report) carries it as markdown. Shown as plain text:
   // it quotes third-party pages, so it is never rendered as markup.
   const document = typeof report.markdown === "string" ? report.markdown : null;
-  const { contracts, judged } = results;
+  const { contracts, judged, audits } = results;
 
   return (
     <div className="results">
@@ -140,6 +140,14 @@ export function ResultsView({ view }: { view: ViewState }) {
             <PStat label="judged" value={judged.count} />
             <PStat label="judge pass" value={judged.count ? `${judged.passed} / ${judged.count}` : "–"} tone={judged.count > 0 && judged.passed === judged.count ? "good" : ""} />
             <PStat label="mean score" value={judged.count ? (judged.scoreSum / judged.count).toFixed(2) : "–"} />
+            {(audits.count > 0 || audits.sampled > 0) && (
+              <>
+                <PStat label="cross-squad audits" value={audits.count} title={`${audits.sampled} contract attempts drawn for audit; ${audits.reused} verdicts adopted from a dead owner`} />
+                <PStat label="audit pass" value={audits.count ? `${audits.passed} / ${audits.count}` : "–"} tone={audits.count > 0 && audits.passed === audits.count ? "good" : ""} />
+                {audits.failed > 0 && <PStat label="audit failed" value={audits.failed} tone="bad" title="a failed audit sends the contract back up the replanning ladder" />}
+                {audits.skipped > 0 && <PStat label="audit skipped" value={audits.skipped} tone="warn" title="no live auditor, or an auditor that could not answer" />}
+              </>
+            )}
           </div>
           {results.goalOrder.length === 0 ? (
             <Nothing>No goal has completed yet.</Nothing>

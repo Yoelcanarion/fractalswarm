@@ -58,6 +58,7 @@ describe("plan approval", () => {
       .emit("feasibility.reported", "o0", { cost_p50_usd: 0.3, cost_p90_usd: 0.45, budget_usd: 2 })
       .emit("risk.scored", "o0", { contract: "c1", risk: 0.7 })
       .emit("plan.weighed", "o0", { goal_id: "root" });
+    // (plan.feasibility is read natively: see the next test)
     const { plan: state } = foldEvents(s.events).panels;
     expect(state.refinements.map((r) => [r.goalId, r.owner, r.children.length, r.fallback])).toEqual([
       ["track-ai", "o2", 2, false],
@@ -65,6 +66,17 @@ describe("plan approval", () => {
     ]);
     expect(state.other.map((row) => row.type)).toEqual(["feasibility.reported", "risk.scored", "plan.weighed"]);
     expect(state.other[0].text).toBe("cost_p50_usd=0.3  cost_p90_usd=0.45  budget_usd=2");
+  });
+
+  it("keeps the feasibility report written between the proposal and the approval, field by field", () => {
+    const report = { verdict: "fits", cost_p50_usd: 0.436, cost_p90_usd: 0.61, budget_share_p50: 0.22, duration_p50_s: 104, bottlenecks: ["track-hci is 2 talks longer"], tools_not_allowed: [] };
+    const s = proposed(new Stream()).emit("plan.feasibility", "o0", report);
+    approved("auto")(s);
+    const { plan: state } = foldEvents(s.events).panels;
+    expect(state.feasibility).toMatchObject({ actor: "o0", payload: report });
+    expect(state.feasibility!.seq).toBeLessThan(state.approvals.root.seq);
+    expect(state.other).toEqual([]); // read natively, not a generic row
+    expect(foldEvents(proposed(new Stream()).events).panels.plan.feasibility).toBeNull();
   });
 
   it("takes the first proposed goal as the root's when none is called root", () => {

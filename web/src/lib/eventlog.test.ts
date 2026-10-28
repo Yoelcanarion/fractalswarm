@@ -30,6 +30,8 @@ describe("which panel claims an event type", () => {
     expect(claimedBy("escalation.raised")).toBe("escalations");
     expect(claimedBy("replan.notice")).toBe("escalations");
     expect(claimedBy("audit.completed")).toBe("results");
+    expect(claimedBy("verify.audited")).toBe("results");
+    expect(claimedBy("verify.sampled")).toBe("results");
     expect(claimedBy("task.result")).toBe("results");
   });
 

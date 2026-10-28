@@ -556,6 +556,18 @@ describe("Results", () => {
     expect(outcomeOf(failed.panels.results)).toBe("failed");
   });
 
+  it("counts the cross-squad audit's verdicts, and the contract attempts drawn for it", () => {
+    const s = started();
+    for (const attempt of [0, 1, 2, 3]) s.emit("verify.sampled", "o2", { goal_id: "g", contract_id: "place", attempt, audit: attempt < 3 });
+    s.emit("verify.audited", "o3", { goal_id: "g", contract_id: "place", attempt: 0, verdict: "pass" });
+    s.emit("verify.audited", "o3", { goal_id: "g", contract_id: "place", attempt: 1, verdict: "fail", reasons: ["room too small"] });
+    s.emit("verify.audited", "o3", { goal_id: "g", contract_id: "extract", attempt: 0, verdict: "skipped" });
+    s.emit("verify.audited", "o2", { goal_id: "g", contract_id: "blurb", attempt: 0, verdict: "pass", reused: true });
+    const { results } = foldEvents(s.events).panels;
+    expect(results.audits).toEqual({ sampled: 4, count: 4, passed: 2, failed: 1, skipped: 1, reused: 1 });
+    expect(results.other).toEqual([]);
+  });
+
   it("counts contracts, judge verdicts and goals, and shows audits as generic rows", () => {
     const work = { goal_id: "g", contract_id: "c", attempt: 0 };
     const s = started()

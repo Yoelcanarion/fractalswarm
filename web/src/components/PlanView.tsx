@@ -5,6 +5,7 @@ import { runCap } from "../lib/economy";
 import { digest } from "../lib/generic";
 import { planStatus, rootProposal, tracksOf, type PlanStatus } from "../lib/plan";
 import type { ViewState } from "../lib/reducer";
+import { KeyValues } from "./KeyValues";
 import { Card, GenericRows, money, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
 
 interface Props {
@@ -179,9 +180,19 @@ export function PlanView({ runId, view, live }: Props) {
               </div>
             </>
           )}
-          {!proposal && <Nothing>The report comes with the plan.</Nothing>}
-          <Nothing>Cost P50/P90 against the budget, the expected duration, bottlenecks and policy flags show here as feasibility.* and risk.* events arrive.</Nothing>
-          <GenericRows rows={plan.other} title="Feasibility and risk events" />
+          {plan.feasibility ? (
+            <>
+              <Subhead hint={`plan.feasibility · t = ${virtualSeconds(plan.feasibility.ts)} · written before the approval`}>Cost, duration, bottlenecks and flags</Subhead>
+              <KeyValues data={plan.feasibility.payload} />
+            </>
+          ) : (
+            <Nothing>
+              {proposal
+                ? "This run has no plan.feasibility report (the TaskSpec's feasibility_report is off). Cost P50/P90 against the budget, the duration, bottlenecks and policy flags show here when it is on."
+                : "The report comes with the plan."}
+            </Nothing>
+          )}
+          <GenericRows rows={plan.other} title="Other feasibility and risk events" />
         </Card>
 
         <Card title="Sub-plans and rejections" hint="below the root">
