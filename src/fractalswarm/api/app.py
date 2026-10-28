@@ -133,13 +133,16 @@ def create_app(
 
     def control_inbox(request: Request) -> Any:
         """The control inbox of a run that is still recording. A finished run (its log is
-        exported) and a bundled recording are history: there is nothing left to control."""
+        exported) and a bundled recording are history: there is nothing left to control. Nor is
+        there for an interrupted run, whose process died: nobody would read the request."""
         from fractalswarm.runs import RunPaths
 
         run = entry(request)
-        last = catalog.last(run)
-        if run.jsonl.exists() or (last is not None and last["type"] == "run.completed"):
+        status = catalog.status(run, catalog.last(run))
+        if run.jsonl.exists() or status in ("completed", "halted"):
             raise HTTPException(409, f"run {run.id!r} is a recording, not a live run")
+        if status != "running":
+            raise HTTPException(409, f"run {run.id!r} is {status}: no process is recording it")
         return RunPaths(run.path)
 
     async def halt_run(request: Request) -> JSONResponse:

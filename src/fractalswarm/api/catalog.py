@@ -2,11 +2,18 @@
 
 A run is a directory holding ``events.sqlite`` (a live or finished log) and/or
 ``events.jsonl`` (an exported bundle), as written by ``runs.record_run``. The catalog lists
-the user's runs under ``runs/`` and the bundled runs under ``demo/``. SQLite logs are opened
-read-only, so the API can tail a run that another process is still recording.
+the user's runs under ``runs/``, the bundled runs under ``demo/`` and, when it is given a
+private dir, the runs of live input (``FRACTALSWARM_PRIVATE_DIR``: intake runs and runs on
+input the user typed), marked private. SQLite logs are opened read-only, so the API can tail a
+run that another process is still recording.
+
+A run's status is ``completed``, ``halted`` (the kill switch), ``running`` (its ``LIVE`` file is
+fresh: the recording process touches it every second) or ``interrupted`` (the log stops
+without an end and nothing touches ``LIVE``: the process died).
 """
 
 import sqlite3
+import time
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,12 +22,16 @@ from typing import Any
 from fractalswarm.kernel.store import COLUMNS, EventStore, _from_row
 
 DEMO_PREFIX = "demo-"
+PRIVATE_SOURCE = "private"
+PRIVATE_RUN_DIRS = ("runs", "intake")  # under the private dir
+LIVE_STALE_S = 15.0  # a LIVE file untouched for this long was left by a process that died
+HALT_TAIL = 2000  # events from the end searched for ``run.halted`` (the halt's own reaction)
 
 
 @dataclass(frozen=True)
 class RunEntry:
     id: str
-    source: str  # "runs" | "demo"
+    source: str  # "runs" | "demo" | "private"
     path: Path
 
     @property
@@ -30,6 +41,14 @@ class RunEntry:
     @property
     def jsonl(self) -> Path:
         return self.path / "events.jsonl"
+
+    @property
+    def live(self) -> Path:
+        return self.path / "LIVE"
+
+    @property
+    def private(self) -> bool:
+        return self.source == PRIVATE_SOURCE
 
     @property
     def recorded_head(self) -> str | None:
@@ -43,9 +62,17 @@ def _is_run_dir(path: Path) -> bool:
 
 
 class Catalog:
-    def __init__(self, runs_dir: Path, demo_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        runs_dir: Path,
+        demo_dir: Path | None = None,
+        private_dir: Path | None = None,
+        live_stale_s: float = LIVE_STALE_S,
+    ) -> None:
         self.runs_dir = runs_dir
         self.demo_dir = demo_dir
+        self.private_dir = private_dir
+        self.live_stale_s = live_stale_s
         self._jsonl_cache: dict[Path, tuple[tuple[int, int], list[dict[str, Any]]]] = {}
 
     def entries(self) -> list[RunEntry]:
@@ -54,11 +81,23 @@ class Catalog:
             for path in sorted(self.demo_dir.iterdir()):
                 if _is_run_dir(path):
                     found.append(RunEntry(DEMO_PREFIX + path.name, "demo", path))
+        runs: list[tuple[str, Path]] = []
         if self.runs_dir.is_dir():
-            runs = [path for path in self.runs_dir.iterdir() if _is_run_dir(path)]
-            # Newest first: the run the user just recorded is the one they want.
-            runs.sort(key=lambda path: (-_mtime(path), path.name))
-            found.extend(RunEntry(path.name, "runs", path) for path in runs)
+            runs += [("runs", path) for path in self.runs_dir.iterdir() if _is_run_dir(path)]
+        if self.private_dir is not None:
+            for name in PRIVATE_RUN_DIRS:
+                parent = self.private_dir / name
+                if parent.is_dir():
+                    runs += [
+                        (PRIVATE_SOURCE, path) for path in parent.iterdir() if _is_run_dir(path)
+                    ]
+        # Newest first: the run the user just recorded is the one they want.
+        runs.sort(key=lambda found_: (-_mtime(found_[1]), found_[1].name))
+        taken = {entry.id for entry in found}
+        for source, path in runs:
+            if path.name not in taken:  # the first of two runs with one name wins
+                taken.add(path.name)
+                found.append(RunEntry(path.name, source, path))
         return found
 
     def get(self, run_id: str) -> RunEntry:
@@ -97,15 +136,44 @@ class Catalog:
         return {
             "id": entry.id,
             "source": entry.source,
+            "private": entry.private,
             "run_id": first[0]["run_id"] if first else None,
             "scenario": started.get("scenario"),
             "seed": started.get("seed"),
             "clock": started.get("clock"),
             "events": last["seq"] if last else 0,
             "duration_ms": last["ts_virtual"] if last else 0,
-            "status": _status(last),
+            "status": self.status(entry, last),
             "head": last["hash"] if last else None,
         }
+
+    def status(self, entry: RunEntry, last: dict | None) -> str:
+        """``completed``, ``halted``, ``running`` or ``interrupted`` (``empty``: no events yet)."""
+        if last is None:
+            return "empty"
+        if self.halted(entry):
+            return "halted"
+        if last["type"] == "run.completed":
+            return "completed"
+        return "running" if self.is_live(entry) else "interrupted"
+
+    def is_live(self, entry: RunEntry) -> bool:
+        """Whether a process is recording the run: its ``LIVE`` file was touched lately."""
+        try:
+            age = time.time() - entry.live.stat().st_mtime
+        except OSError:
+            return False
+        return age < self.live_stale_s
+
+    def halted(self, entry: RunEntry) -> bool:
+        """Whether the kill switch stopped the run. A halted run goes on to ``run.completed``,
+        so the halt is looked for in the tail of the log, where its reaction is."""
+        if entry.sqlite.exists():
+            query = f"SELECT 1 FROM (SELECT type FROM events ORDER BY seq DESC LIMIT {HALT_TAIL})"
+            with _readonly(entry.sqlite) as db:
+                return db.execute(query + " WHERE type = 'run.halted'").fetchone() is not None
+        events = self._jsonl(entry)[-HALT_TAIL:]
+        return any(event["type"] == "run.halted" for event in events)
 
     def summary(self, entry: RunEntry) -> dict[str, Any]:
         events = self.read(entry)
@@ -152,12 +220,6 @@ class Catalog:
             events = [event.model_dump() for event in store.read()]
         self._jsonl_cache[entry.jsonl] = (key, events)
         return events
-
-
-def _status(last: dict | None) -> str:
-    if last is None:
-        return "empty"
-    return "completed" if last["type"] == "run.completed" else "running"
 
 
 def _mtime(path: Path) -> int:

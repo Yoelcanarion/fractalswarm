@@ -5,6 +5,8 @@ fixtures and bundles) and ``cassette.jsonl`` (every LLM call, redacted).
 """
 
 import json
+import os
+import threading
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -37,6 +39,8 @@ SCENARIOS = {
     "breaker-toy": "fractalswarm.actors.breaker_toy:BREAKER_TOY",
 }
 
+LIVE_TOUCH_S = 1.0  # how often the recording process proves it is alive
+
 
 def default_run_cap_usd() -> float:
     defaults = yaml.safe_load((CONFIG_DIR / "defaults.yaml").read_text(encoding="utf-8"))
@@ -58,6 +62,11 @@ class RunPaths:
     @property
     def cassette(self) -> Path:
         return self.root / "cassette.jsonl"
+
+    @property
+    def live(self) -> Path:
+        """The pid of the process recording the run, touched while it lives (``LiveMarker``)."""
+        return self.root / "LIVE"
 
     @property
     def control(self) -> Path:
@@ -93,6 +102,40 @@ class RunPaths:
         if self.events_jsonl.exists():
             return EventStore.import_jsonl(self.events_jsonl)
         raise FileNotFoundError(f"no event log in {self.root}")
+
+
+class LiveMarker:
+    """Marks a run directory as being recorded: ``LIVE`` holds the pid and is touched every
+    ``LIVE_TOUCH_S`` while the process lives, then removed when it exits (even by an error).
+
+    A process that dies leaves the file behind, and it goes stale, which is how the catalog
+    tells a crashed run from a running one. A thread touches it, not the control poll: on the
+    sim clock with the real backend the driver polls only between API calls, which can be
+    minutes apart.
+    """
+
+    def __init__(self, path: Path, period_s: float | None = None) -> None:
+        self.path = path
+        self.period_s = LIVE_TOUCH_S if period_s is None else period_s
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._keep_alive, name="live-marker", daemon=True)
+
+    def __enter__(self) -> "LiveMarker":
+        self.path.write_text(str(os.getpid()), encoding="utf-8")
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._stop.set()
+        self._thread.join()
+        self.path.unlink(missing_ok=True)
+
+    def _keep_alive(self) -> None:
+        while not self._stop.wait(self.period_s):
+            try:
+                os.utime(self.path)
+            except OSError:  # being read or replaced just now: the next touch will do
+                continue
 
 
 @dataclass(frozen=True)
@@ -157,7 +200,8 @@ async def record_run(
         effects = {"llm": client.effect(), "firewall": (firewall or Firewall()).effect()}
         effects |= extra_effects or {}
         runner = EffectRunner(effects, EffectContext(run_id, run_clock))
-        completed = await drive(runtime, runner, control=paths.poll_control)
+        with LiveMarker(paths.live):
+            completed = await drive(runtime, runner, control=paths.poll_control)
         store.export_jsonl(paths.events_jsonl)
         return RunResult(run_id, paths, completed, store.head_hash, store.last_seq)
 
