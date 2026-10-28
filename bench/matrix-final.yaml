@@ -1,0 +1,21 @@
+# The final matrix (spec §15.6): 4 in-house workflows x {T2, T1} x C0-C3 x 2 seeds = 64 runs.
+# Chart v1 (bench/matrix.yaml) is its T2 half: the same out_dir, and the harness skips a cell
+# that has a result file, so only the 32 T1 runs are paid for once v1 has finished. Run it in
+# the worktree that holds bench/results/v1.
+#   uv run fractalswarm bench bench/matrix-final.yaml --dry-run
+#   uv run fractalswarm bench bench/matrix-final.yaml --confirm-real-spend
+name: final
+workflows: [swarm, central, single, pipeline]
+tasks: [t2_conference, t1_extraction]
+profiles: [C0, C1, C2, C3]
+seeds: [1, 2]
+# Contributor routing (spec §7.5): synthetic tasks, explicit opt-in for the bench matrix.
+contributor: true
+out_dir: results/v1
+chart_task: t2_conference
+budget:
+  run_cap_usd: 0.50
+  matrix_cap_usd: 16.00  # the 32 T1 runs x the run cap (the 32 T2 runs are chart v1's, done)
+notes: >
+  Fair failure semantics (spec §15.2): same crashes at the same progress points, 5 s
+  best-case restart for the baselines, completed work preserved.
