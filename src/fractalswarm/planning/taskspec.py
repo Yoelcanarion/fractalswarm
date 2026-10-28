@@ -39,6 +39,8 @@ class TaskInputs(BaseModel):
 
     fixture: str | None = None  # a directory with corpus.json and truth.json
     generate_seed: int | None = None  # generate the fixture if the directory is missing
+    poison: int = Field(default=0, ge=0)  # poisoned speaker emails (spec §13 attack demo)
+    poison_wording: str = "polite"  # a generator POISON_WORDINGS key, or several with commas
 
 
 class TaskSpec(BaseModel):
@@ -101,7 +103,10 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
     if not (fixture / "corpus.json").exists():
         if spec.inputs.generate_seed is None:
             raise FileNotFoundError(f"no T2 fixture in {fixture}")
-        fixture = write_fixture(fixture.parent, spec.inputs.generate_seed)
+        inputs = spec.inputs
+        fixture = write_fixture(
+            fixture.parent, spec.inputs.generate_seed, inputs.poison, inputs.poison_wording
+        )
     corpus, truth = load_fixture(fixture)
     recorded = spec.model_dump(mode="json")
     if fixture.resolve().is_relative_to(REPO_ROOT):  # no machine-specific paths in the log

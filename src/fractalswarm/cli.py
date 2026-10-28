@@ -115,17 +115,38 @@ def run(
         bool, typer.Option(help="required with --backend real: the calls are billed")
     ] = False,
     run_id: Annotated[str | None, typer.Option(help="default: a timestamped id")] = None,
+    scenario: Annotated[str, typer.Option(help="swarm | central (the baseline)")] = "swarm",
+    chaos: Annotated[
+        str, typer.Option(help="C0-C3, or kill-half: the root, two track leads, two sessions")
+    ] = "C0",
+    firewall: Annotated[
+        str, typer.Option(help="auto (PromptGuard 2 when installed) | heuristic")
+    ] = "heuristic",
 ) -> None:
-    """Run a task through the swarm (fake LLM by default) into runs/<run_id>."""
+    """Run a task (fake LLM by default) into runs/<run_id>."""
     import asyncio
     from datetime import datetime
 
+    from fractalswarm.comms.chaos import plan_from
+    from fractalswarm.llm.transport import ApiFaults, FaultyBackend
     from fractalswarm.market.ledger import ProjectLedger
     from fractalswarm.planning.taskspec import TaskSpec, run_params
     from fractalswarm.runs import record_run
+    from fractalswarm.safety.firewall import Firewall, HeuristicBackend, default_backend
 
+    if scenario not in ("swarm", "central"):
+        raise typer.BadParameter("--scenario must be swarm or central")
+    if firewall not in ("auto", "heuristic"):
+        raise typer.BadParameter("--firewall must be auto or heuristic")
     settings = _settings()
     spec = TaskSpec.load(taskspec)
+    params = run_params(spec)
+    if chaos == "kill-half":
+        params |= {"chaos": kill_half_plan(spec.seed), "membership": True}
+    elif chaos in ("C0", "C1", "C2", "C3"):
+        params |= {"chaos": {"profile": chaos, "seed": spec.seed}}
+    else:
+        raise typer.BadParameter("--chaos must be C0-C3 or kill-half")
     project_ledger = None
     if backend == "real":
         from fractalswarm.llm.client import OpenAIBackend
@@ -137,24 +158,29 @@ def run(
         llm = OpenAIBackend(settings.model_api_key.get_secret_value(), settings.model_api_base_url)
         project_ledger = ProjectLedger(settings.ledger_path, settings.project_cap_usd)
     elif backend == "fake":
-        from fractalswarm.bench.tasks.t2_conference.fake import t2_script
-        from fractalswarm.llm.fake import FakeBackend
+        from fractalswarm.bench.workflows import fake_backend
 
-        llm = FakeBackend(script=t2_script)
+        llm = fake_backend()
     else:
         raise typer.BadParameter("--backend must be fake or real")
     if clock not in ("sim", "live"):
         raise typer.BadParameter("--clock must be sim or live")
+    rate = plan_from(params).api_fault_rate
+    if rate:
+        llm = FaultyBackend(llm, ApiFaults(seed=spec.seed, rate=rate))
+    hf_token = settings.hf_token.get_secret_value() if settings.hf_token else None
+    scanner = Firewall(default_backend(hf_token) if firewall == "auto" else HeuristicBackend())
 
     run_id = run_id or f"{taskspec.stem}-{datetime.now():%Y%m%d-%H%M%S}"
     result = asyncio.run(
         record_run(
-            "swarm",
+            scenario,
             run_id=run_id,
             run_dir=settings.runs_dir / run_id,
             backend=llm,
             seed=spec.seed,
-            params=run_params(spec),
+            params=params,
+            firewall=scanner,
             clock=clock,  # type: ignore[arg-type]
             speed=speed,
             run_cap_usd=spec.budget_usd,
@@ -180,6 +206,20 @@ def run(
         typer.echo(f"  gap: {gap}")
     if report["hard_violations"]:
         raise typer.Exit(1)
+
+
+def kill_half_plan(seed: str) -> dict:
+    """Kill 5 of T2's 10 orchestrators at the crash points: the root first, then a session
+    owner, a track lead, a session owner and another track lead (tests/integration)."""
+    from fractalswarm.bench.profiles import CRASH_POINTS
+    from fractalswarm.comms.chaos import ChaosAction, ChaosPlan
+
+    targets = ["o0", "o2.1", "o1", "o3.2", "o2"]
+    actions = tuple(
+        ChaosAction(at=at, kind="kill_coordinator", target=target)
+        for at, target in zip(CRASH_POINTS, targets, strict=True)
+    )
+    return ChaosPlan(profile="kill-half", seed=seed, actions=actions).model_dump(mode="json")
 
 
 def task_outcome(paths) -> dict | None:

@@ -69,7 +69,7 @@ def test_blocks_round_trip_and_untrusted_text_cannot_close_its_block() -> None:
 
 
 def test_parse_json_returns_feedback() -> None:
-    plan, errors = parse_json(TrackPlan, '```json\n{"sessions": []}\n```')
+    plan, errors = parse_json(TrackPlan, '```json\n{"sessions": [], "requests": []}\n```')
     assert plan is not None and errors == []
     plan, errors = parse_json(TrackPlan, '{"sessions": [{"day": "x"}]}')
     assert plan is None and errors

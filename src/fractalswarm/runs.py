@@ -23,6 +23,7 @@ from fractalswarm.llm.client import Backend, LLMClient
 from fractalswarm.llm.roles import RoleTable
 from fractalswarm.market.ledger import ProjectLedger
 from fractalswarm.market.prices import PriceTable
+from fractalswarm.safety.firewall import Firewall
 
 SCENARIOS = {
     "toy": "fractalswarm.actors.toy:TOY",
@@ -114,7 +115,10 @@ async def record_run(
     secrets: list[str] | None = None,
     roles: RoleTable | None = None,
     prices: PriceTable | None = None,
+    firewall: Firewall | None = None,
 ) -> RunResult:
+    """Record a run. ``firewall`` scans attachments (default: the deterministic heuristic;
+    real runs pass PromptGuard)."""
     paths = RunPaths(run_dir)
     if paths.events.exists() or paths.cassette.exists():
         raise FileExistsError(f"{run_dir} already holds a run")
@@ -141,7 +145,8 @@ async def record_run(
             estimators={"llm": client.estimate},
         )
         run_clock = ManualClock("sim") if clock == "sim" else LiveClock(speed)
-        runner = EffectRunner({"llm": client.effect()}, EffectContext(run_id, run_clock))
+        effects = {"llm": client.effect(), "firewall": (firewall or Firewall()).effect()}
+        runner = EffectRunner(effects, EffectContext(run_id, run_clock))
         completed = await drive(runtime, runner, control=paths.poll_control)
         store.export_jsonl(paths.events_jsonl)
         return RunResult(run_id, paths, completed, store.head_hash, store.last_seq)

@@ -60,9 +60,10 @@ from fractalswarm.kernel.scheduler import (
     Stop,
     View,
 )
+from fractalswarm.planning import scope as scoping
 from fractalswarm.planning.contracts import Contract
 from fractalswarm.planning.dag import Dag
-from fractalswarm.planning.planner import scope_token
+from fractalswarm.safety.firewall import Verdict, quarantine_stub, scan_request
 from fractalswarm.verify.checks import run_checks
 from fractalswarm.verify.judge import judge_request, read_verdict
 
@@ -169,6 +170,8 @@ def _handle(state: dict[str, Any], event: Event, view: View):
         tag = (event.payload["tag"] or "").split("|")
         if tag[0] == "plan":
             return _planned(state, tag[1], int(tag[2]), event, view)
+        if tag[0] == "scan":
+            return _scanned(state, tag[1], tag[2], event)
         if tag[0] == "judge":
             payload = event.payload
             text = payload["result"].get("output_text", "")
@@ -247,7 +250,62 @@ def _start_goal(
         if state["mode"] == "central":
             state = {**state, "squads": state["squads"] + 1}
     state = _put_goal(state, goal["id"], entry)
-    return state, [_plan_effect(state, goal["id"])]
+    return _begin(state, goal["id"])
+
+
+def _begin(state: dict[str, Any], gid: str):
+    """Plan the goal; the root first scans its attachments, before any prompt carries them."""
+    entry = state["goals"][gid]
+    attachments = TASKS[state["task"]].attachments(entry["goal"]) if entry["level"] == 0 else []
+    if not attachments:
+        return state, [_plan_effect(state, gid)]
+    state = _put_goal(state, gid, {**entry, "phase": "scanning", "scans": {}})
+    return state, [
+        StartEffect(
+            kind="firewall",
+            request=scan_request(text, "attachment", source),
+            tag=f"scan|{gid}|{source}",
+        )
+        for source, text in attachments
+    ]
+
+
+def _scanned(state: dict[str, Any], gid: str, source: str, event: Event):
+    entry = state["goals"].get(gid)
+    if entry is None or entry["phase"] != "scanning" or source in entry["scans"]:
+        return state, []
+    if event.payload["status"] == "ok":
+        verdict = Verdict.model_validate(event.payload["result"])
+    else:  # fail closed: an attachment nobody could scan is not read
+        error = event.payload["result"].get("error") or event.payload["status"]
+        verdict = Verdict(
+            surface="attachment",
+            source_id=source,
+            decision="quarantine",
+            score=1.0,
+            backend="none",
+            reasons=[f"the scan failed: {error}"],
+        )
+    commands: list[Command] = [
+        Emit(type="security.scanned", payload=verdict.model_dump(mode="json"))
+    ]
+    if not verdict.allowed:
+        quarantined = {"source_id": source, "surface": verdict.surface, "score": verdict.score}
+        quarantined |= {"reason": "; ".join(verdict.reasons), "stub": quarantine_stub(verdict)}
+        commands.append(Emit(type="security.quarantined", payload=quarantined))
+    scans = {**entry["scans"], source: verdict.model_dump(mode="json")}
+    entry = {**entry, "scans": scans}
+    task = TASKS[state["task"]]
+    if len(scans) < len(task.attachments(entry["goal"])):
+        return _put_goal(state, gid, entry), commands
+    stubs = {
+        source_id: quarantine_stub(Verdict.model_validate(found))
+        for source_id, found in sorted(scans.items())
+        if found["decision"] != "allow"
+    }
+    entry = {**entry, "goal": task.quarantine(entry["goal"], stubs), "phase": "planning"}
+    state = _put_goal(state, gid, entry)
+    return state, [*commands, _plan_effect(state, gid)]
 
 
 def _squad(state: dict[str, Any]) -> list[str]:
@@ -295,6 +353,11 @@ def _planned(state: dict[str, Any], gid: str, attempt: int, event: Event, view: 
         plan, errors = None, [f"planning call {status}: {result.get('error') or ''}".strip()]
 
     commands: list[Command] = []
+    if plan is not None and entry["level"] > 0:
+        violations, rejected = _check_scope(state, gid, task.proposals(goal, plan, leaf), view)
+        commands += violations
+        if rejected:
+            plan, errors = None, rejected
     fallback = False
     if plan is None:
         payload = {"goal_id": gid, "attempt": attempt, "errors": errors}
@@ -312,11 +375,13 @@ def _planned(state: dict[str, Any], gid: str, attempt: int, event: Event, view: 
             plan = task.split_fallback(goal)
 
     if entry["level"] == 0:
-        token = scope_token(plan)
+        envelope = scoping.approve(goal["goal"], task.envelope(goal, plan))
+        token = envelope.scope_token
         state = {**state, "scope": token}
         proposed = {"goal_id": gid, "plan": plan, "plan_hash": token, "fallback": fallback}
         commands.append(_emit(state, gid, "plan.proposed", proposed))
         approved = {"goal_id": gid, "scope_token": token, "by": "auto"}
+        approved["envelope"] = envelope.model_dump(mode="json")
         commands.append(_emit(state, gid, "plan.approved", approved))
         state, more = _assign_children(state, gid, task.root_children(goal, plan), view)
         return state, commands + more
@@ -329,6 +394,38 @@ def _planned(state: dict[str, Any], gid: str, attempt: int, event: Event, view: 
     commands.append(_emit(state, gid, "plan.refined", payload))
     state, more = _assign_children(state, gid, children, view)
     return state, commands + more
+
+
+def _check_scope(state: dict[str, Any], gid: str, proposals: list[dict[str, Any]], view: View):
+    """(``scope.violation`` events, reasons to reject the plan). A blocked item of the
+    decomposition sends the plan back to its planner; a blocked request is dropped."""
+    scope = view.views.get("scope")
+    if scope is None or not proposals:
+        return [], []
+    ancestors = _ancestors(state, gid, view)
+    commands: list[Command] = []
+    rejected: list[str] = []
+    for proposal, decision in scoping.check(
+        scope, proposals, state["scope"], state["id"], ancestors
+    ):
+        if decision.allowed:
+            continue
+        found = scoping.evidence(scope, proposal, gid, state["id"])
+        commands.append(Emit(type="scope.violation", payload=decision.violation_payload(found)))
+        if proposal.get("node_id") is not None:
+            rejected += [f"{decision.subgoal_id}: {reason}" for reason in decision.reasons]
+    return commands, rejected
+
+
+def _ancestors(state: dict[str, Any], gid: str, view: View) -> list[str]:
+    """The owners of the goals above ``gid``, nearest first."""
+    tree = view.views.get("tree")
+    found: list[str] = []
+    parent = state["goals"][gid]["parent_gid"]
+    while tree is not None and parent is not None and parent in tree.goals:
+        found.append(tree.goals[parent].owner)
+        parent = tree.goals[parent].parent
+    return found
 
 
 # -- non-leaf: child subgoals -------------------------------------------------------------
@@ -850,8 +947,11 @@ def _adopt(state: dict[str, Any], gid: str, view: View):
         idem = f"tree.adopted:{previous}:{gid}"
         commands.append(_emit(state, gid, "tree.adopted", payload | {"duties": duties}, idem))
 
+    if not state["scope"] and view.views.get("scope") is not None:
+        state = {**state, "scope": view.views["scope"].latest}
     if entry["phase"] == "planning":  # the plan died with its owner: plan it again
-        return state, [*commands, _plan_effect(state, gid)]
+        state, more = _begin(state, gid)
+        return state, [*commands, *more]
     if not leaf:
         tracked = entry["children"]
         if all(child["status"] != "assigned" for child in tracked.values()):

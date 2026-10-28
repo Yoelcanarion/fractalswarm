@@ -23,6 +23,7 @@ class PlanApproved(Payload):
     goal_id: str
     scope_token: str
     by: str  # auto (bench mode) | human
+    envelope: dict[str, Any] | None = None  # the ApprovedPlan the token hashes (spec §13)
     fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 

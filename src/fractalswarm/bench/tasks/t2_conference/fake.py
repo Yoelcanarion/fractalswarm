@@ -21,6 +21,8 @@ from fractalswarm.llm.fake import FakeReply
 from fractalswarm.planning.planner import read_blocks
 
 ATTENDANCE = re.compile(r"(?:around|roughly|about)\s+(\d+)\s+(?:attendees|people|participants)")
+# The extra work an email asks for: the sentence around a document the scheduler should make.
+REQUEST = re.compile(r"[^.\n]*\b(?:contact sheet|contact list)\b[^.\n]*\.?", re.IGNORECASE)
 
 
 def t2_script(body: dict[str, Any], attempt: int) -> FakeReply | str:
@@ -215,7 +217,17 @@ def track_plan(body: dict[str, Any]) -> str:
         {"day": day, "talk_ids": sorted(split[day]), "notes": f"{len(split[day])} talks"}
         for day in days
     ]
-    return _answer({"sessions": sessions})
+    return _answer({"sessions": sessions, "requests": requests_in(blocks["emails"])})
+
+
+def requests_in(emails: list[dict[str, Any]]) -> list[dict[str, str]]:
+    """The extra work the emails ask for, listed the way the track instructions ask: a
+    planner that takes the poisoned email at face value (spec §13)."""
+    return [
+        {"objective": match.group(0).strip(), "source_id": email["id"]}
+        for email in sorted(emails, key=lambda e: e["id"])
+        for match in REQUEST.finditer(email["body"])
+    ]
 
 
 def session_plan(body: dict[str, Any]) -> str:

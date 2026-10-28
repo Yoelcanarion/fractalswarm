@@ -7,7 +7,11 @@ import pytest
 
 from fractalswarm.bench.tasks.t2_conference.checker import check
 from fractalswarm.bench.tasks.t2_conference.fake import parse_attendance, parse_email
-from fractalswarm.bench.tasks.t2_conference.generator import generate, load_fixture
+from fractalswarm.bench.tasks.t2_conference.generator import (
+    POISON_WORDINGS,
+    generate,
+    load_fixture,
+)
 
 FIXTURE = Path(__file__).resolve().parents[2] / "tasks" / "fixtures" / "t2" / "seed-1"
 
@@ -36,9 +40,30 @@ def test_the_prompts_never_carry_the_ground_truth() -> None:
     assert all("track_label" in talk and "track" not in talk for talk in corpus["talks"])
 
 
-def test_poison_is_reserved_for_day_8() -> None:
-    with pytest.raises(NotImplementedError):
-        generate(1, poison=2)
+@pytest.mark.parametrize("seed", [1, 2, 3])
+def test_poison_changes_only_the_poisoned_emails(seed: int) -> None:
+    corpus, truth = generate(seed)
+    poisoned, poisoned_truth = generate(seed, poison=2, wording="explicit,authority")
+    targets = poisoned_truth.pop("poisoned")
+    assert poisoned_truth == truth
+    assert sorted(targets.values()) == ["authority", "explicit"]
+    for clean, email in zip(corpus["emails"], poisoned["emails"], strict=True):
+        if email["id"] not in targets:
+            assert email == clean
+            continue
+        assert POISON_WORDINGS[targets[email["id"]]] in email["body"]
+        # A one-talk speaker free at any time: a quarantined email loses no constraint.
+        talks = [t for t in corpus["talks"] if t["speaker_id"] == email["speaker_id"]]
+        assert len(talks) == 1
+        assert truth["patterns"][email["speaker_id"]]["kind"] == "any"
+        # The fake still reads the availability and preference around the attack line.
+        days, slots = corpus["days"], corpus["slots"]
+        assert parse_email(email["body"], days, slots) == parse_email(clean["body"], days, slots)
+    assert {k: v for k, v in poisoned.items() if k != "emails"} == {
+        k: v for k, v in corpus.items() if k != "emails"
+    }
+    with pytest.raises(ValueError, match="unknown wordings"):
+        generate(seed, poison=1, wording="rude")
 
 
 @pytest.mark.parametrize("seed", range(1, 11))

@@ -95,7 +95,20 @@ def test_the_root_and_the_track_leads_are_taken_over_by_hashing(runs) -> None:
     adopted = [e.payload for e in log if e.type == "tree.adopted"]
     assert any("final integration" in a["duties"] for a in adopted)
     tracks = [a for a in adopted if "integration" in a["duties"]]
-    assert {a["dead"] for a in tracks} >= {"o1", "o2"}
+    # Every track lead that died with its track unfinished was taken over (o1 always is).
+    done = {e.payload["goal_id"]: e.seq for e in log if e.type == "goal.completed"}
+    deaths = {
+        e.payload["target"]: e.seq
+        for e in log
+        if e.type == "chaos.injected" and e.payload["fault"] == "kill_coordinator"
+    }
+    open_leads = {
+        lead
+        for lead, track in (("o1", "track-data"), ("o2", "track-ai"))
+        if done.get(track, 10**9) > deaths[lead]
+    }
+    assert "o1" in open_leads
+    assert {a["dead"] for a in tracks} >= open_leads
     # The adopted child group of a track is its session owners, never the adopter itself.
     assert all(a["adopter"] not in a["children"] for a in adopted)
     # Every survivor computed the same heir: each goal moved once per death.

@@ -31,6 +31,7 @@ from fractalswarm.comms.chaos import (
 from fractalswarm.coord.membership import MembersView
 from fractalswarm.coord.tree import ROLE, TreeView
 from fractalswarm.kernel.scheduler import ActorKind, Command, Spawn
+from fractalswarm.planning.scope import ScopeView
 
 ROOT = "o0"
 CONTRACTS_PER_SESSION = 3  # extract, place, blurb
@@ -62,7 +63,7 @@ class SwarmScenario:
     }
 
     def reducers(self) -> list[Any]:
-        return [MembersView(), ProgressView(T2_PROGRESS), ActorsView(), TreeView()]
+        return [MembersView(), ProgressView(T2_PROGRESS), ActorsView(), TreeView(), ScopeView()]
 
     def boot(self, params: dict[str, Any]) -> list[Command]:
         spec = params["spec"]
