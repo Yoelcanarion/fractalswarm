@@ -801,3 +801,47 @@ Package it into `demo/backup/`:
 - `evidence/`: the config, the code version, the costs, the result, the spend before and after, and the replay, audit and takeover reports.
 
 Keep the workers' test suites quiet during the run. It uses the live clock, so CPU starvation could cause false death verdicts.
+
+### Day 9 (continued): the root dies in a real run, Wed Oct 28, 19:00 CET
+**Memory incident (18:40):** the machine ran out of memory, with 10 Claude processes, Firefox, Discord and Orca running. Claude Code stopped the coordinator's background shells:
+- **v1:** stopped at 18 of 32 cells, all valid. The cut cell `single C1 s1` ($0.2357 settled, $0.0249 left reserved) is kept in `runs/v1-interrupted/`.
+- **Also stopped:** `serve`, the full suite after the T1 merge, and the Orca wait.
+
+With Yoel's OK:
+- The terminals of the 8 finished workers were closed. Their work is committed and their reports are in the scratchpad.
+- An orphan pytest of the verification worker, spinning since 17:50, was stopped.
+- The active workers were asked to hold heavy commands during the paid run.
+
+**The root-death run (backup bundle, `demo/backup/`, f13b20a).** Recorded at 15b1e1f:
+```
+uv run fractalswarm run tasks/examples/t2-conference.yaml --backend real --confirm-real-spend --clock live --firewall auto --chaos kill-half --budget-usd 0.75 --no-paid-retries --run-id t2-real-killhalf-seed1
+```
+- **Result:** 48 of 48 placed, 0 hard violations, soft 1.0, $0.4948 for 79 calls.
+- **Budget:** peak committed $0.516 against the $0.75 cap, 0 refused, 0 reservations left open.
+- **Checks:** replay MATCH (8177 events, head b052b4bc), AUDIT OK. `demo --verify` gives MATCH for the backup and the toy with no API key and an empty, offline HF cache.
+- **The root's owner was killed three times.**
+  - o0 at 22 %. o3 declared it dead after 5.1 s and o1 took the root.
+  - Then o1 at 50 % (root to o2) and o2 at 83 % (root to o3).
+- **Takeovers:** all 7 match the heir recomputed from the log. No split brain, no write by a non-owner, no event by a dead actor.
+- **Work and calls:** 18 of 18 contracts verified, 10 of 10 goals completed. 0 duplicate LLM calls, 0 calls in flight at any kill, and 3 orphan results adopted from the log.
+- **Two independent checks agree:**
+  - `demo/backup/evidence/analyze_takeover.py`;
+  - the read-only checker `fractalswarm takeover RUN --replay` (evidence worker, `verify/takeover.py`, 33 tests, merged), which prints `TAKEOVER OK`.
+- **Evidence:** `demo/backup/evidence/`, with a README that also states what the run does not show.
+
+**What the run does not show:**
+- A kill is an actor crash inside one Python process, and the log is centralized.
+- Recovery after the whole Python process dies is not implemented. The resume worker is studying it; it stays out of the demo unless a real process-kill test passes.
+- No call was in flight at any kill, so the run does not exercise "cancelled and redone".
+
+**Also merged:** T1 (38f5db9; plus 15b1e1f, where T1 takes the `view` argument T3 added to the task protocol) and the evidence checker. Fake T2 heads are unchanged by the T1 merge.
+
+**Deviation:** the run cap was $0.75, not $0.50 (Yoel's choice). At $0.50, Standard would have hit the cap: the peak committed was $0.516.
+
+**Issue:** transformers warns that the PromptGuard 2 tokenizer loads "with an incorrect regex pattern". Check whether its scores are affected before the attack clip.
+
+**Running:** v1 resumed at 18:59 from f13b20a. It runs the 14 remaining cells, including the cut one again. Those cells add `security.routed` events. Otherwise the T2 path is identical event by event to the code of the first 18 cells, apart from the recorded spec's three new default-off fields.
+
+**Next:**
+- After v1: merge scaling (`bench/charts.py`, and a central `_squad` fix that must not change single or pipeline mid-matrix) and langgraph (new dependencies).
+- Then restart `serve` and run the full suite.
