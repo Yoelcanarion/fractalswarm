@@ -37,6 +37,7 @@ SCENARIOS = {
     "pipeline": "fractalswarm.actors.swarm:PIPELINE",
     "chaos-toy": "fractalswarm.actors.chaos_toy:CHAOS_TOY",
     "breaker-toy": "fractalswarm.actors.breaker_toy:BREAKER_TOY",
+    "intake": "fractalswarm.intake.actor:INTAKE",
 }
 
 LIVE_TOUCH_S = 1.0  # how often the recording process proves it is alive

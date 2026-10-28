@@ -277,13 +277,16 @@ def _attendance(room_id: str, rng: random.Random) -> int:
     return rng.randint(20, int(capacity * 0.92))
 
 
-def _assign_speakers(cells: list[dict[str, Any]], rng: random.Random) -> list[int]:
-    """Speaker index per talk: 16 speakers give two talks (never at the same time), 16 one."""
+def _assign_speakers(
+    cells: list[dict[str, Any]], rng: random.Random, speakers: int = SPEAKERS
+) -> list[int]:
+    """Speaker index per talk: some speakers give two talks (never at the same time), the
+    rest one (the default 32 speakers: 22 give two talks of 54, 10 one)."""
     while True:
         order = list(range(len(cells)))
         rng.shuffle(order)
         speaker_of = [0] * len(cells)
-        pairs = SPEAKERS - (2 * SPEAKERS - len(cells))  # speakers with two talks
+        pairs = speakers - (2 * speakers - len(cells))  # speakers with two talks
         ok = True
         for speaker in range(pairs):
             a, b = order[2 * speaker], order[2 * speaker + 1]
@@ -479,6 +482,123 @@ def _poison(
         email["body"] = "\n".join([*lines[:-2], POISON_WORDINGS[name], *lines[-2:]])
         poisoned[email["id"]] = name
     return poisoned
+
+
+LIVE_SPEAKERS = 9
+LIVE_PER_TRACK_DAY = 2  # 3 tracks x 2 days x 2 = 12 talks
+LIVE_ROOMS_PER_SLOT = len(TRACKS)  # a slot holds at most one talk per track
+
+
+def live_sample(seed: int) -> dict[str, Any]:
+    """The pasted text of a 12-talk conference, in the generator's wording, as a person would
+    paste it into the intake form: ``talks`` (submissions) and ``notes`` (emails from nine
+    speakers). ``expected`` is what it was written from (never sent anywhere): a test compares
+    a reading of the text with it. Like ``generate``, it draws a feasible schedule first, so
+    the constraints in the notes can always be met."""
+    rng = random.Random(f"t2-live:{seed}")
+    cells: list[dict[str, Any]] = []
+    for track in TRACKS:
+        for day in DAYS:
+            for slot in sorted(rng.sample(range(len(SLOT_STARTS)), LIVE_PER_TRACK_DAY)):
+                cells.append({"day": day, "slot": slot, "track": track["id"]})
+    in_slot: dict[tuple[int, int], list[dict[str, Any]]] = defaultdict(list)
+    for cell in cells:
+        in_slot[(cell["day"], cell["slot"])].append(cell)
+    for key in sorted(in_slot):
+        assert len(in_slot[key]) <= LIVE_ROOMS_PER_SLOT <= len(ROOMS)
+        for cell, room in zip(
+            in_slot[key], rng.sample([r["id"] for r in ROOMS], len(in_slot[key])), strict=True
+        ):
+            cell["room"] = room
+    rng.shuffle(cells)
+    speaker_of = _assign_speakers(cells, rng, LIVE_SPEAKERS)
+
+    names: list[str] = []
+    while len(names) < LIVE_SPEAKERS:
+        name = f"{rng.choice(FIRST_NAMES)} {rng.choice(LAST_NAMES)}"
+        if name not in names:
+            names.append(name)
+    track_by_id = {track["id"]: track for track in TRACKS}
+    used_topics: dict[str, list[str]] = {track["id"]: [] for track in TRACKS}
+    talks: list[dict[str, Any]] = []
+    for index, cell in enumerate(cells):
+        track = track_by_id[cell["track"]]
+        topics = [t for t in track["topics"] if t not in used_topics[track["id"]]]
+        topic = rng.choice(topics)
+        used_topics[track["id"]].append(topic)
+        people = _attendance(cell["room"], rng)
+        name = names[speaker_of[index]]
+        talks.append(
+            {
+                "title": rng.choice(TITLE_PATTERNS).format(
+                    topic=topic, Topic=topic[0].upper() + topic[1:]
+                ),
+                "speaker": name,
+                "email": name.lower().replace(" ", ".") + "@example.org",
+                "track": track["name"],
+                "track_label": rng.choice(track["labels"]),
+                "abstract": " ".join(
+                    [
+                        rng.choice(ABSTRACT_OPENERS).format(topic=topic),
+                        rng.choice(ABSTRACT_MIDDLES),
+                        rng.choice(ATTENDANCE_SENTENCES).format(n=people),
+                    ]
+                ),
+                "attendance": people,
+                "cell": (cell["day"], cell["slot"]),
+            }
+        )
+
+    speakers = list(dict.fromkeys(talk["speaker"] for talk in talks))  # in order of the text
+    notes, availability, preferences = [], {}, {}
+    for number, name in enumerate(speakers, start=1):
+        mine = [talk for talk in talks if talk["speaker"] == name]
+        kind, day, time = _pick_pattern({talk["cell"] for talk in mine}, rng)
+        preference = rng.choice(["morning", "afternoon", None])
+        mentions = " and ".join(f'"{talk["title"]}"' for talk in mine)
+        body = [
+            rng.choice(GREETINGS),
+            rng.choice(TALK_MENTIONS).format(talks=mentions),
+            availability_sentence(kind, day, time, rng),
+            rng.choice(PREFERENCE_SENTENCES[preference]),
+            rng.choice(FILLERS),
+            rng.choice(CLOSINGS),
+            name,
+        ]
+        subject = "My talks" if len(mine) > 1 else "My talk"
+        header = [f"From: {name} <{mine[0]['email']}>", f"Subject: {subject}"]
+        notes.append("\n".join([*header, *(line for line in body if line)]))
+        availability[f"S{number:02d}"] = [list(c) for c in sorted(pattern_cells(kind, day, time))]
+        preferences[f"S{number:02d}"] = preference
+
+    submissions = [
+        "\n".join(
+            [
+                f"Submission {index}",
+                f"Title: {talk['title']}",
+                f"Speaker: {talk['speaker']} <{talk['email']}>",
+                f"Track: {talk['track_label']}",
+                f"Abstract: {talk['abstract']}",
+            ]
+        )
+        for index, talk in enumerate(talks, start=1)
+    ]
+    return {
+        "conference": f"DevConf Live (sample {seed})",
+        "talks": "\n\n".join(submissions),
+        "notes": "\n\n".join(notes),
+        "rooms": None,
+        "expected": {
+            "track_name_of": {f"T{i:02d}": talk["track"] for i, talk in enumerate(talks, 1)},
+            "speaker_of": {
+                f"T{i:02d}": f"S{speakers.index(talk['speaker']) + 1:02d}"
+                for i, talk in enumerate(talks, 1)
+            },
+            "attendance": {f"T{i:02d}": talk["attendance"] for i, talk in enumerate(talks, 1)},
+            "availability": availability,
+            "preferences": preferences,
+        },
+    }
 
 
 def fixture_dir(root: Path, seed: int, poison: int = 0, wording: str = "polite") -> Path:

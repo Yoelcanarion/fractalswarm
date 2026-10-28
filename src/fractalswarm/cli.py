@@ -252,6 +252,91 @@ def run(
         raise typer.Exit(1)
 
 
+INTAKE_RUN_CAP_USD = 0.25  # one reading of pasted text: about $0.02-0.05 on Muse
+
+
+@app.command()
+def intake(
+    intake_id: Annotated[str, typer.Argument(help="an intake in the private directory")],
+    backend: Annotated[str, typer.Option(help="fake | real")] = "fake",
+    confirm_real_spend: Annotated[
+        bool, typer.Option(help="required with --backend real: the call is billed")
+    ] = False,
+    firewall: Annotated[
+        str | None, typer.Option(help="auto | heuristic; default: auto with the real backend")
+    ] = None,
+    no_paid_retries: Annotated[
+        bool, typer.Option(help="retry only the rejections the API does not bill")
+    ] = False,
+) -> None:
+    """Read the text pasted into an intake (``POST /api/intake`` wrote its ``input.json``) into
+    a proposal for review. The fake LLM reads the generator's wording at $0."""
+    import asyncio
+
+    from fractalswarm.intake.store import PrivateDir, read_json
+    from fractalswarm.llm.client import UNBILLED_STATUSES, RetryPolicy
+    from fractalswarm.market.ledger import ProjectLedger
+    from fractalswarm.runs import record_run
+    from fractalswarm.safety.firewall import Firewall, HeuristicBackend, default_backend
+
+    firewall = firewall or ("auto" if backend == "real" else "heuristic")
+    if firewall not in ("auto", "heuristic"):
+        raise typer.BadParameter("--firewall must be auto or heuristic")
+    settings = _settings()
+    private = PrivateDir(settings.private_dir)
+    try:
+        directory = private.intake_dir(intake_id)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from None
+    saved = read_json(private.input_file(intake_id))
+    if saved is None:
+        raise typer.BadParameter(f"no input for intake {intake_id!r} in {directory.parent}")
+    project_ledger = None
+    if backend == "real":
+        from fractalswarm.llm.client import OpenAIBackend
+
+        if not confirm_real_spend:
+            raise typer.BadParameter("real calls are billed: add --confirm-real-spend")
+        if settings.model_api_key is None:
+            raise typer.BadParameter("MODEL_API_KEY is not set in ~/.fractalswarm/.env")
+        llm = OpenAIBackend(settings.model_api_key.get_secret_value(), settings.model_api_base_url)
+        project_ledger = ProjectLedger(settings.ledger_path, settings.project_cap_usd)
+    elif backend == "fake":
+        from fractalswarm.intake.fake import intake_backend
+
+        llm = intake_backend()
+    else:
+        raise typer.BadParameter("--backend must be fake or real")
+    retry = RetryPolicy(statuses=UNBILLED_STATUSES) if no_paid_retries else None
+    hf_token = settings.hf_token.get_secret_value() if settings.hf_token else None
+    scanner = Firewall(default_backend(hf_token) if firewall == "auto" else HeuristicBackend())
+    scanner.warm()
+    result = asyncio.run(
+        record_run(
+            "intake",
+            run_id=intake_id,
+            run_dir=directory,
+            backend=llm,
+            params={"segments": saved["segments"], "rooms": saved.get("rooms")},
+            firewall=scanner,
+            run_cap_usd=INTAKE_RUN_CAP_USD,
+            project_ledger=project_ledger,
+            secrets=settings.secret_values(),
+            retry=retry,
+        )
+    )
+    spent = result.completed.payload["spent_usd"]
+    typer.echo(f"intake {result.run_id}: {result.events} events, spent ${spent:.6f} ({backend})")
+    with result.paths.open_log() as log:
+        kinds = {event.type for event in log.read()}
+    done = [
+        kind for kind in ("intake.proposed", "intake.refused", "intake.failed") if kind in kinds
+    ]
+    typer.echo(f"outcome: {done[0] if done else 'none'}")
+    if "intake.proposed" not in kinds:
+        raise typer.Exit(1)
+
+
 def kill_half_plan(seed: str) -> dict:
     """Kill 5 of T2's 10 orchestrators at the crash points: the root first, then a session
     owner, a track lead, a session owner and another track lead (tests/integration)."""

@@ -114,6 +114,9 @@ class SwarmScenario:
             "corpus": params["corpus"],
             "truth": params["truth"],
         }
+        # Input a person gave: the final report says how it was checked.
+        if params.get("input") is not None:
+            root_goal["truth_mode"] = params["input"]["truth_mode"]
         chaos = params.get("chaos")
         membership = self.mode == "swarm" and bool(params.get("membership", chaos is not None))
         args = {
