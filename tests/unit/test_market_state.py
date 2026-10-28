@@ -291,6 +291,47 @@ def test_the_view_agrees_with_the_ledger_at_every_step() -> None:
     assert market.spent["s"] == to_micros(0.05) and market.reserved["s"] == 0
 
 
+def test_a_squad_that_owns_leaves_in_two_markets_is_capped_by_both_grants() -> None:
+    # o3 owns a session under track a and another under track b (autoscale with few
+    # orchestrators, or an heir). When a's market clears, o3's cap must still count the
+    # grant b's market gave it. The Phase 0 mutation check found no test that did.
+    from fractalswarm.actors.market_maker import _squad_caps
+    from fractalswarm.market.allocation import Allocation, to_usd
+
+    tree = tree_of(
+        {
+            "root": (None, "o0", 0),
+            "a": ("root", "o1", 1),
+            "b": ("root", "o2", 1),
+            "a1": ("a", "o3", 2),
+            "a2": ("a", "o4", 2),
+            "b1": ("b", "o3", 2),
+            "b2": ("b", "o5", 2),
+        }
+    )
+    market = MarketView()
+    cleared_b = {
+        "goal_id": "b",
+        "epoch": 0,
+        "mode": "auction",
+        "resources": {
+            "usd": {"envelope": 550, "reserve": 50, "pool": 0, "grants": {"b1": 300, "b2": 200}},
+        },
+        "caps": {},
+        "base": {},
+    }
+    market.apply(event("market.cleared", cleared_b))
+    usd = Allocation(
+        envelope_micros=600, reserve_micros=100, pool_micros=0, grants_micros={"a1": 400, "a2": 100}
+    )
+    state = {"market": {"leaf_level": 2}}
+    commands = _squad_caps(tree, market, "a", ["a1", "a2"], usd, 1, state)
+    assert [(command.key, command.usd) for command in commands] == [
+        ("o3", pytest.approx(to_usd(400 + 300))),
+        ("o4", pytest.approx(to_usd(100))),
+    ]
+
+
 def test_the_view_follows_the_run_cap_and_a_shock() -> None:
     market = MarketView()
     market.apply(
