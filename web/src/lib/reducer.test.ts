@@ -154,3 +154,41 @@ describe("takeover (spec §5.2–5.3), against synthetic events", () => {
     expect(foldEvents(s.events).order).toEqual([]);
   });
 });
+
+describe("the shapes the runtime emits today (comms/chaos.py, coord/tree.py)", () => {
+  it("reads chaos.injected by its fault, and counts the network faults instead of listing them", () => {
+    const s = depthTwoTree().at(5000);
+    for (const fault of ["drop", "drop", "delay", "duplicate", "reorder", "partition_drop"]) {
+      s.emit("chaos.injected", "net", { fault, target: null, detail: { from: "t1", to: "t2" } });
+    }
+    s.emit("chaos.injected", "chaos", { fault: "partition", target: "t2", progress: 0.4, detail: { partition: "p1" } });
+    const v = foldEvents(s.events);
+    expect(v.netFaults).toEqual({ drop: 2, delay: 1, duplicate: 1, reorder: 1, partition_drop: 1 });
+    expect(v.chaos).toEqual([expect.objectContaining({ kind: "partition", targets: ["t2"] })]);
+  });
+
+  it("counts a targeted kill once, though chaos.injected and the actor.stopped after it both report it", () => {
+    const s = depthTwoTree().emit("chaos.injected", "chaos", { fault: "kill_coordinator", target: "t1", progress: 0.2, detail: {} });
+    s.emit("actor.stopped", "chaos", { actor_id: "t1", reason: "chaos" });
+    const v = foldEvents(s.events);
+    expect(v.actors.t1.status).toBe("killed");
+    expect(v.counters.kills).toBe(1);
+    // A stop with no injection before it is still a kill.
+    s.emit("actor.stopped", "chaos", { actor_id: "t2", reason: "chaos" });
+    expect(foldEvents(s.events).counters.kills).toBe(2);
+  });
+
+  it("hands a remapped goal to its owner", () => {
+    const s = depthTwoTree().emit("ownership.remapped", "t2", {
+      group: "root",
+      key: "t1",
+      owner: "t2",
+      previous: "t1",
+      works: ["t1/extract"],
+      adopted_results: 0,
+    });
+    const v = foldEvents(s.events);
+    expect(v.ownership.t1).toBe("t2");
+    expect(v.counters.remappedKeys).toBe(1);
+  });
+});

@@ -1,17 +1,23 @@
 // The run view: a pure fold over the event stream (spec §16: "the UI is a pure projection
 // of the event stream, so the same views serve live runs and replays").
 //
-// Kernel events (actor.*, msg.sent, effect.*, budget.*, run.*) exist today. The takeover
-// events below follow spec §5.2–5.3; their payload fields are this UI's proposal, read
-// tolerantly (alternative names in brackets) until coord/ lands:
+// Kernel events (actor.*, msg.sent, effect.*, budget.*, run.*) and the takeover events of
+// spec §5.2–5.3 exist today. Payload fields as coord/ and comms/ emit them (the names this UI
+// proposed on Day 7 are still read, in brackets):
 //
-//   chaos.injected      {kind, target? | targets?}            kind: kill_coordinator | kill_agent | ...
+//   chaos.injected      {fault [kind], target? [targets], detail}   fault: kill_coordinator | kill_agent |
+//                                                                   partition | heal | the network faults
 //   member.suspected    {member}
 //   member.dead         {member, incarnation?}                 envelope member_epoch is bumped
 //   tree.adopted        {dead [from], adopter [to, new_parent], children?, duties?}
 //   ownership.assigned  {key, owner}
-//   ownership.remapped  {from, to, keys? | key?, duties?}       duties ["root"] = root succession
+//   ownership.remapped  {key | keys, owner [to], previous [from], duties?}   duties ["root"] = root succession
+//
+// The supporting panels (Market & budget, Rate limits, Breakers, Memory, Collisions, Escalations,
+// Results) are folded in ``panels``; ``groups`` counts events per list group for the event list.
 
+import { eventGroup } from "./eventlog";
+import { emptyPanels, foldPanels, type PanelsState } from "./panels";
 import { emptySchedule, foldSchedule, type ScheduleState } from "./schedule";
 import type { RunEvent } from "./types";
 
@@ -72,20 +78,26 @@ export interface ViewState {
   lastSeq: number;
   lastTs: number;
   memberEpoch: number;
+  marketEpoch: number;
   headHash: string | null;
   actors: Record<string, ActorNode>;
   order: string[];
   messages: MessageFlash[];
   chaos: ChaosEntry[];
+  netFaults: Record<string, number>; // drop | delay | duplicate | reorder | partition_drop -> count
   ownership: Record<string, string>;
   inflight: Record<string, { actor: string; coordination: boolean }>;
   counters: Counters;
   schedule: ScheduleState;
+  panels: PanelsState;
+  groups: Record<string, number>;
 }
 
 export const MESSAGE_WINDOW = 40;
 const KILL_REASONS = new Set(["killed", "chaos", "crash", "crashed"]);
 const HEARTBEAT_TOPICS = new Set(["heartbeat", "member.heartbeat"]);
+// Faults of the chaos network: thousands per run, so they are counted, not listed.
+const NET_FAULTS = new Set(["drop", "delay", "duplicate", "reorder", "partition_drop"]);
 
 export const emptyView = (): ViewState => ({
   runId: null,
@@ -96,11 +108,13 @@ export const emptyView = (): ViewState => ({
   lastSeq: 0,
   lastTs: 0,
   memberEpoch: 0,
+  marketEpoch: 0,
   headHash: null,
   actors: {},
   order: [],
   messages: [],
   chaos: [],
+  netFaults: {},
   ownership: {},
   inflight: {},
   counters: {
@@ -117,6 +131,8 @@ export const emptyView = (): ViewState => ({
     remappedKeys: 0,
   },
   schedule: emptySchedule(),
+  panels: emptyPanels(),
+  groups: {},
 });
 
 // An LLM call made for coordination (membership, ownership, takeover). FractalSwarm never
@@ -211,9 +227,12 @@ function foldCore(state: ViewState, event: RunEvent): ViewState {
       return { ...state, actors: { ...state.actors, [id]: node }, order };
     }
     case "actor.stopped": {
+      const id = String(p.actor_id);
       const killed = KILL_REASONS.has(String(p.reason ?? ""));
-      const next = markDown(state, [String(p.actor_id)], killed ? "killed" : "stopped", event.seq);
-      return killed ? bump(next, { kills: 1 }) : next;
+      // chaos.injected already counted a targeted kill; the stop that follows must not count it twice.
+      const fresh = killed && state.actors[id] !== undefined && state.actors[id].status !== "killed";
+      const next = markDown(state, [id], killed ? "killed" : "stopped", event.seq);
+      return fresh ? bump(next, { kills: 1 }) : next;
     }
     case "msg.sent": {
       const topic = String(p.topic ?? "");
@@ -251,11 +270,16 @@ function foldCore(state: ViewState, event: RunEvent): ViewState {
     case "budget.settled":
       return bump(state, { spentUsd: Number(p.actual_usd ?? 0) });
     case "chaos.injected": {
+      const kind = String(p.fault ?? p.kind ?? "");
+      if (NET_FAULTS.has(kind)) {
+        return { ...state, netFaults: { ...state.netFaults, [kind]: (state.netFaults[kind] ?? 0) + 1 } };
+      }
       const targets = [...asList(p.target), ...asList(p.targets)];
-      const entry: ChaosEntry = { seq: event.seq, ts: event.ts_virtual, kind: String(p.kind), targets };
+      const entry: ChaosEntry = { seq: event.seq, ts: event.ts_virtual, kind, targets };
       let next: ViewState = { ...state, chaos: [...state.chaos, entry] };
-      if (String(p.kind).startsWith("kill")) {
-        next = bump(markDown(next, targets, "killed", event.seq), { kills: targets.length });
+      if (kind.startsWith("kill")) {
+        const fresh = targets.filter((id) => next.actors[id] !== undefined && next.actors[id].status !== "killed");
+        next = bump(markDown(next, targets, "killed", event.seq), { kills: fresh.length });
       }
       return next;
     }
@@ -269,9 +293,10 @@ function foldCore(state: ViewState, event: RunEvent): ViewState {
       return { ...state, ownership: { ...state.ownership, [String(p.key)]: String(p.owner) } };
     case "ownership.remapped": {
       const keys = [...asList(p.keys), ...asList(p.key)];
+      const owner = String(p.owner ?? p.to);
       const ownership = { ...state.ownership };
-      for (const key of keys) ownership[key] = String(p.to);
-      const next = addDuties({ ...state, ownership }, String(p.to), asList(p.duties));
+      for (const key of keys) ownership[key] = owner;
+      const next = addDuties({ ...state, ownership }, owner, asList(p.duties));
       return bump(next, { remappedKeys: keys.length });
     }
     default:
@@ -281,14 +306,18 @@ function foldCore(state: ViewState, event: RunEvent): ViewState {
 
 export function foldEvent(state: ViewState, event: RunEvent): ViewState {
   const core = foldCore(state, event);
+  const group = eventGroup(event);
   return {
     ...core,
     lastSeq: event.seq,
     lastTs: event.ts_virtual,
     memberEpoch: Math.max(core.memberEpoch, event.member_epoch),
+    marketEpoch: Math.max(core.marketEpoch, event.market_epoch ?? 0),
     headHash: event.hash,
     counters: { ...core.counters, events: core.counters.events + 1 },
     schedule: foldSchedule(core.schedule, event),
+    panels: foldPanels(core.panels, event),
+    groups: { ...core.groups, [group]: (core.groups[group] ?? 0) + 1 },
   };
 }
 
