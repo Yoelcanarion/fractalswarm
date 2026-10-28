@@ -159,11 +159,6 @@ async def resume_run(
     if not paths.events.exists():
         raise ResumeRefused(f"{run_dir} has no events.sqlite: only a live log can be resumed")
     ensure_log_unused(paths.events)
-    dropped = repair_cassette(paths.cassette)
-    try:
-        cassette = Cassette(paths.cassette, secrets or [])
-    except ValueError as exc:  # a corrupt line before the last one is not a torn write
-        raise ResumeRefused(f"the cassette is corrupt: {exc}") from exc
 
     with EventStore(paths.events) as log:
         chain = log.verify_chain()
@@ -174,6 +169,12 @@ async def resume_run(
         last = log.get(log.last_seq)
         if last is not None and last.type == "run.completed":
             raise AlreadyCompleted(f"run {last.run_id} is already completed")
+
+        dropped = repair_cassette(paths.cassette)
+        try:
+            cassette = Cassette(paths.cassette, secrets or [])
+        except ValueError as exc:  # a corrupt line before the last one is not a torn write
+            raise ResumeRefused(f"the cassette is corrupt: {exc}") from exc
 
         scratch = EventStore()
         runtime, report = await replay_runtime(log, replay_setup(cassette), scratch, resuming=True)

@@ -6,7 +6,7 @@ means for every effect that is open when the process dies. The prototype impleme
 (`src/fractalswarm/resume.py`, `Runtime.resume`); the tests in `tests/integration/test_resume*.py`
 check it. Section 9 lists what is proven and what is not.
 
-`resume` is opt-in. It does not touch the default run path, any recording or any golden replay.
+`resume` is opt-in. It does not change the default run path, any recording or any golden replay.
 
 ## 1. What it guarantees, in one paragraph
 
@@ -65,7 +65,10 @@ The completion becomes durable later, when the driver calls `Runtime.complete`, 
   but it exists.
 
 Resume answers such an effect from the cassette with a replay-mode `LLMClient` over a
-`CassetteBackend`, the same code replay uses. No backend is involved, so no request is sent.
+`CassetteBackend`, the same code replay uses. No backend is involved, so no request is sent. It
+does this before it appends `run.resumed` or sends anything, so a reply that does not fit its
+request (a changed prompt or a tampered cassette) refuses the resume instead of becoming a
+silent error completion.
 
 ### 3.3 (c) Sent, with no reply recorded anywhere
 
@@ -97,15 +100,17 @@ Accounting:
   `run_id/effect_id` was committed before the request was sent (`LLMClient._reserve_project`) and
   is settled only after the reply arrives, so after a kill it is still `reserved` at its worst
   case. It stays that way: the possible bill stays committed against the project cap. The second
-  send needs its own reservation, `run_id/effect_id#rN`, because `reservation_id` is `UNIQUE`: re-using the
-  original id would raise `IntegrityError` and silently turn the re-send into an error
-  completion. After the resume the ledger holds the stale reservation plus the settled second
-  call. A person can settle the stale one by hand once the provider's billing page shows
-  whether the first call was billed. Nothing automatic does it.
-- A narrower sub-window: `call` settles the project reservation *before* it records the reply
+  send needs its own reservation, `run_id/effect_id#rN` (`ReissueLedger`), because
+  `reservation_id` is `UNIQUE`: re-using the original id would raise `IntegrityError`, and the
+  effect runner would turn that into an error completion without ever sending the request. After
+  the resume the ledger holds the stale reservation plus the settled second call. A person can
+  settle the stale one by hand once the provider's billing page shows whether the first call was
+  billed. Nothing automatic does it.
+- A narrower window: `call` settles the project reservation *before* it records the reply
   (`_settle_project`, then `_record`). A kill between the two leaves the first call settled in the
   project ledger and its reply lost. It is (c) too: the first call is already counted in the
-  ledger, and the second is a second charge.
+  ledger, and the second is a second charge. (Not exercised by a test: the window is two
+  adjacent statements.)
 
 ### 3.4 (d) Started in the log, never sent
 
@@ -115,9 +120,8 @@ Resume treats it as (c). The over-count is one possible extra call at most.
 
 What could tell them apart, not done: with a real project ledger, the row `run_id/effect_id`
 is committed before the send, so a missing row would prove "never sent". It needs the real
-backend and a ledger query, and it would only shrink the list by the few effects that were
-caught in the microseconds between `effect.started` and `reserve`. A write-ahead intent record
-in the cassette would work for every backend but would change the default run path.
+backend and a ledger query. A write-ahead intent record in the cassette would work for every
+backend but would change the default run path.
 
 How wide is (d)? Effects are launched only after the whole reaction that started them is in the
 log (`launch()` runs after `runtime.step()` returns, `_drive_live`; `_drive_sim` takes the
@@ -134,9 +138,10 @@ is simply started, once, like an effect that a delivery starts after the resume.
 
 `timer` and `firewall` effects are not external: a timer is pure waiting, and a firewall scan is
 a local classifier over the text in the request. Resume runs them again. Under the sim clock
-a timer completes at `started.ts_virtual + delay_ms` as before. Under the live clock it waits
-only the part of its delay that was left at the resume (`started.ts_virtual + delay_ms - now`),
-not the whole delay again.
+a timer completes at `started.ts_virtual + delay_ms` as before. Under the live clock a timer
+that was open at the crash waits only the part of its delay that was left at the resume
+(`started.ts_virtual + delay_ms - vtime`), not the whole delay again. Timers started after the
+resume wait their whole delay, as in any run.
 
 Any other effect kind is treated as external and ambiguous.
 
@@ -147,7 +152,8 @@ in `append`), in WAL mode with `synchronous=NORMAL`. A killed process cannot lea
 event, and cannot leave a broken chain, because each event is hashed against the previous one in
 memory and then inserted atomically. It can leave **half a reaction**:
 
-- a delivery whose handler returned four commands has appended two of the four events;
+- a delivery whose handler returned four commands has appended two of the four events (a
+  reservation without its `effect.started`, for example);
 - `Runtime.complete` has appended `effect.completed` and not yet `budget.settled`;
 - `Runtime.halt` has appended `run.halted` and some of its cancellations;
 - `Runtime.start` has appended `run.started` and part of the boot.
@@ -167,8 +173,8 @@ Why not truncate to the last whole reaction:
 - It could throw away a reaction that the original run had already acted on.
 
 This is safe because **an effect is never launched from a torn reaction**: a reaction is fully
-appended before its effects are launched. So no cassette entry can belong to an effect in the
-torn part. The tests check this on every kill.
+appended before its effects are launched. So no cassette entry and no request can belong to an
+effect in the torn part. The real-kill tests assert this on every kill.
 
 Not done, the alternative that removes tearing: wrap each reaction in one SQLite transaction.
 It changes how every run writes its log, so it is out of scope for an opt-in command.
@@ -176,7 +182,7 @@ It changes how every run writes its log, so it is out of scope for an opt-in com
 The same applies to the cassette: a torn last line (a kill during the write) is cut off at the
 last newline before the cassette is used, and the count of dropped bytes is in
 `run.resumed.cassette_dropped_bytes`. The effect that line belonged to has no reply, so it is
-(c).
+(c). A corrupt line anywhere else is not a torn write: resume refuses.
 
 ## 5. Clocks
 
@@ -202,23 +208,31 @@ virtual time.**
 ## 6. Procedure
 
 1. Open the run directory. Refuse if another process has the log open (an `EXCLUSIVE` probe on
-   the SQLite file: a live writer makes it fail, and the OS releases it when a process dies). Refuse if
-   `run.completed` is already in the log. Verify the hash chain; a broken chain stops here.
+   the SQLite file: a live writer makes it fail, and the OS lets go of it when a process dies).
+   Refuse if `run.completed` is already in the log. Verify the hash chain; a broken chain stops
+   here.
 2. Cut a torn last line off the cassette.
 3. Rebuild the runtime the way `replay` does, from the `run.started` payload (seed, scenario,
    params, clock, role and price tables, caps), into a scratch store. Feed every recorded
    completion from the log or the cassette. Every regenerated event must hash like the recorded
-   one. The reaction the kill cut is completed here (section 4). Resume needs the same code that wrote the log: a
-   changed handler diverges at the first changed event and resume refuses, exactly as
-   `replay --verify` would.
+   one. The reaction the kill cut is completed here (section 4). Resume needs the same code that
+   wrote the log: a changed handler diverges at the first changed event and resume refuses,
+   exactly as `replay --verify` would.
 4. Append the events beyond the old tail to the real log and switch the runtime to it.
-5. Deliver whatever is still queued (what the original would have done next), then classify the open
-   effects (section 3).
+5. Note which effects are open, deliver whatever is still queued (what the original would have
+   done next), and classify the open effects that are still open and that the dead process had
+   already started (section 3).
 6. Append `run.resumed` (an outside event, only when the delivery queue is empty, like every
-   completion) and one `effect.reissued` per ambiguous effect. Put the open effects in the outbox.
-7. Continue with the normal drivers, recording into the same log and the same cassette. Pending control
-   requests (`halt`, `budget`) written while the process was dead are applied. At the end,
-   export `events.jsonl` as `run` does.
+   completion) and one `effect.reissued` per ambiguous effect. Put the open effects in the
+   outbox.
+7. Continue with the normal drivers, recording into the same log and the same cassette. Pending
+   control requests (`halt`, `budget`) written while the process was dead are applied. At the
+   end, export `events.jsonl` as `run` does.
+
+A crash of the resume itself is a crash like any other: step 4 only appends what the log already
+determined, so the next resume starts from a valid log (the events of a completed tail are then
+ordinary recorded events, and an effect among them can show up as ambiguous: one more
+over-approximation, never an under-count).
 
 ## 7. Replay
 
@@ -253,10 +267,49 @@ writer, an empty log) or the options are wrong.
 
 ## 9. Status
 
-Filled in at the end of the work: see the report. In short:
+Proven by tests that kill a real process (`Popen.kill()`, `TerminateProcess` on Windows) at
+a chosen point and count, in a file the child processes share, every request the fake LLM
+received (`tests/integration/test_resume_kill.py`, 14 tests):
 
-- Proven by tests that really kill a process: sections 3.1, 3.2, 3.3 (with the fake backend),
-  3.5, 5 and 7.
-- Not proven: the real Meta API, OS crash or power loss, two resumes at the same instant, a
-  control request consumed but not yet logged, and the exact set of effects of a real run that
-  the provider billed. See the report for the list.
+- (a), (b) and local effects after a natural kill in the middle of a run;
+- (b) forced: the process stops right after `Cassette.record`;
+- (c) forced: the process holds a request it has received; also under C3 chaos (API faults,
+  partitions, kills, drops);
+- a kill during a takeover (first `ownership.remapped`, first `tree.adopted`) under kill-half;
+- a torn tail: the kill lands between a reservation and its `effect.started`, and between
+  `effect.completed` and `budget.settled`;
+- the live clock with 60 virtual seconds of downtime: nobody is declared dead;
+- a second crash during the resume;
+- a live log is not resumed; the real backend needs the spend flag and a key;
+- the project ledger keeps the lost call reserved and the second send gets its own entry.
+
+Each of them ends with the same checks: the T2 program is complete and valid (48/48, 0 hard
+violations), the hash chain verifies, `replay --verify` matches the whole log, no request
+followed an effect of class (a) or (b), each ambiguous effect was sent exactly once more and
+is in `run.resumed` and `effect.reissued`, and every effect that started after the crash was
+sent once.
+
+In process (`test_resume_cuts.py`, 19 tests): a finished log cut at every sequence number of the
+toy run, with every, no, or every other open reply in the cassette; T2 cut where a reaction is
+half written, at the boot, and at random points; a halt cut short and every prefix after a
+budget shock; the refusals; the torn cassette line.
+
+Not proven:
+
+- **The real Meta API.** Nothing here spent a cent. Every send is the fake LLM; the project
+  ledger was a temporary file.
+- **OS crash or power loss.** The log is `synchronous=NORMAL` and the cassette is never
+  fsynced, so after a power loss each may lose its newest records independently. A completed
+  effect whose cassette line is gone makes resume refuse; it cannot rebuild the reply. Only a
+  killed process is covered.
+- **A control request that was consumed but not logged.** `RunPaths.poll_control` renames a
+  request to `.done` before the driver appends `run.halted` or `budget.shock`. A kill in between
+  loses a `halt`. The window is the time to apply one request. Fix: rename only after the
+  append.
+- **Two resumes started in the same few milliseconds** can both pass the liveness probe. The
+  second fails at its first append, but it may have sent requests by then.
+- **Scenarios other than the T2 swarm under the fake LLM.** The central, single and pipeline
+  baselines and `chaos-toy` were not killed.
+- **The kill switch across a real kill.** The halt case is cut in process, not killed.
+- **Anything with a different code version** from the one that recorded the log: resume refuses.
+- **The sub-window between `_settle_project` and `_record`** (section 3.3).

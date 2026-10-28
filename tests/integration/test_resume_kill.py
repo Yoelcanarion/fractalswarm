@@ -36,7 +36,8 @@ import pytest
 
 from fractalswarm.kernel.events import Event
 from fractalswarm.kernel.store import EventStore
-from fractalswarm.runs import replay_run
+from fractalswarm.runs import RunPaths, replay_run
+from fractalswarm.verify.audit import audit_run
 
 REPO = Path(__file__).resolve().parents[2]
 WORKER = Path(__file__).with_name("resume_worker.py")
@@ -569,3 +570,36 @@ def test_the_real_backend_needs_the_spend_flag_and_a_key(box: Sandbox) -> None:
 def test_resume_says_so_when_there_is_no_such_run(box: Sandbox) -> None:
     text = box.finish(box.resume(), expect=2)
     assert "no run directory" in text
+
+
+async def test_a_halt_cut_short_by_a_kill_is_finished_and_nothing_is_sent_after_it(
+    box: Sandbox,
+) -> None:
+    # The kill switch is pressed; the process stops dead right after run.halted is appended,
+    # with its cancellations unwritten and requests in flight.
+    child = box.run(freeze_after_event="run.halted:1")
+    wait_for(box, child, log_reaches(box, 1500), "the log to reach 1500 events")
+    RunPaths(box.run_dir).request_control({"op": "halt", "reason": "operator pressed stop"})
+    wait_for(box, child, signalled(box), "run.halted to be appended")
+    box.kill(child)
+    crash = snapshot(box)
+    assert crash.events[-1].type == "run.halted"
+    assert crash.open_llm  # LLM calls were in flight when the halt was cut short
+
+    text = box.finish(box.resume(), expect=1)  # exit 1: a halted run has no program
+    assert "no task.result" in text
+    events = read_log(box)
+    halt = crash.events[-1].seq
+    after = {e.type for e in events if e.seq > halt}
+    assert after <= {"effect.cancelled", "budget.settled", "actor.stopped", "run.resumed"} | {
+        "run.completed"
+    }
+    assert [e.type for e in events].count("run.halted") == 1
+    # The halt was finished, not repeated: what was in flight is cancelled, and nothing at all
+    # was sent after the kill. The halt wins over the resume.
+    assert crash.open <= {e.payload["effect_id"] for e in events if e.type == "effect.cancelled"}
+    assert box.served() == crash.served
+    marker = next(e.payload for e in events if e.type == "run.resumed")
+    assert marker["ambiguous"] == [] and marker["from_cassette"] == [] and marker["rerun"] == {}
+    audit = await audit_run(box.run_dir, with_replay=True)
+    assert audit.ok and audit.replay_ok, audit.problems

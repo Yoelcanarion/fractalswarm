@@ -23,11 +23,12 @@ from pathlib import Path
 import pytest
 
 from fractalswarm.bench.workflows import fake_backend
-from fractalswarm.comms.chaos import ChaosAction, ChaosPlan
+from fractalswarm.comms.chaos import ChaosAction, ChaosPlan, plan_from
 from fractalswarm.kernel.clock import LiveClock
 from fractalswarm.kernel.events import Event, EventDraft, validate_payload
 from fractalswarm.kernel.store import EventStore
 from fractalswarm.llm.fake import FakeBackend
+from fractalswarm.llm.transport import ApiFaults, FaultyBackend
 from fractalswarm.market.ledger import ProjectLedger
 from fractalswarm.planning.taskspec import TaskSpec, run_params
 from fractalswarm.resume import (
@@ -275,8 +276,13 @@ async def test_a_log_with_a_broken_chain_is_not_resumed(toy: Path, tmp_path: Pat
     db = sqlite3.connect(RunPaths(dest).events, isolation_level=None)
     db.execute("UPDATE events SET payload = REPLACE(payload, 'worker', 'w0rker') WHERE seq = 9")
     db.close()
+    cassette = RunPaths(dest).cassette
+    with cassette.open("ab") as out:
+        out.write(b'{"half')  # a torn line: repaired only once the log is known to be sound
+    before = cassette.read_bytes()
     with pytest.raises(ResumeRefused, match="corrupt at seq 9"):
         await resume_run(dest, backend=FakeBackend())
+    assert cassette.read_bytes() == before  # a refused resume changes nothing
 
 
 async def test_a_resealed_forgery_diverges_and_is_not_resumed(toy: Path, tmp_path: Path) -> None:
@@ -501,3 +507,75 @@ async def test_a_timer_open_at_the_crash_waits_only_what_it_had_left() -> None:
     ]
     assert waits.waited == [1_000, 0, 2_000]
     assert [outcome.latency_ms for outcome in outcomes] == [2_000, 2_000, 2_000]
+
+
+# -- the other scenarios -----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("scenario", ["central", "single", "pipeline"])
+async def test_the_baselines_resume_too_under_api_faults(scenario: str, tmp_path: Path) -> None:
+    spec = TaskSpec.load(TASKSPEC)
+    params = run_params(spec) | {"chaos": {"profile": "C2", "seed": spec.seed}}
+    rate = plan_from(params).api_fault_rate
+    assert rate > 0
+    source = tmp_path / scenario
+    await record_run(
+        scenario,
+        run_id=scenario,
+        run_dir=source,
+        backend=FaultyBackend(fake_backend(), ApiFaults(seed=spec.seed, rate=rate)),
+        seed=spec.seed,
+        params=params,
+        run_cap_usd=spec.budget_usd,
+    )
+    events = read_events(source)
+    rng = random.Random(scenario)
+    for _ in range(2):
+        cut = rng.randrange(2, len(events) - 1)
+        dest = tmp_path / f"cut-{cut}"
+        keep = random.Random(cut)
+        open_llm, kept_open = crashed_copy(
+            source, dest, cut, lambda _, keep=keep: keep.random() < 0.5
+        )
+        await resume_and_check(dest, cut, open_llm, kept_open, t2_result, (48, 48, 0))
+
+
+async def test_the_chaos_toy_resumes_from_random_cuts_under_c3(tmp_path: Path) -> None:
+    params = {"coordinators": 8, "contracts": 24, "chaos": {"profile": "C3", "seed": "s1"}}
+    rate = plan_from(params).api_fault_rate
+
+    def faulty() -> FaultyBackend:
+        return FaultyBackend(FakeBackend(), ApiFaults(seed="s1", rate=rate))
+
+    source = tmp_path / "chaos-toy"
+    await record_run(
+        "chaos-toy", run_id="chaos-toy", run_dir=source, backend=faulty(), seed="s1",
+        params=params, run_cap_usd=100.0,
+    )  # fmt: skip
+
+    def finished(events: list[Event]) -> object:
+        done = next(e.payload for e in events if e.type == "toy.finished")
+        return done["complete"], done["verified"], done["contracts"]
+
+    events = read_events(source)
+    assert finished(events) == (True, 24, 24)
+    rng = random.Random("chaos-toy")
+    for _ in range(3):
+        cut = rng.randrange(2, len(events) - 1)
+        dest = tmp_path / f"cut-{cut}"
+        crashed_copy(source, dest, cut, lambda _: rng.random() < 0.5)
+        await resume_run(dest, backend=faulty())
+        assert finished(read_events(dest)) == (True, 24, 24), f"cut {cut}"
+        assert (await replay_run(dest)).ok, f"cut {cut}"
+
+
+async def test_a_corrupt_cassette_line_in_the_middle_is_not_a_torn_write(
+    toy: Path, tmp_path: Path
+) -> None:
+    dest = toy_cut(toy, tmp_path)
+    paths = RunPaths(dest)
+    lines = paths.cassette.read_text(encoding="utf-8").splitlines()
+    lines[0] = lines[0][:40]  # damaged, though the file still ends in a newline
+    paths.cassette.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    with pytest.raises(ResumeRefused, match="cassette is corrupt"):
+        await resume_run(dest, backend=FakeBackend())
