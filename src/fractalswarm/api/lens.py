@@ -439,6 +439,12 @@ def sentence_spans(text: str) -> list[tuple[int, int]]:
     return spans
 
 
+def utf16_offset(text: str, index: int) -> int:
+    """A code-point offset as UTF-16 units, which is what a browser's ``slice`` counts: the UI
+    highlights ``text.slice(start, end)``, and an emoji before the sentence would shift it."""
+    return len(text[:index].encode("utf-16-le", "surrogatepass")) // 2
+
+
 def best_sentence(text: str, cues: Cues) -> tuple[int, int, int] | None:
     """The sentence the cues fit best as (start, end, score); the first one wins a tie."""
     best: tuple[int, int, int] | None = None
@@ -577,14 +583,15 @@ class Facts:
                 if found is None:
                     missing.append(name)
                     continue
+                text = source["text"]
                 start, end, score = found
                 evidence.append(
                     {
                         "field": name,
                         "source_id": source["id"],
-                        "start": start,
-                        "end": end,
-                        "text": source["text"][start:end],
+                        "start": utf16_offset(text, start),
+                        "end": utf16_offset(text, end),
+                        "text": text[start:end],
                         "score": score,
                     }
                 )

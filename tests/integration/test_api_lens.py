@@ -23,6 +23,7 @@ from fractalswarm.api.lens import (
     rationale,
     sentence_spans,
     split_prompt,
+    utf16_offset,
 )
 from fractalswarm.bench.scoring import load_events, score_run
 from fractalswarm.bench.workflows import fake_backend
@@ -597,3 +598,15 @@ def test_a_reused_fact_is_listed_without_evidence() -> None:
     (fact,) = Facts(facts_prompt("Any slot works for me."), answer).build()
     assert fact["reused"] and fact["via"] == "answer" and fact["evidence"] == []
     assert fact["reading"] == "day 1: not free; day 2: not free; no time preference"
+
+
+def test_evidence_offsets_count_utf16_units_as_a_browser_slices() -> None:
+    email = "😅 Hi!\nI can only attend on day 2.\nBest"
+    value = {"available": [{"day": 2, "slots": [0, 1, 2, 3]}], "preference": "none"}
+    (fact,) = Facts(facts_prompt(email), publish(value)).build()
+    (found,) = [item for item in fact["evidence"] if item["field"] == "available"]
+    assert found["text"] == "I can only attend on day 2."
+    assert found["start"] == email.index("I can") + 1  # the emoji is one code point, two units
+    units = email.encode("utf-16-le")
+    assert units[2 * found["start"] : 2 * found["end"]].decode("utf-16-le") == found["text"]
+    assert utf16_offset("a😅b", 2) == 3 and utf16_offset("abc", 2) == 2 and utf16_offset("", 0) == 0
