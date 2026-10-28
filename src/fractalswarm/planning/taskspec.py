@@ -62,6 +62,8 @@ class TaskSpec(BaseModel):
     contributor_opt_in: bool = False
     auto_approve: bool = True  # bench mode; the plan-approval UI comes later
     channel_breakers: bool = False  # per-pair and per-topic bus breakers (spec §8); opt-in
+    cross_audit: bool = False  # a sibling audits sampled contracts (spec §11.3)
+    feasibility_report: bool = False  # emit the feasibility report at plan approval (§12)
 
     @classmethod
     def load(cls, path: Path) -> "TaskSpec":

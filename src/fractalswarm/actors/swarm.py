@@ -40,7 +40,10 @@ from fractalswarm.coord.membership import MembersView
 from fractalswarm.coord.tree import ROLE, TreeView
 from fractalswarm.kernel.scheduler import ActorKind, Command, Spawn
 from fractalswarm.memory.sources import SourcesView
+from fractalswarm.planning.feasibility import RunConfigView
+from fractalswarm.planning.risk import RoleHistoryView
 from fractalswarm.planning.scope import ScopeView
+from fractalswarm.verify.cross_audit import CrossAuditView
 
 ROOT = "o0"
 CONTRACTS_PER_SESSION = 3  # extract, place, blurb
@@ -74,8 +77,17 @@ class SwarmScenario:
     }
 
     def reducers(self) -> list[Any]:
-        views = [MembersView(), ProgressView(T2_PROGRESS), ActorsView(), TreeView(), ScopeView()]
-        return [*views, SourcesView()]
+        return [
+            MembersView(),
+            ProgressView(T2_PROGRESS),
+            ActorsView(),
+            TreeView(),
+            ScopeView(),
+            SourcesView(),
+            RoleHistoryView(),
+            CrossAuditView(),
+            RunConfigView(),
+        ]
 
     def boot(self, params: dict[str, Any]) -> list[Command]:
         spec = params["spec"]
@@ -108,6 +120,13 @@ class SwarmScenario:
         breakers = params.get("channel_breakers", spec.get("channel_breakers"))
         if breakers:  # only when on: a run that never asked for them records nothing new
             args["channel_breakers"] = breakers
+        # Off unless asked, and left out of the args when off, so a log that lacks the
+        # params (or runs without them) is the same log as before. The baselines have no
+        # sibling squad to audit them.
+        if self.mode == "swarm" and bool(params.get("cross_audit", spec.get("cross_audit"))):
+            args["audit"] = True
+        if bool(params.get("feasibility_report", spec.get("feasibility_report"))):
+            args["feasibility"] = True
         commands: list[Command] = [Spawn(actor_id=BOARD, kind="board", args={})]
         if args["relay"] is not None:
             commands.append(Spawn(actor_id=NET, kind=NET, args={}))

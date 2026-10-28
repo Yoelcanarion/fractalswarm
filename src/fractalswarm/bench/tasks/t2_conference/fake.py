@@ -13,6 +13,7 @@ no code: the actors only see Responses-shaped replies.
 
 import json
 import re
+from collections import Counter
 from collections.abc import Iterable
 from typing import Any
 
@@ -274,6 +275,90 @@ def judge(body: dict[str, Any]) -> str:
     return _answer({"verdict": "pass", "score": 0.9, "reasons": []})
 
 
+def audit(body: dict[str, Any]) -> str:
+    """The cross-squad auditor (spec §11.3): from the request alone, it re-derives what the
+    contract's data says and fails what does not hold. It reads more than the judge does: the
+    room capacities, the speakers' availability and the slot rule, not only which talks were
+    placed."""
+    blocks = read_blocks(_prompt(body))
+    check = AUDITS.get(blocks["audit"]["kind"])
+    reasons = check(blocks["contract_data"], blocks["agent_output"]) if check else []
+    verdict = {"verdict": "fail", "score": 0.2} if reasons else {"verdict": "pass", "score": 0.9}
+    return _answer(verdict | {"reasons": reasons})
+
+
+def _audit_extract(data: dict[str, Any], output: dict[str, Any]) -> list[str]:
+    reasons = []
+    speakers = {row["speaker_id"] for row in output.get("speakers", [])}
+    talks = {row["talk_id"] for row in output.get("talks", [])}
+    if missing := sorted(set(data["speaker_ids"]) - speakers):
+        reasons.append(f"no constraints for speakers {missing}")
+    if missing := sorted(set(data["session"]["talk_ids"]) - talks):
+        reasons.append(f"no expected attendance for talks {missing}")
+    days, slots = set(data["days"]), {slot["index"] for slot in data["slots"]}
+    for row in output.get("speakers", []):
+        for found in row["available"]:
+            if found["day"] not in days or not set(found["slots"]) <= slots:
+                reasons.append(f"{row['speaker_id']}: unknown day or slot in {found}")
+    return reasons
+
+
+def _audit_place(data: dict[str, Any], output: dict[str, Any]) -> list[str]:
+    session = data["session"]
+    day = session["day"]
+    rooms = {room["id"]: room for room in data["rooms"]}
+    slots = {slot["index"] for slot in data["slots"]}
+    constraints = data["constraints"]
+    need = {talk["talk_id"]: talk["expected_attendance"] for talk in constraints["talks"]}
+    available = {
+        row["speaker_id"]: {found["day"]: set(found["slots"]) for found in row["available"]}
+        for row in constraints["speakers"]
+    }
+    speaker_of = {talk["talk_id"]: talk["speaker_id"] for talk in data["talks"]}
+    placements = output.get("placements", [])
+    reasons = []
+    placed = sorted(placed["talk_id"] for placed in placements)
+    if placed != sorted(session["talk_ids"]):
+        reasons.append(f"placed {placed} but the session has {sorted(session['talk_ids'])}")
+    for placement in placements:
+        talk, slot = placement["talk_id"], placement["slot"]
+        if placement["day"] != day:
+            reasons.append(f"{talk} is on day {placement['day']}, the session is day {day}")
+        if slot not in slots:
+            reasons.append(f"{talk}: slot {slot} does not exist")
+        room = rooms.get(placement["room"])
+        if room is None:
+            reasons.append(f"{talk}: unknown room {placement['room']}")
+        elif room["capacity"] < need.get(talk, 0):
+            reasons.append(
+                f"{talk}: {need[talk]} expected in {room['id']} (capacity {room['capacity']})"
+            )
+        speaker = speaker_of.get(talk)
+        if speaker in available and slot not in available[speaker].get(day, set()):
+            reasons.append(
+                f"{talk}: speaker {speaker} is not available at slot {slot} on day {day}"
+            )
+    crowded = Counter(placement["slot"] for placement in placements)
+    reasons += [
+        f"slot {slot} holds {n} talks of one session"
+        for slot, n in sorted(crowded.items())
+        if n > 1
+    ]
+    return reasons
+
+
+def _audit_blurb(data: dict[str, Any], output: dict[str, Any]) -> list[str]:
+    reasons = []
+    if not output.get("blurb", "").strip():
+        reasons.append("the blurb is empty")
+    if output.get("path") != data.get("path"):
+        reasons.append(f"the blurb was saved to {output.get('path')}, not {data.get('path')}")
+    return reasons
+
+
+AUDITS = {"extract": _audit_extract, "place": _audit_place, "blurb": _audit_blurb}
+
+
 # -- agent roles --------------------------------------------------------------------------
 
 
@@ -472,4 +557,5 @@ HANDLERS = {
     "t2_place": place,
     "t2_blurb": blurb,
     "judge_verdict": judge,
+    "audit_verdict": audit,
 }

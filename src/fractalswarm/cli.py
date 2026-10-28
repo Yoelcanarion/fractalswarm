@@ -138,6 +138,12 @@ def run(
             "that may have run (no reply, 500)"
         ),
     ] = False,
+    cross_audit: Annotated[
+        bool, typer.Option(help="a sibling audits sampled contracts (spec §11.3); swarm only")
+    ] = False,
+    feasibility_report: Annotated[
+        bool, typer.Option(help="record the feasibility report at plan approval (spec §12)")
+    ] = False,
 ) -> None:
     """Run a task (fake LLM by default) into runs/<run_id>."""
     import asyncio
@@ -167,6 +173,10 @@ def run(
     if no_paid_retries:
         retry = RetryPolicy(statuses=UNBILLED_STATUSES)
         params |= {"retry": retry.model_dump(mode="json")}
+    if cross_audit:
+        params["cross_audit"] = True
+    if feasibility_report:
+        params["feasibility_report"] = True
     if chaos == "kill-half":
         params |= {"chaos": kill_half_plan(spec.seed), "membership": True}
     elif chaos in ("C0", "C1", "C2", "C3"):
@@ -294,6 +304,24 @@ def replay(
     typer.echo(f"replayed {report.replayed_events} events, head {report.replayed_head}")
     typer.echo(f"first divergence at seq {report.first_divergence}:\n{report.detail}")
     raise typer.Exit(1)
+
+
+@app.command()
+def feasibility(
+    run: Annotated[str, typer.Argument(help="run id under runs/, or a run directory")],
+) -> None:
+    """Show the feasibility report a run recorded at plan approval (feasibility_report: true)."""
+    from fractalswarm.planning.feasibility import render
+    from fractalswarm.runs import RunPaths
+
+    with RunPaths(_resolve_run_dir(run)).open_log() as log:
+        found = next((e.payload for e in log.read() if e.type == "plan.feasibility"), None)
+    if found is None:
+        typer.echo(
+            "this run has no feasibility report: set feasibility_report: true in the TaskSpec"
+        )
+        raise typer.Exit(1)
+    typer.echo(render(found))
 
 
 @app.command()
