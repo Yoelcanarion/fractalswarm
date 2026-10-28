@@ -4,7 +4,9 @@ It is the shared *log view*, not a brain: it decides nothing, it applies request
 delivery order and logs every change (``fact.*``, ``artifact.written``, ``lease.booked``,
 ``collision.detected``), so replay rebuilds the same board.
 
-Topics: ``tool`` -> ``tool.result``, ``promote``, ``book`` -> ``book.result``.
+Topics: ``tool`` -> ``tool.result``, ``promote``, ``book`` -> ``book.result``, and the
+mailbox of the channel breakers (``comms/mailbox.py``): ``mailbox.put``, ``mailbox.poll`` ->
+``mailbox.items``, with ``mailbox.notify`` to a receiver whose box was empty.
 """
 
 import json
@@ -12,6 +14,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from fractalswarm.comms.mailbox import MAIL_ITEMS, MAIL_NOTIFY, MAIL_POLL, MAIL_PUT, Mailbox
 from fractalswarm.coord.leases import FencingToken, Write
 from fractalswarm.kernel.events import Event
 from fractalswarm.kernel.scheduler import Command, Emit, Send, View
@@ -68,7 +71,7 @@ TOOL_DESCRIPTIONS = {
 
 
 def board_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
-    return {"id": actor_id, "board": Blackboard()}
+    return {"id": actor_id, "board": Blackboard(), "mail": Mailbox()}
 
 
 def board_handle(state: dict[str, Any], event: Event, view: View):
@@ -88,7 +91,27 @@ def board_handle(state: dict[str, Any], event: Event, view: View):
         return state, commands
     if topic == "book":
         return state, _book(board, body, sender, view)
+    if topic == MAIL_PUT:
+        return state, _mail_put(state["mail"], body, view)
+    if topic == MAIL_POLL:
+        return state, _mail_poll(state["mail"], body, sender)
     return state, []
+
+
+def _mail_put(mail: Mailbox, body: dict[str, Any], view: View) -> list[Command]:
+    owner = body["to"]
+    if mail.put(owner, body["env"], view.now):
+        return [Send(to=owner, topic=MAIL_NOTIFY, body={"waiting": mail.depth(owner)})]
+    return []
+
+
+def _mail_poll(mail: Mailbox, body: dict[str, Any], sender: str) -> list[Command]:
+    items, remaining, dropped = mail.take(sender, min(max(int(body.get("batch", 16)), 1), 64))
+    commands: list[Command] = []
+    if items:
+        delivered = {"owner": sender, "count": len(items), "remaining": remaining}
+        commands.append(Emit(type="mailbox.delivered", payload=delivered | {"dropped": dropped}))
+    return [*commands, Send(to=sender, topic=MAIL_ITEMS, body={"items": items, "more": remaining})]
 
 
 def _fact_event(fact: Fact) -> Emit:

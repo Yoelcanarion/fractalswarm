@@ -24,6 +24,13 @@ Pub/sub fans out at the publisher, to the subscribers it knows (given at start o
 from ``subscribe`` frames), so each copy is acked end to end. With a ``relay`` set, every
 frame goes through that actor first (the chaos network in ``comms/chaos.py``).
 
+**Breakers** (spec §8, off by default). With an ``Endpoint.guard`` (``comms/channel_breakers``)
+every application message the endpoint sends or receives is counted by its channel and topic
+breakers, and a send is routed by what they say: onto the wire, held for its 1 msg/s slot
+(critical lane while a channel is open), diverted to the receiver's blackboard mailbox, or
+coalesced into a digest (``kind="digest"``, delivered as such). Mail is fetched by polling
+(``comms/mailbox.py``). Without a guard none of this runs, and the frames are unchanged.
+
 All timing uses one timer tag, ``bus.tick``, armed only while there is pending work.
 """
 
@@ -33,15 +40,17 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
+from fractalswarm.comms.channel_breakers import Guard, Route
+from fractalswarm.comms.mailbox import MAIL_ITEMS, MAIL_NOTIFY, MAIL_POLL, MAIL_PUT, MAILBOX_ACTOR
 from fractalswarm.comms.topics import Lane, lane_of, validate
 from fractalswarm.kernel.events import Event
-from fractalswarm.kernel.scheduler import Command, Send, SetTimer, View
+from fractalswarm.kernel.scheduler import Command, Emit, Send, SetTimer, View
 
 ENVELOPE_KEY = "bus"
 TICK_TAG = "bus.tick"
 RELAY_TOPIC = "net.frame"
 
-Kind = Literal["msg", "request", "reply", "ack", "subscribe", "fenced"]
+Kind = Literal["msg", "request", "reply", "ack", "subscribe", "fenced", "digest"]
 
 
 class Envelope(BaseModel):
@@ -135,11 +144,15 @@ class Endpoint:
     requests: dict[str, tuple[str, int]] = field(default_factory=dict)  # id -> (topic, deadline)
     armed: list[int] = field(default_factory=list)
     stats: dict[str, int] = field(default_factory=dict)
+    guard: Guard | None = None
+    paced: list[Outgoing] = field(default_factory=list)  # critical messages awaiting their slot
 
     @property
     def idle(self) -> bool:
-        """Nothing left to resend, release or wait for."""
-        return not self.unacked and not self.held and not self.requests
+        """Nothing left to resend, release, flush, fetch or wait for."""
+        if self.unacked or self.held or self.requests or self.paced:
+            return False
+        return self.guard is None or self.guard.idle
 
     def count(self, name: str, n: int = 1) -> None:
         self.stats[name] = self.stats.get(name, 0) + n
@@ -273,6 +286,9 @@ def reset(ep: Endpoint, incarnation: int) -> None:
     ep.unacked.clear()
     ep.last_critical.clear()
     ep.requests.clear()
+    ep.paced.clear()
+    if ep.guard is not None:
+        ep.guard.forget_in_flight()
 
 
 def _send(
@@ -291,7 +307,21 @@ def _send(
 ) -> tuple[Envelope, list[Command]]:
     ep.counter += 1
     msg_id = f"{ep.owner}#{ep.incarnation}:{ep.counter}"
-    reliable = lane == Lane.CRITICAL and kind not in ("ack", "fenced")
+    correlation_id = correlation_id if kind != "request" else msg_id
+    routed = None
+    if ep.guard is not None:
+        routed = ep.guard.route_out(
+            view.now,
+            peer=to,
+            topic=topic,
+            kind=kind,
+            lane=lane,
+            payload=payload,
+            correlation_id=correlation_id,
+            backlog=bool(ep.paced),
+        )
+    absorbed = routed is not None and routed.route == Route.ABSORB
+    reliable = lane == Lane.CRITICAL and kind not in ("ack", "fenced") and not absorbed
     if reliable:
         previous = ep.last_critical.get(to)
         if previous is not None and previous not in deps:
@@ -309,18 +339,37 @@ def _send(
         lamport=view.lamport,
         member_epoch=view.member_epoch,
         idem_key=idem_key or msg_id,
-        correlation_id=correlation_id if kind != "request" else msg_id,
+        correlation_id=correlation_id,
         deps=deps,
         expires_at=None if ttl_ms is None else view.now + ttl_ms,
         payload=payload,
     )
     ep.count("sent")
+    if routed is None:
+        return envelope, _launch(ep, view.now, envelope)
+    commands: list[Command] = [Emit(type=name, payload=body) for name, body in routed.moves]
+    match routed.route:
+        case Route.ABSORB:
+            ep.count("coalesced")
+        case Route.DIVERT:
+            ep.count("diverted")
+            commands.append(_mail_put(envelope))
+        case Route.PACE if routed.at > view.now or ep.paced:
+            ep.count("paced")
+            ep.paced.append(Outgoing(envelope, routed.at))
+        case _:
+            commands += _launch(ep, view.now, envelope)
+    return envelope, commands + _arm_guard(ep, view.now)
+
+
+def _launch(ep: Endpoint, now: int, envelope: Envelope) -> list[Command]:
+    """Put a message on the wire. A critical one is also kept until it is acked."""
     commands: list[Command] = [_wire(ep, envelope)]
-    if reliable:
-        due = view.now + ep.policy.backoff(0)
-        ep.unacked[msg_id] = Outgoing(envelope, due)
-        commands += _arm(ep, view.now, due)
-    return envelope, commands
+    if envelope.lane == Lane.CRITICAL and envelope.kind not in ("ack", "fenced"):
+        due = now + ep.policy.backoff(0)
+        ep.unacked[envelope.id] = Outgoing(envelope, due)
+        commands += _arm(ep, now, due)
+    return commands
 
 
 def _wire(ep: Endpoint, envelope: Envelope) -> Send:
@@ -330,12 +379,26 @@ def _wire(ep: Endpoint, envelope: Envelope) -> Send:
     return Send(to=envelope.to, topic=envelope.topic, body=body)
 
 
+def _mail_put(envelope: Envelope) -> Send:
+    """Divert a message to its receiver's mailbox on the blackboard (not through the relay)."""
+    body = {"to": envelope.to, "env": envelope.model_dump(mode="json")}
+    return Send(to=MAILBOX_ACTOR, topic=MAIL_PUT, body=body)
+
+
 def _arm(ep: Endpoint, now: int, due: int) -> list[Command]:
     """Make sure a ``bus.tick`` fires at or before ``due``."""
     if ep.armed and ep.armed[0] <= due:
         return []
     bisect.insort(ep.armed, due)
     return [SetTimer(delay_ms=max(due - now, 1), tag=TICK_TAG)]
+
+
+def _arm_guard(ep: Endpoint, now: int) -> list[Command]:
+    """Wake the endpoint for its paced messages and its breakers' deadlines, digests and polls."""
+    dues = [pending.due for pending in ep.paced]
+    if ep.guard is not None:
+        dues += ep.guard.deadlines()
+    return _arm(ep, now, min(dues)) if dues else []
 
 
 # -- receiving --------------------------------------------------------------------------
@@ -352,6 +415,10 @@ def handle(ep: Endpoint, event: Event, view: View) -> BusOutcome | None:
     """Process a bus event; ``None`` means the event is not the bus's business."""
     if event.type == "effect.completed" and event.payload["tag"] == TICK_TAG:
         return on_tick(ep, view)
+    if ep.guard is not None and event.type == "msg.sent":
+        mail = on_mail(ep, event, view)
+        if mail is not None:
+            return mail
     envelope = frame_of(event)
     if envelope is None:
         return None
@@ -362,7 +429,30 @@ def _members(view: View) -> MembersLike | None:
     return view.views.get("members")
 
 
-def on_frame(ep: Endpoint, env: Envelope, view: View) -> BusOutcome:
+def on_mail(ep: Endpoint, event: Event, view: View) -> BusOutcome | None:
+    """The blackboard's side of the mailbox: a notice that mail is waiting, or the messages
+    that a poll fetched, which are processed as if they had just arrived."""
+    guard = ep.guard
+    assert guard is not None
+    topic, now = event.payload["topic"], view.now
+    if topic == MAIL_NOTIFY:
+        guard.on_notify(now)
+        return BusOutcome(commands=_arm_guard(ep, now))
+    if topic != MAIL_ITEMS:
+        return None
+    body = event.payload["body"]
+    out = BusOutcome()
+    for raw in body["items"]:
+        more = on_frame(ep, Envelope.model_validate(raw), view, from_mail=True)
+        out.deliveries += more.deliveries
+        out.commands += more.commands
+    ep.count("mail_in", len(body["items"]))
+    guard.on_mail(now, len(body["items"]), int(body["more"]))
+    out.commands += _arm_guard(ep, now)
+    return out
+
+
+def on_frame(ep: Endpoint, env: Envelope, view: View, *, from_mail: bool = False) -> BusOutcome:
     out = BusOutcome()
     now = view.now
     if env.kind == "ack":
@@ -409,6 +499,19 @@ def on_frame(ep: Endpoint, env: Envelope, view: View) -> BusOutcome:
         _remember(ep.delivered, env.id, ep.policy.memory)
         out.deliveries += _release(ep, now)
         return out
+    if ep.guard is not None:
+        moves = ep.guard.on_receive(
+            now,
+            peer=env.sender,
+            topic=env.topic,
+            kind=env.kind,
+            payload=env.payload,
+            correlation_id=env.correlation_id,
+            from_mail=from_mail,
+        )
+        if moves:
+            out.commands += [Emit(type=name, payload=body) for name, body in moves]
+            out.commands += _arm_guard(ep, now)
 
     release_at = now + ep.policy.hold_ms
     ep.held[env.id] = (env, release_at)
@@ -483,12 +586,47 @@ def on_tick(ep: Endpoint, view: View) -> BusOutcome:
             ep.count("timeout")
             out.deliveries.append(Delivery("timeout", topic, ep.owner, {}, correlation_id))
 
+    if ep.guard is not None:
+        out.commands += _guard_tick(ep, view)
+
     upcoming = [pending.due for pending in ep.unacked.values()]
     upcoming += [release_at for _, release_at in ep.held.values()]
     upcoming += [deadline for _, deadline in ep.requests.values()]
+    upcoming += [pending.due for pending in ep.paced]
+    if ep.guard is not None:
+        upcoming += ep.guard.deadlines()
     if upcoming:
         out.commands += _arm(ep, now, min(upcoming))
     return out
+
+
+def _guard_tick(ep: Endpoint, view: View) -> list[Command]:
+    """The breakers' own clock: state changes, paced messages that are due, digests, a poll."""
+    guard, now = ep.guard, view.now
+    assert guard is not None
+    moves, digests = guard.tick(now)
+    commands: list[Command] = [Emit(type=name, payload=body) for name, body in moves]
+    ready = [pending for pending in ep.paced if pending.due <= now]
+    ep.paced = [pending for pending in ep.paced if pending.due > now]
+    for pending in ready:
+        commands += _launch(ep, now, pending.envelope)
+    for topic, peer, payload in digests:
+        _, more = _send(
+            ep,
+            view,
+            peer,
+            topic,
+            payload,
+            kind="digest",
+            lane=lane_of(topic),
+            idem_key=guard.digest_key(topic, peer),
+        )
+        commands += more
+    if guard.poll_now(now):
+        commands.append(
+            Send(to=MAILBOX_ACTOR, topic=MAIL_POLL, body={"batch": guard.policy.mail.batch})
+        )
+    return commands
 
 
 def _remember(memory: dict[str, None], key: str, limit: int) -> None:
