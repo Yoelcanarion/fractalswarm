@@ -27,8 +27,11 @@ SENSITIVE_KEYS = {
     "model_api_key",
     "hf_token",
 }
+# Opaque model blobs (encrypted reasoning): patterns would match random base64 (a real
+# T2 run's blob held "hf_" plus 50 letters) and break replay; only known secrets are removed.
+OPAQUE_KEYS = {"encrypted_content"}
 # Re-exported: the secret patterns live in safety/scanners.py, shared with the scanners.
-__all__ = ["REDACTED", "SECRET_PATTERNS", "SENSITIVE_KEYS", "redact"]
+__all__ = ["OPAQUE_KEYS", "REDACTED", "SECRET_PATTERNS", "SENSITIVE_KEYS", "redact"]
 
 
 def redact(value: Any, secrets: Iterable[str] = ()) -> Any:
@@ -39,15 +42,22 @@ def redact(value: Any, secrets: Iterable[str] = ()) -> Any:
 
 def _redact(value: Any, secrets: list[str]) -> Any:
     if isinstance(value, dict):
-        return {
-            key: REDACTED if str(key).lower() in SENSITIVE_KEYS else _redact(item, secrets)
-            for key, item in value.items()
-        }
+        return {key: _redact_item(str(key).lower(), item, secrets) for key, item in value.items()}
     if isinstance(value, list | tuple):
         return [_redact(item, secrets) for item in value]
     if isinstance(value, str):
         return redact_secrets(value, secrets)
     return value
+
+
+def _redact_item(key: str, item: Any, secrets: list[str]) -> Any:
+    if key in SENSITIVE_KEYS:
+        return REDACTED
+    if key in OPAQUE_KEYS and isinstance(item, str):
+        for secret in secrets:
+            item = item.replace(secret, REDACTED)
+        return item
+    return _redact(item, secrets)
 
 
 class Attempt(BaseModel):

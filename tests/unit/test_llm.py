@@ -145,6 +145,22 @@ def test_redaction() -> None:
     assert clean["headers"]["x-request-id"] == "abc"
 
 
+def test_redaction_leaves_opaque_blobs_intact_but_known_secrets() -> None:
+    # A real reasoning blob held "hf_" + 50 letters; redacting it broke the run's replay.
+    blob = "Q4Fx76bFNP56RS_hf_MCZTSVlXwuGj8KtMa4HVAC6G5n4cXx0RhxMXsCq8SVw4YT-JY5nk9"
+    value = {
+        "output": [
+            {"type": "reasoning", "encrypted_content": blob},
+            {"type": "reasoning", "encrypted_content": f"x{FAKE_KEY}x"},
+            {"type": "message", "text": blob},
+        ]
+    }
+    clean = redact(value, secrets=[FAKE_KEY])
+    assert clean["output"][0]["encrypted_content"] == blob
+    assert clean["output"][1]["encrypted_content"] == f"x{REDACTED}x"
+    assert REDACTED in clean["output"][2]["text"]  # readable text keeps the patterns
+
+
 async def test_cassette_replays_the_same_outcome_and_rejects_other_requests(
     tmp_path: Path,
 ) -> None:
