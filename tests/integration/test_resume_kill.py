@@ -237,7 +237,12 @@ def snapshot(box: Sandbox, name: str = "snapshot") -> Crash:
     for line in path.read_text(encoding="utf-8").splitlines() if path.exists() else []:
         with contextlib.suppress(ValueError):  # a torn last line: that call has no reply on record
             cassette.add(json.loads(line)["effect_id"])
-    return Crash(events, cassette, box.served())
+    crash = Crash(events, cassette, box.served())
+    # An effect is launched only after the reaction that started it is whole in the log, so no
+    # reply and no request can belong to an effect that the log does not show as started.
+    assert cassette <= set(crash.started)
+    assert {effect_id for effect_id, count in crash.served.items() if count} <= set(crash.started)
+    return crash
 
 
 def read_log(box: Sandbox) -> list[Event]:
@@ -326,8 +331,9 @@ def signalled_effect(box: Sandbox) -> str:
     return json.loads(box.signal.read_text(encoding="utf-8"))["effect_id"]
 
 
-async def test_a_request_in_flight_is_sent_again_and_listed(box: Sandbox) -> None:
-    child = box.run(hold_at="20")  # the 20th request is received and never answered
+@pytest.mark.parametrize("chaos", ["C0", "C3"])  # C3: API faults, partitions, kills, drops
+async def test_a_request_in_flight_is_sent_again_and_listed(box: Sandbox, chaos: str) -> None:
+    child = box.run("--chaos", chaos, hold_at="20")  # the 20th request is received, never answered
     wait_for(box, child, signalled(box), "a request to be held")
     held = signalled_effect(box)
     box.kill(child)
