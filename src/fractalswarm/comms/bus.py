@@ -309,7 +309,9 @@ def _send(
     msg_id = f"{ep.owner}#{ep.incarnation}:{ep.counter}"
     correlation_id = correlation_id if kind != "request" else msg_id
     routed = None
+    waiting = False  # critical messages to this peer already in line for their slots
     if ep.guard is not None:
+        waiting = any(pending.envelope.to == to for pending in ep.paced)
         routed = ep.guard.route_out(
             view.now,
             peer=to,
@@ -318,7 +320,7 @@ def _send(
             lane=lane,
             payload=payload,
             correlation_id=correlation_id,
-            backlog=bool(ep.paced),
+            backlog=waiting,
         )
     absorbed = routed is not None and routed.route == Route.ABSORB
     reliable = lane == Lane.CRITICAL and kind not in ("ack", "fenced") and not absorbed
@@ -354,7 +356,7 @@ def _send(
         case Route.DIVERT:
             ep.count("diverted")
             commands.append(_mail_put(envelope))
-        case Route.PACE if routed.at > view.now or ep.paced:
+        case Route.PACE if routed.at > view.now or waiting:
             ep.count("paced")
             ep.paced.append(Outgoing(envelope, routed.at))
         case _:

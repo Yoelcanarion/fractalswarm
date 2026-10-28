@@ -163,6 +163,23 @@ def test_paced_messages_are_acked_and_resent_like_any_critical_message() -> None
     assert released.id not in ep.unacked
 
 
+def test_a_backlog_toward_one_peer_queues_only_that_peers_critical_messages() -> None:
+    ep = guarded()
+    burst(ep, 21)  # opens the channel to b, at 200 ms
+    for n in range(3):
+        bus.send(ep, view("a", 500), "b", "fact.verified", {"n": n})  # b's slots: 500, 1500, 2500
+    assert [pending.due for pending in ep.paced] == [1500, 2500]
+
+    elsewhere = bus.send(ep, view("a", 600), "c", "fact.verified", {"n": 9})
+    assert len(wired(elsewhere)) == 1  # c is quiet and has no backlog: it does not wait for b's
+    assert [pending.due for pending in ep.paced] == [1500, 2500]
+
+    # Toward b the order holds even after its channel has half-opened, until the line is empty.
+    late = bus.send(ep, view("a", 16 * S), "b", "fact.verified", {"n": 3})
+    assert wired(late) == [] and emitted(late) == ["breaker.half_open"]
+    assert [pending.envelope.payload["n"] for pending in ep.paced] == [1, 2, 3]
+
+
 def test_requests_and_replies_are_paced_not_diverted() -> None:
     ep = guarded()
     burst(ep, 21)

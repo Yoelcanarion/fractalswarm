@@ -8,8 +8,10 @@ payload to emit, like the model breaker's (``comms/breakers.py``).
 **What counts.** An application message is a ``msg``, ``request`` or ``reply`` frame. Not
 counted and never held back: the bus's own control frames (``ack``, ``fenced``,
 ``subscribe``) and liveness gossip (``member.heartbeat``). A breaker that silenced heartbeats
-would turn congestion into a false ``member.dead`` and a takeover. A message's size is the
-bytes of its canonical JSON payload. Resends are not counted: they are the same message.
+would turn congestion into a false ``member.dead`` and a takeover, and a track lead's five
+beats a second sit exactly at the storm threshold, so timer jitter alone would trip it. A
+message's size is the bytes of its canonical JSON payload. Resends are not counted: they are
+the same message.
 
 **Channel breaker** (one per pair, named ``channel:a|b``). Each endpoint keeps its own for
 every peer, fed by the messages it sends to and receives from that peer, so a one-way flood
@@ -24,9 +26,9 @@ than the one before it. The count restarts at every new fact.
 
 While open, an endpoint's sends to that peer split by lane. The **critical lane** is every
 frame whose envelope lane is ``critical``: the topics registered critical in ``topics.py``,
-plus requests and replies. It keeps flowing at most ``1 / critical_gap_ms`` messages per
-second, in order: the bus holds the excess until its slot, so nothing on it is lost and its
-FIFO chain (``deps``) stays intact. Everything else is diverted to the receiver's blackboard
+plus requests and replies. It keeps flowing at one message per ``critical_gap_ms`` (1 msg/s),
+in order: the bus holds the excess until its slot, so nothing on it is lost and its FIFO
+chain (``deps``) stays intact. Everything else is diverted to the receiver's blackboard
 mailbox (``comms/mailbox.py``), which the receiver polls with backoff.
 
 **Recovery.** After ``half_open_after_ms`` the breaker is half-open: traffic flows again
@@ -484,8 +486,9 @@ class Guard:
         correlation_id: str | None,
         backlog: bool,
     ) -> Routed:
-        """What happens to a message this endpoint sends. ``backlog``: critical messages are
-        already waiting for their slots, so a new one queues behind them even when closed."""
+        """What happens to a message this endpoint sends. ``backlog``: critical messages to this
+        peer are already waiting for their slots, so a new one queues behind them (FIFO) even
+        when the channel is closed again."""
         if topic in EXEMPT_TOPICS or kind in CONTROL_KINDS:
             return Routed(Route.PASS)
         channel, storm = self.channel(peer), self.storm(topic)
