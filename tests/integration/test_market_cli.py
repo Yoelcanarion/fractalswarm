@@ -16,13 +16,16 @@ def test_the_example_taskspecs_opt_in_to_the_economy() -> None:
     assert auction.market.mode == "auction" and auction.scaling.mode == "exact"
     auto = TaskSpec.load(EXAMPLES / "t2-autoscale.yaml")
     assert auto.scaling.mode == "autoscale" and auto.scaling.max_agents_per_orchestrator == 4
+    breaker = TaskSpec.load(EXAMPLES / "t2-breaker.yaml")
+    assert breaker.market.breaker and breaker.market.mode == "proportional"
+    assert run_params(breaker)["market"]["breaker"]["pause_ms"] == 30_000
     plain = TaskSpec.load(EXAMPLES / "t2-conference.yaml")
     assert plain.market.mode == "proportional" and plain.scaling.mode == "exact"
     assert "market" in run_params(auction) and "market" in run_params(auto)
     assert "market" not in run_params(plain)  # the default needs no economy
 
 
-@pytest.mark.parametrize("example", ["t2-auction.yaml", "t2-autoscale.yaml"])
+@pytest.mark.parametrize("example", ["t2-auction.yaml", "t2-autoscale.yaml", "t2-breaker.yaml"])
 def test_cli_run_with_the_economy_finishes_the_program_and_replays(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, example: str
 ) -> None:

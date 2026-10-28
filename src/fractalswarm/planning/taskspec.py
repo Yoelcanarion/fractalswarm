@@ -11,6 +11,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from fractalswarm.config import CONFIG_DIR
+from fractalswarm.market.spend_breaker import SpendBreakerConfig
 
 REPO_ROOT = CONFIG_DIR.parent
 AUTOSCALE_KEYS = (
@@ -55,6 +56,9 @@ class Market(BaseModel):
     epoch_interval_s: float = Field(default=15.0, gt=0)
     epoch_max_completions: int = Field(default=10, ge=1)
     floor_usd: float = Field(default=0.08, gt=0)  # what a squad may always commit
+    # The global spend breaker (spec §8): burn above 20% of the remaining budget per minute
+    # pauses new contracts for 30 s. It needs the economy's view, so it turns the epochs on.
+    breaker: bool = False
 
 
 class TaskInputs(BaseModel):
@@ -159,11 +163,15 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
 def market_params(spec: TaskSpec) -> dict[str, Any] | None:
     """The economy's settings with every number resolved, or ``None`` when it is off.
 
-    The epoch machinery runs for ``market.mode: auction`` and for autoscale (which needs the
-    $ and rate-limit allocations). The numbers are recorded in the run's params, so replay
-    never reads a config file.
+    The epoch machinery runs for ``market.mode: auction``, for autoscale (which needs the $ and
+    rate-limit allocations) and for the global spend breaker (which needs the view). The
+    numbers are recorded in the run's params, so replay never reads a config file.
     """
-    if spec.market.mode != "auction" and spec.scaling.mode != "autoscale":
+    if (
+        spec.market.mode != "auction"
+        and spec.scaling.mode != "autoscale"
+        and not spec.market.breaker
+    ):
         return None
     economy = _defaults()["market"]
     limits = yaml.safe_load((CONFIG_DIR / "prices.yaml").read_text(encoding="utf-8"))["rate_limits"]
@@ -182,6 +190,7 @@ def market_params(spec: TaskSpec) -> dict[str, Any] | None:
         if spec.scaling.mode == "autoscale"
         else len(spec.scaling.fanout),
         "ladder": _defaults()["budget"]["ladder"],
+        "breaker": SpendBreakerConfig.load().model_dump() if spec.market.breaker else None,
         "limits": {
             model: {"limit_rpm": found["rpm"], "limit_tpm": found["tpm"]}
             for model, found in sorted(limits.items())

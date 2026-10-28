@@ -9,6 +9,10 @@ market maker dies, its heir reads the same view and clears the next epoch.
 
 Money is in integer micro-dollars. A reservation counts as committed from the moment it is
 made, as in the ledger, so the view and the ledger agree at every event.
+
+The global spend breaker (spec §8) lives here too, when the run enables it: every settled cost
+goes through ``market/spend_breaker.py`` on virtual time, so whether it is open at a given
+moment is a fact of the log, the same for every orchestrator and for replay.
 """
 
 from dataclasses import dataclass
@@ -16,8 +20,9 @@ from typing import Any
 
 from fractalswarm.kernel.events import Event
 from fractalswarm.market import events as _events  # noqa: F401  (registers the event types)
-from fractalswarm.market.allocation import to_micros
+from fractalswarm.market.allocation import to_micros, to_usd
 from fractalswarm.market.quotas import Quota, rate_limited
+from fractalswarm.market.spend_breaker import SpendBreaker, SpendBreakerConfig, record_spend
 
 
 @dataclass
@@ -46,6 +51,12 @@ class MarketView:
         self.reserved: dict[str, int] = {}  # squad -> open reservations (micros)
         self.spent: dict[str, int] = {}  # squad -> settled spend (micros)
         self._open: dict[str, tuple[str, int]] = {}  # effect id -> (squad, reservation)
+        self._open_all: dict[str, int] = {}  # effect id -> reservation, whatever its scopes
+        self.run_reserved = 0  # open reservations of the whole run (micros)
+        self.last_call_at = 0  # virtual ms of the last reservation: the run's last sign of life
+        self.run_spent = 0  # settled spend of the whole run (micros)
+        self.breaker = SpendBreaker()  # the global spend breaker (spec §8)
+        self.breaker_config: SpendBreakerConfig | None = None  # None: not enabled
         self.epochs: dict[str, int] = {}  # goal -> last closed epoch
         self.opened: dict[str, int] = {}  # goal -> virtual ms its current epoch opened
         self.clearings: dict[str, Clearing] = {}  # goal -> its last clearing
@@ -62,7 +73,7 @@ class MarketView:
         return self.reserved.get(squad, 0) + self.spent.get(squad, 0)
 
     def committed_total(self) -> int:
-        return sum(self.reserved.values()) + sum(self.spent.values())
+        return self.run_reserved + self.run_spent
 
     def headroom(self, squad: str) -> int | None:
         """What the squad may still commit under its cap; ``None`` if it has none."""
@@ -81,20 +92,32 @@ class MarketView:
         payload = event.payload
         kind = event.type
         if kind == "budget.reserved":
+            micros = to_micros(payload["usd"])
+            self._open_all[payload["effect_id"]] = micros
+            self.run_reserved += micros
+            self.last_call_at = event.ts_virtual
             squad = payload["scopes"].get("squad")
             if squad is not None:
-                micros = to_micros(payload["usd"])
                 self._open[payload["effect_id"]] = (squad, micros)
                 self.reserved[squad] = self.reserved.get(squad, 0) + micros
         elif kind == "budget.settled":
+            actual = to_micros(payload["actual_usd"])
+            reserved = self._open_all.pop(payload["effect_id"], None)
+            if reserved is not None:
+                self.run_reserved -= reserved
+                self.run_spent += actual
             held = self._open.pop(payload["effect_id"], None)
             if held is not None:
                 squad, micros = held
                 self.reserved[squad] -= micros
-                self.spent[squad] = self.spent.get(squad, 0) + to_micros(payload["actual_usd"])
+                self.spent[squad] = self.spent.get(squad, 0) + actual
+            self._burn(event.ts_virtual, payload["actual_usd"])
         elif kind == "run.started":
             if payload.get("run_cap_usd") is not None:
                 self.run_cap = to_micros(payload["run_cap_usd"])
+            found = ((payload.get("params") or {}).get("market") or {}).get("breaker")
+            if found:
+                self.breaker_config = SpendBreakerConfig(**found)
         elif kind in ("budget.cap_set", "budget.shock"):
             self._cap_set(payload)
             self.shocks += kind == "budget.shock"
@@ -118,6 +141,15 @@ class MarketView:
                 fraction=payload["fraction"],
             )
             self.pressure = 0
+
+    def _burn(self, now: int, usd: float) -> None:
+        """A cost settled: the global spend breaker sees it (spec §8)."""
+        if self.breaker_config is None or self.run_cap is None:
+            return
+        remaining = max(self.run_cap - self.committed_total(), 0)
+        self.breaker, _ = record_spend(
+            self.breaker, now, usd, to_usd(remaining), self.breaker_config
+        )
 
     def _cap_set(self, payload: dict[str, Any]) -> None:
         micros = to_micros(payload["usd"])

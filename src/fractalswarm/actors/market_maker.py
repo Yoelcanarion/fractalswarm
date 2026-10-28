@@ -22,8 +22,9 @@ return commands without fencing tokens; the orchestrator signs them (``emit``).
 from collections.abc import Callable
 from typing import Any
 
+from fractalswarm.comms import breakers as _breakers  # noqa: F401  (registers breaker.*)
 from fractalswarm.kernel.events import Event
-from fractalswarm.kernel.scheduler import Command, Send, SetCap, SetTimer, View
+from fractalswarm.kernel.scheduler import Command, Emit, Send, SetCap, SetTimer, View
 from fractalswarm.market.allocation import (
     CHILD_RESERVE_SHARE,
     Allocation,
@@ -46,6 +47,11 @@ from fractalswarm.market.ladder import LadderState, Thresholds, ladder_state
 from fractalswarm.market.quotas import Quota, adapt
 
 EPOCH_TAG = "epoch"
+BREAKER_TAG = "breaker"
+# A market whose run has reserved no LLM call for this long (virtual ms) stops re-arming its
+# timer. Without it a wedged run would never end: the timer is always in flight.
+IDLE_MS = 300_000
+SPEND_BREAKER = "global_spend"  # the name its breaker.* events carry
 Emitter = Callable[[str, str, dict[str, Any], str | None], Command]
 
 
@@ -132,15 +138,17 @@ def adopt(state: dict[str, Any], gid: str, view: View):
 def on_event(state: dict[str, Any], event: Event, view: View, emit: Emitter):
     """Timers, completions, top-up requests, budget shocks, and the forced epochs."""
     seen = views(view)
-    if not enabled(state) or not state["mk"] or seen is None:
+    if not enabled(state) or seen is None:
         return state, []
+    state, commands = _spend_breaker(state, view, seen[0])
+    if not state["mk"]:
+        return state, commands
     market, tree = seen
     goals = state["goals"]
     live = {
         gid: m for gid, m in state["mk"].items() if gid in goals and goals[gid]["phase"] != "done"
     }
     state = {**state, "mk": live}
-    commands: list[Command] = []
     due: dict[str, str] = {}
     payload = event.payload
     if event.type == "effect.completed":
@@ -185,6 +193,57 @@ def _changed(state: dict[str, Any], gid: str, view: View, tree: Any) -> str | No
     if _signature(tree, gid) != watched["sig"]:
         return "ownership"
     return None
+
+
+# -- the global spend breaker ---------------------------------------------------------------
+
+
+def paused_until(state: dict[str, Any], view: View) -> int | None:
+    """The virtual ms until which the global spend breaker (spec §8) holds back new
+    contracts, or ``None`` when it is closed or the run did not enable it."""
+    market = view.views.get("market")
+    if not enabled(state) or not state["market"].get("breaker") or market is None:
+        return None
+    breaker = market.breaker
+    return breaker.open_until if breaker.is_open(view.now) else None
+
+
+def wake(state: dict[str, Any], gid: str, until: int, view: View):
+    """A leaf held its contracts back: come back to them when the breaker closes. One timer
+    per pause, however many dispatches the pause swallows."""
+    entry = state["goals"][gid]
+    if entry.get("wake") == until:
+        return state, []
+    entry = {**entry, "wake": until}
+    state = {**state, "goals": {**state["goals"], gid: entry}}
+    timer = SetTimer(delay_ms=max(until - view.now, 0), tag=f"{BREAKER_TAG}|{gid}")
+    return state, [timer]
+
+
+def _spend_breaker(state: dict[str, Any], view: View, market: Any):
+    """Report each trip and recovery of the breaker once. Whichever orchestrator sees it
+    first writes the event; the keys turn everyone else's write into a no-op."""
+    config = market.breaker_config
+    if config is None:
+        return state, []
+    breaker, seen = market.breaker, state["spend"]
+    commands: list[Command] = []
+    if breaker.trips > seen["trips"] and breaker.open_until is not None:
+        burn = breaker.burn(breaker.open_until - config.pause_ms)
+        reason = f"burn ${burn:.4f} in the last minute is over "
+        reason += f"{config.max_burn_share_per_min:.0%} of the remaining budget"
+        opened = {"breaker": SPEND_BREAKER, "until_ms": breaker.open_until, "trips": breaker.trips}
+        key = f"breaker.opened:{SPEND_BREAKER}:{breaker.trips}"
+        commands.append(
+            Emit(type="breaker.opened", payload=opened | {"reason": reason}, idem_key=key)
+        )
+        seen = {"trips": breaker.trips, "open": True}
+    if seen["open"] and not breaker.is_open(view.now):
+        closed = {"breaker": SPEND_BREAKER}
+        key = f"breaker.closed:{SPEND_BREAKER}:{seen['trips']}"
+        commands.append(Emit(type="breaker.closed", payload=closed, idem_key=key))
+        seen = {**seen, "open": False}
+    return {**state, "spend": seen}, commands
 
 
 # -- closing an epoch ---------------------------------------------------------------------
@@ -271,7 +330,8 @@ def close_epoch(state: dict[str, Any], gid: str, reason: str, view: View, emit: 
     watched = _watch(state, view, tree, gid)
     watched["closed"] = epoch
     state = {**state, "mk": {**state["mk"], gid: watched}}
-    commands.append(_timer(state, market, gid, params["epoch_interval_ms"]))
+    if view.now - market.last_call_at < IDLE_MS:
+        commands.append(_timer(state, market, gid, params["epoch_interval_ms"]))
     return state, commands
 
 

@@ -135,6 +135,7 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "contributor": bool(args.get("contributor")),
         "market": args.get("market"),  # the economy's settings; None: no epochs (the default)
         "autoscale": args.get("autoscale"),  # the caps of scaling.mode: autoscale; None: exact
+        "spend": {"trips": 0, "open": False},  # the global spend breaker trips this one reported
         "mk": {},  # goal -> epoch bookkeeping of the markets this orchestrator makes
         "spawned": len(children),  # agents spawned so far, for replacement names
         "respawned": 0,  # orchestrators spawned into dead sibling groups
@@ -199,6 +200,8 @@ def _handle(state: dict[str, Any], event: Event, view: View):
             payload = event.payload
             text = payload["result"].get("output_text", "")
             return _judged(state, tag[1], tag[2], int(tag[3]), payload["status"], text, view)
+        if tag[0] == market_maker.BREAKER_TAG:
+            return _woken(state, tag[1], view)
         return state, []
     if kind != "msg.sent":
         return state, []
@@ -629,6 +632,9 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
     busy = [cid for cid, s in status.items() if s != "pending"]
     commands: list[Command] = []
     ready = dag.ready(done, busy)
+    until = market_maker.paused_until(state, view) if ready else None
+    if until is not None:  # the global spend breaker is open: no new contracts (spec §8)
+        ready = []
     if state["mode"] in SERIAL_MODES and ready:
         if _serial_busy(state) or not _work_open(state):
             return state, []  # one worker: the session waits its turn (_serial_next)
@@ -675,8 +681,18 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
         return state, commands
     if any(s in ACTIVE for s in status.values()):
         return state, []
+    if until is not None:  # nothing runs and the breaker holds the rest: wait for it to close
+        return market_maker.wake(state, gid, until, view)
     output, gaps = leaf_outcome(task, entry, dag)
     return _complete(state, gid, output, gaps, view)
+
+
+def _woken(state: dict[str, Any], gid: str, view: View):
+    """The global spend breaker's pause may be over: dispatch what it held back."""
+    entry = state["goals"].get(gid)
+    if entry is None or entry["phase"] != "running":
+        return state, []
+    return _dispatch(_put_goal(state, gid, {**entry, "wake": None}), gid, view)
 
 
 def _contract_result(state: dict[str, Any], body: dict[str, Any], view: View):
