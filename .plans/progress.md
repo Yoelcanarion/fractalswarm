@@ -743,7 +743,8 @@ finished in its own Orca workspace on Wed 28 Oct. Spend: $0 (fake LLM and record
 - **The first wave stopped.** 7 Claude subagents hit the Opus 5-hour limit before writing any code. Their `.claude/worktrees/agent-*` worktrees and `worktree-agent-*` branches are still there, at e6f5106 with no commits. Deleting them needs Yoel's OK.
 
 **Next:**
-1. After v1: the backup bundle and the attack clip. Both need Yoel's permission, and the clip needs his choice of wording.
+1. The attack clip (and its wording) waits until Nov 3, the day before delivery (Yoel). The backup bundle runs after v1 if Yoel agrees.
+   Added to the workers: the UI Security view and the plan approval form (UI worker), and wiring the global spend breaker (economy worker, optional).
 2. Merge the workers' branches as they finish.
 3. Then, after the last handler change:
    - the final matrix (adds the T1 rows);
@@ -752,3 +753,51 @@ finished in its own Orca workspace on Wed 28 Oct. Spend: $0 (fake LLM and record
    - the headline runs;
    - the final demo bundle.
 4. Publish only after the audit and Yoel's confirmation.
+
+### Day 9 (continued): checkpoint, Wed Oct 28, 18:40 CET
+**Yoel's priority (18:00):** prove that the root really dies in a real run, before anything else. The rules:
+- one `kill-half` run in Standard after v1, with no automatic retries that could pay twice;
+- explicit checks of the root's death, its heir, adoption, lost work, duplicate calls and invariants;
+- a full evidence bundle; if it fails, keep the failed run and diagnose before repeating.
+
+The resume study runs in parallel at $0. Never claim resume works until a test kills the Python process for real. Never claim "no duplicates" without testing the ambiguous in-flight case. If resume is not validated in time, it stays out of the demo.
+
+**Decided:** Standard with a run cap of $0.75 (Yoel's choice).
+- At $0.50, Standard would hit the cap. The cap counts committed money: settled plus open worst-case reservations.
+- The real Standard runs settled $0.45–0.49, and v1's committed peak is $0.07–0.10 above settled.
+
+**Done since 17:45:**
+- `run --budget-usd` and `run --no-paid-retries` (376e749). The second retries only 429/503, rejections the API does not bill. A request with no reply, or a 500, is never re-sent. Both are recorded in the run's params.
+- **Merged:**
+  - T3 web example (f2c04c6);
+  - breakers (0b272c1);
+  - verification: risk score, cross-squad audit, feasibility (1180e05);
+  - UI (9ac1f43).
+
+  715 tests pass, ruff is clean, and `demo --verify` gives MATCH.
+- **Fake T2 logs after the merges.** At C0, kill-half and C3, every event is identical to f2c04c6 except `run.started`: the recorded spec gains three default-off fields (`channel_breakers`, `cross_audit`, `feasibility_report`).
+
+**Waiting:**
+- **v1** (17/32 at 18:29; the single and pipeline cells take about 10 min each).
+- **Merges after v1:**
+  - scaling, which changes `bench/charts.py`, imported lazily by the running bench;
+  - langgraph, which changes `pyproject.toml` and `uv.lock`, and a sync must not touch the venv of a paid run.
+- **Workers still running:**
+  - `resume` (ctx_fe8db16ec509; semantics first, real process-kill tests);
+  - `evidence` (ctx_70ca1e899282; `fractalswarm takeover RUN`, a read-only checker that recomputes every heir from the log);
+  - t1;
+  - economy.
+
+**Then:** the backup run.
+```
+uv run fractalswarm spend
+uv run fractalswarm run tasks/examples/t2-conference.yaml --backend real --confirm-real-spend --clock live --firewall auto --chaos kill-half --budget-usd 0.75 --no-paid-retries --run-id t2-real-killhalf-seed1
+uv run fractalswarm spend
+uv run fractalswarm replay t2-real-killhalf-seed1 --verify
+uv run fractalswarm audit verify t2-real-killhalf-seed1 --replay
+```
+Package it into `demo/backup/`:
+- `events.jsonl`, `cassette.jsonl`, `HEAD`;
+- `evidence/`: the config, the code version, the costs, the result, the spend before and after, and the replay, audit and takeover reports.
+
+Keep the workers' test suites quiet during the run. It uses the live clock, so CPU starvation could cause false death verdicts.
