@@ -1,0 +1,33 @@
+{
+  "cell": "single__t2_conference__C2__s2",
+  "workflow": "single",
+  "task": "t2_conference",
+  "profile": "C2",
+  "coordinators_killed": 3,
+  "seed": "2",
+  "run_dir": "runs/single__t2_conference__C2__s2",
+  "metrics": {
+    "run_id": "single__t2_conference__C2__s2",
+    "events": 5778,
+    "completed": true,
+    "valid": true,
+    "score": 0.72,
+    "detail": "placed 48/48, hard violations 0, gaps 0",
+    "makespan_s": 540.984,
+    "stall_s": 207.341,
+    "work_window_s": 505.141,
+    "work_busy_s": 297.8,
+    "cost_usd": 0.24955862,
+    "input_tokens": 170736,
+    "output_tokens": 68694,
+    "total_tokens": 239430,
+    "coordination_tokens": 0,
+    "llm_calls": 66,
+    "llm_errors": 0,
+    "cancelled_llm_calls": 3,
+    "work_calls": 49,
+    "messages": 267,
+    "breaker_trips": 0,
+    "chaos_events": 5
+  }
+}

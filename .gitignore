@@ -11,6 +11,8 @@ dist/
 
 # Runs: project ledger, per-run dirs, spike evidence
 runs/
+# Bench run dirs (hundreds of MB); only the per-cell summaries are committed
+bench/results/*/runs/
 
 # Web
 web/node_modules/

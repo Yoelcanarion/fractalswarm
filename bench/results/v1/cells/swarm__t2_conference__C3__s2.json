@@ -1,0 +1,33 @@
+{
+  "cell": "swarm__t2_conference__C3__s2",
+  "workflow": "swarm",
+  "task": "t2_conference",
+  "profile": "C3",
+  "coordinators_killed": 5,
+  "seed": "2",
+  "run_dir": "runs/swarm__t2_conference__C3__s2",
+  "metrics": {
+    "run_id": "swarm__t2_conference__C3__s2",
+    "events": 22662,
+    "completed": true,
+    "valid": true,
+    "score": 0.84,
+    "detail": "placed 48/48, hard violations 0, gaps 0",
+    "makespan_s": 235.983,
+    "stall_s": 23.516,
+    "work_window_s": 189.547,
+    "work_busy_s": 166.031,
+    "cost_usd": 0.330101136,
+    "input_tokens": 206117,
+    "output_tokens": 73249,
+    "total_tokens": 279366,
+    "coordination_tokens": 0,
+    "llm_calls": 73,
+    "llm_errors": 0,
+    "cancelled_llm_calls": 1,
+    "work_calls": 54,
+    "messages": 10770,
+    "breaker_trips": 0,
+    "chaos_events": 2990
+  }
+}
