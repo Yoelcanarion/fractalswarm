@@ -87,6 +87,7 @@ def runs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
             "c3": await record(root / "c3", chaos=c3),
             "kill": await record(root / "kill", chaos=kill),
             "few": await record(root / "few", epoch_max_completions=3),
+            "tight": await record(root / "tight", budget=0.50),
             "scarce": await record(root / "scarce", budget=0.40),
             "shock": await record(shocked, backend=shock_after(shocked, 25, 0.60)),
         }
@@ -176,11 +177,26 @@ def test_every_clearing_conserves_the_envelope(runs) -> None:
                 assert found["pool"] >= 0 and all(g >= 0 for g in found["grants"].values())
 
 
-def test_the_reserve_is_15_percent_at_the_root_and_10_below(runs) -> None:
-    for event in of_type(events(runs["c0"]), "market.cleared"):
+def test_the_reserve_is_15_percent_at_the_root_and_10_below_and_gives_way_to_the_floors(
+    runs,
+) -> None:
+    log = events(runs["c0"])
+    bids = {
+        (e.payload["goal_id"], e.payload["epoch"]): e.payload for e in of_type(log, "market.bids")
+    }
+    shrunk = 0
+    for event in of_type(log, "market.cleared"):
         usd = event.payload["resources"]["usd"]
         share = 0.15 if event.payload["goal_id"] == "root" else 0.10
-        assert usd["reserve"] == usd["envelope"] * round(share * 10_000) // 10_000
+        expected = usd["envelope"] * round(share * 10_000) // 10_000
+        asked = bids[(event.payload["goal_id"], event.payload["epoch"])]["bids"]
+        floors = sum(b["resources"]["usd"]["floor"] for b in asked)
+        if usd["envelope"] - expected >= floors:
+            assert usd["reserve"] == expected
+        else:  # the floors keep every squad able to make a call: the reserve shrinks to fit them
+            shrunk += 1
+            assert usd["reserve"] < expected and usd["reserve"] <= max(usd["envelope"] - floors, 0)
+    assert shrunk >= 1  # a track's last epochs, with little envelope left, show it
 
 
 def test_the_grants_are_bounded_by_the_bids_and_the_floors_come_first(runs) -> None:
@@ -223,7 +239,7 @@ def test_the_rate_limit_quota_follows_aimd(runs) -> None:
 
 
 def test_the_auction_replays_to_its_recorded_head(runs) -> None:
-    for name in ("c0", "c3", "kill", "few", "scarce", "shock"):
+    for name in ("c0", "c3", "kill", "few", "tight", "scarce", "shock"):
         report = asyncio.run(replay_run(runs[name]))
         assert report.ok, (name, report.detail)
 
@@ -287,6 +303,16 @@ def test_when_the_root_dies_its_heir_continues_the_same_market(runs) -> None:
 
 
 # -- scarcity: graceful, capped, top-ups from the reserve ----------------------------------------
+
+
+def test_a_budget_under_twice_the_programs_cost_still_places_every_talk(runs) -> None:
+    """$0.50 against a program that costs $0.29. The floors keep every squad able to make a call,
+    the reserve gives way to them, and the envelopes count money spent, not worst-case holds:
+    nobody is starved and no call is refused."""
+    log = events(runs["tight"])
+    assert not of_type(log, "budget.refused")
+    assert result(log)["status"] == "ok" and result(log)["report"]["placed"] == 48
+    assert score(runs["tight"]).valid and score(runs["tight"]).cost_usd <= 0.50
 
 
 def test_a_scarce_budget_degrades_without_exceeding_the_cap(runs) -> None:

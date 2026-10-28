@@ -55,7 +55,7 @@ class Market(BaseModel):
     mode: Literal["proportional", "auction"] = "proportional"
     epoch_interval_s: float = Field(default=15.0, gt=0)
     epoch_max_completions: int = Field(default=10, ge=1)
-    floor_usd: float = Field(default=0.08, gt=0)  # what a squad may always commit
+    floor_usd: float = Field(default=0.05, gt=0)  # what a squad may always commit
     # The global spend breaker (spec §8): burn above 20% of the remaining budget per minute
     # pauses new contracts for 30 s. It needs the economy's view, so it turns the epochs on.
     breaker: bool = False

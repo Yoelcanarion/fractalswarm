@@ -41,8 +41,8 @@ class MarketBids(Payload):
 class MarketCleared(Payload):
     """The result of clearing. ``resources[name]`` is ``{envelope, reserve, pool, grants}``
     (conservation: ``sum(grants) + pool + reserve == envelope``); ``caps[child]`` is the
-    cumulative cap on the $ its subtree may commit (``base[child]`` plus its grant), where
-    ``base`` is what the subtree had committed when the market cleared."""
+    cumulative cap on the $ its subtree may spend (``base[child]`` plus its grant), where
+    ``base`` is what the subtree had spent (settled) when the market cleared."""
 
     goal_id: str
     epoch: int
@@ -95,6 +95,20 @@ class MarketQuota(Payload):
     tpm: int
     pressure: int  # rate-limited calls seen since the last epoch
     fence: dict[str, Any] | None = None
+
+
+@register("budget.threshold")
+class BudgetThreshold(Payload):
+    """The run moved to another rung of the model ladder (spec §7.4): 80%, 90% or 95% of its
+    cap spent (settled money, not reservations). A new cap (a shock) moves it either way."""
+
+    level: str  # L0 | L1 | L2 | stop
+    previous: str
+    at_ms: int
+    share: float  # spent / cap
+    spent_usd: float
+    cap_usd: float
+    actions: list[str]
 
 
 @register("scaling.decided")

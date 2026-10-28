@@ -12,8 +12,9 @@ the money is gone. A budget shock that lowers the cap moves the run up the ladde
 Safety roles are never degraded: ``config/roles.yaml`` gives them the same spec at every level.
 """
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -89,6 +90,42 @@ def run_ladder(ledger: Ledger, run_id: str, thresholds: Thresholds) -> LadderSta
     """The ladder for a run from the kernel's in-run book (committed = spent + reserved)."""
     scope = ("run", run_id)
     return ladder_state(ledger.committed(scope), ledger.caps.get(scope), thresholds)
+
+
+def request_level(level: str) -> str:
+    """The level an LLM request carries. At ``stop`` no new work starts, but a call that is
+    still made (a plan already under way) takes the cheapest specs: ``roles.yaml`` has none
+    for ``stop``."""
+    return "L2" if level == "stop" else level
+
+
+def actions(level: str) -> list[str]:
+    """What the run does at a level, for the ``budget.threshold`` event (spec §7.4)."""
+    if level == "L0":
+        return ["normal operation"]
+    steps = ["cheaper model and effort", "scale squads down to one agent"]
+    if level in ("L2", "stop"):
+        steps.append("only the critical path continues")
+    if level == "stop":
+        steps.append("no new contracts: partial result with explicit gaps")
+    return steps
+
+
+def critical_closure(contracts: Mapping[str, Mapping[str, Any]]) -> set[str]:
+    """The contracts that keep running at L2, where "only the critical path continues" (spec
+    §7.4): the ones flagged critical and everything they depend on, however far back. A
+    plan that flags none has no critical path to prune to: all of it continues."""
+    flagged = [cid for cid, found in contracts.items() if found.get("critical_path")]
+    if not flagged:
+        return set(contracts)
+    keep: set[str] = set()
+    while flagged:
+        cid = flagged.pop()
+        if cid in keep or cid not in contracts:
+            continue
+        keep.add(cid)
+        flagged.extend(contracts[cid].get("depends_on", []))
+    return keep
 
 
 def degrade(roles: RoleTable, role: str, level: Level) -> RoleSpec | None:

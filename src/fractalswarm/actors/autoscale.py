@@ -20,7 +20,8 @@ from fractalswarm.actors import market_maker
 from fractalswarm.actors.market_maker import Emitter
 from fractalswarm.coord.hrw import assign
 from fractalswarm.kernel.scheduler import Command, Spawn, Stop, View
-from fractalswarm.market.bids import Estimates, committed, contract_estimate, unplanned
+from fractalswarm.market.allocation import CHILD_RESERVE_SHARE, to_micros
+from fractalswarm.market.bids import Estimates, contract_estimate, spent, unplanned_floor
 from fractalswarm.market.scaling import (
     DOWN_EPOCHS,
     Caps,
@@ -67,8 +68,14 @@ def group(state: dict[str, Any], gid: str, subgoals: int, view: View, emit: Emit
     market, tree = seen
     caps, est, level = caps_of(state), Estimates.from_args(state["market"]), entry["level"]
     cap = market.run_cap if level == 0 else market.caps.get(gid, market.run_cap)
-    envelope = None if cap is None else max(cap - committed(tree, market, gid), 0)
-    each = unplanned(level + 1, est).usd
+    envelope = None if cap is None else max(cap - spent(tree, market, gid), 0)
+    # Affordable is how many children the envelope can keep alive: the floor each needs (one
+    # call, and for a child that will split, its own children's floors), not their full
+    # estimate. The estimates are rough, and a goal's own planning call comes out of the same
+    # envelope, so a count by estimate would flip on a cent.
+    each = unplanned_floor(
+        level + 1, est, to_micros(state["market"]["floor_usd"]), CHILD_RESERVE_SHARE
+    )
     can_pay = affordable(envelope, each)
     n = orchestrators_for(subgoals, caps.max_orchestrators_per_group, can_pay)
     prefix = "o" if state["id"] == "o0" else f"{state['id']}."
@@ -95,7 +102,7 @@ def group(state: dict[str, Any], gid: str, subgoals: int, view: View, emit: Emit
             cap=caps.max_orchestrators_per_group,
             affordable=can_pay,
             envelope_micros=envelope,
-            est_child_micros=each,
+            floor_child_micros=each,
         )
     )
     return {**state, "children": ids}, commands

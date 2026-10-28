@@ -138,11 +138,15 @@ def subtree_squads(tree: Any, gid: str) -> list[str]:
     return sorted(owner for owner in owners if owner is not None)
 
 
-def committed(tree: Any, market: Any, gid: str) -> int:
-    """The $ committed (reserved plus settled) by the squads working under ``gid``."""
+def spent(tree: Any, market: Any, gid: str) -> int:
+    """The $ settled by the squads working under ``gid``. This is what the market's envelopes,
+    bases and caps count. Open reservations do not: they are worst cases that settle for a
+    third of their size or less, so counting them would leave a tight budget with no envelope
+    for the work it is meant to pay for (the leaf squads' ledger caps, which the ledger checks
+    against committed money, are the exception: ``MarketView.committed``)."""
     if tree.goals[gid].parent is None:  # the root goal: the whole run
-        return market.committed_total()
-    return sum(market.committed(squad) for squad in subtree_squads(tree, gid))
+        return market.run_spent
+    return sum(market.spent.get(squad, 0) for squad in subtree_squads(tree, gid))
 
 
 def floor_requirement(tree: Any, gid: str, est: Estimates, floor: int, reserve: float) -> int:
@@ -159,15 +163,16 @@ def floor_requirement(tree: Any, gid: str, est: Estimates, floor: int, reserve: 
         below = sum(floor_requirement(tree, child, est, floor, reserve) for child in children)
     else:
         width = est.fanout[level] if level < len(est.fanout) else 1
-        below = width * _unplanned_floor(level + 1, est, floor, reserve)
+        below = width * unplanned_floor(level + 1, est, floor, reserve)
     return math.ceil(below / (1 - reserve))
 
 
-def _unplanned_floor(level: int, est: Estimates, floor: int, reserve: float) -> int:
+def unplanned_floor(level: int, est: Estimates, floor: int, reserve: float) -> int:
+    """``floor_requirement`` of a goal at ``level`` that nobody has planned."""
     if level >= est.leaf_level:
         return floor
     width = est.fanout[level] if level < len(est.fanout) else 1
-    return math.ceil(width * _unplanned_floor(level + 1, est, floor, reserve) / (1 - reserve))
+    return math.ceil(width * unplanned_floor(level + 1, est, floor, reserve) / (1 - reserve))
 
 
 def usd_bid(child: str, need: Need, floor: int) -> Bid:

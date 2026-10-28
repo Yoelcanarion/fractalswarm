@@ -13,10 +13,10 @@ from fractalswarm.market.allocation import to_micros
 from fractalswarm.market.bids import (
     Estimates,
     Need,
-    committed,
     contract_estimate,
     floor_requirement,
     goal_need,
+    spent,
     subtree_squads,
     unplanned,
     usd_bid,
@@ -238,19 +238,29 @@ def test_a_bid_always_asks_for_its_floor_and_is_worth_nothing_when_idle() -> Non
     assert busy.q == 200_000 and busy.value == 2 * 1.5 * 1.5 * 0.5
 
 
-def test_committed_money_is_summed_over_the_squads_below_a_goal() -> None:
+def test_settled_money_is_summed_over_the_squads_below_a_goal_and_reservations_do_not_count() -> (
+    None
+):
     tree = tree_of(SHAPE)
     market = MarketView()
     for squad, usd in (("o1", 0.01), ("o1.1", 0.02), ("o1.2", 0.04), ("o2", 0.08), ("o0", 0.16)):
+        scopes = {"squad": squad, "run": "r"}
+        market.apply(
+            event("budget.reserved", {"effect_id": f"e-{squad}", "usd": usd * 3, "scopes": scopes})
+        )
         market.apply(
             event(
-                "budget.reserved",
-                {"effect_id": f"e-{squad}", "usd": usd, "scopes": {"squad": squad, "run": "r"}},
+                "budget.settled",
+                {"effect_id": f"e-{squad}", "reserved_usd": usd * 3, "actual_usd": usd},
             )
         )
+    # A call in flight holds a worst case that is not spent: the market's envelopes ignore it.
+    inflight = {"effect_id": "late", "usd": 0.5, "scopes": {"squad": "o1.1", "run": "r"}}
+    market.apply(event("budget.reserved", inflight))
     assert subtree_squads(tree, "a") == ["o1", "o1.1", "o1.2"]
-    assert committed(tree, market, "a") == to_micros(0.07)
-    assert committed(tree, market, "root") == to_micros(0.31)  # the root goal is the whole run
+    assert spent(tree, market, "a") == to_micros(0.07)
+    assert spent(tree, market, "root") == to_micros(0.31)  # the root goal is the whole run
+    assert market.committed("o1.1") == to_micros(0.52)  # the ledger's cap does count it
 
 
 # -- the market view mirrors the ledger ---------------------------------------------------------
@@ -360,3 +370,30 @@ def test_rate_limited_calls_are_counted_until_a_quota_update_clears_them() -> No
     )
     assert market.pressure == 0
     assert market.quotas["m"] == Quota(model="m", limit_rpm=100, limit_tpm=1000, fraction=0.35)
+
+
+# -- the reserve gives way to the floors -----------------------------------------------------
+
+
+def test_the_reserve_gives_way_to_the_floors_a_squad_needs_to_make_a_call() -> None:
+    from fractalswarm.actors.market_maker import _reserve_share
+
+    def asks(*floors: int) -> dict:
+        from fractalswarm.market.auction import Bid
+
+        return {
+            f"g{n}": Bid(child=f"g{n}", q=max(f, 1), floor=f, value=1.0)
+            for n, f in enumerate(floors)
+        }
+
+    assert (
+        _reserve_share(0, 1_000_000, asks(100_000, 100_000)) == 0.15
+    )  # the floors fit: 15% at the root
+    assert _reserve_share(1, 1_000_000, asks(100_000, 100_000)) == 0.10  # and 10% below it
+    # Floors of 100_000 in an envelope of 105_000 leave room for a reserve of 5_000, not 10_500.
+    share = _reserve_share(1, 105_000, asks(100_000))
+    assert share < 0.10 and 105_000 * round(share * 10_000) // 10_000 <= 5_000
+    assert _reserve_share(1, 100_000, asks(100_000)) == 0.0  # nothing is left over the floors
+    assert _reserve_share(1, 50_000, asks(100_000)) == 0.0  # not even the floors fit: no reserve
+    assert _reserve_share(1, 0, asks(100_000)) == 0.10  # nothing to clear: the share is moot
+    assert _reserve_share(1, 500_000, {}) == 0.10  # no children, no floors

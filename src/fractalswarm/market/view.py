@@ -21,6 +21,7 @@ from typing import Any
 from fractalswarm.kernel.events import Event
 from fractalswarm.market import events as _events  # noqa: F401  (registers the event types)
 from fractalswarm.market.allocation import to_micros, to_usd
+from fractalswarm.market.ladder import LadderState, Thresholds, ladder_state
 from fractalswarm.market.quotas import Quota, rate_limited
 from fractalswarm.market.spend_breaker import SpendBreaker, SpendBreakerConfig, record_spend
 
@@ -32,7 +33,7 @@ class Clearing:
     epoch: int
     at_ms: int
     grants: dict[str, int]  # child -> $ granted (micros)
-    base: dict[str, int]  # child -> $ its subtree had committed at the time (micros)
+    base: dict[str, int]  # child -> $ its subtree had spent at the time (micros)
     reserve: int  # $ held back for top-ups (micros)
     pool: int  # $ nobody asked for (micros)
     topped: int = 0  # reserve handed out since, as top-ups (micros)
@@ -55,12 +56,15 @@ class MarketView:
         self.run_reserved = 0  # open reservations of the whole run (micros)
         self.last_call_at = 0  # virtual ms of the last reservation: the run's last sign of life
         self.run_spent = 0  # settled spend of the whole run (micros)
+        self.thresholds: Thresholds | None = None  # the ladder's rungs; None: no ladder
+        self.ladder: LadderState = ladder_state(0.0, None, Thresholds())  # where the run is
+        self.changes: list[dict[str, Any]] = []  # every rung crossed, for budget.threshold
         self.breaker = SpendBreaker()  # the global spend breaker (spec §8)
         self.breaker_config: SpendBreakerConfig | None = None  # None: not enabled
         self.epochs: dict[str, int] = {}  # goal -> last closed epoch
         self.opened: dict[str, int] = {}  # goal -> virtual ms its current epoch opened
         self.clearings: dict[str, Clearing] = {}  # goal -> its last clearing
-        self.caps: dict[str, int] = {}  # actor -> cumulative cap on its subtree (micros)
+        self.caps: dict[str, int] = {}  # goal -> cumulative cap on what its subtree spends
         self.slices: dict[str, dict[str, dict[str, int]]] = {}  # actor -> resource -> grant
         self.quotas: dict[str, Quota] = {}  # model -> AIMD state
         self.models: set[str] = set()  # models the run has used
@@ -96,6 +100,7 @@ class MarketView:
             self._open_all[payload["effect_id"]] = micros
             self.run_reserved += micros
             self.last_call_at = event.ts_virtual
+            self._rung(event.ts_virtual)
             squad = payload["scopes"].get("squad")
             if squad is not None:
                 self._open[payload["effect_id"]] = (squad, micros)
@@ -112,15 +117,20 @@ class MarketView:
                 self.reserved[squad] -= micros
                 self.spent[squad] = self.spent.get(squad, 0) + actual
             self._burn(event.ts_virtual, payload["actual_usd"])
+            self._rung(event.ts_virtual)
         elif kind == "run.started":
             if payload.get("run_cap_usd") is not None:
                 self.run_cap = to_micros(payload["run_cap_usd"])
-            found = ((payload.get("params") or {}).get("market") or {}).get("breaker")
-            if found:
-                self.breaker_config = SpendBreakerConfig(**found)
+            economy = (payload.get("params") or {}).get("market") or {}
+            if economy.get("breaker"):
+                self.breaker_config = SpendBreakerConfig(**economy["breaker"])
+            if economy.get("ladder"):
+                self.thresholds = Thresholds(**economy["ladder"])
+            self._rung(event.ts_virtual)
         elif kind in ("budget.cap_set", "budget.shock"):
             self._cap_set(payload)
             self.shocks += kind == "budget.shock"
+            self._rung(event.ts_virtual)
         elif kind == "effect.completed" and payload["kind"] == "llm":
             result = payload.get("result") or {}
             if result.get("model"):
@@ -141,6 +151,30 @@ class MarketView:
                 fraction=payload["fraction"],
             )
             self.pressure = 0
+
+    def _rung(self, now: int) -> None:
+        """Where the run is on the model ladder (spec §7.4): the share of the run cap that has
+        been spent. Settled money, not the worst-case reservations of calls in flight: those
+        overstate a call's cost three to ten times, so counting them would put a run on the
+        cheap rungs at its first call and flap it up and down as calls start and settle.
+        A new run cap moves the share at once: a shock that cuts it climbs the ladder, one that
+        raises it can lower the level."""
+        if self.thresholds is None or self.run_cap is None:
+            return
+        cap = to_usd(self.run_cap)
+        fresh = ladder_state(to_usd(self.run_spent), cap, self.thresholds)
+        before, self.ladder = self.ladder.level, fresh
+        if fresh.level != before:
+            self.changes.append(
+                {
+                    "level": fresh.level,
+                    "previous": before,
+                    "at_ms": now,
+                    "share": fresh.share,
+                    "spent_usd": to_usd(self.run_spent),
+                    "cap_usd": cap,
+                }
+            )
 
     def _burn(self, now: int, usd: float) -> None:
         """A cost settled: the global spend breaker sees it (spec §8)."""

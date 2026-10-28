@@ -66,6 +66,7 @@ from fractalswarm.kernel.scheduler import (
     Stop,
     View,
 )
+from fractalswarm.market.ladder import critical_closure, request_level
 from fractalswarm.planning import scope as scoping
 from fractalswarm.planning.contracts import Contract
 from fractalswarm.planning.dag import Dag
@@ -136,6 +137,8 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "market": args.get("market"),  # the economy's settings; None: no epochs (the default)
         "autoscale": args.get("autoscale"),  # the caps of scaling.mode: autoscale; None: exact
         "spend": {"trips": 0, "open": False},  # the global spend breaker trips this one reported
+        "rung": "L0",  # the model ladder's level (spec §7.4), from the market view
+        "ladder_seen": 0,  # budget.threshold changes this one has reported
         "mk": {},  # goal -> epoch bookkeeping of the markets this orchestrator makes
         "spawned": len(children),  # agents spawned so far, for replacement names
         "respawned": 0,  # orchestrators spawned into dead sibling groups
@@ -155,6 +158,8 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
 
 
 def orchestrator_handle(state: dict[str, Any], event: Event, view: View):
+    if state["market"] is not None:
+        state = {**state, "rung": market_maker.ladder(state, view).level}
     state, commands = _handle_event(state, event, view)
     if state["market"] is not None and not (state["det"] and _zombie(state, view)):
         state, more = market_maker.on_event(state, event, view, _emitter(state))
@@ -632,6 +637,15 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
     busy = [cid for cid, s in status.items() if s != "pending"]
     commands: list[Command] = []
     ready = dag.ready(done, busy)
+    ladder = market_maker.ladder(state, view)
+    if ready and (ladder.critical_only or ladder.stop):
+        skipped = (
+            ready if ladder.stop else [c for c in ready if c not in critical_closure(contracts)]
+        )
+        if skipped:  # at L2 only the critical path continues; at the stop, nothing new starts
+            commands, state = _drop(state, gid, skipped, ladder, view)
+            state, more = _dispatch(state, gid, view)
+            return state, commands + more
     until = market_maker.paused_until(state, view) if ready else None
     if until is not None:  # the global spend breaker is open: no new contracts (spec §8)
         ready = []
@@ -672,9 +686,8 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
             "work": f"{gid}/{cid}",
         }
         commands.append(_emit(state, gid, "contract.dispatched", dispatched))
-        commands.append(
-            Send(to=contract.assignee, topic="contract", body={"contract": contracts[cid]})
-        )
+        body = {"contract": contracts[cid]} | market_maker.level_body(state)
+        commands.append(Send(to=contract.assignee, topic="contract", body=body))
     entry = {**entry, "status": status, "contracts": contracts}
     state = _put_goal(state, gid, entry)
     if commands:
@@ -685,6 +698,22 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
         return market_maker.wake(state, gid, until, view)
     output, gaps = leaf_outcome(task, entry, dag)
     return _complete(state, gid, output, gaps, view)
+
+
+def _drop(state: dict[str, Any], gid: str, cids: list[str], ladder: Any, view: View):
+    """The model ladder drops contracts (spec §7.4): they fail with the reason, which the goal's
+    result lists as gaps. Nothing is spent on them and no attempt is consumed."""
+    entry = state["goals"][gid]
+    reason = f"budget ladder {ladder.level}: "
+    reason += "no new contracts at 95% spent" if ladder.stop else "only the critical path continues"
+    status, commands = dict(entry["status"]), []
+    for cid in cids:
+        attempt = entry["contracts"][cid]["attempt"]
+        failed = {"goal_id": gid, "contract_id": cid, "attempt": attempt, "reasons": [reason]}
+        commands.append(_emit(state, gid, "contract.failed", failed | {"work": f"{gid}/{cid}"}))
+        commands += market_maker.completed(state, gid, view)
+        status[cid] = "failed"
+    return commands, _put_goal(state, gid, {**entry, "status": status})
 
 
 def _woken(state: dict[str, Any], gid: str, view: View):
@@ -1338,7 +1367,10 @@ def _agent_args(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _route(state: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
-    """Contributor routing, when the run opted in (spec §7.5; the client still gates it)."""
+    """The ladder's level (spec §7.4) and Contributor routing, when the run opted in (spec
+    §7.5; the client still gates it)."""
+    if state["rung"] != "L0":
+        request = request | {"level": request_level(state["rung"])}
     return request | {"contributor": True} if state["contributor"] else request
 
 

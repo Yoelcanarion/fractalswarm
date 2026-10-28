@@ -19,6 +19,7 @@ from ``MarketView``, so when a maker dies its heir resumes the same market. The 
 return commands without fencing tokens; the orchestrator signs them (``emit``).
 """
 
+import math
 from collections.abc import Callable
 from typing import Any
 
@@ -36,14 +37,14 @@ from fractalswarm.market.allocation import (
 from fractalswarm.market.auction import Bid, clear, grant_topups, refunds
 from fractalswarm.market.bids import (
     Estimates,
-    committed,
     contract_estimate,
     floor_requirement,
     goal_need,
+    spent,
     subtree_squads,
     usd_bid,
 )
-from fractalswarm.market.ladder import LadderState, Thresholds, ladder_state
+from fractalswarm.market.ladder import LadderState, Thresholds, actions, ladder_state, request_level
 from fractalswarm.market.quotas import Quota, adapt
 
 EPOCH_TAG = "epoch"
@@ -141,6 +142,8 @@ def on_event(state: dict[str, Any], event: Event, view: View, emit: Emitter):
     if not enabled(state) or seen is None:
         return state, []
     state, commands = _spend_breaker(state, view, seen[0])
+    state, more = _ladder_events(state, seen[0])
+    commands += more
     if not state["mk"]:
         return state, commands
     market, tree = seen
@@ -265,7 +268,7 @@ def close_epoch(state: dict[str, Any], gid: str, reason: str, view: View, emit: 
     owed = {}
     if previous is not None:
         used = {
-            child: max(committed(tree, market, child) - previous.base.get(child, 0), 0)
+            child: max(spent(tree, market, child) - previous.base.get(child, 0), 0)
             for child in previous.grants
             if child in tree.goals
         }
@@ -286,10 +289,10 @@ def close_epoch(state: dict[str, Any], gid: str, reason: str, view: View, emit: 
     }
     asks: dict[str, dict[str, Bid]] = {"usd": bids}
     asks |= _rate_bids(state, tree, needs, bids, quotas)
-    committed_now = {child: committed(tree, market, child) for child in children}
+    spent_now = {child: spent(tree, market, child) for child in children}
     results: dict[str, Allocation] = {}
-    share = reserve_share(level)
-    envelopes = {"usd": max((cap or 0) - committed(tree, market, gid), 0)}
+    envelopes = {"usd": max((cap or 0) - spent(tree, market, gid), 0)}
+    share = _reserve_share(level, envelopes["usd"], bids)
     envelopes |= _rate_envelopes(gid, level, market, quotas, asks)
     for name in sorted(asks):
         if params["mode"] == "auction":
@@ -315,14 +318,14 @@ def close_epoch(state: dict[str, Any], gid: str, reason: str, view: View, emit: 
         commands.append(emit(gid, "market.refund", refund, None))
 
     usd = results["usd"]
-    caps = {child: committed_now[child] + usd.grants_micros[child] for child in children}
+    caps = {child: spent_now[child] + usd.grants_micros[child] for child in children}
     cleared = {
         "goal_id": gid,
         "epoch": epoch,
         "mode": params["mode"],
         "resources": {name: _allocation_payload(results[name]) for name in sorted(results)},
         "caps": caps,
-        "base": committed_now,
+        "base": spent_now,
     }
     commands.append(emit(gid, "market.cleared", cleared, f"market.cleared:{gid}:{epoch}"))
     commands += _squad_caps(tree, market, gid, children, usd, level, state)
@@ -333,6 +336,18 @@ def close_epoch(state: dict[str, Any], gid: str, reason: str, view: View, emit: 
     if view.now - market.last_call_at < IDLE_MS:
         commands.append(_timer(state, market, gid, params["epoch_interval_ms"]))
     return state, commands
+
+
+def _reserve_share(level: int, envelope: int, bids: dict[str, Bid]) -> float:
+    """The reserve is 15% at the root and 10% below, but it gives way to the floors: they keep
+    every squad able to make a call, the reserve only tops them up. When the pool left after the
+    reserve cannot pay them, the reserve shrinks to what the envelope has over the floors."""
+    share = reserve_share(level)
+    if envelope <= 0:
+        return share
+    floors = sum(bid.floor for bid in bids.values())
+    fits = math.floor((1 - floors / envelope) * 10_000) / 10_000  # whole basis points, rounded down
+    return max(min(share, fits), 0.0)
 
 
 def _squad_caps(
@@ -519,14 +534,34 @@ def completed(state: dict[str, Any], gid: str, view: View) -> list[Command]:
 
 
 def ladder(state: dict[str, Any], view: View) -> LadderState:
-    """Where the run is on the model ladder (spec §7.4), from what the log says it has
-    committed against the run cap."""
-    seen = views(view)
-    thresholds = Thresholds(**state["market"]["ladder"])
-    if seen is None or seen[0].run_cap is None:
-        return ladder_state(0.0, None, thresholds)
-    market = seen[0]
-    return ladder_state(to_usd(market.committed_total()), to_usd(market.run_cap), thresholds)
+    """Where the run is on the model ladder (spec §7.4): a fact of the log, kept by the
+    market view as the committed share of the run cap grows. L0 when the economy is off."""
+    market = view.views.get("market")
+    if not enabled(state) or market is None:
+        return ladder_state(0.0, None, Thresholds())
+    return market.ladder
+
+
+def level_body(state: dict[str, Any]) -> dict[str, Any]:
+    """What a ``contract`` message adds so that the agent's calls take the ladder's level;
+    nothing at L0, so a run that never climbs sends the messages it always did."""
+    rung = state.get("rung", "L0")
+    return {} if rung == "L0" else {"level": request_level(rung)}
+
+
+def _ladder_events(state: dict[str, Any], market: Any):
+    """Report each rung the run crossed once (``budget.threshold``). Whichever orchestrator
+    sees a crossing first writes it; the key (its number in the view's list) makes every
+    other writer's event a no-op."""
+    found = market.changes[state["ladder_seen"] :]
+    if not found:
+        return state, []
+    commands: list[Command] = []
+    for number, change in enumerate(found, start=state["ladder_seen"]):
+        payload = change | {"actions": actions(change["level"])}
+        key = f"budget.threshold:{number}"
+        commands.append(Emit(type="budget.threshold", payload=payload, idem_key=key))
+    return {**state, "ladder_seen": len(market.changes)}, commands
 
 
 # -- payloads -----------------------------------------------------------------------------

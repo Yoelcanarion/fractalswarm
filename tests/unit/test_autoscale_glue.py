@@ -83,9 +83,9 @@ def decided(commands: list[Command]) -> list[dict[str, Any]]:
 
 
 def run_cap(market: MarketView, usd: float) -> None:
-    market.apply(
-        event("run.started", {"seed": "s", "scenario": "x", "clock": "sim", "run_cap_usd": usd})
-    )
+    ladder = {"L1": 0.8, "L2": 0.9, "stop": 0.95}  # recorded with the run's params
+    started = {"seed": "s", "scenario": "x", "clock": "sim", "run_cap_usd": usd}
+    market.apply(event("run.started", started | {"params": {"market": {"ladder": ladder}}}))
 
 
 # -- growing and shrinking a squad ---------------------------------------------------------------
@@ -161,9 +161,10 @@ def test_the_budget_ladder_scales_a_squad_down_at_once_from_80_percent_spent() -
     agents = ["o1.1.a1", "o1.1.a2", "o1.1.a3"]
     market = MarketView()
     run_cap(market, 1.0)
-    market.apply(
-        event("budget.reserved", {"effect_id": "e", "usd": 0.82, "scopes": {"squad": "z"}})
-    )
+    scopes = {"squad": "z"}
+    market.apply(event("budget.reserved", {"effect_id": "e", "usd": 1.5, "scopes": scopes}))
+    settled = {"effect_id": "e", "reserved_usd": 1.5, "actual_usd": 0.82}
+    market.apply(event("budget.settled", settled))  # 82% of the cap spent: the ladder's L1
     state, commands = autoscale.squad(squad_state(agents), GID, 3, view_of(market, agents), emit)
     assert len([c for c in commands if isinstance(c, Stop)]) == 2  # no waiting for epochs
     [found] = decided(commands)
@@ -229,9 +230,9 @@ def test_a_group_has_min_of_subgoals_cap_and_affordable_orchestrators() -> None:
 
 
 def test_a_group_is_as_big_as_the_money_allows_but_never_empty() -> None:
-    each = 0.01 + 2 * (0.01 + 3 * 0.03)  # what one track is estimated to cost
+    each = 2 * 0.05 / 0.9  # what keeps one track alive: its two sessions' floors, and a reserve
     market = MarketView()
-    run_cap(market, 2.2 * each)  # money for two tracks
+    run_cap(market, 2.2 * each)  # money to keep two tracks alive
     _, commands = autoscale.group(group_state(), "root", 3, group_view(market), emit)
     assert len([c for c in commands if isinstance(c, Spawn)]) == 2
     broke = MarketView()
