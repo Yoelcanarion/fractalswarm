@@ -255,6 +255,13 @@ def test_the_final_matrix_registers_every_cell_and_caps_its_t1_half_at_the_run_c
     assert len(t1) == 32
     assert final.budget.matrix_cap_usd == pytest.approx(len(t1) * final.budget.run_cap_usd)
 
+    # The smoke matrix is one cell of the final matrix, with the same settings and cap.
+    smoke = Matrix.load(REPO / "bench" / "matrix-t1-smoke.yaml")
+    assert [c.id for c in smoke.cells()] == ["swarm__t1_extraction__C0__s1"]
+    assert {c.id for c in smoke.cells()} <= {c.id for c in t1}
+    assert smoke.contributor is final.contributor and smoke.budget.run_cap_usd == 0.50
+    assert smoke.budget.matrix_cap_usd == smoke.budget.run_cap_usd
+
 
 def test_a_t1_cell_would_cost_more_than_its_run_cap_so_the_cap_is_its_worst_case(
     tmp_path: Path,

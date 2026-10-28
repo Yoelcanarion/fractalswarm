@@ -5,7 +5,7 @@
 - Session orchestrator (Spark): contracts ``extract`` -> ``resolve`` -> ``report``.
 - Agents: ``extract`` reads the session's documents and lists what each one states about its
   company; ``resolve`` settles the contradictions between documents (the newer one wins) and
-  publishes one value per company and field; ``report`` writes the audit note to the workspace.
+  publishes one fact per company; ``report`` writes the audit note to the workspace.
 
 All the documents of a company go to one session, so its contradictions are settled inside
 one squad. Deterministic checks on each contract are the field formats (spec §11) and
@@ -145,7 +145,7 @@ agents. Write the contracts for your batch of companies, as a small DAG:
 1. kind "extract": read the documents of the batch and list what each one states about its
    company;
 2. kind "resolve": depends on extract; settle the contradictions between documents (the newer
-   document wins) and publish one value per company and field;
+   document wins) and publish what it decided, one fact per company;
 3. kind "report": depends on resolve; write the audit note of the batch.
 Use short ids (extract, resolve, report). Keep each objective to one sentence and do not copy
 field values into it. Reply with JSON matching the schema."""
