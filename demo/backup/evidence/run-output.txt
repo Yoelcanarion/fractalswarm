@@ -1,0 +1,7 @@
+~\orca\workspaces\work-orquestrator\day-09\.venv\Lib\site-packages\torch\jit\_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+The tokenizer you are loading from '~/.cache/huggingface\meta-llama--Llama-Prompt-Guard-2-22M' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+run t2-real-killhalf-seed1: 8177 events, head b052b4bc33cfe1b54c7b6ceb2872de26
+run dir runs\t2-real-killhalf-seed1  spent $0.494767 (real LLM)
+result ok: placed 48/48, hard violations 0, soft score 1.0
+exit 0

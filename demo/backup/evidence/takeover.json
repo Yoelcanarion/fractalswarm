@@ -1,0 +1,449 @@
+{
+  "adoptions": [
+    {
+      "adopter": "o1",
+      "children": [
+        "o2",
+        "o3"
+      ],
+      "dead": "o0",
+      "duties": [
+        "final integration",
+        "top-level arbitration"
+      ],
+      "goal_id": "root",
+      "seq": 4539,
+      "t_s": 49.64
+    },
+    {
+      "adopter": "o2.2",
+      "children": [
+        "o2.1.a1",
+        "o2.1.a2"
+      ],
+      "dead": "o2.1",
+      "duties": [],
+      "goal_id": "track-ai/d1",
+      "seq": 5585,
+      "t_s": 59.781
+    },
+    {
+      "adopter": "o2",
+      "children": [
+        "o3"
+      ],
+      "dead": "o1",
+      "duties": [
+        "final integration",
+        "top-level arbitration"
+      ],
+      "goal_id": "root",
+      "seq": 5723,
+      "t_s": 60.797
+    },
+    {
+      "adopter": "o3",
+      "children": [
+        "o1.1",
+        "o1.2"
+      ],
+      "dead": "o1",
+      "duties": [
+        "integration",
+        "arbitration"
+      ],
+      "goal_id": "track-data",
+      "seq": 5754,
+      "t_s": 61.75
+    },
+    {
+      "adopter": "o3.1",
+      "children": [
+        "o3.2.a1",
+        "o3.2.a2"
+      ],
+      "dead": "o3.2",
+      "duties": [],
+      "goal_id": "track-hci/d2",
+      "seq": 6366,
+      "t_s": 70.859
+    },
+    {
+      "adopter": "o3",
+      "children": [],
+      "dead": "o2",
+      "duties": [
+        "final integration",
+        "top-level arbitration"
+      ],
+      "goal_id": "root",
+      "seq": 6857,
+      "t_s": 80.952
+    },
+    {
+      "adopter": "o3",
+      "children": [
+        "o2.2"
+      ],
+      "dead": "o2",
+      "duties": [
+        "integration",
+        "arbitration"
+      ],
+      "goal_id": "track-ai",
+      "seq": 6859,
+      "t_s": 80.952
+    }
+  ],
+  "contracts": {
+    "created": 18,
+    "dispatches": 23,
+    "never_verified": [],
+    "rejected": 5,
+    "same_attempt_dispatched_twice": {},
+    "verified": 18
+  },
+  "costs": {
+    "open_reservations_at_end_usd": 0,
+    "peak_committed_usd": 0.516427,
+    "refused": 0,
+    "settled_by_actor": {
+      "o0": 0.047071,
+      "o1": 0.016624,
+      "o1.1": 0.011085,
+      "o1.1.a1": 0.004708,
+      "o1.1.a2": 0.036551,
+      "o1.2": 0.009503,
+      "o1.2.a1": 0.01453,
+      "o1.2.a2": 0.024717,
+      "o2": 0.02268,
+      "o2.1": 0.005099,
+      "o2.1.a1": 0.02847,
+      "o2.1.a2": 0.030829,
+      "o2.2": 0.025267,
+      "o2.2.a1": 0.010001,
+      "o2.2.a2": 0.030337,
+      "o3": 0.017191,
+      "o3.1": 0.034026,
+      "o3.1.a1": 0.023797,
+      "o3.1.a2": 0.027648,
+      "o3.2": 0.005219,
+      "o3.2.a1": 0.027646,
+      "o3.2.a2": 0.041769
+    },
+    "settled_by_role": {
+      "agent": 0.301002,
+      "judge": 0.061039,
+      "root_planner": 0.047071,
+      "sub_planner": 0.085655
+    },
+    "settled_usd": 0.494767
+  },
+  "events": 8177,
+  "false_verdicts": 0,
+  "fenced_writes_rejected": 0,
+  "goals": {
+    "completed": 10,
+    "total": 10
+  },
+  "kills": [
+    {
+      "events_by_target_after_stop": 0,
+      "msgs_sent_to_target_after_stop": 16,
+      "progress": 0.2222,
+      "seq": 4025,
+      "skipped": false,
+      "stop_reason": "chaos",
+      "stopped_seq": 4027,
+      "t_s": 44.5,
+      "target": "o0",
+      "topics_sent_to_target_after_stop": {
+        "member.heartbeat": 16
+      }
+    },
+    {
+      "events_by_target_after_stop": 0,
+      "msgs_sent_to_target_after_stop": 10,
+      "progress": 0.3889,
+      "seq": 5167,
+      "skipped": false,
+      "stop_reason": "chaos",
+      "stopped_seq": 5169,
+      "t_s": 55.375,
+      "target": "o2.1",
+      "topics_sent_to_target_after_stop": {
+        "contract.result": 1,
+        "member.heartbeat": 9
+      }
+    },
+    {
+      "events_by_target_after_stop": 0,
+      "msgs_sent_to_target_after_stop": 17,
+      "progress": 0.5,
+      "seq": 5301,
+      "skipped": false,
+      "stop_reason": "chaos",
+      "stopped_seq": 5303,
+      "t_s": 56.672,
+      "target": "o1",
+      "topics_sent_to_target_after_stop": {
+        "member.heartbeat": 17
+      }
+    },
+    {
+      "events_by_target_after_stop": 0,
+      "msgs_sent_to_target_after_stop": 10,
+      "progress": 0.6667,
+      "seq": 6063,
+      "skipped": false,
+      "stop_reason": "chaos",
+      "stopped_seq": 6065,
+      "t_s": 65.906,
+      "target": "o3.2",
+      "topics_sent_to_target_after_stop": {
+        "contract.result": 1,
+        "member.heartbeat": 9
+      }
+    },
+    {
+      "events_by_target_after_stop": 0,
+      "msgs_sent_to_target_after_stop": 10,
+      "progress": 0.8333,
+      "seq": 6701,
+      "skipped": false,
+      "stop_reason": "chaos",
+      "stopped_seq": 6703,
+      "t_s": 76.859,
+      "target": "o2",
+      "topics_sent_to_target_after_stop": {
+        "member.heartbeat": 9,
+        "result": 1
+      }
+    }
+  ],
+  "llm_calls": {
+    "cancelled_and_redone": [],
+    "cancelled_in_flight": 0,
+    "cassette_entries": 79,
+    "cassette_entries_repeated": {},
+    "completed": 79,
+    "idem_keys_reused": {},
+    "identical_requests_completed_twice": {},
+    "started": 79
+  },
+  "rejoins": [],
+  "root_owner_when_each_kill_landed": {
+    "o0": "o0",
+    "o1": "o1",
+    "o2": "o2",
+    "o2.1": "o1",
+    "o3.2": "o2"
+  },
+  "run": "t2-real-killhalf-seed1",
+  "succession": [
+    {
+      "adopted_results": 0,
+      "goal": "root",
+      "heir_matches": true,
+      "hrw_scores_mod_1e6": {
+        "o1": 740862,
+        "o2": 935100,
+        "o3": 471321
+      },
+      "owner": "o1",
+      "owner_before": "o0",
+      "pool": [
+        "o1",
+        "o2",
+        "o3"
+      ],
+      "previous": "o0",
+      "recomputed_heir": "o1",
+      "seq": 4538,
+      "t_s": 49.64,
+      "works": [],
+      "written_by": "o1"
+    },
+    {
+      "adopted_results": 0,
+      "goal": "track-ai/d1",
+      "heir_matches": true,
+      "hrw_scores_mod_1e6": {
+        "o2.2": 408782
+      },
+      "owner": "o2.2",
+      "owner_before": "o2.1",
+      "pool": [
+        "o2.2"
+      ],
+      "previous": "o2.1",
+      "recomputed_heir": "o2.2",
+      "seq": 5584,
+      "t_s": 59.781,
+      "works": [
+        "track-ai/d1/extract",
+        "track-ai/d1/place",
+        "track-ai/d1/blurb"
+      ],
+      "written_by": "o2.2"
+    },
+    {
+      "adopted_results": 0,
+      "goal": "root",
+      "heir_matches": true,
+      "hrw_scores_mod_1e6": {
+        "o2": 935100,
+        "o3": 471321
+      },
+      "owner": "o2",
+      "owner_before": "o1",
+      "pool": [
+        "o2",
+        "o3"
+      ],
+      "previous": "o1",
+      "recomputed_heir": "o2",
+      "seq": 5722,
+      "t_s": 60.797,
+      "works": [],
+      "written_by": "o2"
+    },
+    {
+      "adopted_results": 0,
+      "goal": "track-data",
+      "heir_matches": true,
+      "hrw_scores_mod_1e6": {
+        "o2": 273757,
+        "o3": 648168
+      },
+      "owner": "o3",
+      "owner_before": "o1",
+      "pool": [
+        "o2",
+        "o3"
+      ],
+      "previous": "o1",
+      "recomputed_heir": "o3",
+      "seq": 5753,
+      "t_s": 61.75,
+      "works": [],
+      "written_by": "o3"
+    },
+    {
+      "adopted_results": 1,
+      "goal": "track-hci/d2",
+      "heir_matches": true,
+      "hrw_scores_mod_1e6": {
+        "o3.1": 389689
+      },
+      "owner": "o3.1",
+      "owner_before": "o3.2",
+      "pool": [
+        "o3.1"
+      ],
+      "previous": "o3.2",
+      "recomputed_heir": "o3.1",
+      "seq": 6365,
+      "t_s": 70.859,
+      "works": [
+        "track-hci/d2/place",
+        "track-hci/d2/blurb"
+      ],
+      "written_by": "o3.1"
+    },
+    {
+      "adopted_results": 0,
+      "goal": "root",
+      "heir_matches": true,
+      "hrw_scores_mod_1e6": {
+        "o3": 471321
+      },
+      "owner": "o3",
+      "owner_before": "o2",
+      "pool": [
+        "o3"
+      ],
+      "previous": "o2",
+      "recomputed_heir": "o3",
+      "seq": 6856,
+      "t_s": 80.952,
+      "works": [],
+      "written_by": "o3"
+    },
+    {
+      "adopted_results": 0,
+      "goal": "track-ai",
+      "heir_matches": true,
+      "hrw_scores_mod_1e6": {
+        "o3": 613208
+      },
+      "owner": "o3",
+      "owner_before": "o2",
+      "pool": [
+        "o3"
+      ],
+      "previous": "o2",
+      "recomputed_heir": "o3",
+      "seq": 6858,
+      "t_s": 80.952,
+      "works": [],
+      "written_by": "o3"
+    }
+  ],
+  "task_result": {
+    "expected": 48,
+    "hard_violations": 0,
+    "placed": 48,
+    "soft_score": 1.0,
+    "status": "ok"
+  },
+  "verdicts": [
+    {
+      "by": "o3",
+      "delay_after_kill_s": 5.109,
+      "member": "o0",
+      "missed": 5,
+      "seq": 4487,
+      "t_s": 49.609,
+      "true": true
+    },
+    {
+      "by": "o2",
+      "delay_after_kill_s": 4.406,
+      "member": "o2.1",
+      "missed": 5,
+      "seq": 5567,
+      "t_s": 59.781,
+      "true": true
+    },
+    {
+      "by": "o3",
+      "delay_after_kill_s": 4.062,
+      "member": "o1",
+      "missed": 5,
+      "seq": 5692,
+      "t_s": 60.734,
+      "true": true
+    },
+    {
+      "by": "o3",
+      "delay_after_kill_s": 4.921,
+      "member": "o3.2",
+      "missed": 5,
+      "seq": 6339,
+      "t_s": 70.827,
+      "true": true
+    },
+    {
+      "by": "o2.2",
+      "delay_after_kill_s": 4.093,
+      "member": "o2",
+      "missed": 5,
+      "seq": 6848,
+      "t_s": 80.952,
+      "true": true
+    }
+  ],
+  "violations": [],
+  "writes_by_non_owner": []
+}

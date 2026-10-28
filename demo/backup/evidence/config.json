@@ -1,0 +1,307 @@
+{
+  "chaos": {
+    "actions": [
+      {
+        "agent_share": 0.0,
+        "at": 0.2,
+        "duration_ms": 8000,
+        "kind": "kill_coordinator",
+        "target": "o0"
+      },
+      {
+        "agent_share": 0.0,
+        "at": 0.35,
+        "duration_ms": 8000,
+        "kind": "kill_coordinator",
+        "target": "o2.1"
+      },
+      {
+        "agent_share": 0.0,
+        "at": 0.5,
+        "duration_ms": 8000,
+        "kind": "kill_coordinator",
+        "target": "o1"
+      },
+      {
+        "agent_share": 0.0,
+        "at": 0.65,
+        "duration_ms": 8000,
+        "kind": "kill_coordinator",
+        "target": "o3.2"
+      },
+      {
+        "agent_share": 0.0,
+        "at": 0.8,
+        "duration_ms": 8000,
+        "kind": "kill_coordinator",
+        "target": "o2"
+      }
+    ],
+    "api_fault_rate": 0.0,
+    "net": {
+      "delay": 0.0,
+      "delay_ms": [
+        200,
+        1500
+      ],
+      "drop": 0.0,
+      "duplicate": 0.0,
+      "reorder": 0.0,
+      "reorder_ms": [
+        20,
+        200
+      ]
+    },
+    "profile": "kill-half",
+    "seed": "1"
+  },
+  "clock": "live",
+  "command": "uv run fractalswarm run tasks/examples/t2-conference.yaml --backend real --confirm-real-spend --clock live --firewall auto --chaos kill-half --budget-usd 0.75 --no-paid-retries --run-id t2-real-killhalf-seed1",
+  "llm_config": {
+    "prices": {
+      "models": {
+        "muse-spark-1.3": {
+          "cached_input": 0.15,
+          "input": 1.25,
+          "output": 4.25
+        },
+        "muse-spark-1.3-contributor": {
+          "cached_input": 0.002,
+          "input": 0.1,
+          "output": 0.2
+        },
+        "muse-wonder-1.0": {
+          "cached_input": 0.2,
+          "input": 4.0,
+          "output": 20.0
+        }
+      },
+      "unit_tokens": 1000000,
+      "web_search_usd_per_1k": 2.5
+    },
+    "roles": {
+      "roles": {
+        "agent": {
+          "L0": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 4096,
+            "model": "muse-spark-1.3"
+          },
+          "L1": {
+            "contributor_ok": true,
+            "effort": "minimal",
+            "max_output_tokens": 4096,
+            "model": "muse-spark-1.3"
+          },
+          "L2": {
+            "contributor_ok": true,
+            "effort": "minimal",
+            "max_output_tokens": 4096,
+            "model": "muse-spark-1.3"
+          }
+        },
+        "alignment_check": {
+          "L0": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 1024,
+            "model": "muse-spark-1.3"
+          },
+          "L1": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 1024,
+            "model": "muse-spark-1.3"
+          },
+          "L2": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 1024,
+            "model": "muse-spark-1.3"
+          }
+        },
+        "arbiter": {
+          "L0": {
+            "contributor_ok": false,
+            "effort": "high",
+            "max_output_tokens": 8192,
+            "model": "muse-wonder-1.0"
+          },
+          "L1": {
+            "contributor_ok": false,
+            "effort": "high",
+            "max_output_tokens": 8192,
+            "model": "muse-spark-1.3"
+          },
+          "L2": {
+            "contributor_ok": false,
+            "effort": "medium",
+            "max_output_tokens": 8192,
+            "model": "muse-spark-1.3"
+          }
+        },
+        "auditor": {
+          "L0": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 2048,
+            "model": "muse-spark-1.3"
+          },
+          "L1": {
+            "contributor_ok": false,
+            "effort": "minimal",
+            "max_output_tokens": 2048,
+            "model": "muse-spark-1.3"
+          },
+          "L2": {
+            "contributor_ok": false,
+            "effort": "minimal",
+            "max_output_tokens": 2048,
+            "model": "muse-spark-1.3"
+          }
+        },
+        "collision_check": {
+          "L0": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 1024,
+            "model": "muse-spark-1.3"
+          },
+          "L1": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 1024,
+            "model": "muse-spark-1.3"
+          },
+          "L2": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 1024,
+            "model": "muse-spark-1.3"
+          }
+        },
+        "judge": {
+          "L0": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 2048,
+            "model": "muse-spark-1.3"
+          },
+          "L1": {
+            "contributor_ok": false,
+            "effort": "minimal",
+            "max_output_tokens": 2048,
+            "model": "muse-spark-1.3"
+          },
+          "L2": {
+            "contributor_ok": false,
+            "effort": "minimal",
+            "max_output_tokens": 2048,
+            "model": "muse-spark-1.3"
+          }
+        },
+        "root_planner": {
+          "L0": {
+            "contributor_ok": false,
+            "effort": "high",
+            "max_output_tokens": 16384,
+            "model": "muse-wonder-1.0"
+          },
+          "L1": {
+            "contributor_ok": false,
+            "effort": "high",
+            "max_output_tokens": 16384,
+            "model": "muse-spark-1.3"
+          },
+          "L2": {
+            "contributor_ok": false,
+            "effort": "medium",
+            "max_output_tokens": 16384,
+            "model": "muse-spark-1.3"
+          }
+        },
+        "safety_classifier": {
+          "L0": {
+            "contributor_ok": false,
+            "effort": "minimal",
+            "max_output_tokens": 1024,
+            "model": "muse-spark-1.3"
+          },
+          "L1": {
+            "contributor_ok": false,
+            "effort": "minimal",
+            "max_output_tokens": 1024,
+            "model": "muse-spark-1.3"
+          },
+          "L2": {
+            "contributor_ok": false,
+            "effort": "minimal",
+            "max_output_tokens": 1024,
+            "model": "muse-spark-1.3"
+          }
+        },
+        "sub_planner": {
+          "L0": {
+            "contributor_ok": false,
+            "effort": "medium",
+            "max_output_tokens": 8192,
+            "model": "muse-spark-1.3"
+          },
+          "L1": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 8192,
+            "model": "muse-spark-1.3"
+          },
+          "L2": {
+            "contributor_ok": false,
+            "effort": "low",
+            "max_output_tokens": 8192,
+            "model": "muse-spark-1.3"
+          }
+        }
+      }
+    }
+  },
+  "membership": true,
+  "project_remaining_usd": 139.219839852,
+  "retry": {
+    "base_delay_ms": 500,
+    "max_attempts": 5,
+    "max_jitter_ms": 1000,
+    "statuses": [
+      429,
+      503
+    ]
+  },
+  "run_cap_usd": 0.75,
+  "scenario": "fractalswarm.actors.swarm:SWARM",
+  "spec": {
+    "auto_approve": true,
+    "budget_usd": 0.75,
+    "channel_breakers": false,
+    "contributor_opt_in": false,
+    "cross_audit": false,
+    "feasibility_report": false,
+    "goal": "Build the two-day program of the conference from the talk submissions and the speakers' emails. Place every talk on the rooms x slots grid of one day, in its own track, with no room or speaker double-booked, every speaker available at their slot, every room big enough for its expected audience, and never two talks of one track at the same time. Honor the speakers' time preferences where possible, and write a short blurb per session.\n",
+    "inputs": {
+      "fixture": "tasks/fixtures/t2/seed-1",
+      "generate_seed": 1,
+      "poison": 0,
+      "poison_wording": "polite"
+    },
+    "max_attempts": 6,
+    "max_steps": 8,
+    "scaling": {
+      "agents_per_leaf": 2,
+      "fanout": [
+        3,
+        2
+      ],
+      "mode": "exact"
+    },
+    "seed": "1",
+    "task": "t2_conference"
+  }
+}

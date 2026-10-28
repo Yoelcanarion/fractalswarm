@@ -1,0 +1,309 @@
+{
+  "fence": {
+    "epoch": 15,
+    "incarnation": 0,
+    "member": "o3",
+    "resource": "root"
+  },
+  "report": {
+    "expected": 48,
+    "gaps": [],
+    "hard_violations": 0,
+    "placed": 48,
+    "schedule": [
+      {
+        "day": 2,
+        "room": "room-d",
+        "slot": 6,
+        "talk_id": "T01"
+      },
+      {
+        "day": 1,
+        "room": "room-b",
+        "slot": 3,
+        "talk_id": "T02"
+      },
+      {
+        "day": 1,
+        "room": "main-hall",
+        "slot": 0,
+        "talk_id": "T03"
+      },
+      {
+        "day": 1,
+        "room": "room-b",
+        "slot": 0,
+        "talk_id": "T04"
+      },
+      {
+        "day": 2,
+        "room": "room-b",
+        "slot": 5,
+        "talk_id": "T05"
+      },
+      {
+        "day": 2,
+        "room": "main-hall",
+        "slot": 3,
+        "talk_id": "T06"
+      },
+      {
+        "day": 2,
+        "room": "room-b",
+        "slot": 3,
+        "talk_id": "T07"
+      },
+      {
+        "day": 1,
+        "room": "room-b",
+        "slot": 8,
+        "talk_id": "T08"
+      },
+      {
+        "day": 1,
+        "room": "room-d",
+        "slot": 5,
+        "talk_id": "T09"
+      },
+      {
+        "day": 2,
+        "room": "room-c",
+        "slot": 3,
+        "talk_id": "T10"
+      },
+      {
+        "day": 2,
+        "room": "room-d",
+        "slot": 0,
+        "talk_id": "T11"
+      },
+      {
+        "day": 1,
+        "room": "room-d",
+        "slot": 2,
+        "talk_id": "T12"
+      },
+      {
+        "day": 1,
+        "room": "room-c",
+        "slot": 5,
+        "talk_id": "T13"
+      },
+      {
+        "day": 1,
+        "room": "room-c",
+        "slot": 3,
+        "talk_id": "T14"
+      },
+      {
+        "day": 2,
+        "room": "main-hall",
+        "slot": 6,
+        "talk_id": "T15"
+      },
+      {
+        "day": 2,
+        "room": "room-d",
+        "slot": 4,
+        "talk_id": "T16"
+      },
+      {
+        "day": 1,
+        "room": "room-d",
+        "slot": 0,
+        "talk_id": "T17"
+      },
+      {
+        "day": 1,
+        "room": "room-c",
+        "slot": 6,
+        "talk_id": "T18"
+      },
+      {
+        "day": 2,
+        "room": "room-b",
+        "slot": 2,
+        "talk_id": "T19"
+      },
+      {
+        "day": 1,
+        "room": "room-b",
+        "slot": 5,
+        "talk_id": "T20"
+      },
+      {
+        "day": 1,
+        "room": "room-d",
+        "slot": 6,
+        "talk_id": "T21"
+      },
+      {
+        "day": 2,
+        "room": "room-d",
+        "slot": 7,
+        "talk_id": "T22"
+      },
+      {
+        "day": 1,
+        "room": "room-d",
+        "slot": 4,
+        "talk_id": "T23"
+      },
+      {
+        "day": 2,
+        "room": "room-c",
+        "slot": 5,
+        "talk_id": "T24"
+      },
+      {
+        "day": 1,
+        "room": "room-d",
+        "slot": 3,
+        "talk_id": "T25"
+      },
+      {
+        "day": 2,
+        "room": "main-hall",
+        "slot": 5,
+        "talk_id": "T26"
+      },
+      {
+        "day": 2,
+        "room": "room-c",
+        "slot": 0,
+        "talk_id": "T27"
+      },
+      {
+        "day": 1,
+        "room": "main-hall",
+        "slot": 1,
+        "talk_id": "T28"
+      },
+      {
+        "day": 1,
+        "room": "room-d",
+        "slot": 1,
+        "talk_id": "T29"
+      },
+      {
+        "day": 2,
+        "room": "room-b",
+        "slot": 7,
+        "talk_id": "T30"
+      },
+      {
+        "day": 2,
+        "room": "main-hall",
+        "slot": 1,
+        "talk_id": "T31"
+      },
+      {
+        "day": 1,
+        "room": "main-hall",
+        "slot": 7,
+        "talk_id": "T32"
+      },
+      {
+        "day": 2,
+        "room": "main-hall",
+        "slot": 8,
+        "talk_id": "T33"
+      },
+      {
+        "day": 1,
+        "room": "room-c",
+        "slot": 1,
+        "talk_id": "T34"
+      },
+      {
+        "day": 1,
+        "room": "room-c",
+        "slot": 7,
+        "talk_id": "T35"
+      },
+      {
+        "day": 2,
+        "room": "room-b",
+        "slot": 4,
+        "talk_id": "T36"
+      },
+      {
+        "day": 1,
+        "room": "room-b",
+        "slot": 7,
+        "talk_id": "T37"
+      },
+      {
+        "day": 2,
+        "room": "room-c",
+        "slot": 1,
+        "talk_id": "T38"
+      },
+      {
+        "day": 1,
+        "room": "room-b",
+        "slot": 4,
+        "talk_id": "T39"
+      },
+      {
+        "day": 2,
+        "room": "room-c",
+        "slot": 6,
+        "talk_id": "T40"
+      },
+      {
+        "day": 2,
+        "room": "room-b",
+        "slot": 1,
+        "talk_id": "T41"
+      },
+      {
+        "day": 2,
+        "room": "main-hall",
+        "slot": 0,
+        "talk_id": "T42"
+      },
+      {
+        "day": 2,
+        "room": "room-c",
+        "slot": 7,
+        "talk_id": "T43"
+      },
+      {
+        "day": 1,
+        "room": "room-c",
+        "slot": 2,
+        "talk_id": "T44"
+      },
+      {
+        "day": 1,
+        "room": "room-c",
+        "slot": 4,
+        "talk_id": "T45"
+      },
+      {
+        "day": 2,
+        "room": "room-c",
+        "slot": 2,
+        "talk_id": "T46"
+      },
+      {
+        "day": 2,
+        "room": "room-c",
+        "slot": 8,
+        "talk_id": "T47"
+      },
+      {
+        "day": 1,
+        "room": "main-hall",
+        "slot": 2,
+        "talk_id": "T48"
+      }
+    ],
+    "soft_score": 1.0,
+    "violation_counts": {},
+    "violations": []
+  },
+  "status": "ok",
+  "task": "t2_conference"
+}
