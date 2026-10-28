@@ -26,15 +26,16 @@ class Clock(Protocol):
 class LiveClock:
     mode: ClockMode = "live"
 
-    def __init__(self, speed: float = 1.0) -> None:
+    def __init__(self, speed: float = 1.0, start_ms: int = 0) -> None:
         if speed <= 0:
             raise ValueError("speed must be positive")
         self.speed = speed
+        self.start_ms = start_ms  # a resumed run goes on from its last virtual time
         self.started = time.monotonic()  # determinism: allow (live clock)
 
     def now(self) -> int:
         elapsed = time.monotonic() - self.started  # determinism: allow (live clock)
-        return int(elapsed * 1000 * self.speed)
+        return self.start_ms + int(elapsed * 1000 * self.speed)
 
     def wall_seconds(self, virtual_ms: int) -> float:
         """How long to really wait for ``virtual_ms`` of virtual time."""

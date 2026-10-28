@@ -326,6 +326,37 @@ class Runtime:
                 self._enqueue(event, actor_id)
         return event
 
+    def resume(self, resumed: dict[str, Any], ts_virtual: int) -> Event:
+        """Record that a dead process was replaced (spec §8, docs/resume.md) and put every
+        effect that was in flight into the outbox, for the driver to run again.
+
+        ``resumed`` is the ``run.resumed`` payload. Like a completion it is an outside event, so
+        it enters only when the delivery queue is empty. The effects it calls ambiguous may have
+        run before the crash; each gets an ``effect.reissued``.
+        """
+        self.vtime = max(self.vtime, ts_virtual)
+        self.kernel_lamport = lamport_tick(self.kernel_lamport)
+        event = self._append(
+            "run.resumed",
+            ENV,
+            resumed,
+            self.kernel_lamport,
+            idem_key=f"run.resumed:{resumed['attempt']}",
+        )
+        reaction = Reaction(KERNEL, event)
+        for effect_id in resumed["ambiguous"]:
+            reservation = self.ledger.open.get(effect_id)
+            payload = {
+                "effect_id": effect_id,
+                "kind": self.inflight[effect_id].payload["kind"],
+                "ambiguous": True,
+                "reserved_usd": reservation.usd if reservation else 0.0,
+                "reason": "sent before the crash and no reply was recorded",
+            }
+            self._react(reaction, "effect.reissued", payload, correlation_id=effect_id)
+        self.outbox = sorted(self.inflight.values(), key=lambda started: started.seq)
+        return event
+
     @property
     def idle(self) -> bool:
         return not self.queue and not self.inflight

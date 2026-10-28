@@ -325,6 +325,114 @@ def feasibility(
 
 
 @app.command()
+def resume(
+    run: Annotated[str, typer.Argument(help="run id under runs/, or a run directory")],
+    speed: Annotated[float, typer.Option(help="live clock speed-up")] = 1.0,
+    backend: Annotated[str, typer.Option(help="fake | real")] = "fake",
+    confirm_real_spend: Annotated[
+        bool, typer.Option(help="required with --backend real: calls sent again are billed")
+    ] = False,
+    firewall: Annotated[
+        str | None,
+        typer.Option(
+            help="auto (PromptGuard 2 when installed) | heuristic; default: auto with the "
+            "real backend, heuristic with the fake one"
+        ),
+    ] = None,
+) -> None:
+    """Continue a run whose process died, from its log and cassette (docs/resume.md)."""
+    import asyncio
+
+    from fractalswarm.kernel.events import RunResumed
+    from fractalswarm.market.ledger import ProjectLedger
+    from fractalswarm.resume import AlreadyCompleted, ResumeRefused, resume_run
+    from fractalswarm.safety.firewall import Firewall, HeuristicBackend, default_backend
+
+    firewall = firewall or ("auto" if backend == "real" else "heuristic")
+    if firewall not in ("auto", "heuristic"):
+        raise typer.BadParameter("--firewall must be auto or heuristic")
+    settings = _settings()
+    project_ledger = None
+    if backend == "real":
+        from fractalswarm.llm.client import OpenAIBackend
+
+        if not confirm_real_spend:
+            raise typer.BadParameter("calls sent again are billed: add --confirm-real-spend")
+        if settings.model_api_key is None:
+            raise typer.BadParameter("MODEL_API_KEY is not set in ~/.fractalswarm/.env")
+        llm = OpenAIBackend(settings.model_api_key.get_secret_value(), settings.model_api_base_url)
+        project_ledger = ProjectLedger(settings.ledger_path, settings.project_cap_usd)
+    elif backend == "fake":
+        from fractalswarm.bench.workflows import fake_backend
+
+        llm = fake_backend()
+    else:
+        raise typer.BadParameter("--backend must be fake or real")
+    hf_token = settings.hf_token.get_secret_value() if settings.hf_token else None
+    scanner = Firewall(default_backend(hf_token) if firewall == "auto" else HeuristicBackend())
+    scanner.warm()  # before the clock starts
+
+    def announce(plan: RunResumed) -> None:
+        extra = f" (+{plan.completed_tail} to finish the reaction the kill cut)"
+        typer.echo(
+            f"resuming: {plan.log_events} events in the log{extra if plan.completed_tail else ''}"
+        )
+        local = ", ".join(f"{count} {kind}" for kind, count in plan.rerun.items()) or "none"
+        typer.echo(
+            f"  open effects: {len(plan.from_cassette)} answered from the cassette, "
+            f"{len(plan.ambiguous)} sent again, local: {local}"
+        )
+        if plan.ambiguous:
+            typer.echo(
+                f"  ambiguous, may be billed twice (up to ${plan.possible_extra_usd:.4f}): "
+                + ", ".join(plan.ambiguous)
+            )
+        if plan.cassette_dropped_bytes:
+            typer.echo(f"  cut {plan.cassette_dropped_bytes} bytes of a torn cassette line")
+
+    run_dir = _resolve_run_dir(run)
+    try:
+        result = asyncio.run(
+            resume_run(
+                run_dir,
+                backend=llm,
+                speed=speed,
+                project_ledger=project_ledger,
+                secrets=settings.secret_values(),
+                firewall=scanner,
+                announce=announce,
+            )
+        )
+    except AlreadyCompleted as exc:
+        typer.echo(f"{exc}; nothing to resume")
+        raise typer.Exit(0) from exc
+    except ResumeRefused as exc:
+        typer.echo(f"cannot resume {run_dir.name}: {exc}")
+        raise typer.Exit(2) from exc
+    done = result.run
+    spent = done.completed.payload["spent_usd"]
+    typer.echo(f"run {done.run_id}: {done.events} events, head {done.head_hash}")
+    typer.echo(f"run dir {done.paths.root}  spent ${spent:.6f} ({backend} LLM)")
+    outcome = task_outcome(done.paths)
+    if outcome is None:
+        with done.paths.open_log() as log:
+            started = log.get(1)
+        if started is not None and "spec" in started.payload["params"]:
+            typer.echo("no task.result: the run ended without a result")
+            raise typer.Exit(1)
+        return
+    report = outcome["report"]
+    typer.echo(
+        f"result {outcome['status']}: placed {report['placed']}/{report['expected']}, "
+        f"hard violations {report['hard_violations']}, soft score {report['soft_score']}"
+    )
+    for gap in report["gaps"]:
+        typer.echo(f"  gap: {gap}")
+    if report["hard_violations"]:
+        raise typer.Exit(1)
+
+
+@app.command()
 def calibrate(
     sources: Annotated[
         list[Path], typer.Argument(help="cassette or sample .jsonl files, or directories of them")
