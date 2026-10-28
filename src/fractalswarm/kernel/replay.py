@@ -26,6 +26,9 @@ class ReplaySetup:
     """What a replay needs that depends on the recorded run.started (built by the caller)."""
 
     estimators: dict[str, Callable[[dict[str, Any]], float]] = field(default_factory=dict)
+    routers: dict[str, Callable[[dict[str, Any]], dict[str, Any] | None]] = field(
+        default_factory=dict
+    )
     replayers: dict[str, Replayer] = field(default_factory=dict)
 
 
@@ -84,6 +87,7 @@ async def replay(
         run_cap_usd=started["run_cap_usd"],
         project_remaining_usd=started["project_remaining_usd"],
         estimators=tools.estimators,
+        routers=tools.routers,
     )
     checked = 0
     try:

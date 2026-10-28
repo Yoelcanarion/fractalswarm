@@ -145,6 +145,7 @@ async def record_run(
             run_cap_usd=default_run_cap_usd() if run_cap_usd is None else run_cap_usd,
             project_remaining_usd=project_ledger.remaining_usd() if project_ledger else None,
             estimators={"llm": client.estimate},
+            routers={"llm": client.route},
         )
         run_clock = ManualClock("sim") if clock == "sim" else LiveClock(speed)
         effects = {"llm": client.effect(), "firewall": (firewall or Firewall()).effect()}
@@ -173,7 +174,11 @@ def replay_setup(cassette: Cassette):
             )
             return outcome.status, outcome.result
 
-        return ReplaySetup(estimators={"llm": client.estimate}, replayers={"llm": replay_llm})
+        return ReplaySetup(
+            estimators={"llm": client.estimate},
+            routers={"llm": client.route},
+            replayers={"llm": replay_llm},
+        )
 
     return setup
 

@@ -27,10 +27,10 @@ from pydantic import BaseModel, ConfigDict
 from fractalswarm.kernel.effects import EffectContext, EffectFn, EffectOutcome
 from fractalswarm.kernel.events import Event
 from fractalswarm.llm.cassette import Attempt, Cassette, CassetteEntry, load_json
-from fractalswarm.llm.roles import CONTRIBUTOR_SUFFIX, RoleTable
+from fractalswarm.llm.roles import CONTRIBUTOR_SUFFIX, RoleSpec, RoleTable
 from fractalswarm.market.ledger import ProjectLedger
 from fractalswarm.market.prices import PriceTable, Usage
-from fractalswarm.safety.scanners import contributor_gate
+from fractalswarm.safety.scanners import RoutingDecision, contributor_gate
 
 Sleep = Callable[[int], Awaitable[None]]
 Mode = Literal["record", "live", "replay"]
@@ -61,10 +61,15 @@ class LLMRequest(BaseModel):
     keep_reasoning: bool = False  # ask for encrypted reasoning items, for multi-turn replay
 
 
-def contributor_allowed(request: LLMRequest) -> bool:
-    """The Contributor gate (spec §7.5): content the scanners flag stays on Standard."""
-    content = [request.instructions, request.input]
-    return contributor_gate(content, opted_in=request.contributor).contributor
+def contributor_routing(request: LLMRequest, spec: RoleSpec) -> RoutingDecision | None:
+    """The Contributor gate (spec §7.5) for a request that opted in: content the scanners
+    flag stays on Standard, and so does a role the ladder keeps there."""
+    if not request.contributor:
+        return None
+    if not spec.contributor_ok:
+        reason = f"the role ladder keeps {request.role} at {request.level} on Standard"
+        return RoutingDecision(contributor=False, reason=reason)
+    return contributor_gate([request.instructions, request.input], opted_in=True)
 
 
 class RetryPolicy(BaseModel):
@@ -174,7 +179,8 @@ class LLMClient:
         """(model, Responses body, max_output_tokens) for a request."""
         spec = self.roles.resolve(request.role, request.level)
         model = spec.model
-        if request.contributor and spec.contributor_ok and contributor_allowed(request):
+        routing = contributor_routing(request, spec)
+        if routing is not None and routing.contributor:
             model += CONTRIBUTOR_SUFFIX
         body: dict[str, Any] = {
             "model": model,
@@ -196,6 +202,13 @@ class LLMClient:
         if request.keep_reasoning:
             body["include"] = ["reasoning.encrypted_content"]
         return model, body, spec.max_output_tokens
+
+    def route(self, request: dict[str, Any]) -> dict[str, Any] | None:
+        """The ``security.routed`` payload of a request that opted in to Contributor: the
+        decision ``build`` applies, which the kernel logs before the call starts."""
+        parsed = LLMRequest.model_validate(request)
+        routing = contributor_routing(parsed, self.roles.resolve(parsed.role, parsed.level))
+        return None if routing is None else routing.model_dump(mode="json")
 
     def estimate(self, request: dict[str, Any]) -> float:
         """The worst-case cost of a request, for the two-phase reservation."""

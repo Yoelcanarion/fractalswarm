@@ -114,6 +114,18 @@ def client() -> LLMClient:
     return LLMClient(FakeBackend(), roles=RoleTable.load(), prices=PriceTable.load(), mode="live")
 
 
+def test_route_reports_the_decision_build_applies() -> None:
+    llm = client()
+    request = {"role": "agent", "level": "L1", "input": "Summarize."}
+    assert llm.route(request) is None  # no opt-in, no decision to audit
+    clean = llm.route(request | {"contributor": True})
+    assert clean == {"contributor": True, "reason": "opted in and content is clean", "findings": []}
+    flagged = llm.route(request | {"contributor": True, "input": "Email ana@example.org now."})
+    assert not flagged["contributor"] and flagged["findings"] == ["email"]
+    ladder = llm.route(request | {"level": "L0", "contributor": True})
+    assert not ladder["contributor"] and "agent at L0" in ladder["reason"]
+
+
 def test_client_keeps_flagged_content_off_contributor_models() -> None:
     clean = LLMRequest(role="agent", level="L1", input="Summarize.", contributor=True)
     model, _, _ = client().build(clean)

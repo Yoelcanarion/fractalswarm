@@ -210,6 +210,7 @@ class Runtime:
         run_cap_usd: float | None = None,
         project_remaining_usd: float | None = None,
         estimators: Mapping[str, Callable[[dict[str, Any]], float]] | None = None,
+        routers: Mapping[str, Callable[[dict[str, Any]], dict[str, Any] | None]] | None = None,
     ) -> None:
         self.store = store
         self.run_id = run_id
@@ -222,6 +223,7 @@ class Runtime:
         self.run_cap_usd = run_cap_usd
         self.project_remaining_usd = project_remaining_usd
         self.estimators = dict(estimators or {})
+        self.routers = dict(routers or {})
 
         self.actors: dict[str, ActorSlot] = {}
         self.queue: list[tuple[int, int, int, str]] = []
@@ -495,6 +497,11 @@ class Runtime:
 
     def _start_effect(self, reaction: Reaction, command: StartEffect) -> None:
         effect_id = f"eff-{reaction.cause.seq}.{len(reaction.appended)}"
+        router = self.routers.get(command.kind)
+        routing = router(command.request) if router else None
+        if routing is not None:  # every Contributor routing decision is audited (spec §7.5)
+            payload = {"request_id": effect_id} | routing
+            self._react(reaction, "security.routed", payload, correlation_id=effect_id)
         estimator = self.estimators.get(command.kind)
         usd = estimator(command.request) if estimator else 0.0
         if usd > 0:

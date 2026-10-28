@@ -721,3 +721,34 @@ finished in its own Orca workspace on Wed 28 Oct. Spend: $0 (fake LLM and record
 4. Day 9 tasks: make the repo public only after Yoel confirms; LangGraph baseline; headline runs; final demo bundle (T2 kill-half + poisoned email); supporting features.
 5. (Done: the stream notes are folded in above.)
 6. Ask before merging into `master` or pushing.
+
+### Day 9 (continued): checkpoint, Wed Oct 28, 17:45 CET
+**Done:**
+- `single` and `pipeline` baselines (e6f5106). Both run on the central baseline's process with one worker: one contract in flight, the same planning calls, signal crashes and the 5 s best-case restart with completed work kept. The $0 gate now runs all four workflows and is not flat. Means over 2 seeds, C0 → C3:
+
+  | workflow | stall (s) | extra cost |
+  |---|---|---|
+  | swarm | 0.3 → 0.1 | about −3 % |
+  | central | 0.4 → 39.6 | +62.5 % |
+  | single | 56.5 → 134.1 | +3.9 % |
+  | pipeline | 16.9 → 64.4 | +3.6 % |
+
+  `single` and `pipeline` stall even at C0. With one worker, planning and judging count as "no agent work in flight": the stall is structural, not caused by the faults. Say so next to the chart.
+- The pre-flight bounds each cell by its run cap. The v1 matrix cap is now $16 (587c88f; approved by Yoel).
+- `security.routed` (spec §7.5). For each LLM call that opted in, the kernel logs one routing decision before the call starts. It comes from `LLMClient.route`, through a `routers` hook beside `estimators`, and replays. Tests: `test_contributor_routing.py` and `test_route_reports_the_decision_build_applies`. Runs recorded before this commit replay at their own commit.
+
+**Running:**
+- **Chart v1, real, Contributor, 32 cells.** Started 17:15 at 587c88f; results in `bench/results/v1/`. Spend before: $2.5547 spent, $0.7778 reserved. First cell (swarm C0 s1): 48/48, 0 hard violations, $0.285.
+- **Orca run `run_30ed47a8075e`: 9 Sonnet workers.** Eight have their own Orca worktree, as children of day-09: langgraph, economy, breakers, verification, t3, ui, t1 (T1 bench task and final matrix) and scaling (the scaling sweep). The ninth is the read-only publish audit, which runs in day-09. Briefs and reports are in the coordinator session's scratchpad (`reports/`).
+- **The first wave stopped.** 7 Claude subagents hit the Opus 5-hour limit before writing any code. Their `.claude/worktrees/agent-*` worktrees and `worktree-agent-*` branches are still there, at e6f5106 with no commits. Deleting them needs Yoel's OK.
+
+**Next:**
+1. After v1: the backup bundle and the attack clip. Both need Yoel's permission, and the clip needs his choice of wording.
+2. Merge the workers' branches as they finish.
+3. Then, after the last handler change:
+   - the final matrix (adds the T1 rows);
+   - the LangGraph rows;
+   - the scaling sweep;
+   - the headline runs;
+   - the final demo bundle.
+4. Publish only after the audit and Yoel's confirmation.
