@@ -1,7 +1,18 @@
 // The T2 schedule grid (rooms × slots × day) as a pure fold over placement events.
 //
-// The T2 slice does not emit these events yet, so the shapes below are this UI's proposal,
-// derived from spec §6 and §15.3. See .plans/notes/day-07-ui.md for the wiring notes.
+// The T2 slice logs a placement as a booking on the blackboard, not as a placement event, so the
+// grid is read from what it does log (actors/board.py, actors/orchestrator.py):
+//
+//   run.started.params.corpus  {days, rooms: [{id}], slots: [{index}]}   the axes
+//   msg.sent book              body {goal_id, contract_id, attempt, writes: [{key: "cell:d1:s0:room-b",
+//                              value: {day, room, slot, talk_id, speaker_id}}]}   an owner asks for its cells
+//   msg.sent book.result       body {goal_id, contract_id, attempt, conflicts}   no conflict: the cells are placed
+//   collision.detected         {kind, goal_id, holder, conflicts: [{key: "cell:d1:s0:room-b", reason, holder}]}
+//   collision.resolved         {kind, goal_id, resolution}               the owner re-placed the goal
+//   task.result                {report: {hard_violations, soft_score}}   the final check
+//
+// The shapes this UI proposed on Day 7 are still read (spec §6 and §15.3), for a runtime that
+// logs placements directly:
 //
 //   run.started.params.grid  {days: [..], rooms: [..], slots: [..]}       (optional axes)
 //   schedule.placed          {talk_id, day, room, slot, squad, title?, speaker?}
@@ -10,7 +21,7 @@
 //   collision.resolved       {collision_id, arbiter, rule?, winner?}
 //   schedule.checked         {hard_violations, soft_score?}
 //
-// Without a grid in run.started, the axes are the sorted values seen in placements.
+// Without axes in run.started, they are the sorted values seen in placements.
 
 import type { RunEvent } from "./types";
 
@@ -27,6 +38,7 @@ export interface Cell {
 export interface Collision {
   id: string;
   kind?: string;
+  goalId?: string;
   cells: string[]; // cell keys
   squads: string[];
   status: "open" | "resolved";
@@ -37,6 +49,12 @@ export interface Collision {
   winner?: string;
 }
 
+/** The cells an owner asked the board for, until the board answers. */
+interface Booking {
+  squad: string;
+  cells: { day: string; room: string; slot: string; talkId: string; speaker?: string }[];
+}
+
 export interface ScheduleState {
   days: Axis[];
   rooms: Axis[];
@@ -45,6 +63,7 @@ export interface ScheduleState {
   cells: Record<string, Cell>;
   collisions: Record<string, Collision>;
   collisionOrder: string[];
+  pending: Record<string, Booking>; // `${goal}|${contract}|${attempt}` -> its cells
   hardViolations: number | null;
   softScore: number | null;
   placements: number;
@@ -58,6 +77,7 @@ export const emptySchedule = (): ScheduleState => ({
   cells: {},
   collisions: {},
   collisionOrder: [],
+  pending: {},
   hardViolations: null,
   softScore: null,
   placements: 0,
@@ -81,11 +101,88 @@ function axis(value: unknown): Axis[] {
   return [];
 }
 
+// A T2 run carries its conference in the params: the rooms and slots are the grid's axes.
+function gridOf(params: Record<string, any> | undefined): Record<string, unknown> | null {
+  if (params?.grid) return params.grid;
+  const corpus = params?.corpus;
+  if (!corpus || !Array.isArray(corpus.rooms)) return null;
+  return {
+    days: corpus.days,
+    rooms: corpus.rooms.map((room: any) => room?.id ?? room),
+    slots: Array.isArray(corpus.slots) ? corpus.slots.map((slot: any) => slot?.index ?? slot) : corpus.slots,
+  };
+}
+
+const CELL_KEY = /^cell:d(\d+):s(\d+):(.+)$/;
+
+/** The grid cells of a collision's conflicts (their keys are ``cell:d1:s0:room-b``). */
+const conflictCells = (conflicts: unknown): string[] =>
+  (Array.isArray(conflicts) ? conflicts : []).flatMap((conflict) => {
+    const match = CELL_KEY.exec(String(conflict?.key ?? ""));
+    return match ? [cellKey(match[1], match[3], match[2])] : [];
+  });
+
+const bookingKey = (body: Record<string, any>): string => `${body.goal_id}|${body.contract_id}|${body.attempt}`;
+
+function foldBooking(state: ScheduleState, event: RunEvent, topic: string, body: Record<string, any>): ScheduleState {
+  const key = bookingKey(body);
+  if (topic === "book") {
+    const cells = (Array.isArray(body.writes) ? body.writes : []).flatMap((write: Record<string, any>) =>
+      String(write.key).startsWith("cell:") && write.value
+        ? [
+            {
+              day: String(write.value.day),
+              room: String(write.value.room),
+              slot: String(write.value.slot),
+              talkId: String(write.value.talk_id),
+              speaker: write.value.speaker_id === undefined ? undefined : String(write.value.speaker_id),
+            },
+          ]
+        : [],
+    );
+    return { ...state, pending: { ...state.pending, [key]: { squad: event.actor, cells } } };
+  }
+  // book.result: the board answered. Without conflicts the owner's cells are placed.
+  const booking = state.pending[key];
+  if (!booking) return state;
+  const pending = { ...state.pending };
+  delete pending[key];
+  if (Array.isArray(body.conflicts) && body.conflicts.length > 0) return { ...state, pending };
+  let next: ScheduleState = { ...state, pending };
+  for (const cell of booking.cells) {
+    next = {
+      ...next,
+      ...(next.fixedAxes
+        ? {}
+        : {
+            days: withAxisValue(next.days, cell.day),
+            rooms: withAxisValue(next.rooms, cell.room),
+            slots: withAxisValue(next.slots, cell.slot),
+          }),
+      cells: {
+        ...next.cells,
+        [cellKey(cell.day, cell.room, cell.slot)]: { talkId: cell.talkId, speaker: cell.speaker, squad: booking.squad, placedSeq: event.seq },
+      },
+      placements: next.placements + 1,
+    };
+  }
+  return next;
+}
+
 export function foldSchedule(state: ScheduleState, event: RunEvent): ScheduleState {
   const p = event.payload;
   switch (event.type) {
+    case "msg.sent": {
+      const topic = String(p.topic ?? "");
+      return topic === "book" || topic === "book.result" ? foldBooking(state, event, topic, p.body ?? {}) : state;
+    }
+    case "task.result": {
+      const report = p.report;
+      if (typeof report?.hard_violations !== "number") return state;
+      return { ...state, hardViolations: report.hard_violations, softScore: report.soft_score ?? null };
+    }
     case "run.started": {
-      const grid = p.params?.grid;
+      const grid = gridOf(p.params);
       if (!grid) return state;
       return {
         ...state,
@@ -128,14 +225,15 @@ export function foldSchedule(state: ScheduleState, event: RunEvent): ScheduleSta
     }
     case "collision.detected": {
       const id = String(p.collision_id ?? event.idem_key);
-      const cells = (Array.isArray(p.cells) ? p.cells : []).map((c: Record<string, unknown>) =>
-        cellKey(c.day, c.room, c.slot),
-      );
+      const cells = Array.isArray(p.cells)
+        ? p.cells.map((c: Record<string, unknown>) => cellKey(c.day, c.room, c.slot))
+        : conflictCells(p.conflicts);
       const collision: Collision = {
         id,
         kind: p.kind,
+        goalId: p.goal_id === undefined ? undefined : String(p.goal_id),
         cells,
-        squads: Array.isArray(p.squads) ? p.squads.map(String) : [],
+        squads: Array.isArray(p.squads) ? p.squads.map(String) : p.holder === undefined ? [] : [String(p.holder)],
         status: "open",
         detectedSeq: event.seq,
       };
@@ -143,18 +241,27 @@ export function foldSchedule(state: ScheduleState, event: RunEvent): ScheduleSta
       return { ...state, collisions: { ...state.collisions, [id]: collision }, collisionOrder: order };
     }
     case "collision.resolved": {
-      const id = String(p.collision_id);
-      const open = state.collisions[id];
-      if (!open) return state;
-      const resolved: Collision = {
-        ...open,
-        status: "resolved",
-        resolvedSeq: event.seq,
-        arbiter: String(p.arbiter ?? event.actor),
-        rule: p.rule,
-        winner: p.winner,
-      };
-      return { ...state, collisions: { ...state.collisions, [id]: resolved } };
+      // Named by its id, or (as the runtime logs it) by the goal whose owner re-placed it.
+      const ids =
+        p.collision_id !== undefined
+          ? [String(p.collision_id)]
+          : state.collisionOrder.filter(
+              (id) => state.collisions[id].status === "open" && state.collisions[id].goalId === String(p.goal_id),
+            );
+      const collisions = { ...state.collisions };
+      for (const id of ids) {
+        const open = collisions[id];
+        if (!open || open.status === "resolved") continue;
+        collisions[id] = {
+          ...open,
+          status: "resolved",
+          resolvedSeq: event.seq,
+          arbiter: String(p.arbiter ?? event.actor),
+          rule: p.rule ?? p.resolution,
+          winner: p.winner,
+        };
+      }
+      return { ...state, collisions };
     }
     case "schedule.checked":
       return {

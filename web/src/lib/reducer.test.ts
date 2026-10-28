@@ -178,6 +178,27 @@ describe("the shapes the runtime emits today (comms/chaos.py, coord/tree.py)", (
     expect(foldEvents(s.events).counters.kills).toBe(2);
   });
 
+  it("does not count a kill of an actor that is already down, or that the log never spawned", () => {
+    const s = depthTwoTree()
+      .emit("chaos.injected", "chaos", { fault: "kill_agent", target: "t1-d1-a" })
+      .emit("chaos.injected", "chaos", { fault: "kill_agent", target: "t1-d1-a" })
+      .emit("chaos.injected", "chaos", { fault: "kill_agent", target: "ghost" });
+    const v = foldEvents(s.events);
+    expect(v.counters.kills).toBe(1);
+    expect(v.chaos).toHaveLength(3); // each injection is still logged
+  });
+
+  it("leaves the infrastructure actors (blackboard, chaos network, chaos monkey) out of the tree", () => {
+    const s = new Stream()
+      .spawn("board", "board", null)
+      .spawn("net", "net", null)
+      .spawn("o0", "orchestrator", null)
+      .spawn("chaos", "chaos", null)
+      .spawn("o1", "orchestrator", "o0");
+    const placed = layoutTree(foldEvents(s.events)).map((p) => p.id);
+    expect(placed.sort()).toEqual(["o0", "o1"]);
+  });
+
   it("hands a remapped goal to its owner", () => {
     const s = depthTwoTree().emit("ownership.remapped", "t2", {
       group: "root",
