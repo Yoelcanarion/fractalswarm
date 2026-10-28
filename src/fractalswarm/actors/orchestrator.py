@@ -323,7 +323,8 @@ def _squad(state: dict[str, Any]) -> list[str]:
     if state["mode"] != "central":  # a leaf's agents, or the one worker of single and pipeline
         return list(state["children"])
     size = state["agents_per_leaf"]
-    first = state["squads"] * size
+    squads = max(1, len(state["children"]) // size)
+    first = state["squads"] % squads * size  # fewer squads than sessions (a scaling cell): turns
     return list(state["children"][first : first + size])
 
 

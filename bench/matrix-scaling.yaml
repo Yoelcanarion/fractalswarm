@@ -1,0 +1,25 @@
+# Scaling sweep (spec §15.6): {swarm, central} x total agents {1, 2, 4, 8, 16} x T2 x C0 x
+# 2 seeds = 20 runs, in Contributor mode. Each total becomes a depth-2 `exact` tree through
+# fractalswarm.bench.scaling.tree_for (squads of 2, two session orchestrators per track
+# orchestrator); swarm and central get the same numbers. T2 has 6 sessions, so no more than 6
+# agents can work at once: expect the curves to flatten past 6.
+#   uv run fractalswarm bench bench/matrix-scaling.yaml --fake             # $0, sim clock
+#   uv run fractalswarm bench bench/matrix-scaling.yaml --dry-run
+#   uv run fractalswarm bench bench/matrix-scaling.yaml --confirm-real-spend
+# The chart is results/scaling/scaling-t2_conference.png (+ .json); the hero chart is not drawn.
+name: scaling
+workflows: [swarm, central]
+tasks: [t2_conference]
+profiles: [C0]
+seeds: [1, 2]
+agents: [1, 2, 4, 8, 16]
+# Contributor routing (spec §7.5): synthetic tasks, explicit opt-in for the bench matrix.
+contributor: true
+out_dir: results/scaling
+chart_task: t2_conference
+budget:
+  run_cap_usd: 0.50
+  matrix_cap_usd: 10.00  # 20 runs x the run cap
+notes: >
+  No chaos: the sweep measures how makespan, cost and stall move with the number of agents.
+  Exact scaling only (no autoscale).

@@ -9,7 +9,8 @@ so its C0 twin is the same system. The baselines are crashed by signal and resta
 later with their completed work kept (``actors/orchestrator.py``).
 
 A cell's seed picks the T2 instance (``tasks/fixtures/t2/seed-<n>``, generated when missing),
-the run's seed and the chaos seed.
+the run's seed and the chaos seed. A cell's ``agents`` (the scaling sweep) picks the tree of
+``swarm`` and ``central`` through ``bench/scaling.py``; without it they run the TaskSpec's.
 """
 
 from collections.abc import Sequence
@@ -23,8 +24,10 @@ from fractalswarm.bench.registry import (
     register_task,
     register_workflow,
 )
+from fractalswarm.bench.scaling import tree_for
 from fractalswarm.bench.scoring import Outcome
 from fractalswarm.bench.tasks.t2_conference.fake import t2_script
+from fractalswarm.bench.tasks.t2_conference.generator import DAYS, TRACKS
 from fractalswarm.bench.tasks.t2_conference.task import T2
 from fractalswarm.comms.chaos import plan_from
 from fractalswarm.kernel.events import Event
@@ -59,17 +62,21 @@ def fake_backend() -> FakeBackend:
     return FakeBackend(script=bench_script)
 
 
-def t2_spec(seed: str) -> TaskSpec:
+def t2_spec(seed: str, agents: int | None = None) -> TaskSpec:
     spec = TaskSpec.load(T2_TASKSPEC)
     if seed.isdigit():
         spec.inputs.fixture = str(T2_FIXTURES / f"seed-{int(seed)}")
         spec.inputs.generate_seed = int(seed)
     spec.seed = seed
+    if agents is not None:
+        fanout, per_leaf = tree_for(agents)
+        update = {"mode": "exact", "fanout": fanout, "agents_per_leaf": per_leaf}
+        spec.scaling = spec.scaling.model_copy(update=update)
     return spec
 
 
 def t2_params(cell: Cell, contributor: bool) -> dict[str, Any]:
-    params = run_params(t2_spec(cell.seed))
+    params = run_params(t2_spec(cell.seed, cell.agents))
     params["chaos"] = {"profile": cell.profile.name, "seed": cell.seed}
     params["contributor"] = contributor
     return params
@@ -80,6 +87,7 @@ class T2Workflow:
 
     def __init__(self, name: str) -> None:
         self.name = name  # also the scenario: swarm | central | single | pipeline
+        self.scalable = name in ("swarm", "central")  # the other two have one worker by design
 
     async def run(self, ctx: CellContext) -> None:
         from fractalswarm.llm.transport import ApiFaults, FaultyBackend
@@ -162,5 +170,10 @@ register_workflow(T2Workflow("central"))
 register_workflow(T2Workflow("single"))
 register_workflow(T2Workflow("pipeline"))
 register_task(
-    TaskDef(name="t2_conference", checker=t2_checker, description="T2 conference program")
+    TaskDef(
+        name="t2_conference",
+        checker=t2_checker,
+        description="T2 conference program",
+        parallelism=len(TRACKS) * len(DAYS),  # one chain of contracts per session
+    )
 )
