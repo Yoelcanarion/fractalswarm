@@ -1,0 +1,16 @@
+# The $0 gate (spec §15.6), before any paid run: swarm vs central on T2 at C0-C3, with the
+# fake LLM on calibrated latencies (config/fake_calibration.json).
+#   uv run fractalswarm bench bench/matrix-gate.yaml --fake
+# It must show a clear separation on stall time and extra cost; if the chart is flat, stop.
+# tests/integration/test_bench_smoke.py runs a smaller version of it on every test run.
+name: gate
+workflows: [swarm, central]
+tasks: [t2_conference]
+profiles: [C0, C1, C2, C3]
+seeds: [1, 2]
+contributor: false
+out_dir: ../runs/bench-gate
+chart_task: t2_conference
+notes: >
+  Fake LLM, sim clock, $0. Same crash points, agent kills, network and API fault seeds for
+  both workflows (spec §15.2).

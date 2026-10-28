@@ -73,6 +73,7 @@ def agent_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "owner": args["owner"],
         "squad": args["squad"],
         "max_steps": int(args.get("max_steps", 8)),
+        "contributor": bool(args.get("contributor")),
         "queue": [],
         "cur": None,
         "done": 0,
@@ -103,13 +104,14 @@ def _next(state: dict[str, Any]) -> tuple[dict[str, Any], list[Command]]:
     cur = {"contract": state["queue"][0], "step": 1, "items": items, "calls": [], "outputs": {}}
     cur["published"] = []
     state = {**state, "queue": state["queue"][1:], "cur": cur}
-    return state, [_call(contract, cur)]
+    return state, [_call(state, contract, cur)]
 
 
-def _call(contract: Contract, cur: dict[str, Any]) -> StartEffect:
+def _call(state: dict[str, Any], contract: Contract, cur: dict[str, Any]) -> StartEffect:
+    request = llm_request(contract, cur["items"])
     return StartEffect(
         kind="llm",
-        request=llm_request(contract, cur["items"]),
+        request=request | {"contributor": True} if state.get("contributor") else request,
         tag=f"{contract.idem_key}:{cur['step']}",
         scopes={"contract": contract.idem_key, "squad": contract.owner},
     )
@@ -206,7 +208,8 @@ def _continue(state: dict[str, Any]):
     ]
     cur = {**cur, "items": [*cur["items"], *results], "step": cur["step"] + 1}
     cur |= {"calls": [], "outputs": {}}
-    return {**state, "cur": cur}, [_call(contract, cur)]
+    state = {**state, "cur": cur}
+    return state, [_call(state, contract, cur)]
 
 
 def _finish(state: dict[str, Any], contract: Contract, status: str, output: dict, error: str):

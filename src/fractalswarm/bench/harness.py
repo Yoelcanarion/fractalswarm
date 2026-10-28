@@ -18,7 +18,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from itertools import product
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -75,6 +75,8 @@ class Matrix(BaseModel):
     seeds: list[str]
     # Contributor routing for the matrix's calls: synthetic tasks only, explicit opt-in (§7.5).
     contributor: bool = False
+    # Wonder has no Contributor variant: its roles stay on Standard Wonder, or move to Spark.
+    contributor_wonder: Literal["standard", "spark"] = "standard"
     out_dir: str
     budget: MatrixBudget = MatrixBudget()
     chart_task: str | None = None  # task drawn in the hero chart (default: the first one)
@@ -144,9 +146,12 @@ def preflight(
     prices: PriceTable | None = None,
 ) -> Preflight:
     """Worst-case cost of the cells still to run, with ``market/prices.py`` estimates."""
+    roles = roles or RoleTable.load()
+    if matrix.contributor:
+        roles = roles.contributor_mode(matrix.contributor_wonder == "spark")
     client = LLMClient(
         _NoBackend(),
-        roles=roles or RoleTable.load(),
+        roles=roles,
         prices=prices or PriceTable.load(),
         mode="live",
     )
@@ -253,6 +258,7 @@ async def run_matrix(
             backend=options.backend_factory(),
             clock=options.clock,
             contributor=matrix.contributor,
+            contributor_wonder=matrix.contributor_wonder,
             project_ledger=options.project_ledger,
             secrets=list(options.secrets or []),
             run_cap_usd=matrix.budget.run_cap_usd,

@@ -383,9 +383,9 @@ def bench(
     settings = _settings()
     project_ledger = None
     if fake:
-        from fractalswarm.llm.fake import FakeBackend
+        from fractalswarm.bench.workflows import fake_backend
 
-        backend_factory, clock = FakeBackend, "sim"
+        backend_factory, clock = fake_backend, "sim"
     else:
         from fractalswarm.llm.client import OpenAIBackend
         from fractalswarm.market.ledger import ProjectLedger

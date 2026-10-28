@@ -38,6 +38,7 @@ class CellContext:
     backend: Backend
     clock: str  # sim (fake LLM) | live (real API)
     contributor: bool  # the matrix opted in to Contributor routing (spec §7.5)
+    contributor_wonder: str = "standard"  # standard | spark (Wonder has no Contributor)
     project_ledger: ProjectLedger | None = None
     secrets: list[str] = field(default_factory=list)
     run_cap_usd: float | None = None
@@ -87,7 +88,7 @@ def get_task(name: str) -> TaskDef | None:
 
 
 # Modules that register workflows and tasks when imported. Later days add theirs here.
-BUILTIN_MODULES: list[str] = ["fractalswarm.bench.toy_workflow"]
+BUILTIN_MODULES: list[str] = ["fractalswarm.bench.toy_workflow", "fractalswarm.bench.workflows"]
 _loaded: set[str] = set()
 
 

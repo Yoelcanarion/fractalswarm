@@ -179,8 +179,10 @@ def _tool(board: Blackboard, body: dict[str, Any], view: View):
 def _book(board: Blackboard, body: dict[str, Any], sender: str, view: View) -> list[Command]:
     writes = [Write.model_validate(write) for write in body["writes"]]
     token = FencingToken.model_validate(body["token"])
-    conflicts = board.book(writes, sender, token, view.now)
     reply = {key: body[key] for key in ("goal_id", "contract_id", "attempt")}
+    if board.grid.already(writes):  # an heir re-sending a dead owner's booking
+        return [Send(to=sender, topic="book.result", body=reply | {"conflicts": []})]
+    conflicts = board.book(writes, sender, token, view.now)
     commands: list[Command] = []
     if conflicts:
         found = [conflict.model_dump() for conflict in conflicts]

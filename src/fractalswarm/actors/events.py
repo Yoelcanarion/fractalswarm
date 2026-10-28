@@ -15,6 +15,7 @@ class PlanProposed(Payload):
     plan: dict[str, Any]
     plan_hash: str
     fallback: bool = False
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("plan.approved")
@@ -22,6 +23,7 @@ class PlanApproved(Payload):
     goal_id: str
     scope_token: str
     by: str  # auto (bench mode) | human
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("plan.refined")
@@ -33,6 +35,7 @@ class PlanRefined(Payload):
     children: list[str]
     plan: dict[str, Any]
     fallback: bool = False
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("plan.rejected")
@@ -40,6 +43,7 @@ class PlanRejected(Payload):
     goal_id: str
     attempt: int
     errors: list[str]
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("ownership.assigned")
@@ -48,11 +52,15 @@ class OwnershipAssigned(Payload):
     key: str
     owner: str
     member_epoch: int = 0
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("contract.created")
 class ContractCreated(Payload):
     contract: dict[str, Any]
+    work: str = ""  # gid/cid: the contract's run-wide key (chaos progress, takeover)
+    owner: str = ""
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("contract.dispatched")
@@ -62,6 +70,8 @@ class ContractDispatched(Payload):
     attempt: int
     assignee: str
     idem_key: str
+    work: str = ""  # gid/cid: the contract's run-wide key (chaos progress, takeover)
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("contract.completed")
@@ -72,6 +82,7 @@ class ContractCompleted(Payload):
     agent: str
     status: str
     steps: int = 0
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("contract.verified")
@@ -79,6 +90,8 @@ class ContractVerified(Payload):
     goal_id: str
     contract_id: str
     attempt: int
+    work: str = ""  # gid/cid: the contract's run-wide key (chaos progress, takeover)
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("contract.rejected")
@@ -88,6 +101,7 @@ class ContractRejected(Payload):
     attempt: int
     stage: str  # agent | checks | judge | booking
     reasons: list[str]
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("contract.failed")
@@ -96,6 +110,8 @@ class ContractFailed(Payload):
     contract_id: str
     attempt: int
     reasons: list[str]
+    work: str = ""  # gid/cid: the contract's run-wide key (chaos progress, takeover)
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("verify.judged")
@@ -106,6 +122,8 @@ class VerifyJudged(Payload):
     verdict: str
     score: float
     reasons: list[str]
+    reused: bool = False  # a dead owner's judge verdict, adopted from the log
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("fact.published")
@@ -153,6 +171,7 @@ class CollisionResolved(Payload):
     kind: str
     goal_id: str
     resolution: str
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("goal.completed")
@@ -161,6 +180,7 @@ class GoalCompleted(Payload):
     owner: str
     status: str  # ok | partial | failed
     gaps: list[str] = []
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
 @register("task.result")
@@ -168,3 +188,4 @@ class TaskResult(Payload):
     task: str
     status: str
     report: dict[str, Any]
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)

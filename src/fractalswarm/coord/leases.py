@@ -123,6 +123,16 @@ class LeaseTable:
         )
         return None
 
+    def already(self, writes: list[Write]) -> bool:
+        """Is this exact booking already in place? An heir that re-sends a dead owner's
+        booking (the values name the session, so no other booking can match) is a no-op."""
+        return bool(writes) and all(
+            write.value is not None
+            and self.get(write.key).version == write.expected + 1
+            and self.get(write.key).value == write.value
+            for write in writes
+        )
+
     def book(
         self, writes: list[Write], holder: str, token: FencingToken, now: int
     ) -> list[Conflict]:

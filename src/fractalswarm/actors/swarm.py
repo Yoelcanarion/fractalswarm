@@ -1,7 +1,14 @@
 """The swarm scenario: the blackboard plus the fractal tree of orchestrators and agents.
 
 ``params`` (recorded in ``run.started``, so replay needs no fixture files):
-``{"spec": TaskSpec as a dict, "corpus": ..., "truth": ...}``.
+``{"spec": TaskSpec as a dict, "corpus": ..., "truth": ...}``, and optionally:
+- ``"chaos"``: a chaos plan, or ``{"profile": "C2", "seed": "1"}`` (spec §15.4). It spawns
+  the chaos network and the monkey, and turns membership on;
+- ``"membership"``: failure detection and takeover (default: on with chaos).
+
+``central`` is the central baseline (spec §15.1) on the same task, the same LLM calls and the
+same chaos: one orchestrator plans every level and leads every squad, under the best-case
+supervisor. The monkey crashes it by signal (``chaos.crash``) instead of stopping it.
 """
 
 from dataclasses import dataclass
@@ -11,18 +18,51 @@ from fractalswarm.actors import events as _events  # noqa: F401  (registers the 
 from fractalswarm.actors.agent import agent_handle, agent_init
 from fractalswarm.actors.board import BOARD, board_handle, board_init
 from fractalswarm.actors.orchestrator import orchestrator_handle, orchestrator_init
+from fractalswarm.comms.chaos import (
+    CHAOS,
+    CHAOS_MONKEY,
+    NET,
+    NET_KIND,
+    ActorsView,
+    ProgressSpec,
+    ProgressView,
+    plan_from,
+)
+from fractalswarm.coord.membership import MembersView
+from fractalswarm.coord.tree import ROLE, TreeView
 from fractalswarm.kernel.scheduler import ActorKind, Command, Spawn
 
 ROOT = "o0"
+CONTRACTS_PER_SESSION = 3  # extract, place, blurb
+# A T2 contract's run-wide key is ``work`` (gid/cid); its owner is the session's owner.
+T2_PROGRESS = ProgressSpec(
+    created=frozenset({"contract.created"}),
+    dispatched=frozenset({"contract.dispatched"}),
+    finished=frozenset({"contract.verified", "contract.failed"}),
+    owners=frozenset({"ownership.remapped"}),
+    key_field="work",
+    keys_field="works",
+)
+
+
+def expected_contracts(corpus: dict[str, Any]) -> int:
+    """T2 has one session per (track, day) and three contracts per session."""
+    return len(corpus["tracks"]) * len(corpus["days"]) * CONTRACTS_PER_SESSION
 
 
 @dataclass(frozen=True)
 class SwarmScenario:
+    mode: str = "swarm"  # swarm | central
     kinds = {
         "board": ActorKind(board_init, board_handle),
         "orchestrator": ActorKind(orchestrator_init, orchestrator_handle),
         "agent": ActorKind(agent_init, agent_handle),
+        NET: NET_KIND,
+        CHAOS: CHAOS_MONKEY.kind(),
     }
+
+    def reducers(self) -> list[Any]:
+        return [MembersView(), ProgressView(T2_PROGRESS), ActorsView(), TreeView()]
 
     def boot(self, params: dict[str, Any]) -> list[Command]:
         spec = params["spec"]
@@ -37,6 +77,8 @@ class SwarmScenario:
             "corpus": params["corpus"],
             "truth": params["truth"],
         }
+        chaos = params.get("chaos")
+        membership = self.mode == "swarm" and bool(params.get("membership", chaos is not None))
         args = {
             "level": 0,
             "fanout": scaling["fanout"],
@@ -45,11 +87,26 @@ class SwarmScenario:
             "max_attempts": spec["max_attempts"],
             "max_steps": spec["max_steps"],
             "root_goal": root_goal,
+            "mode": self.mode,
+            "membership": membership,
+            "relay": NET if membership and chaos is not None else None,
+            "contributor": bool(params.get("contributor", spec.get("contributor_opt_in"))),
         }
-        return [
-            Spawn(actor_id=BOARD, kind="board", args={}),
-            Spawn(actor_id=ROOT, kind="orchestrator", args=args),
-        ]
+        commands: list[Command] = [Spawn(actor_id=BOARD, kind="board", args={})]
+        if args["relay"] is not None:
+            commands.append(Spawn(actor_id=NET, kind=NET, args={}))
+        commands.append(Spawn(actor_id=ROOT, kind="orchestrator", args=args))
+        if chaos is not None:
+            monkey = {
+                "plan": plan_from(params).model_dump(mode="json"),
+                "coordinator_role": ROLE,
+                "agent_kinds": ["agent"],
+                "crash_mode": "signal" if self.mode == "central" else "stop",
+                "expected_work": expected_contracts(params["corpus"]),
+            }
+            commands.append(Spawn(actor_id=CHAOS, kind=CHAOS, args=monkey))
+        return commands
 
 
 SWARM = SwarmScenario()
+CENTRAL = SwarmScenario(mode="central")

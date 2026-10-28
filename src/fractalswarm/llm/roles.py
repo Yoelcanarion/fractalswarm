@@ -30,6 +30,22 @@ class RoleTable(BaseModel):
     def from_dict(cls, data: dict[str, Any]) -> "RoleTable":
         return cls.model_validate(data)
 
+    def contributor_mode(self, wonder_to_spark: bool = False) -> "RoleTable":
+        """The bench's Contributor mode (spec §7.5, §15.6): every Spark call may go to the
+        Contributor variant (the scanners still gate each call). Wonder has no Contributor
+        variant on pay-as-you-go, so its roles stay on Standard Wonder unless
+        ``wonder_to_spark`` moves them to Spark at the same effort."""
+        roles: dict[str, dict[str, RoleSpec]] = {}
+        for role, levels in self.roles.items():
+            roles[role] = {}
+            for level, spec in levels.items():
+                if wonder_to_spark and spec.model.startswith("muse-wonder"):
+                    spec = spec.model_copy(update={"model": "muse-spark-1.3"})
+                if spec.model.startswith("muse-spark"):
+                    spec = spec.model_copy(update={"contributor_ok": True})
+                roles[role][level] = spec
+        return RoleTable(roles=roles)
+
     def resolve(self, role: str, level: str = "L0") -> RoleSpec:
         try:
             return self.roles[role][level]

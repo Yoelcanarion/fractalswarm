@@ -3,28 +3,63 @@
 With ``fanout = [3, 2]`` the root ``o0`` has children ``o1..o3``, each of which has children
 ``oN.1, oN.2`` (the leaves), and every leaf leads a squad of agents ``oN.M.a1, oN.M.a2``.
 
-What an orchestrator does with a subgoal depends on its level:
-- **root** (level 0): plans the goal (Wonder), auto-approves the plan in bench mode (its
-  hash becomes the scope token) and assigns the level-1 subgoals to its children;
-- **intermediate**: sub-plans its subgoal into child subgoals and assigns them;
-- **leaf**: writes contracts, dispatches the ready ones to its agents (stigmergy over the
-  contract DAG), verifies each result (checks, then judge), books placements with leases and
-  CAS, and walks the replanning ladder on failure (retry with feedback, then reassign).
+What an orchestrator does with a goal depends on the goal's level, not on its own: after a
+takeover one orchestrator can own goals of several levels (the root's heir is a track lead).
+- **root goal** (level 0): plan it (Wonder), auto-approve the plan in bench mode (its hash
+  becomes the scope token) and assign the level-1 subgoals to the child group;
+- **intermediate goals**: sub-plan into child subgoals and assign them;
+- **leaf goals**: write contracts, dispatch the ready ones to the squad's agents (stigmergy
+  over the contract DAG), verify each result (checks, then judge), book placements with
+  leases and CAS, and walk the replanning ladder on failure (retry with feedback, then
+  reassign).
 
 Ownership of child subgoals uses bounded-load HRW over the child group, so it costs no
-tokens. Results integrate bottom-up (``actors/integrator.py``): leaf -> parent -> root, and
-the root runs the task's final deterministic check. Failure handling (membership, remap,
-adoption) arrives on Day 5.
+tokens. Results integrate bottom-up (``actors/integrator.py``) and the root goal's owner runs
+the task's final deterministic check.
+
+**Failure handling** (spec §5.2-§5.3), on when the run has ``membership``: each orchestrator
+embeds a failure detector and a bus endpoint and heartbeats its siblings, parent and children
+every second. On each tick it also reconciles against the log (``coord/tree.py``):
+- it adopts the unfinished goals of dead owners for which it is the HRW heir
+  (``ownership.remapped``), with the dead owner's child group (``tree.adopted``): orphaned
+  agents and sessions keep running, and their results, sent to the dead owner, are in the
+  log, so nothing is paid for twice;
+- it pulls such results for the goals it owns, and re-dispatches the contracts of agents
+  that died (spawning a replacement when a squad has none left).
+An orchestrator that the log declares dead (a partitioned zombie) drops its goals at once;
+owner-scoped writes carry fencing tokens.
+
+``mode="central"`` is the central baseline (spec §15.1): one orchestrator owns every goal and
+leads every squad, under the best-case supervisor (``baselines/supervisor.py``). A
+``chaos.crash`` cancels everything in flight, its agents' calls included (process-tree
+semantics); it restarts ``RESTART_DELAY_MS`` later and redoes only the lost work.
 """
 
 from typing import Any
 
 from fractalswarm.actors.board import BOARD
 from fractalswarm.actors.integrator import finish_goal, leaf_outcome, merge_children
+from fractalswarm.baselines.supervisor import RESTART_TAG
+from fractalswarm.bench.profiles import RESTART_DELAY_MS
 from fractalswarm.bench.tasks.t2_conference.task import T2
+from fractalswarm.comms.bus import Endpoint
+from fractalswarm.comms.chaos import CRASH_TOPIC
+from fractalswarm.coord import membership
 from fractalswarm.coord.hrw import assign, rank
+from fractalswarm.coord.membership import Detector
+from fractalswarm.coord.tree import ROLE, heir
 from fractalswarm.kernel.events import Event
-from fractalswarm.kernel.scheduler import Command, Emit, Send, Spawn, StartEffect, Stop, View
+from fractalswarm.kernel.scheduler import (
+    Cancel,
+    Command,
+    Emit,
+    Send,
+    SetTimer,
+    Spawn,
+    StartEffect,
+    Stop,
+    View,
+)
 from fractalswarm.planning.contracts import Contract
 from fractalswarm.planning.dag import Dag
 from fractalswarm.planning.planner import scope_token
@@ -35,6 +70,9 @@ TASKS = {T2.name: T2}
 MAX_PLAN_ATTEMPTS = 3
 MAX_FEEDBACK_LINES = 20
 ACTIVE = ("running", "judging", "booking")
+CENTRAL_TICK = "central.tick"
+CENTRAL_TICK_MS = 1000
+CENTRAL_REDO = "central.redo"
 
 
 def child_ids(actor_id: str, count: int) -> list[str]:
@@ -42,20 +80,34 @@ def child_ids(actor_id: str, count: int) -> list[str]:
     return [f"{prefix}{i}" for i in range(1, count + 1)]
 
 
+def leaf_count(fanout: list[int]) -> int:
+    total = 1
+    for count in fanout:
+        total *= count
+    return total
+
+
 def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
     fanout = list(args["fanout"])
     level = int(args["level"])
     leaf = level == len(fanout)
-    count = int(args["agents_per_leaf"]) if leaf else fanout[level]
-    children = (
-        [f"{actor_id}.a{i}" for i in range(1, count + 1)] if leaf else child_ids(actor_id, count)
-    )
-    return {
+    mode = args.get("mode", "swarm")
+    agents_per_leaf = int(args["agents_per_leaf"])
+    if mode == "central":
+        count = agents_per_leaf * leaf_count(fanout)
+        children = [f"{actor_id}.a{i}" for i in range(1, count + 1)]
+    elif args.get("bare"):  # a member respawned into a dead group: it inherits, spawns none
+        children = []
+    elif leaf:
+        children = [f"{actor_id}.a{i}" for i in range(1, agents_per_leaf + 1)]
+    else:
+        children = child_ids(actor_id, fanout[level])
+    state: dict[str, Any] = {
         "id": actor_id,
         "level": level,
         "leaf": leaf,
         "fanout": fanout,
-        "agents_per_leaf": int(args["agents_per_leaf"]),
+        "agents_per_leaf": agents_per_leaf,
         "task": args["task"],
         "max_attempts": int(args.get("max_attempts", 6)),
         "max_steps": int(args.get("max_steps", 8)),
@@ -65,102 +117,177 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "scope": "",
         "goals": {},
         "child_of": {},
+        "mode": mode,
+        "membership": bool(args.get("membership")),
+        "relay": args.get("relay"),
+        "contributor": bool(args.get("contributor")),
+        "spawned": len(children),  # agents spawned so far, for replacement names
+        "respawned": 0,  # orchestrators spawned into dead sibling groups
+        "squads": 0,  # central: squads handed out to leaf goals so far
+        "det": None,
+        "ep": None,
+        "up": True,  # central: false while crashed
+        "crashes": 0,
+        "pending_crashes": 0,
+        "crashed_agents": [],
     }
+    if state["membership"]:
+        state["det"] = Detector(member=actor_id, role=ROLE, group=args.get("parent"))
+        state["ep"] = Endpoint(owner=actor_id, relay=args.get("relay"))
+    return state
 
 
 def orchestrator_handle(state: dict[str, Any], event: Event, view: View):
+    if state["mode"] == "central":
+        return _central(state, event, view)
+    det = state["det"]
+    if det is None:
+        return _handle(state, event, view)
+    if event.type == "actor.spawned":
+        state, commands = _spawned(state, view)
+        return state, commands + membership.join(det, view, _peers(state, view))
+    tick = event.type == "effect.completed" and event.payload["tag"] == membership.TICK_TAG
+    if tick:
+        membership.watch(det, _peers(state, view), view.now)
+    out = membership.handle(det, state["ep"], event, view)
+    if out is not None:
+        commands = list(out.commands)
+        if tick:
+            state, more = _reconcile(state, view)
+            commands += more
+        return state, commands
+    if _zombie(state, view):
+        return _drop_goals(state), []
+    return _handle(state, event, view)
+
+
+def _handle(state: dict[str, Any], event: Event, view: View):
     kind = event.type
     if kind == "actor.spawned":
-        return _spawned(state)
+        return _spawned(state, view)
     if kind == "effect.completed":
         tag = (event.payload["tag"] or "").split("|")
         if tag[0] == "plan":
-            return _planned(state, tag[1], int(tag[2]), event)
+            return _planned(state, tag[1], int(tag[2]), event, view)
         if tag[0] == "judge":
-            return _judged(state, tag[1], tag[2], int(tag[3]), event)
+            payload = event.payload
+            text = payload["result"].get("output_text", "")
+            return _judged(state, tag[1], tag[2], int(tag[3]), payload["status"], text, view)
         return state, []
     if kind != "msg.sent":
         return state, []
     topic, body, sender = event.payload["topic"], event.payload["body"], event.actor
     if topic == "assign":
-        return _assigned(state, body, sender)
+        return _assigned(state, body, sender, view)
     if topic == "result":
-        return _child_result(state, body)
+        return _child_result(state, body, view)
     if topic == "contract.result":
-        return _contract_result(state, body)
+        return _contract_result(state, body, view)
     if topic == "book.result":
-        return _booked(state, body)
+        return _booked(state, body, view)
     if topic == "shutdown":
-        return state, _shutdown(state)
+        return state, [Stop(reason="shutdown")]
     return state, []
 
 
 # -- spawning and planning ----------------------------------------------------------------
 
 
-def _spawned(state: dict[str, Any]):
+def _spawned(state: dict[str, Any], view: View):
     commands: list[Command] = []
+    passed = {"membership": state["membership"], "relay": state["relay"]}
+    passed["contributor"] = state["contributor"]
     for child in state["children"]:
-        if state["leaf"]:
-            args = {"owner": state["id"], "squad": state["id"], "max_steps": state["max_steps"]}
-            commands.append(Spawn(actor_id=child, kind="agent", args=args))
+        if state["leaf"] or state["mode"] == "central":
+            commands.append(Spawn(actor_id=child, kind="agent", args=_agent_args(state)))
         else:
             args = {
                 key: state[key]
                 for key in ("fanout", "agents_per_leaf", "task", "max_attempts", "max_steps")
             }
-            args |= {"level": state["level"] + 1, "parent": state["id"]}
+            args |= {"level": state["level"] + 1, "parent": state["id"]} | passed
             commands.append(Spawn(actor_id=child, kind="orchestrator", args=args))
     if state["root_goal"] is not None:
         root = state["root_goal"]
-        state, more = _start_goal(state, root, sender=None)
+        state, more = _start_goal(state, root, None, None, 0, view)
         commands += more
     return state, commands
 
 
-def _assigned(state: dict[str, Any], body: dict[str, Any], sender: str):
+def _assigned(state: dict[str, Any], body: dict[str, Any], sender: str, view: View):
     goal = body["goal"]
     if goal["id"] in state["goals"]:
         return state, []  # idempotent: a duplicate assignment changes nothing
     state = {**state, "scope": body["scope_token"]}
-    return _start_goal(state, goal, sender)
+    level = int(body.get("level", state["level"]))
+    return _start_goal(state, goal, sender, body.get("parent"), level, view)
 
 
-def _start_goal(state: dict[str, Any], goal: dict[str, Any], sender: str | None):
-    entry = {"goal": goal, "from": sender, "phase": "planning", "attempt": 0, "feedback": []}
+def _start_goal(
+    state: dict[str, Any],
+    goal: dict[str, Any],
+    sender: str | None,
+    parent_gid: str | None,
+    level: int,
+    view: View,
+):
+    entry = {
+        "goal": goal,
+        "from": sender,
+        "parent_gid": parent_gid,
+        "level": level,
+        "phase": "planning",
+        "attempt": 0,
+        "feedback": [],
+        "epoch": view.member_epoch,
+        "group": state["id"],
+    }
+    if level == len(state["fanout"]):
+        entry["agents"] = _squad(state)
+        if state["mode"] == "central":
+            state = {**state, "squads": state["squads"] + 1}
     state = _put_goal(state, goal["id"], entry)
     return state, [_plan_effect(state, goal["id"])]
+
+
+def _squad(state: dict[str, Any]) -> list[str]:
+    if state["mode"] != "central":
+        return list(state["children"])
+    size = state["agents_per_leaf"]
+    first = state["squads"] * size
+    return list(state["children"][first : first + size])
 
 
 def _plan_effect(state: dict[str, Any], gid: str) -> StartEffect:
     task = TASKS[state["task"]]
     entry = state["goals"][gid]
     goal, feedback = entry["goal"], entry["feedback"]
-    if state["level"] == 0:
+    if entry["level"] == 0:
         request = task.root_request(goal, feedback)
-    elif state["leaf"]:
+    elif _is_leaf(state, entry):
         request = task.contracts_request(goal, feedback)
     else:
         request = task.split_request(goal, feedback)
     return StartEffect(
         kind="llm",
-        request=request,
+        request=_route(state, request),
         tag=f"plan|{gid}|{entry['attempt']}",
         scopes={"squad": state["id"]},
     )
 
 
-def _planned(state: dict[str, Any], gid: str, attempt: int, event: Event):
+def _planned(state: dict[str, Any], gid: str, attempt: int, event: Event, view: View):
     entry = state["goals"].get(gid)
     if entry is None or entry["phase"] != "planning" or entry["attempt"] != attempt:
         return state, []
     task = TASKS[state["task"]]
     goal = entry["goal"]
+    leaf = _is_leaf(state, entry)
     status, result = event.payload["status"], event.payload["result"]
     if status == "ok":
-        if state["level"] == 0:
+        if entry["level"] == 0:
             plan, errors = task.root_parse(goal, result.get("output_text", ""))
-        elif state["leaf"]:
+        elif leaf:
             plan, errors = task.contracts_parse(goal, result.get("output_text", ""))
         else:
             plan, errors = task.split_parse(goal, result.get("output_text", ""))
@@ -171,74 +298,89 @@ def _planned(state: dict[str, Any], gid: str, attempt: int, event: Event):
     fallback = False
     if plan is None:
         payload = {"goal_id": gid, "attempt": attempt, "errors": errors}
-        commands.append(Emit(type="plan.rejected", payload=payload))
+        commands.append(_emit(state, gid, "plan.rejected", payload))
         if attempt + 1 < MAX_PLAN_ATTEMPTS:
             entry = {**entry, "attempt": attempt + 1, "feedback": errors}
             state = _put_goal(state, gid, entry)
             return state, [*commands, _plan_effect(state, gid)]
         fallback = True
-        if state["level"] == 0:
+        if entry["level"] == 0:
             plan = task.root_fallback(goal)
-        elif state["leaf"]:
+        elif leaf:
             plan = task.contracts_fallback(goal)
         else:
             plan = task.split_fallback(goal)
 
-    if state["level"] == 0:
+    if entry["level"] == 0:
         token = scope_token(plan)
         state = {**state, "scope": token}
-        commands.append(
-            Emit(
-                type="plan.proposed",
-                payload={"goal_id": gid, "plan": plan, "plan_hash": token, "fallback": fallback},
-            )
-        )
-        commands.append(
-            Emit(type="plan.approved", payload={"goal_id": gid, "scope_token": token, "by": "auto"})
-        )
-        state, more = _assign_children(state, gid, task.root_children(goal, plan))
+        proposed = {"goal_id": gid, "plan": plan, "plan_hash": token, "fallback": fallback}
+        commands.append(_emit(state, gid, "plan.proposed", proposed))
+        approved = {"goal_id": gid, "scope_token": token, "by": "auto"}
+        commands.append(_emit(state, gid, "plan.approved", approved))
+        state, more = _assign_children(state, gid, task.root_children(goal, plan), view)
         return state, commands + more
-    if state["leaf"]:
-        state, more = _start_contracts(state, gid, plan, fallback)
+    if leaf:
+        state, more = _start_contracts(state, gid, plan, fallback, view)
         return state, commands + more
     children = task.split_children(goal, plan)
     payload = {"goal_id": gid, "owner": state["id"], "plan": plan, "fallback": fallback}
-    commands.append(
-        Emit(type="plan.refined", payload=payload | {"children": [c["id"] for c in children]})
-    )
-    state, more = _assign_children(state, gid, children)
+    payload["children"] = [c["id"] for c in children]
+    commands.append(_emit(state, gid, "plan.refined", payload))
+    state, more = _assign_children(state, gid, children, view)
     return state, commands + more
 
 
 # -- non-leaf: child subgoals -------------------------------------------------------------
 
 
-def _assign_children(state: dict[str, Any], gid: str, children: list[dict[str, Any]]):
-    owners = assign({child["id"]: child["priority"] for child in children}, state["children"])
+def _assign_children(state: dict[str, Any], gid: str, children: list[dict[str, Any]], view: View):
+    entry = state["goals"][gid]
+    group = _child_group(state, entry, view)
+    # epsilon 0 at plan time: with no more subgoals than members, one each (parallel squads);
+    # takeover remaps use the spec's epsilon (coord/tree.py).
+    keys = {child["id"]: child["priority"] for child in children}
+    owners = assign(keys, group, epsilon=0.0)
     commands: list[Command] = []
     tracked = {}
     child_of = dict(state["child_of"])
+    level = entry["level"] + 1
     for child in sorted(children, key=lambda c: c["id"]):
         owner = owners[child["id"]]
-        payload = {"group": state["id"], "key": child["id"], "owner": owner}
-        commands.append(Emit(type="ownership.assigned", payload=payload))
-        commands.append(
-            Send(to=owner, topic="assign", body={"goal": child, "scope_token": state["scope"]})
-        )
+        payload = {"group": entry["group"], "key": child["id"], "owner": owner}
+        commands.append(_emit(state, gid, "ownership.assigned", payload))
         tracked[child["id"]] = {"owner": owner, "status": "assigned", "result": None}
         child_of[child["id"]] = gid
-    entry = {**state["goals"][gid], "phase": "running", "children": tracked}
+    entry = {**entry, "phase": "running", "children": tracked}
     state = _put_goal({**state, "child_of": child_of}, gid, entry)
+    for child in sorted(children, key=lambda c: c["id"]):
+        body = {"goal": child, "scope_token": state["scope"], "parent": gid, "level": level}
+        if state["mode"] == "central":  # one process: the child goal starts in place
+            state, more = _start_goal(state, child, state["id"], gid, level, view)
+            commands += more
+        else:
+            commands.append(Send(to=owners[child["id"]], topic="assign", body=body))
     return state, commands
 
 
-def _child_result(state: dict[str, Any], body: dict[str, Any]):
+def _child_group(state: dict[str, Any], entry: dict[str, Any], view: View) -> list[str]:
+    """Who the goal's child subgoals go to: the live members of its child group."""
+    if state["mode"] == "central":
+        return [state["id"]]
+    members = view.views.get("members")
+    if state["membership"] and members is not None:
+        alive = members.alive(role=ROLE, group=entry["group"])
+        return alive or [state["id"]]
+    return list(state["children"])
+
+
+def _child_result(state: dict[str, Any], body: dict[str, Any], view: View):
     gid = state["child_of"].get(body["goal_id"])
     entry = state["goals"].get(gid) if gid else None
     if entry is None or entry["phase"] != "running":
         return state, []
-    child = entry["children"][body["goal_id"]]
-    if child["status"] != "assigned":
+    child = entry["children"].get(body["goal_id"])
+    if child is None or child["status"] != "assigned":
         return state, []  # first result wins (idempotent)
     children = {**entry["children"], body["goal_id"]: {**child, "status": body["status"]}}
     children[body["goal_id"]]["result"] = body
@@ -248,28 +390,39 @@ def _child_result(state: dict[str, Any], body: dict[str, Any]):
         return state, []
     task = TASKS[state["task"]]
     output, gaps = merge_children(task, entry["goal"], children)
-    return _complete(state, gid, output, gaps)
+    return _complete(state, gid, output, gaps, view)
 
 
-def _complete(state: dict[str, Any], gid: str, output: dict[str, Any], gaps: list[str]):
+def _complete(state: dict[str, Any], gid: str, output: dict[str, Any], gaps: list[str], view: View):
     entry = {**state["goals"][gid], "phase": "done"}
     state = _put_goal(state, gid, entry)
     task = TASKS[state["task"]]
-    commands = finish_goal(task, state["id"], entry, output, gaps)
-    if entry["from"] is None:  # the root: the run's result is in, shut the tree down
-        commands += [Stop(actor_id=BOARD, reason="done"), *_shutdown(state)]
-    return state, commands
+    events, body = finish_goal(task, state["id"], entry, output, gaps)
+    commands: list[Command] = [_fenced(state, gid, command) for command in events]
+    if body is None:  # the root goal: the run's result is in, stop everything
+        others = [actor for actor in view.alive if actor != state["id"]]
+        stops = [Stop(actor_id=actor, reason="done", cancel=True) for actor in others]
+        return state, [*commands, *stops, Stop(reason="done", cancel=True)]
+    if state["mode"] == "central":
+        state, more = _child_result(state, body, view)
+        return state, commands + more
+    target = _result_target(state, entry, view)
+    return state, [*commands, Send(to=target, topic="result", body=body)]
 
 
-def _shutdown(state: dict[str, Any]) -> list[Command]:
-    sends: list[Command] = [Send(to=child, topic="shutdown") for child in state["children"]]
-    return [*sends, Stop(reason="shutdown")]
+def _result_target(state: dict[str, Any], entry: dict[str, Any], view: View) -> str:
+    """The parent goal's current owner: an heir, if the assigner has died since."""
+    tree = view.views.get("tree")
+    owner = tree.owner_of(entry["parent_gid"]) if tree is not None else None
+    return owner or entry["from"]
 
 
 # -- leaf: contracts ----------------------------------------------------------------------
 
 
-def _start_contracts(state: dict[str, Any], gid: str, plan: dict[str, Any], fallback: bool):
+def _start_contracts(
+    state: dict[str, Any], gid: str, plan: dict[str, Any], fallback: bool, view: View
+):
     task = TASKS[state["task"]]
     entry = state["goals"][gid]
     contracts = task.contracts(entry["goal"], plan, state["id"], state["scope"])
@@ -279,40 +432,61 @@ def _start_contracts(state: dict[str, Any], gid: str, plan: dict[str, Any], fall
         )
         for c in contracts
     ]
+    commands: list[Command] = []
+    state, agents, spawned = _live_agents(state, gid, view)
+    commands += spawned
     keys = {f"{gid}/{c.id}": c.priority for c in contracts}
-    owners = assign(keys, state["children"])
-    commands: list[Command] = [
-        Emit(
-            type="plan.refined",
-            payload={
-                "goal_id": gid,
-                "owner": state["id"],
-                "children": [c.id for c in contracts],
-                "plan": plan,
-                "fallback": fallback,
-            },
-        )
-    ]
+    owners = assign(keys, agents)
+    refined = {
+        "goal_id": gid,
+        "owner": state["id"],
+        "children": [c.id for c in contracts],
+        "plan": plan,
+        "fallback": fallback,
+    }
+    commands.append(_emit(state, gid, "plan.refined", refined))
     stored = {}
     for contract in contracts:
         contract = contract.model_copy(update={"assignee": owners[f"{gid}/{contract.id}"]})
         stored[contract.id] = contract.model_dump()
-        commands.append(Emit(type="contract.created", payload={"contract": stored[contract.id]}))
+        created = {"contract": stored[contract.id], "work": f"{gid}/{contract.id}"}
+        created["owner"] = state["id"]
+        commands.append(_emit(state, gid, "contract.created", created))
     entry = {
-        **entry,
+        **state["goals"][gid],
         "phase": "running",
         "contracts": stored,
         "status": dict.fromkeys(stored, "pending"),
         "outputs": {},
         "pending": {},
         "collisions": dict.fromkeys(stored, 0),
+        "losses": dict.fromkeys(stored, 0),
     }
     state = _put_goal(state, gid, entry)
-    state, more = _dispatch(state, gid)
+    state, more = _dispatch(state, gid, view)
     return state, commands + more
 
 
-def _dispatch(state: dict[str, Any], gid: str):
+def _live_agents(state: dict[str, Any], gid: str, view: View):
+    """The goal's squad agents that are alive; spawns a replacement if none is."""
+    entry = state["goals"][gid]
+    alive = [agent for agent in entry["agents"] if _alive(view, agent)]
+    if alive:
+        return state, alive, []
+    number = state["spawned"] + 1
+    agent = f"{state['id']}.a{number}"
+    entry = {**entry, "agents": [*entry["agents"], agent]}
+    state = _put_goal({**state, "spawned": number}, gid, entry)
+    return state, [agent], [Spawn(actor_id=agent, kind="agent", args=_agent_args(state))]
+
+
+def _alive(view: View, actor: str) -> bool:
+    """Alive, or spawned by this very handler call (not in the log yet, so not dead)."""
+    tree = view.views.get("tree")
+    return actor in view.alive or (tree is not None and actor not in tree.kinds)
+
+
+def _dispatch(state: dict[str, Any], gid: str, view: View):
     task = TASKS[state["task"]]
     entry = state["goals"][gid]
     status = dict(entry["status"])
@@ -321,25 +495,31 @@ def _dispatch(state: dict[str, Any], gid: str):
     done = [cid for cid, s in status.items() if s == "verified"]
     busy = [cid for cid, s in status.items() if s != "pending"]
     commands: list[Command] = []
-    for cid in dag.ready(done, busy):
+    ready = dag.ready(done, busy)
+    agents: list[str] = []
+    if ready:
+        state, agents, spawned = _live_agents(state, gid, view)
+        entry = state["goals"][gid]
+        commands += spawned
+    for cid in ready:
         contract = Contract.model_validate(contracts[cid])
         deps = {dep: entry["outputs"][dep] for dep in contract.depends_on}
         inputs = task.contract_inputs(entry["goal"], contract, deps)
-        contract = contract.model_copy(update={"inputs": inputs})
+        update: dict[str, Any] = {"inputs": inputs, "owner": state["id"]}
+        if contract.assignee not in agents:
+            update["assignee"] = rank(f"{gid}/{cid}:{contract.attempt}", agents)[0]
+        contract = contract.model_copy(update=update)
         contracts[cid] = contract.model_dump()
         status[cid] = "running"
-        commands.append(
-            Emit(
-                type="contract.dispatched",
-                payload={
-                    "goal_id": gid,
-                    "contract_id": cid,
-                    "attempt": contract.attempt,
-                    "assignee": contract.assignee,
-                    "idem_key": contract.idem_key,
-                },
-            )
-        )
+        dispatched = {
+            "goal_id": gid,
+            "contract_id": cid,
+            "attempt": contract.attempt,
+            "assignee": contract.assignee,
+            "idem_key": contract.idem_key,
+            "work": f"{gid}/{cid}",
+        }
+        commands.append(_emit(state, gid, "contract.dispatched", dispatched))
         commands.append(
             Send(to=contract.assignee, topic="contract", body={"contract": contracts[cid]})
         )
@@ -350,10 +530,10 @@ def _dispatch(state: dict[str, Any], gid: str):
     if any(s in ACTIVE for s in status.values()):
         return state, []
     output, gaps = leaf_outcome(task, entry, dag)
-    return _complete(state, gid, output, gaps)
+    return _complete(state, gid, output, gaps, view)
 
 
-def _contract_result(state: dict[str, Any], body: dict[str, Any]):
+def _contract_result(state: dict[str, Any], body: dict[str, Any], view: View):
     gid, cid = body["goal_id"], body["contract_id"]
     entry = state["goals"].get(gid)
     if entry is None or entry["phase"] != "running" or cid not in entry["contracts"]:
@@ -361,99 +541,125 @@ def _contract_result(state: dict[str, Any], body: dict[str, Any]):
     contract = Contract.model_validate(entry["contracts"][cid])
     if entry["status"][cid] != "running" or body["attempt"] != contract.attempt:
         return state, []  # stale: an earlier attempt's late answer
-    commands: list[Command] = [
-        Emit(
-            type="contract.completed",
-            payload={
-                "goal_id": gid,
-                "contract_id": cid,
-                "attempt": contract.attempt,
-                "agent": body["agent"],
-                "status": body["status"],
-                "steps": body["steps"],
-            },
-        )
-    ]
+    completed = {
+        "goal_id": gid,
+        "contract_id": cid,
+        "attempt": contract.attempt,
+        "agent": body["agent"],
+        "status": body["status"],
+        "steps": body["steps"],
+    }
+    commands: list[Command] = [_emit(state, gid, "contract.completed", completed)]
     if body["status"] != "ok":
-        state, more = _retry(state, gid, cid, "agent", [body["error"]])
+        state, more = _retry(state, gid, cid, "agent", [body["error"]], view)
         return state, commands + more
     task = TASKS[state["task"]]
     output = body["output"]
     failures = run_checks(contract.acceptance.checks, output, task.check_context(entry["goal"]))
     if failures:
-        state, more = _retry(state, gid, cid, "checks", failures)
+        state, more = _retry(state, gid, cid, "checks", failures, view)
         return state, commands + more
     pending = {**entry["pending"], cid: {"output": output, "published": body["published"]}}
     entry = {**entry, "pending": pending}
     state = _put_goal(state, gid, entry)
     if task.needs_judge(contract):
-        request = judge_request(contract, output, contract.inputs.get("data", {}))
-        state = _set_status(state, gid, cid, "judging")
-        effect = StartEffect(
-            kind="llm",
-            request=request,
-            tag=f"judge|{gid}|{cid}|{contract.attempt}",
-            scopes={"contract": contract.idem_key, "squad": state["id"]},
-        )
-        return state, [*commands, effect]
-    state, more = _accept(state, gid, cid, view_epoch=0)
+        state, more = _judge(state, gid, cid, view)
+    else:
+        state, more = _accept(state, gid, cid, view)
     return state, commands + more
 
 
-def _judged(state: dict[str, Any], gid: str, cid: str, attempt: int, event: Event):
+def _judge(state: dict[str, Any], gid: str, cid: str, view: View):
+    """Ask the judge, unless the log already holds its verdict (a dead owner asked it)."""
+    state = _set_status(state, gid, cid, "judging")
+    entry = state["goals"][gid]
+    contract = Contract.model_validate(entry["contracts"][cid])
+    logged = _logged(view, gid, cid)
+    verdict = logged.judged.get(contract.attempt) if logged is not None else None
+    if verdict is not None:
+        return _judged(state, gid, cid, contract.attempt, *verdict, view, reused=True)
+    output = entry["pending"][cid]["output"]
+    request = judge_request(contract, output, contract.inputs.get("data", {}))
+    effect = StartEffect(
+        kind="llm",
+        request=_route(state, request),
+        tag=f"judge|{gid}|{cid}|{contract.attempt}",
+        scopes={"contract": contract.idem_key, "squad": state["id"]},
+    )
+    return state, [effect]
+
+
+def _judged(
+    state: dict[str, Any],
+    gid: str,
+    cid: str,
+    attempt: int,
+    status: str,
+    text: str,
+    view: View,
+    reused: bool = False,
+):
     entry = state["goals"].get(gid)
     if entry is None or entry["status"].get(cid) != "judging":
         return state, []
     contract = Contract.model_validate(entry["contracts"][cid])
     if contract.attempt != attempt:
         return state, []
-    verdict = read_verdict(event.payload["status"], event.payload["result"].get("output_text", ""))
-    commands: list[Command] = [
-        Emit(
-            type="verify.judged",
-            payload={"goal_id": gid, "contract_id": cid, "attempt": attempt} | verdict.model_dump(),
-        )
-    ]
+    verdict = read_verdict(status, text)
+    payload = {"goal_id": gid, "contract_id": cid, "attempt": attempt} | verdict.model_dump()
+    commands: list[Command] = [_emit(state, gid, "verify.judged", payload | _reused(reused))]
     if verdict.verdict == "fail":
-        state, more = _retry(state, gid, cid, "judge", verdict.reasons or ["the judge failed it"])
+        reasons = verdict.reasons or ["the judge failed it"]
+        state, more = _retry(state, gid, cid, "judge", reasons, view)
         return state, commands + more
-    state, more = _accept(state, gid, cid, view_epoch=event.member_epoch)
+    state, more = _accept(state, gid, cid, view)
     return state, commands + more
 
 
-def _accept(state: dict[str, Any], gid: str, cid: str, view_epoch: int):
+def _reused(reused: bool) -> dict[str, Any]:
+    return {"reused": True} if reused else {}
+
+
+def _accept(state: dict[str, Any], gid: str, cid: str, view: View):
     task = TASKS[state["task"]]
     entry = state["goals"][gid]
     contract = Contract.model_validate(entry["contracts"][cid])
     output = entry["pending"][cid]["output"]
     writes = task.bookings(entry["goal"], contract, output)
     if not writes:
-        return _verified(state, gid, cid)
+        return _verified(state, gid, cid, view)
     state = _set_status(state, gid, cid, "booking")
+    logged = _logged(view, gid, cid)
+    booked = logged.booked.get(contract.attempt) if logged is not None else None
+    if booked is not None:  # the dead owner's booking already went through the board
+        return _booked(state, {"goal_id": gid, "contract_id": cid, "conflicts": booked}, view)
+    det = state["det"]
+    token = {"member": state["id"], "incarnation": det.incarnation if det else 0}
     body = {
         "goal_id": gid,
         "contract_id": cid,
         "attempt": contract.attempt,
-        "token": {"member": state["id"], "incarnation": 0, "epoch": view_epoch},
+        "token": token | {"epoch": view.member_epoch},
         "writes": writes,
     }
     return state, [Send(to=BOARD, topic="book", body=body)]
 
 
-def _booked(state: dict[str, Any], body: dict[str, Any]):
+def _booked(state: dict[str, Any], body: dict[str, Any], view: View):
     gid, cid = body["goal_id"], body["contract_id"]
     entry = state["goals"].get(gid)
     if entry is None or entry["status"].get(cid) != "booking":
         return state, []
     if not body["conflicts"]:
-        return _verified(state, gid, cid)
+        return _verified(state, gid, cid, view)
     task = TASKS[state["task"]]
     collisions = {**entry["collisions"], cid: entry["collisions"][cid] + 1}
     state = _put_goal(state, gid, {**entry, "collisions": collisions})
-    return _retry(state, gid, cid, "booking", task.conflict_feedback(body["conflicts"]))
+    feedback = task.conflict_feedback(body["conflicts"])
+    return _retry(state, gid, cid, "booking", feedback, view)
 
 
-def _verified(state: dict[str, Any], gid: str, cid: str):
+def _verified(state: dict[str, Any], gid: str, cid: str, view: View):
     entry = state["goals"][gid]
     contract = Contract.model_validate(entry["contracts"][cid])
     pending = entry["pending"][cid]
@@ -463,70 +669,466 @@ def _verified(state: dict[str, Any], gid: str, cid: str):
         "status": {**entry["status"], cid: "verified"},
     }
     state = _put_goal(state, gid, entry)
+    verified = {"goal_id": gid, "contract_id": cid, "attempt": contract.attempt}
     commands: list[Command] = [
-        Emit(
-            type="contract.verified",
-            payload={"goal_id": gid, "contract_id": cid, "attempt": contract.attempt},
-        )
+        _emit(state, gid, "contract.verified", verified | {"work": f"{gid}/{cid}"})
     ]
     if pending["published"]:
         commands.append(Send(to=BOARD, topic="promote", body={"keys": pending["published"]}))
     if entry["collisions"][cid]:
         resolution = f"re-placed after {entry['collisions'][cid]} booking conflict(s)"
         payload = {"kind": "temporal", "goal_id": gid, "resolution": resolution}
-        commands.append(Emit(type="collision.resolved", payload=payload))
-    state, more = _dispatch(state, gid)
+        commands.append(_emit(state, gid, "collision.resolved", payload))
+    state, more = _dispatch(state, gid, view)
     return state, commands + more
 
 
-def _retry(state: dict[str, Any], gid: str, cid: str, stage: str, reasons: list[str]):
-    """The replanning ladder, steps 1-2: retry with feedback, then reassign to a sibling."""
+def _retry(state: dict[str, Any], gid: str, cid: str, stage: str, reasons: list[str], view: View):
+    """The replanning ladder, steps 1-2: retry with feedback, then reassign to a sibling.
+
+    A contract lost with its agent (stage ``lost``) is re-dispatched without counting as a
+    failed attempt.
+    """
     entry = state["goals"][gid]
     contract = Contract.model_validate(entry["contracts"][cid])
     reasons = [reason[:400] for reason in reasons[:MAX_FEEDBACK_LINES]]
-    commands: list[Command] = [
-        Emit(
-            type="contract.rejected",
-            payload={
-                "goal_id": gid,
-                "contract_id": cid,
-                "attempt": contract.attempt,
-                "stage": stage,
-                "reasons": reasons,
-            },
-        )
-    ]
+    rejected = {
+        "goal_id": gid,
+        "contract_id": cid,
+        "attempt": contract.attempt,
+        "stage": stage,
+        "reasons": reasons,
+    }
+    commands: list[Command] = [_emit(state, gid, "contract.rejected", rejected)]
+    losses = dict(entry.get("losses") or dict.fromkeys(entry["contracts"], 0))
+    if stage == "lost":
+        losses[cid] = losses.get(cid, 0) + 1
     attempt = contract.attempt + 1
-    if attempt >= state["max_attempts"]:
-        commands.append(
-            Emit(
-                type="contract.failed",
-                payload={"goal_id": gid, "contract_id": cid, "attempt": contract.attempt}
-                | {"reasons": reasons},
-            )
-        )
+    if attempt - losses.get(cid, 0) >= state["max_attempts"]:
+        failed = {"goal_id": gid, "contract_id": cid, "attempt": contract.attempt}
+        failed |= {"reasons": reasons, "work": f"{gid}/{cid}"}
+        commands.append(_emit(state, gid, "contract.failed", failed))
         state = _set_status(state, gid, cid, "failed")
-        state, more = _dispatch(state, gid)
+        state, more = _dispatch(state, gid, view)
         return state, commands + more
     assignee = contract.assignee
-    if stage != "booking" and attempt >= 2:
-        ranked = rank(f"{gid}/{cid}", state["children"])
+    if stage == "lost":
+        assignee = None  # _dispatch picks a live agent
+    elif stage != "booking" and attempt >= 2:
+        ranked = rank(f"{gid}/{cid}", entry["agents"])
         others = [agent for agent in ranked if agent != contract.assignee] or ranked
         assignee = others[0]
+    feedback = contract.feedback if stage == "lost" else reasons
     contract = contract.model_copy(
-        update={"attempt": attempt, "feedback": reasons, "assignee": assignee}
+        update={"attempt": attempt, "feedback": feedback, "assignee": assignee}
     )
     entry = {
         **entry,
         "contracts": {**entry["contracts"], cid: contract.model_dump()},
         "status": {**entry["status"], cid: "pending"},
+        "losses": losses,
     }
     state = _put_goal(state, gid, entry)
-    state, more = _dispatch(state, gid)
+    state, more = _dispatch(state, gid, view)
     return state, commands + more
 
 
+# -- failure handling: membership, reconcile, adoption ------------------------------------
+
+
+def _peers(state: dict[str, Any], view: View) -> list[str]:
+    """Siblings, the (current) parent and the (current) child orchestrators (spec §5.2)."""
+    me, det = state["id"], state["det"]
+    members, tree = view.views.get("members"), view.views.get("tree")
+    peers: set[str] = set()
+    if members is not None and det.group is not None:
+        peers |= set(members.alive(role=ROLE, group=det.group))
+    if tree is not None:
+        parent = tree.parents.get(me, state["parent"])
+        if parent is not None and tree.kinds.get(parent) == "orchestrator":
+            peers.add(parent)
+        peers |= set(tree.child_actors(me, kind="orchestrator"))
+    else:
+        if state["parent"] is not None:
+            peers.add(state["parent"])
+        if not state["leaf"]:
+            peers |= set(state["children"])
+    peers.discard(me)
+    if members is not None:
+        peers = {peer for peer in peers if not members.is_gone(peer)}
+    return sorted(peers)
+
+
+def _zombie(state: dict[str, Any], view: View) -> bool:
+    members = view.views.get("members")
+    det = state["det"]
+    return members is not None and members.is_dead(state["id"], det.incarnation)
+
+
+def _drop_goals(state: dict[str, Any]) -> dict[str, Any]:
+    """The log says this incarnation is dead: its goals belong to its heirs now."""
+    if not state["goals"]:
+        return state
+    return {**state, "goals": {}, "child_of": {}}
+
+
+def _reconcile(state: dict[str, Any], view: View):
+    members, tree = view.views.get("members"), view.views.get("tree")
+    if members is None or tree is None:
+        return state, []
+    if _zombie(state, view):
+        return _drop_goals(state), []
+    me = state["id"]
+    commands: list[Command] = []
+    respawned: set[str | None] = set()
+    for gid in sorted(tree.goals):
+        record = tree.goals[gid]
+        if record.done or gid in state["goals"] or not members.is_gone(record.owner):
+            continue
+        new_owner = heir(tree, gid, members)
+        if new_owner == me:
+            state, more = _adopt(state, gid, view)
+            commands += more
+        elif new_owner is None and tree.owner_of(record.parent) == me:
+            group = members.get(record.owner).group
+            if group not in respawned:
+                respawned.add(group)
+                state, more = _respawn(state, record.level, group)
+                commands += more
+    for gid in sorted(state["goals"]):
+        state, more = _pull(state, gid, view)
+        commands += more
+    return state, commands
+
+
+def _adopt(state: dict[str, Any], gid: str, view: View):
+    """Take over a dead owner's goal: rebuild it from the log, adopt its child group."""
+    tree, members = view.views["tree"], view.views["members"]
+    record = tree.goals[gid]
+    previous, me = record.owner, state["id"]
+    leaf = record.level == len(state["fanout"])
+    entry: dict[str, Any] = {
+        "goal": record.goal,
+        "from": tree.owner_of(record.parent),
+        "parent_gid": record.parent,
+        "level": record.level,
+        "phase": "planning",
+        "attempt": 0,
+        "feedback": [],
+        "epoch": view.member_epoch,
+        "group": previous,
+    }
+    works: list[str] = []
+    adopted = 0
+    children = [actor for actor in _child_group_of(tree, gid, leaf) if actor in view.alive]
+    children = [actor for actor in children if actor != me]
+    if leaf:
+        entry["agents"] = children
+        if record.plan is not None and record.contracts:
+            entry, works, adopted = _rebuild_leaf(entry, record, gid)
+    elif record.plan is not None and tree.children_goals(gid):
+        tracked = {}
+        for child in tree.children_goals(gid):
+            result = tree.goals[child].result
+            status = result["status"] if result is not None else "assigned"
+            tracked[child] = {"owner": tree.goals[child].owner, "status": status, "result": result}
+        entry |= {"phase": "running", "children": tracked}
+        state = {**state, "child_of": state["child_of"] | dict.fromkeys(tracked, gid)}
+    state = _put_goal(state, gid, entry)
+
+    group = members.get(previous).group if members.get(previous) is not None else None
+    remapped = {"group": group, "key": gid, "owner": me, "previous": previous}
+    remapped |= {"works": works, "adopted_results": adopted}
+    commands: list[Command] = [
+        _emit(state, gid, "ownership.remapped", remapped, f"ownership.remapped:{gid}:{previous}")
+    ]
+    duties = ["final integration", "top-level arbitration"] if record.level == 0 else []
+    if not leaf and record.level > 0:
+        duties = ["integration", "arbitration"]
+    if children or duties:
+        payload = {"dead": previous, "adopter": me, "goal_id": gid, "children": children}
+        idem = f"tree.adopted:{previous}:{gid}"
+        commands.append(_emit(state, gid, "tree.adopted", payload | {"duties": duties}, idem))
+
+    if entry["phase"] == "planning":  # the plan died with its owner: plan it again
+        return state, [*commands, _plan_effect(state, gid)]
+    if not leaf:
+        tracked = entry["children"]
+        if all(child["status"] != "assigned" for child in tracked.values()):
+            task = TASKS[state["task"]]
+            output, gaps = merge_children(task, entry["goal"], tracked)
+            state, more = _complete(state, gid, output, gaps, view)
+            return state, commands + more
+    return state, commands
+
+
+def _child_group_of(tree: Any, gid: str, leaf: bool) -> list[str]:
+    """A goal's child group: the owners of its subgoals, or its squad (the agents its
+    contracts went to, plus the owner's own agents when this was its only session)."""
+    record = tree.goals[gid]
+    if not leaf:
+        return sorted({tree.goals[child].owner for child in tree.children_goals(gid)})
+    squad = {found.contract.get("assignee") for found in record.contracts.values()}
+    sessions = [
+        g for g in tree.goals.values() if g.owner == record.owner and g.level == record.level
+    ]
+    if len(sessions) == 1:
+        squad |= set(tree.child_actors(record.owner, "agent"))
+    return sorted(agent for agent in squad if agent)
+
+
+def _respawn(state: dict[str, Any], level: int, group: str | None):
+    """A whole sibling group died (spec §5.3): the parent goal's owner spawns a new member
+    into it, which inherits the group's goals by HRW on its first tick."""
+    number = state["respawned"] + 1
+    prefix = "o" if state["id"] == "o0" else f"{state['id']}."
+    actor = f"{prefix}{len(state['children']) + number}"
+    args = {key: state[key] for key in ("fanout", "agents_per_leaf", "task", "max_attempts")}
+    args |= {"max_steps": state["max_steps"], "level": level, "parent": group, "bare": True}
+    args |= {"membership": True, "relay": state["relay"], "contributor": state["contributor"]}
+    state = {**state, "respawned": number}
+    return state, [Spawn(actor_id=actor, kind="orchestrator", args=args)]
+
+
+def _rebuild_leaf(entry: dict[str, Any], record: Any, gid: str):
+    contracts, status, outputs = {}, {}, {}
+    works: list[str] = []
+    adopted = 0
+    for cid in record.children:
+        found = record.contracts.get(cid)
+        if found is None:
+            continue
+        contract = found.contract
+        contracts[cid] = contract
+        state = found.status if found.status in ("verified", "failed", "running") else "pending"
+        status[cid] = state
+        if state == "verified":
+            outputs[cid] = found.results.get(contract["attempt"], {}).get("output", {})
+        else:
+            works.append(f"{gid}/{cid}")
+        if state == "running" and contract["attempt"] in found.results:
+            adopted += 1
+    entry = {
+        **entry,
+        "phase": "running",
+        "contracts": contracts,
+        "status": status,
+        "outputs": outputs,
+        "pending": {},
+        "collisions": dict.fromkeys(contracts, 0),
+        "losses": dict.fromkeys(contracts, 0),
+    }
+    return entry, works, adopted
+
+
+def _pull(state: dict[str, Any], gid: str, view: View):
+    """Results sent to a dead previous owner are in the log: take them from there. Contracts
+    whose agent died are dispatched again; pending ones are dispatched."""
+    entry = state["goals"].get(gid)
+    tree = view.views.get("tree")
+    if entry is None or entry["phase"] != "running" or tree is None:
+        return state, []
+    commands: list[Command] = []
+    if not _is_leaf(state, entry):
+        for child in sorted(entry["children"]):
+            record = tree.goals.get(child)
+            if entry["children"][child]["status"] == "assigned" and record and record.result:
+                state, more = _child_result(state, record.result, view)
+                commands += more
+                entry = state["goals"][gid]
+                if entry["phase"] != "running":
+                    break
+        return state, commands
+    for cid in sorted(entry["contracts"]):
+        entry = state["goals"][gid]
+        if entry["phase"] != "running" or entry["status"].get(cid) != "running":
+            continue
+        contract = entry["contracts"][cid]
+        logged = _logged(view, gid, cid)
+        result = logged.results.get(contract["attempt"]) if logged is not None else None
+        if result is not None:
+            state, more = _contract_result(state, result, view)
+            commands += more
+        elif not _alive(view, contract["assignee"]):
+            reason = f"agent {contract['assignee']} was lost"
+            state, more = _retry(state, gid, cid, "lost", [reason], view)
+            commands += more
+    entry = state["goals"][gid]
+    if entry["phase"] == "running" and "pending" in entry["status"].values():
+        state, more = _dispatch(state, gid, view)
+        commands += more
+    return state, commands
+
+
+def _logged(view: View, gid: str, cid: str):
+    tree = view.views.get("tree")
+    record = tree.goals.get(gid) if tree is not None else None
+    return record.contracts.get(cid) if record is not None else None
+
+
+# -- the central baseline: one orchestrator under the best-case supervisor ----------------
+
+
+def _central(state: dict[str, Any], event: Event, view: View):
+    if event.type == "actor.spawned":
+        joined = {"member": state["id"], "incarnation": 0, "role": ROLE, "group": None}
+        join = Emit(type="member.joined", payload=joined, idem_key=f"member.joined:{state['id']}:0")
+        state, commands = _handle(state, event, view)
+        tick = SetTimer(delay_ms=CENTRAL_TICK_MS, tag=CENTRAL_TICK)
+        return state, [join, *commands, tick]
+    tag = event.payload.get("tag") if event.type == "effect.completed" else None
+    if tag == RESTART_TAG:
+        return _restart(state)
+    if tag == CENTRAL_REDO:
+        return _redo(state, view)
+    if event.type == "msg.sent" and event.payload["topic"] == CRASH_TOPIC:
+        if not state["up"]:  # two crash points passed at once: crash again after the restart
+            return {**state, "pending_crashes": state["pending_crashes"] + 1}, []
+        return _crash(state, view)
+    if tag == CENTRAL_TICK:
+        if all(entry["phase"] == "done" for entry in state["goals"].values()):
+            return state, []
+        commands: list[Command] = [SetTimer(delay_ms=CENTRAL_TICK_MS, tag=CENTRAL_TICK)]
+        if state["up"]:  # the same 1 s check as the swarm's: lost agents, results in the log
+            for gid in sorted(state["goals"]):
+                state, more = _pull(state, gid, view)
+                commands += more
+        return state, commands
+    if not state["up"]:
+        return state, []  # down: deliveries and completions are lost with the process
+    return _handle(state, event, view)
+
+
+def _crash(state: dict[str, Any], view: View):
+    """Process-tree crash: everything in flight dies, the workers' calls included."""
+    tags: list[str] = []
+    lost: list[str] = []
+    for gid in sorted(state["goals"]):
+        entry = state["goals"][gid]
+        if entry["phase"] == "planning":
+            tags.append(f"plan|{gid}|{entry['attempt']}")
+            lost.append(gid)
+        for cid in sorted(entry.get("status", {})):
+            status = entry["status"][cid]
+            if status in ACTIVE:
+                lost.append(f"{gid}/{cid}")
+            if status == "judging":
+                tags.append(f"judge|{gid}|{cid}|{entry['contracts'][cid]['attempt']}")
+    agents = [agent for agent in _all_agents(state) if agent in view.alive]
+    number = state["crashes"] + 1
+    payload = {
+        "coordinator": state["id"],
+        "crash": number,
+        "dispatched": _dispatched_count(state),
+        "lost": lost,
+        "restart_in_ms": RESTART_DELAY_MS,
+    }
+    commands: list[Command] = [Emit(type="baseline.crashed", payload=payload)]
+    commands += [Cancel(tag=tag) for tag in tags]
+    commands += [Stop(actor_id=agent, reason="crash", cancel=True) for agent in agents]
+    commands.append(SetTimer(delay_ms=RESTART_DELAY_MS, tag=RESTART_TAG))
+    state = {**state, "up": False, "crashes": number, "crashed_agents": agents}
+    return state, commands
+
+
+def _restart(state: dict[str, Any]):
+    """Back ``RESTART_DELAY_MS`` after the crash; the restart itself takes 0 s. The workers
+    come back first, so the redo (a 0 ms timer later) can dispatch to them."""
+    commands: list[Command] = [
+        Spawn(actor_id=agent, kind="agent", args=_agent_args(state))
+        for agent in state["crashed_agents"]
+    ]
+    state = {**state, "up": True, "crashed_agents": []}
+    return state, [*commands, SetTimer(delay_ms=0, tag=CENTRAL_REDO)]
+
+
+def _redo(state: dict[str, Any], view: View):
+    """Redo only the work the crash lost: completed work was kept (native persistence)."""
+    commands: list[Command] = []
+    redo: list[str] = []
+    for gid in sorted(state["goals"]):
+        if state["goals"][gid]["phase"] == "planning":
+            redo.append(gid)
+            commands.append(_plan_effect(state, gid))
+            continue
+        for cid in sorted(state["goals"][gid].get("status", {})):
+            entry = state["goals"][gid]
+            status = entry["status"][cid] if entry["phase"] == "running" else None
+            if status not in ACTIVE:
+                continue
+            redo.append(f"{gid}/{cid}")
+            if status == "judging":
+                state, more = _judge(state, gid, cid, view)
+            elif status == "booking":
+                state, more = _accept(state, gid, cid, view)
+            else:
+                logged = _logged(view, gid, cid)
+                attempt = entry["contracts"][cid]["attempt"]
+                result = logged.results.get(attempt) if logged is not None else None
+                if result is not None:  # it answered before the crash: kept
+                    state, more = _contract_result(state, result, view)
+                else:
+                    state, more = _retry(state, gid, cid, "lost", ["lost in a crash"], view)
+            commands += more
+    restarted = {"coordinator": state["id"], "crash": state["crashes"], "redo": redo}
+    commands = [Emit(type="baseline.restarted", payload=restarted), *commands]
+    if state["pending_crashes"]:
+        state = {**state, "pending_crashes": state["pending_crashes"] - 1}
+        state, more = _crash(state, view)
+        commands += more
+    return state, commands
+
+
+def _all_agents(state: dict[str, Any]) -> list[str]:
+    spawned = {agent for entry in state["goals"].values() for agent in entry.get("agents", [])}
+    return sorted({*state["children"], *spawned})
+
+
+def _dispatched_count(state: dict[str, Any]) -> int:
+    return sum(
+        1
+        for entry in state["goals"].values()
+        for status in entry.get("status", {}).values()
+        if status != "pending"
+    )
+
+
 # -- helpers ------------------------------------------------------------------------------
+
+
+def _agent_args(state: dict[str, Any]) -> dict[str, Any]:
+    args = {"owner": state["id"], "squad": state["id"], "max_steps": state["max_steps"]}
+    return args | {"contributor": state["contributor"]}
+
+
+def _route(state: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
+    """Contributor routing, when the run opted in (spec §7.5; the client still gates it)."""
+    return request | {"contributor": True} if state["contributor"] else request
+
+
+def _is_leaf(state: dict[str, Any], entry: dict[str, Any]) -> bool:
+    return entry["level"] == len(state["fanout"])
+
+
+def _emit(
+    state: dict[str, Any],
+    gid: str,
+    event_type: str,
+    payload: dict[str, Any],
+    idem_key: str | None = None,
+) -> Emit:
+    """An owner-scoped write: with membership on, it carries the owner's fencing token."""
+    det = state["det"]
+    entry = state["goals"].get(gid)
+    if det is not None and entry is not None:
+        payload = payload | {"fence": membership.token(det, entry["epoch"], gid)}
+    return Emit(type=event_type, payload=payload, idem_key=idem_key)
+
+
+def _fenced(state: dict[str, Any], gid: str, command: Command) -> Command:
+    if isinstance(command, Emit):
+        return _emit(state, gid, command.type, command.payload, command.idem_key)
+    return command
 
 
 def _put_goal(state: dict[str, Any], gid: str, entry: dict[str, Any]) -> dict[str, Any]:

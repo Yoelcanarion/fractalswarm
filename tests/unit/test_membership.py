@@ -232,3 +232,26 @@ def test_sync_adopts_the_logs_verdict() -> None:
     admit_and_apply(members, "member.joined", joined("c", 1), "c")
     changes = membership.sync(det, view("a", 200, members))
     assert [(c.member, c.status, c.incarnation) for c in changes] == [("c", "alive", 1)]
+
+
+def test_sync_withdraws_a_verdict_the_log_fenced() -> None:
+    # A cut-off zombie judges its parent dead, but it is a dead incarnation itself, so the
+    # verdict is fenced. After it rejoins, it must heartbeat the parent again.
+    members = MembersView()
+    for name in NAMES:
+        admit_and_apply(members, "member.joined", joined(name), name)
+    admit_and_apply(members, "member.dead", verdict("a", "b"), "b")
+    det = Detector(member="a")
+    membership.watch(det, ["b", "c"], 0)
+    det.peers["b"].status = "dead"  # its own verdict on b, which the log refused
+    assert not admit_and_apply(members, "member.dead", verdict("b", "a"), "a").accept
+    changes = membership.sync(det, view("a", 9000, members))
+    assert [(c.member, c.status) for c in changes] == [("b", "alive")]
+    assert det.peers["b"].last_heard == 9000
+    out = membership.tick(det, Endpoint(owner="a"), view("a", 9000, members))
+    sent = [
+        Envelope.model_validate(c.body[bus.ENVELOPE_KEY]).to
+        for c in out.commands
+        if isinstance(c, Send)
+    ]
+    assert sorted(sent) == ["b", "c"]

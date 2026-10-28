@@ -115,13 +115,16 @@ def test_preflight_prices_worst_cases_and_lists_unregistered(tmp_path: Path) -> 
     v1 = Matrix.load(V1)
     assert len(v1.cells()) == 32 and v1.contributor is True
     plan = preflight(v1, tmp_path)
-    assert plan.worst_case_usd == 0
-    assert all(not cell.registered for cell in plan.cells)
-    assert "workflow swarm" in plan.unregistered and "task t2_conference" in plan.unregistered
+    registered = {cell.cell.split("__")[0] for cell in plan.cells if cell.registered}
+    assert registered == {"swarm", "central"}
+    assert plan.unregistered == ["workflow pipeline", "workflow single"]
+    # Only the registered cells are priced.
+    assert plan.worst_case_usd == pytest.approx(sum(c.worst_case_usd or 0 for c in plan.cells))
+    assert all(c.worst_case_usd is None for c in plan.cells if not c.registered)
 
 
 async def test_running_an_unregistered_matrix_is_refused(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="workflow swarm"):
+    with pytest.raises(ValueError, match="workflow pipeline"):
         await run_matrix(Matrix.load(V1), tmp_path, options())
 
 

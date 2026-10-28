@@ -34,10 +34,9 @@ from fractalswarm.comms.chaos import (
     NET,
     NET_KIND,
     ActorsView,
-    ChaosPlan,
     ProgressSpec,
     ProgressView,
-    build_plan,
+    plan_from,
 )
 from fractalswarm.comms.topics import ARTIFACT_READY
 from fractalswarm.coord import membership
@@ -384,14 +383,6 @@ def _retry(state: AgentState, view: View) -> list[Command]:
 
 
 # -- the scenario -----------------------------------------------------------------------
-
-
-def plan_from(params: dict[str, Any]) -> ChaosPlan:
-    """``params["chaos"]``: a full plan, or ``{"profile": "C2", "seed": "..."}``."""
-    raw = params.get("chaos") or {"profile": "C0"}
-    if "actions" in raw:
-        return ChaosPlan.model_validate(raw)
-    return build_plan(raw.get("profile", "C0"), str(raw.get("seed", "0")))
 
 
 @dataclass(frozen=True)

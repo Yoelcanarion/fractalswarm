@@ -405,7 +405,9 @@ def _judge(det: Detector, name: str, missed: int, changes: list[Change]) -> list
 
 
 def sync(det: Detector, view: View) -> list[Change]:
-    """Adopt what the log already decided: the first ``member.dead`` in the log wins."""
+    """Adopt what the log already decided: the first ``member.dead`` in the log wins, and a
+    verdict of ours that never entered the log (we were a dead incarnation, so it was
+    fenced) is withdrawn: the peer is alive again, with a fresh grace period."""
     members = view.views.get("members")
     if members is None:
         return []
@@ -418,6 +420,14 @@ def sync(det: Detector, view: View) -> list[Change]:
             peer.incarnation = record.incarnation
             peer.status = "alive"
             peer.last_heard = max(peer.last_heard, record.since)
+            changes.append(Change(name, "alive", record.incarnation))
+        elif (
+            record.incarnation == peer.incarnation
+            and record.status != "dead"
+            and (peer.status == "dead")
+        ):
+            peer.status = "alive"
+            peer.last_heard = view.now
             changes.append(Change(name, "alive", record.incarnation))
         elif (
             record.incarnation >= peer.incarnation

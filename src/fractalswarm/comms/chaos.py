@@ -15,7 +15,9 @@ Three parts:
   progress point passes, kills a coordinator chosen by a pluggable targeting rule (default:
   the one with the most remaining owned work), kills agents, or partitions a member and later
   heals it. Each action is a ``chaos.injected`` event followed by the kernel's
-  ``actor.stopped``.
+  ``actor.stopped``; a kill is a crash, so the victim's in-flight effects die with it. With
+  ``crash_mode="signal"`` a coordinator is not stopped but sent ``chaos.crash`` instead: a
+  supervised baseline crashes and restarts itself (spec §15.2), at the same progress points.
 
 Every decision is a pure function of the seed and the log so far, so chaos runs replay bit for
 bit. Two reducers feed the monkey: ``ProgressView`` (contracts created, dispatched and finished,
@@ -29,6 +31,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from fractalswarm.bench.profiles import CRASH_POINTS
 from fractalswarm.comms.bus import ENVELOPE_KEY, RELAY_TOPIC
 from fractalswarm.kernel.events import Event, Payload, register
 from fractalswarm.kernel.ids import stable_hash
@@ -37,7 +40,7 @@ from fractalswarm.kernel.scheduler import ActorKind, Command, Emit, Send, SetTim
 NET = "net"
 CHAOS = "chaos"
 CONFIG_TOPIC = "net.config"
-CRASH_POINTS = (0.20, 0.35, 0.50, 0.65, 0.80)
+CRASH_TOPIC = "chaos.crash"
 
 
 @register("chaos.injected")
@@ -99,14 +102,14 @@ PROFILES = {
     "C2": ChaosProfile(3, 0.30, 0.10, 0.10, True),
     "C3": ChaosProfile(5, 0.50, 0.20, 0.20, True),
 }
-# Which of the five points each crash count uses: spread out, the middle first.
-CRASH_SCHEDULE = {0: (), 1: (0.35,), 3: (0.20, 0.50, 0.80), 5: CRASH_POINTS}
 
 
 def build_plan(profile: str, seed: str = "0", partition_ms: int = 8000) -> ChaosPlan:
     """The same profile and seed give the same plan for every workflow (spec §15.2)."""
     spec = PROFILES[profile]
-    actions = [ChaosAction(at=at, kind="kill_coordinator") for at in CRASH_SCHEDULE[spec.crashes]]
+    # Crash k happens at the k-th shared point, as in the baselines' supervisor.
+    crashes = CRASH_POINTS[: spec.crashes]
+    actions = [ChaosAction(at=at, kind="kill_coordinator") for at in crashes]
     if spec.agent_share > 0:
         actions += [
             ChaosAction(at=at, kind="kill_agents", agent_share=spec.agent_share)
@@ -126,6 +129,14 @@ def build_plan(profile: str, seed: str = "0", partition_ms: int = 8000) -> Chaos
         net=net,
         api_fault_rate=spec.api_faults,
     )
+
+
+def plan_from(params: dict[str, Any]) -> ChaosPlan:
+    """``params["chaos"]``: a full plan, or ``{"profile": "C2", "seed": "..."}``."""
+    raw = params.get("chaos") or {"profile": "C0"}
+    if "actions" in raw:
+        return ChaosPlan.model_validate(raw)
+    return build_plan(raw.get("profile", "C0"), str(raw.get("seed", "0")))
 
 
 # -- the views the monkey reads (kernel reducers) ---------------------------------------
@@ -163,15 +174,19 @@ class ProgressView:
         self.spec = spec or ProgressSpec()
         self.items: dict[str, WorkItem] = {}
 
-    def fraction(self) -> float:
-        """Share of the known work dispatched at least once (the chaos clock)."""
-        if not self.items:
+    def fraction(self, expected: int = 0) -> float:
+        """Share of the work dispatched at least once (the chaos clock). ``expected``: the
+        total the task will create, when known, so early dispatches do not count double."""
+        total = max(len(self.items), expected)
+        if not total:
             return 0.0
         dispatched = sum(1 for item in self.items.values() if item.dispatches > 0)
-        return dispatched / len(self.items)
+        return dispatched / total
 
-    def complete(self) -> bool:
-        return bool(self.items) and all(item.finished for item in self.items.values())
+    def complete(self, expected: int = 0) -> bool:
+        if not self.items or len(self.items) < expected:
+            return False
+        return all(item.finished for item in self.items.values())
 
     def remaining_by_owner(self) -> dict[str, int]:
         remaining: dict[str, int] = {}
@@ -354,8 +369,11 @@ class MonkeyState:
     agent_kinds: tuple[str, ...]
     poll_ms: int
     until_ms: int | None = None  # stop polling then, even if progress stalls
+    crash_mode: str = "stop"  # stop | signal (send CRASH_TOPIC to a supervised coordinator)
+    expected_work: int = 0  # the task's total work, for the progress clock
     next_action: int = 0
     agents_killed: int = 0
+    killed: list[str] = field(default_factory=list)  # stopped by this monkey
     partitions: dict[str, str] = field(default_factory=dict)  # id -> isolated member
     log: list[dict[str, Any]] = field(default_factory=list)
 
@@ -376,6 +394,8 @@ class ChaosMonkey:
             agent_kinds=tuple(args.get("agent_kinds", ["agent"])),
             poll_ms=int(args.get("poll_ms", 250)),
             until_ms=args.get("until_ms"),
+            crash_mode=args.get("crash_mode", "stop"),
+            expected_work=int(args.get("expected_work", 0)),
         )
 
     def handle(self, state: MonkeyState, event: Event, view: View):
@@ -395,14 +415,14 @@ class ChaosMonkey:
         if tag != "chaos.poll":
             return state, []
         progress = view.views["progress"]
-        fraction = progress.fraction()
+        fraction = progress.fraction(state.expected_work)
         commands = []
         actions = state.plan.actions
         while state.next_action < len(actions) and actions[state.next_action].at <= fraction:
             action = actions[state.next_action]
             state.next_action += 1
             commands += self._act(state, action, fraction, view)
-        more = state.next_action < len(actions) and not progress.complete()
+        more = state.next_action < len(actions) and not progress.complete(state.expected_work)
         if more and (state.until_ms is None or view.now < state.until_ms):
             commands.append(SetTimer(delay_ms=state.poll_ms, tag="chaos.poll"))
         return state, commands
@@ -414,13 +434,15 @@ class ChaosMonkey:
         progress = view.views["progress"]
         actors = view.views["actors"]
         isolated = set(state.partitions.values())
+        if state.crash_mode == "signal" and action.kind == "kill_coordinator":
+            isolated = set()  # a partition does not touch a workflow without a bus
         at = round(fraction, 4)
 
         if action.kind in ("kill_coordinator", "partition"):
             candidates = tuple(
                 member
                 for member in members.alive(role=state.coordinator_role)
-                if member not in isolated and member in view.alive
+                if member not in isolated and member in view.alive and member not in state.killed
             )
             target = action.target if action.target in candidates else None
             purpose = f"{action.kind}:{state.next_action}"
@@ -440,9 +462,13 @@ class ChaosMonkey:
                     "progress": at,
                     "detail": {"remaining_work": remaining},
                 }
+                if state.crash_mode == "signal":
+                    crash = Send(to=target, topic=CRASH_TOPIC, body={"progress": at})
+                    return [Emit(type="chaos.injected", payload=payload), crash]
+                state.killed.append(target)
                 return [
                     Emit(type="chaos.injected", payload=payload),
-                    Stop(actor_id=target, reason="chaos"),
+                    Stop(actor_id=target, reason="chaos", cancel=True),
                 ]
             partition_id = f"p{state.next_action}"
             state.partitions[partition_id] = target
@@ -460,17 +486,22 @@ class ChaosMonkey:
             ]
 
         if action.kind == "kill_agents":
-            alive = [agent for agent in actors.alive(state.agent_kinds) if agent in view.alive]
+            alive = [
+                agent
+                for agent in actors.alive(state.agent_kinds)
+                if agent in view.alive and agent not in state.killed
+            ]
             quota = math.floor(action.agent_share * actors.seen(state.agent_kinds) + 1e-9)
             count = min(max(quota - state.agents_killed, 0), len(alive))
             rng = view.rng(f"kill_agents:{state.next_action}")
             victims = sorted(rng.sample(alive, count))
             state.agents_killed += count
+            state.killed += victims
             commands: list[Command] = []
             for victim in victims:
                 payload = {"fault": "kill_agent", "target": victim, "progress": at}
                 commands.append(Emit(type="chaos.injected", payload=payload))
-                commands.append(Stop(actor_id=victim, reason="chaos"))
+                commands.append(Stop(actor_id=victim, reason="chaos", cancel=True))
             return commands
 
         raise ValueError(f"unknown chaos action {action.kind!r}")

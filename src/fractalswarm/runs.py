@@ -28,6 +28,7 @@ SCENARIOS = {
     "toy": "fractalswarm.actors.toy:TOY",
     "one-call": "fractalswarm.actors.toy:ONE_CALL",
     "swarm": "fractalswarm.actors.swarm:SWARM",
+    "central": "fractalswarm.actors.swarm:CENTRAL",
     "chaos-toy": "fractalswarm.actors.chaos_toy:CHAOS_TOY",
 }
 

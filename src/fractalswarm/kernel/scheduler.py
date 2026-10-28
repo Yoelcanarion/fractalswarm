@@ -90,6 +90,9 @@ class Spawn(Command):
 class Stop(Command):
     actor_id: str | None = None  # None stops the actor itself
     reason: str = ""
+    # A crash: the actor's in-flight effects die with it (``effect.cancelled``, reservation
+    # released). Without it they run to completion and are dropped on arrival.
+    cancel: bool = False
 
 
 class SetCap(Command):
@@ -467,6 +470,8 @@ class Runtime:
             case Stop():
                 target = command.actor_id or reaction.actor
                 if target in self.actors:
+                    if command.cancel:
+                        self._cancel_effects(reaction, lambda event: event.actor == target)
                     payload = {"actor_id": target, "reason": command.reason}
                     self._react(reaction, "actor.stopped", payload)
                     del self.actors[target]
@@ -523,13 +528,16 @@ class Runtime:
         self.outbox.append(event)
 
     def _cancel(self, reaction: Reaction, tag: str) -> None:
-        mine = [
-            event
-            for event in self.inflight.values()
-            if event.actor == reaction.actor and event.payload["tag"] == tag
-        ]
-        for started in sorted(mine, key=lambda event: event.seq):
+        self._cancel_effects(
+            reaction,
+            lambda event: event.actor == reaction.actor and event.payload["tag"] == tag,
+        )
+
+    def _cancel_effects(self, reaction: Reaction, select: Callable[[Event], bool]) -> None:
+        chosen = [event for event in self.inflight.values() if select(event)]
+        for started in sorted(chosen, key=lambda event: event.seq):
             effect_id = started.payload["effect_id"]
+            tag = started.payload["tag"]
             del self.inflight[effect_id]
             self.cancelled.append(effect_id)
             payload = {"effect_id": effect_id, "kind": started.payload["kind"], "tag": tag}
