@@ -1,0 +1,936 @@
+{
+  "run_id": "t2-real-killhalf-seed1",
+  "events": 8177,
+  "head": "b052b4bc33cfe1b54c7b6ceb2872de26",
+  "ok": true,
+  "violations": [],
+  "kills": [
+    {
+      "fault": "kill_coordinator",
+      "target": "o0",
+      "progress": 0.2222,
+      "seq": 4025,
+      "ts_virtual": 44500,
+      "remaining_work": 0,
+      "stopped_seq": 4027,
+      "stopped_reason": "chaos",
+      "cancelled_effects": {
+        "timer": 1
+      },
+      "events_after_stop": 0,
+      "after_stop": [],
+      "completions_after_stop": 0
+    },
+    {
+      "fault": "kill_coordinator",
+      "target": "o2.1",
+      "progress": 0.3889,
+      "seq": 5167,
+      "ts_virtual": 55375,
+      "remaining_work": 3,
+      "stopped_seq": 5169,
+      "stopped_reason": "chaos",
+      "cancelled_effects": {
+        "timer": 1
+      },
+      "events_after_stop": 0,
+      "after_stop": [],
+      "completions_after_stop": 0
+    },
+    {
+      "fault": "kill_coordinator",
+      "target": "o1",
+      "progress": 0.5,
+      "seq": 5301,
+      "ts_virtual": 56672,
+      "remaining_work": 0,
+      "stopped_seq": 5303,
+      "stopped_reason": "chaos",
+      "cancelled_effects": {
+        "timer": 1
+      },
+      "events_after_stop": 0,
+      "after_stop": [],
+      "completions_after_stop": 0
+    },
+    {
+      "fault": "kill_coordinator",
+      "target": "o3.2",
+      "progress": 0.6667,
+      "seq": 6063,
+      "ts_virtual": 65906,
+      "remaining_work": 2,
+      "stopped_seq": 6065,
+      "stopped_reason": "chaos",
+      "cancelled_effects": {
+        "timer": 1
+      },
+      "events_after_stop": 0,
+      "after_stop": [],
+      "completions_after_stop": 0
+    },
+    {
+      "fault": "kill_coordinator",
+      "target": "o2",
+      "progress": 0.8333,
+      "seq": 6701,
+      "ts_virtual": 76859,
+      "remaining_work": 0,
+      "stopped_seq": 6703,
+      "stopped_reason": "chaos",
+      "cancelled_effects": {
+        "timer": 1
+      },
+      "events_after_stop": 0,
+      "after_stop": [],
+      "completions_after_stop": 0
+    }
+  ],
+  "verdicts": [
+    {
+      "seq": 4487,
+      "ts_virtual": 49609,
+      "member_epoch": 11,
+      "subject": "o0",
+      "incarnation": 0,
+      "by": "o3",
+      "missed": 5,
+      "last_heard_ms": 44344,
+      "truth": "true",
+      "stopped_seq": 4027,
+      "stop_reason": "chaos",
+      "kill_seq": 4025,
+      "delay_ms": 5109,
+      "rejoins": []
+    },
+    {
+      "seq": 5567,
+      "ts_virtual": 59781,
+      "member_epoch": 12,
+      "subject": "o2.1",
+      "incarnation": 0,
+      "by": "o2",
+      "missed": 5,
+      "last_heard_ms": 54688,
+      "truth": "true",
+      "stopped_seq": 5169,
+      "stop_reason": "chaos",
+      "kill_seq": 5167,
+      "delay_ms": 4406,
+      "rejoins": []
+    },
+    {
+      "seq": 5692,
+      "ts_virtual": 60734,
+      "member_epoch": 13,
+      "subject": "o1",
+      "incarnation": 0,
+      "by": "o3",
+      "missed": 5,
+      "last_heard_ms": 55719,
+      "truth": "true",
+      "stopped_seq": 5303,
+      "stop_reason": "chaos",
+      "kill_seq": 5301,
+      "delay_ms": 4062,
+      "rejoins": []
+    },
+    {
+      "seq": 6339,
+      "ts_virtual": 70827,
+      "member_epoch": 14,
+      "subject": "o3.2",
+      "incarnation": 0,
+      "by": "o3",
+      "missed": 5,
+      "last_heard_ms": 65813,
+      "truth": "true",
+      "stopped_seq": 6065,
+      "stop_reason": "chaos",
+      "kill_seq": 6063,
+      "delay_ms": 4921,
+      "rejoins": []
+    },
+    {
+      "seq": 6848,
+      "ts_virtual": 80952,
+      "member_epoch": 15,
+      "subject": "o2",
+      "incarnation": 0,
+      "by": "o2.2",
+      "missed": 5,
+      "last_heard_ms": 75890,
+      "truth": "true",
+      "stopped_seq": 6703,
+      "stop_reason": "chaos",
+      "kill_seq": 6701,
+      "delay_ms": 4093,
+      "rejoins": []
+    }
+  ],
+  "successions": [
+    {
+      "seq": 4538,
+      "ts_virtual": 49640,
+      "goal": "root",
+      "root": true,
+      "previous": "o0",
+      "owner": "o1",
+      "group": null,
+      "kind": "takeover",
+      "works": [],
+      "adopted_results": 0,
+      "fence_epoch": 11,
+      "verdict_seq": 4487,
+      "verdict_epoch": 11,
+      "basis_seq": 4532,
+      "pool": [
+        "o1",
+        "o2",
+        "o3"
+      ],
+      "scores": [
+        {
+          "member": "o1",
+          "score": "e5ec11ecd2057b7e"
+        },
+        {
+          "member": "o2",
+          "score": "40644f4adc41ea7c"
+        },
+        {
+          "member": "o3",
+          "score": "3dea08728f5da819"
+        }
+      ],
+      "heir": "o1",
+      "expected_works": [],
+      "expected_adopted": 0,
+      "skew": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 5584,
+      "ts_virtual": 59781,
+      "goal": "track-ai/d1",
+      "root": false,
+      "previous": "o2.1",
+      "owner": "o2.2",
+      "group": "o2",
+      "kind": "takeover",
+      "works": [
+        "track-ai/d1/extract",
+        "track-ai/d1/place",
+        "track-ai/d1/blurb"
+      ],
+      "adopted_results": 0,
+      "fence_epoch": 12,
+      "verdict_seq": 5567,
+      "verdict_epoch": 12,
+      "basis_seq": 5581,
+      "pool": [
+        "o2.2"
+      ],
+      "scores": [
+        {
+          "member": "o2.2",
+          "score": "3131d2f56d73ac4e"
+        }
+      ],
+      "heir": "o2.2",
+      "expected_works": [
+        "track-ai/d1/extract",
+        "track-ai/d1/place",
+        "track-ai/d1/blurb"
+      ],
+      "expected_adopted": 0,
+      "skew": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 5722,
+      "ts_virtual": 60797,
+      "goal": "root",
+      "root": true,
+      "previous": "o1",
+      "owner": "o2",
+      "group": "o0",
+      "kind": "takeover",
+      "works": [],
+      "adopted_results": 0,
+      "fence_epoch": 13,
+      "verdict_seq": 5692,
+      "verdict_epoch": 13,
+      "basis_seq": 5718,
+      "pool": [
+        "o2",
+        "o3"
+      ],
+      "scores": [
+        {
+          "member": "o2",
+          "score": "40644f4adc41ea7c"
+        },
+        {
+          "member": "o3",
+          "score": "3dea08728f5da819"
+        }
+      ],
+      "heir": "o2",
+      "expected_works": [],
+      "expected_adopted": 0,
+      "skew": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 5753,
+      "ts_virtual": 61750,
+      "goal": "track-data",
+      "root": false,
+      "previous": "o1",
+      "owner": "o3",
+      "group": "o0",
+      "kind": "takeover",
+      "works": [],
+      "adopted_results": 0,
+      "fence_epoch": 13,
+      "verdict_seq": 5692,
+      "verdict_epoch": 13,
+      "basis_seq": 5748,
+      "pool": [
+        "o2",
+        "o3"
+      ],
+      "scores": [
+        {
+          "member": "o3",
+          "score": "67464c7e857fa328"
+        },
+        {
+          "member": "o2",
+          "score": "2bec9cc7cb5347dd"
+        }
+      ],
+      "heir": "o3",
+      "expected_works": [],
+      "expected_adopted": 0,
+      "skew": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 6365,
+      "ts_virtual": 70859,
+      "goal": "track-hci/d2",
+      "root": false,
+      "previous": "o3.2",
+      "owner": "o3.1",
+      "group": "o3",
+      "kind": "takeover",
+      "works": [
+        "track-hci/d2/place",
+        "track-hci/d2/blurb"
+      ],
+      "adopted_results": 1,
+      "fence_epoch": 14,
+      "verdict_seq": 6339,
+      "verdict_epoch": 14,
+      "basis_seq": 6362,
+      "pool": [
+        "o3.1"
+      ],
+      "scores": [
+        {
+          "member": "o3.1",
+          "score": "87a45ab21afe9639"
+        }
+      ],
+      "heir": "o3.1",
+      "expected_works": [
+        "track-hci/d2/place",
+        "track-hci/d2/blurb"
+      ],
+      "expected_adopted": 1,
+      "skew": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 6856,
+      "ts_virtual": 80952,
+      "goal": "root",
+      "root": true,
+      "previous": "o2",
+      "owner": "o3",
+      "group": "o0",
+      "kind": "takeover",
+      "works": [],
+      "adopted_results": 0,
+      "fence_epoch": 15,
+      "verdict_seq": 6848,
+      "verdict_epoch": 15,
+      "basis_seq": 6851,
+      "pool": [
+        "o3"
+      ],
+      "scores": [
+        {
+          "member": "o3",
+          "score": "3dea08728f5da819"
+        }
+      ],
+      "heir": "o3",
+      "expected_works": [],
+      "expected_adopted": 0,
+      "skew": null,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 6858,
+      "ts_virtual": 80952,
+      "goal": "track-ai",
+      "root": false,
+      "previous": "o2",
+      "owner": "o3",
+      "group": "o0",
+      "kind": "takeover",
+      "works": [],
+      "adopted_results": 0,
+      "fence_epoch": 15,
+      "verdict_seq": 6848,
+      "verdict_epoch": 15,
+      "basis_seq": 6851,
+      "pool": [
+        "o3"
+      ],
+      "scores": [
+        {
+          "member": "o3",
+          "score": "03e10a4fcb070fd8"
+        }
+      ],
+      "heir": "o3",
+      "expected_works": [],
+      "expected_adopted": 0,
+      "skew": null,
+      "ok": true,
+      "problems": []
+    }
+  ],
+  "chains": {
+    "root": [
+      "o0",
+      "o1",
+      "o2",
+      "o3"
+    ],
+    "track-ai/d1": [
+      "o2.1",
+      "o2.2"
+    ],
+    "track-data": [
+      "o1",
+      "o3"
+    ],
+    "track-hci/d2": [
+      "o3.2",
+      "o3.1"
+    ],
+    "track-ai": [
+      "o2",
+      "o3"
+    ]
+  },
+  "adoptions": [
+    {
+      "seq": 4539,
+      "ts_virtual": 49640,
+      "dead": "o0",
+      "adopter": "o1",
+      "goal": "root",
+      "children": [
+        "o2",
+        "o3"
+      ],
+      "duties": [
+        "final integration",
+        "top-level arbitration"
+      ],
+      "expected_duties": [
+        "final integration",
+        "top-level arbitration"
+      ],
+      "remap_seq": 4538,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 5585,
+      "ts_virtual": 59781,
+      "dead": "o2.1",
+      "adopter": "o2.2",
+      "goal": "track-ai/d1",
+      "children": [
+        "o2.1.a1",
+        "o2.1.a2"
+      ],
+      "duties": [],
+      "expected_duties": [],
+      "remap_seq": 5584,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 5723,
+      "ts_virtual": 60797,
+      "dead": "o1",
+      "adopter": "o2",
+      "goal": "root",
+      "children": [
+        "o3"
+      ],
+      "duties": [
+        "final integration",
+        "top-level arbitration"
+      ],
+      "expected_duties": [
+        "final integration",
+        "top-level arbitration"
+      ],
+      "remap_seq": 5722,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 5754,
+      "ts_virtual": 61750,
+      "dead": "o1",
+      "adopter": "o3",
+      "goal": "track-data",
+      "children": [
+        "o1.1",
+        "o1.2"
+      ],
+      "duties": [
+        "integration",
+        "arbitration"
+      ],
+      "expected_duties": [
+        "integration",
+        "arbitration"
+      ],
+      "remap_seq": 5753,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 6366,
+      "ts_virtual": 70859,
+      "dead": "o3.2",
+      "adopter": "o3.1",
+      "goal": "track-hci/d2",
+      "children": [
+        "o3.2.a1",
+        "o3.2.a2"
+      ],
+      "duties": [],
+      "expected_duties": [],
+      "remap_seq": 6365,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 6857,
+      "ts_virtual": 80952,
+      "dead": "o2",
+      "adopter": "o3",
+      "goal": "root",
+      "children": [],
+      "duties": [
+        "final integration",
+        "top-level arbitration"
+      ],
+      "expected_duties": [
+        "final integration",
+        "top-level arbitration"
+      ],
+      "remap_seq": 6856,
+      "ok": true,
+      "problems": []
+    },
+    {
+      "seq": 6859,
+      "ts_virtual": 80952,
+      "dead": "o2",
+      "adopter": "o3",
+      "goal": "track-ai",
+      "children": [
+        "o2.2"
+      ],
+      "duties": [
+        "integration",
+        "arbitration"
+      ],
+      "expected_duties": [
+        "integration",
+        "arbitration"
+      ],
+      "remap_seq": 6858,
+      "ok": true,
+      "problems": []
+    }
+  ],
+  "orphan_results": [
+    {
+      "seq": 5973,
+      "ts_virtual": 65000,
+      "sender": "o2.1.a1",
+      "to": "o2.1",
+      "goal": "track-ai/d1",
+      "contract": "extract",
+      "attempt": 0,
+      "status": "ok",
+      "owner_stopped_seq": 5169,
+      "sent_after_death": true,
+      "fate": "adopted",
+      "consumer": "o2.2",
+      "consumed_seq": 6031,
+      "verified_seq": 6032,
+      "ok": true
+    },
+    {
+      "seq": 6069,
+      "ts_virtual": 66140,
+      "sender": "o3.2.a1",
+      "to": "o3.2",
+      "goal": "track-hci/d2",
+      "contract": "place",
+      "attempt": 0,
+      "status": "ok",
+      "owner_stopped_seq": 6065,
+      "sent_after_death": true,
+      "fate": "retried",
+      "consumer": "o3.1",
+      "consumed_seq": 6367,
+      "verified_seq": null,
+      "ok": true
+    }
+  ],
+  "fencing": {
+    "fenced": [],
+    "owner_writes_checked": 139,
+    "owner_writes_unchecked": 0
+  },
+  "lost_work": {
+    "contracts": [
+      {
+        "work": "track-data/d2/extract",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o1.2",
+        "seq": 5175,
+        "why": ""
+      },
+      {
+        "work": "track-data/d2/place",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o1.2",
+        "seq": 6209,
+        "why": ""
+      },
+      {
+        "work": "track-data/d2/blurb",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o1.2",
+        "seq": 6385,
+        "why": ""
+      },
+      {
+        "work": "track-data/d1/extract",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o1.1",
+        "seq": 5144,
+        "why": ""
+      },
+      {
+        "work": "track-data/d1/place",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o1.1",
+        "seq": 6188,
+        "why": ""
+      },
+      {
+        "work": "track-data/d1/blurb",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o1.1",
+        "seq": 6330,
+        "why": ""
+      },
+      {
+        "work": "track-hci/d1/extract",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o3.1",
+        "seq": 5280,
+        "why": ""
+      },
+      {
+        "work": "track-hci/d1/place",
+        "status": "verified",
+        "dispatches": 2,
+        "verified_by": "o3.1",
+        "seq": 6959,
+        "why": ""
+      },
+      {
+        "work": "track-hci/d1/blurb",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o3.1",
+        "seq": 7066,
+        "why": ""
+      },
+      {
+        "work": "track-hci/d2/extract",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o3.2",
+        "seq": 5431,
+        "why": ""
+      },
+      {
+        "work": "track-hci/d2/place",
+        "status": "verified",
+        "dispatches": 3,
+        "verified_by": "o3.1",
+        "seq": 8038,
+        "why": ""
+      },
+      {
+        "work": "track-hci/d2/blurb",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o3.1",
+        "seq": 8145,
+        "why": ""
+      },
+      {
+        "work": "track-ai/d2/extract",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o2.2",
+        "seq": 5904,
+        "why": ""
+      },
+      {
+        "work": "track-ai/d2/place",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o2.2",
+        "seq": 6695,
+        "why": ""
+      },
+      {
+        "work": "track-ai/d2/blurb",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o2.2",
+        "seq": 6807,
+        "why": ""
+      },
+      {
+        "work": "track-ai/d1/extract",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o2.2",
+        "seq": 6032,
+        "why": ""
+      },
+      {
+        "work": "track-ai/d1/place",
+        "status": "verified",
+        "dispatches": 3,
+        "verified_by": "o2.2",
+        "seq": 7636,
+        "why": ""
+      },
+      {
+        "work": "track-ai/d1/blurb",
+        "status": "verified",
+        "dispatches": 1,
+        "verified_by": "o2.2",
+        "seq": 7743,
+        "why": ""
+      }
+    ],
+    "goals": [
+      {
+        "goal": "root",
+        "status": "ok",
+        "seq": 8150,
+        "writer": "o3",
+        "gaps": []
+      },
+      {
+        "goal": "track-ai",
+        "status": "ok",
+        "seq": 7746,
+        "writer": "o3",
+        "gaps": []
+      },
+      {
+        "goal": "track-ai/d1",
+        "status": "ok",
+        "seq": 7744,
+        "writer": "o2.2",
+        "gaps": []
+      },
+      {
+        "goal": "track-ai/d2",
+        "status": "ok",
+        "seq": 6808,
+        "writer": "o2.2",
+        "gaps": []
+      },
+      {
+        "goal": "track-data",
+        "status": "ok",
+        "seq": 6388,
+        "writer": "o3",
+        "gaps": []
+      },
+      {
+        "goal": "track-data/d1",
+        "status": "ok",
+        "seq": 6331,
+        "writer": "o1.1",
+        "gaps": []
+      },
+      {
+        "goal": "track-data/d2",
+        "status": "ok",
+        "seq": 6386,
+        "writer": "o1.2",
+        "gaps": []
+      },
+      {
+        "goal": "track-hci",
+        "status": "ok",
+        "seq": 8148,
+        "writer": "o3",
+        "gaps": []
+      },
+      {
+        "goal": "track-hci/d1",
+        "status": "ok",
+        "seq": 7067,
+        "writer": "o3.1",
+        "gaps": []
+      },
+      {
+        "goal": "track-hci/d2",
+        "status": "ok",
+        "seq": 8146,
+        "writer": "o3.1",
+        "gaps": []
+      }
+    ],
+    "task": {
+      "results": 1,
+      "status": "ok",
+      "placed": 48,
+      "expected": 48,
+      "hard_violations": 0,
+      "gaps": [],
+      "writer": "o3",
+      "seq": 8151
+    }
+  },
+  "duplicates": {
+    "llm_started": 79,
+    "llm_paid": 79,
+    "llm_failed": 0,
+    "groups": [],
+    "cancelled": [],
+    "idem_key_reuse": [],
+    "effect_id_reuse": [],
+    "contract_redispatched": [],
+    "cassette": {
+      "checked": true,
+      "entries": 79,
+      "duplicated": [],
+      "orphans": [],
+      "missing": [],
+      "recorded_but_cancelled": [],
+      "foreign": 0
+    }
+  },
+  "invariants": {
+    "chain_checked": true,
+    "chain_ok": true,
+    "head_file_ok": true,
+    "audit_ok": true,
+    "audit_problems": [],
+    "replay_checked": true,
+    "replay_ok": true,
+    "replay_detail": ""
+  },
+  "costs": {
+    "settled_usd": 0.49476705000000004,
+    "by_role": {
+      "agent": 0.30100189999999993,
+      "judge": 0.06103915,
+      "root_planner": 0.0470712,
+      "sub_planner": 0.08565480000000002
+    },
+    "by_actor": {
+      "o0": 0.0470712,
+      "o1": 0.016624,
+      "o1.1": 0.0110845,
+      "o1.1.a1": 0.0047079,
+      "o1.1.a2": 0.03655055,
+      "o1.2": 0.00950335,
+      "o1.2.a1": 0.01453005,
+      "o1.2.a2": 0.024716500000000002,
+      "o2": 0.0226805,
+      "o2.1": 0.0050989,
+      "o2.1.a1": 0.0284697,
+      "o2.1.a2": 0.030828849999999998,
+      "o2.2": 0.025267150000000002,
+      "o2.2.a1": 0.0100007,
+      "o2.2.a2": 0.030337350000000003,
+      "o3": 0.01719055,
+      "o3.1": 0.034025599999999996,
+      "o3.1.a1": 0.0237975,
+      "o3.1.a2": 0.027647500000000002,
+      "o3.2": 0.0052194,
+      "o3.2.a1": 0.027646399999999998,
+      "o3.2.a2": 0.0417689
+    },
+    "peak_committed_usd": 0.5164269,
+    "peak_seq": 7707,
+    "run_cap_usd": 0.75,
+    "open_reservations": [],
+    "open_reserved_usd": 0.0,
+    "cancelled_llm_calls": 0,
+    "cancelled_worst_case_usd": 0.0,
+    "cancelled_estimated_usd": 0.0
+  },
+  "limits": [
+    "A kill is an in-process Stop (actor.stopped): the log cannot show an operating-system process dying, only that the actor produced nothing afterwards.",
+    "Message deliveries are not logged, only sends. Whether an orphaned result was ever delivered to its dead owner is inferred from who consumed it afterwards.",
+    "The heir is recomputed with this repository's coord.tree.heir on views folded from the log: it proves the log is consistent with that code, not that the code matches the spec.",
+    "Costs are the log's: settled amounts and reservation worst cases. What a provider billed for a call cancelled in flight is estimated, not known.",
+    "A call that completed with an error is counted as not billed (its cost is 0 in the log); a provider may still bill a request that timed out.",
+    "The chain and the replay show that this code reproduces the recorded run from the recorded model outputs, not where those outputs came from."
+  ]
+}

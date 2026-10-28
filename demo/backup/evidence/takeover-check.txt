@@ -1,0 +1,49 @@
+takeover check of t2-real-killhalf-seed1: 8177 events, head b052b4bc33cfe1b54c7b6ceb2872de26
+
+1 KILLS (5)
+  o0       kill_coordinator at 22% of the work, seq 4025, t=44.50s; stopped at seq 4027 (chaos); events after stop: 0
+  o2.1     kill_coordinator at 39% of the work, seq 5167, t=55.38s; stopped at seq 5169 (chaos); events after stop: 0
+  o1       kill_coordinator at 50% of the work, seq 5301, t=56.67s; stopped at seq 5303 (chaos); events after stop: 0
+  o3.2     kill_coordinator at 67% of the work, seq 6063, t=65.91s; stopped at seq 6065 (chaos); events after stop: 0
+  o2       kill_coordinator at 83% of the work, seq 6701, t=76.86s; stopped at seq 6703 (chaos); events after stop: 0
+2 DEATH VERDICTS (5: 5 true, 0 false)
+  o0       declared dead by o3 at seq 4487, t=49.61s, 5.11s after the kill: true
+  o2.1     declared dead by o2 at seq 5567, t=59.78s, 4.41s after the kill: true
+  o1       declared dead by o3 at seq 5692, t=60.73s, 4.06s after the kill: true
+  o3.2     declared dead by o3 at seq 6339, t=70.83s, 4.92s after the kill: true
+  o2       declared dead by o2.2 at seq 6848, t=80.95s, 4.09s after the kill: true
+3 SUCCESSION (7 remaps)
+  root: o0 -> o1 -> o2 -> o3
+  track-ai/d1: o2.1 -> o2.2
+  track-data: o1 -> o3
+  track-hci/d2: o3.2 -> o3.1
+  track-ai: o2 -> o3
+  seq 4538: root o0 -> o1 (recomputed heir o1, pool o1, o2, o3): ok
+  seq 5584: track-ai/d1 o2.1 -> o2.2 (recomputed heir o2.2, pool o2.2): ok
+  seq 5722: root o1 -> o2 (recomputed heir o2, pool o2, o3): ok
+  seq 5753: track-data o1 -> o3 (recomputed heir o3, pool o2, o3): ok
+  seq 6365: track-hci/d2 o3.2 -> o3.1 (recomputed heir o3.1, pool o3.1): ok
+  seq 6856: root o2 -> o3 (recomputed heir o3, pool o3): ok
+  seq 6858: track-ai o2 -> o3 (recomputed heir o3, pool o3): ok
+  ROOT o0 died; heir o1; HRW scores o1 e5ec11ecd2057b7e, o2 40644f4adc41ea7c, o3 3dea08728f5da819
+  ROOT o1 died; heir o2; HRW scores o2 40644f4adc41ea7c, o3 3dea08728f5da819
+  ROOT o2 died; heir o3; HRW scores o3 3dea08728f5da819
+4 ADOPTION (7 tree.adopted, 1 orphan results adopted)
+  root: o0 -> o1, children ['o2', 'o3'], final integration, top-level arbitration
+  track-ai/d1: o2.1 -> o2.2, children ['o2.1.a1', 'o2.1.a2'], no duties
+  root: o1 -> o2, children ['o3'], final integration, top-level arbitration
+  track-data: o1 -> o3, children ['o1.1', 'o1.2'], integration, arbitration
+  track-hci/d2: o3.2 -> o3.1, children ['o3.2.a1', 'o3.2.a2'], no duties
+  root: o2 -> o3, children [], final integration, top-level arbitration
+  track-ai: o2 -> o3, children ['o2.2'], integration, arbitration
+  result track-ai/d1/extract of o2.1.a1 to dead o2.1 (seq 5973): adopted by o2.2
+  result track-hci/d2/place of o3.2.a1 to dead o3.2 (seq 6069): retried by o3.1
+5 FENCING (0 write.fenced; 139 owner writes checked against the owner, 0 unchecked)
+6 LOST WORK (contracts verified 18/18, goals ok 10/10)
+  task.result x1: ok, placed 48/48, hard violations 0, written by o3
+7 DUPLICATE CALLS (79 paid llm calls, 0 duplicated; 0 cancelled, 0 by a kill)
+  idem_key reused 0, contract attempts dispatched twice 0, cassette: 79 entries
+8 INVARIANTS (hash chain ok, audit True, replay MATCH)
+9 COSTS (settled $0.494767, peak committed $0.516427 of cap 0.75, open reservations 0, cancelled worst case $0.000000)
+
+TAKEOVER OK: no violation

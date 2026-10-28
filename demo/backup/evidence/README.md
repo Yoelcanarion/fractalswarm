@@ -27,9 +27,13 @@ uv run fractalswarm replay demo/backup --verify   # the same check, by path
 | security audit | `AUDIT OK` (`audit.txt`) |
 | cost | $0.494767 settled for 79 LLM calls. The peak committed (settled plus open reservations) was $0.516. 0 calls refused, 0 reservations left open (`costs.json`, `spend-before.txt`, `spend-after.txt`) |
 
-## What the log shows (`takeover.json`)
+## What the log shows (`takeover.json`, `takeover-check.*`)
 
 These facts come from the log, not from what the actors say about themselves. Each heir was recomputed: the members and tree views were rebuilt from the events before the takeover, then `coord.tree.heir` was called on them.
+
+Two independent analyses agree:
+- `analyze_takeover.py`, run as `uv run python demo/backup/evidence/analyze_takeover.py demo/backup OUT_DIR`;
+- the read-only checker `uv run fractalswarm takeover demo/backup --replay` (`verify/takeover.py`, with its own tests), which prints `TAKEOVER OK: no violation`.
 
 **The root really died.**
 - o0 was killed at 22 % of the contracts dispatched (t = 44.5 s, seq 4025), and the kernel stopped it at seq 4027.
@@ -77,6 +81,8 @@ For comparison, the real Standard run of the same task with no kills (`t2-real-s
 - the session result of track-ai/d2 (sent to o2).
 
 The heirs took all three from the log, and no contract was dispatched again for the same attempt.
+
+The adopted `place` result of track-hci/d2 then failed its booking, because speaker S13 was already booked by track-data/d2. So o3.1 sent a new attempt, as any owner would. All 5 rejections in the run are of this kind: 4 booking collisions with other sessions and 1 judge verdict on a soft preference.
 
 **No lost work.**
 - 18 of 18 contracts were verified and 10 of 10 goals completed.
