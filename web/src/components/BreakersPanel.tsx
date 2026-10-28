@@ -43,6 +43,14 @@ export function BreakersPanel({ view }: { view: ViewState }) {
         <PStat label="not closed" value={open} tone={open > 0 ? "bad" : ""} />
         <PStat label="trips" value={rows.reduce((sum, row) => sum + row.trips, 0)} />
         <PStat label="transitions" value={breakers.transitions} />
+        {breakers.mailbox.deliveries > 0 && (
+          <PStat
+            label="mailbox"
+            value={breakers.mailbox.items}
+            tone={breakers.mailbox.dropped > 0 ? "bad" : ""}
+            title={`${breakers.mailbox.items} messages an open channel diverted, handed over in ${breakers.mailbox.deliveries} deliveries; ${breakers.mailbox.dropped} dropped`}
+          />
+        )}
       </div>
 
       {rows.length + quiet.length === 0 && <Nothing>No model has been called yet.</Nothing>}
@@ -90,7 +98,7 @@ export function BreakersPanel({ view }: { view: ViewState }) {
           <ol className="generic__list">
             {history.map((h) => (
               <li key={`${h.name}-${h.seq}`}>
-                <span className="mono muted">{h.seq}</span> <b>{h.name}</b> {h.event.replace("_", "-")} <span className="muted">t = {virtualSeconds(h.ts)}{h.reason ? ` · ${h.reason}` : ""}</span>
+                <span className="mono muted">{h.seq}</span> <b>{h.name}</b> {h.event.replace("_", "-")} <span className="muted">by {h.actor} · t = {virtualSeconds(h.ts)}{h.reason ? ` · ${h.reason}` : ""}</span>
               </li>
             ))}
           </ol>

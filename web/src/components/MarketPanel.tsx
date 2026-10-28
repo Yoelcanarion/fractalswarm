@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { conserved, headline } from "../lib/auction";
 import { burnRate, committed, ladderLevel, LADDER, runCap, type LadderLevel } from "../lib/economy";
 import { compact } from "../lib/generic";
 import type { ViewState } from "../lib/reducer";
@@ -32,9 +33,13 @@ export function MarketPanel({ view }: { view: ViewState }) {
   const level = ladderLevel(used, cap);
   const burn = burnRate(economy, view.lastTs);
   const squads = Object.values(economy.squads)
-    .filter((row) => row.spent > 0 || row.reserved > 0 || row.refused > 0)
+    .filter((row) => row.spent > 0 || row.reserved > 0 || row.refused > 0 || row.cap !== null)
     .sort((a, b) => b.spent + b.reserved - (a.spent + a.reserved) || a.squad.localeCompare(b.squad));
   const mostSpent = Math.max(...squads.map((row) => row.spent + row.reserved), 1e-9);
+  const { auction } = view.panels;
+  const head = headline(auction);
+  const headEpoch = head && [...auction.epochs].reverse().find((e) => e.goalId === head.goalId && e.epoch === head.epoch);
+  const auctionOn = auction.epochCount > 0 || head !== null || auction.topups.length > 0 || auction.scaling.length > 0;
   const roles = Object.values(economy.roles).sort((a, b) => b.usd - a.usd);
   const models = Object.values(economy.models).sort((a, b) => b.usd - a.usd);
   const data = useMemo(
@@ -146,17 +151,63 @@ export function MarketPanel({ view }: { view: ViewState }) {
             <Nothing>No reservation yet.</Nothing>
           ) : (
             <ul className="bars">
-              {squads.slice(0, 5).map((row) => (
-                <li key={row.squad}>
-                  <span className="mono bars__name">{row.squad}</span>
-                  <span className="bars__track">
-                    <i style={{ width: `${((row.spent + row.reserved) / mostSpent) * 100}%` }} />
-                  </span>
-                  <span className="mono bars__value">{money(row.spent + row.reserved)}</span>
-                  <span className="muted bars__calls">{row.calls} calls</span>
-                </li>
-              ))}
+              {squads.slice(0, 5).map((row) => {
+                const used = row.spent + row.reserved;
+                // A squad the market has capped is measured against its cap, the rest against the biggest spender.
+                const capped = row.cap !== null && row.cap > 0;
+                const filled = Math.min(used / (capped ? row.cap! : mostSpent), 1);
+                return (
+                  <li key={row.squad} title={`${row.calls} calls${row.refused ? `, ${row.refused} refused` : ""}`}>
+                    <span className="mono bars__name">{row.squad}</span>
+                    <span className="bars__track">
+                      <i className={capped && filled >= 0.9 ? "bars__fill--bad" : ""} style={{ width: `${filled * 100}%` }} />
+                    </span>
+                    <span className="mono bars__value">{money(used)}</span>
+                    <span className="muted bars__calls">{row.cap !== null ? `of ${money(row.cap, 2)}` : `${row.calls} calls`}</span>
+                  </li>
+                );
+              })}
             </ul>
+          )}
+          {auctionOn && (
+            <div className="auction">
+              <Subhead
+                hint={`${auction.epochCount} epochs · ${auction.bidSets} bid sets · refunds ${money(auction.refundedUsd, 3)} · top-ups ${money(auction.grantedUsd, 3)} of ${money(auction.requestedUsd, 3)}`}
+              >
+                Epoch auction
+              </Subhead>
+              {head && (
+                <div className="auction__line">
+                  <b className="mono">{head.goalId}</b> e{head.epoch}
+                  {headEpoch ? ` (${headEpoch.reason})` : ""} cleared {head.mode}: envelope {money(head.envelopeUsd, 3)} = grants{" "}
+                  {money(head.grants.reduce((sum, g) => sum + g.usd, 0), 3)} + pool {money(head.poolUsd, 3)} + reserve {money(head.reserveUsd, 3)}{" "}
+                  <Pill tone={conserved(head) ? "good" : "bad"}>{conserved(head) ? "adds up ✓" : "does not add up"}</Pill>
+                </div>
+              )}
+              {head && head.grants.length > 0 && (
+                <div className="spendchips">
+                  {head.grants.slice(0, 5).map((grant) => (
+                    <span key={grant.child} className="spendchip" title="granted to this child for the next epoch">
+                      <b>{grant.child}</b> {money(grant.usd, 3)}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {auction.epochs.length > 0 && (
+                <div className="spendchips">
+                  {auction.epochs.slice(-5).map((epoch) => (
+                    <span key={epoch.seq} className="spendchip" title={`t = ${virtualSeconds(epoch.ts)} · ${epoch.completions} completions`}>
+                      {epoch.goalId} e{epoch.epoch} <span className="muted">{epoch.reason}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {auction.scaling.slice(-2).map((decision) => (
+                <div key={decision.seq} className="auction__line">
+                  <b className="mono">{decision.owner}</b> {decision.kind} {decision.before} → {decision.after} <span className="muted">{decision.reason}</span>
+                </div>
+              ))}
+            </div>
           )}
           <Subhead hint="calls · spent">By role</Subhead>
           <div className="spendchips">

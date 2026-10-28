@@ -6,8 +6,11 @@
 //                                 rate_limits: {limit_requests, limit_tokens,
 //                                               remaining_requests, remaining_tokens}}
 //
-// Per-orchestrator quotas that adapt by AIMD (spec §6.1) land as their own event family
-// (quota.*, aimd.*, ...): they show as generic rows until this fold learns their fields.
+//   market.quota     {goal_id, epoch, model, change, fraction, limit_rpm, limit_tpm, rpm, tpm, pressure}
+//                    the run's AIMD share of a model's limit, once per epoch (spec §6.1; market/quotas.py):
+//                    change is init | decrease (x0.7 after a 429) | increase (+5 points) | hold
+//
+// Other quota families that land later (quota.*, aimd.*, ...) show as generic rows.
 
 import { claimedBy } from "./families";
 import {
@@ -44,9 +47,27 @@ export interface RateSample {
   rpm: number;
 }
 
+/** The run's AIMD share of one model's provider limit, as of the latest epoch. */
+export interface Quota {
+  model: string;
+  epoch: number;
+  change: string;
+  fraction: number | null; // 0..1 of the provider limit
+  limitRpm: number | null;
+  limitTpm: number | null;
+  rpm: number | null; // the slice granted
+  tpm: number | null;
+  pressure: boolean;
+  decreases: number;
+  increases: number;
+  ts: number;
+}
+
 export interface LimitsState {
   models: Record<string, ModelLimits>;
   order: string[];
+  quotas: Record<string, Quota>;
+  quotaOrder: string[];
   starts: number[]; // virtual ms of LLM requests inside the window
   inflight: number;
   peakInflight: number;
@@ -58,6 +79,8 @@ export interface LimitsState {
 export const emptyLimits = (): LimitsState => ({
   models: {},
   order: [],
+  quotas: {},
+  quotaOrder: [],
   starts: [],
   inflight: 0,
   peakInflight: 0,
@@ -84,6 +107,27 @@ const blank = (model: string, seq: number): ModelLimits => ({
 export function foldLimits(state: LimitsState, event: RunEvent): LimitsState {
   const p = event.payload;
   switch (event.type) {
+    case "market.quota": {
+      const model = asString(p.model);
+      if (!model) return state;
+      const known = state.quotas[model];
+      const change = asString(p.change);
+      const quota: Quota = {
+        model,
+        epoch: asNumber(p.epoch) ?? 0,
+        change,
+        fraction: asNumber(p.fraction),
+        limitRpm: asNumber(p.limit_rpm),
+        limitTpm: asNumber(p.limit_tpm),
+        rpm: asNumber(p.rpm),
+        tpm: asNumber(p.tpm),
+        pressure: Boolean(p.pressure),
+        decreases: (known?.decreases ?? 0) + (change === "decrease" ? 1 : 0),
+        increases: (known?.increases ?? 0) + (change === "increase" ? 1 : 0),
+        ts: event.ts_virtual,
+      };
+      return { ...state, quotas: { ...state.quotas, [model]: quota }, quotaOrder: known ? state.quotaOrder : [...state.quotaOrder, model] };
+    }
     case "effect.started": {
       if (p.kind !== "llm") return state;
       const cutoff = event.ts_virtual - RPM_WINDOW_MS;

@@ -16,7 +16,7 @@ interface Claim {
 
 // Order matters when two panels claim the same type: the first listed wins.
 const CLAIMS: readonly (readonly [PanelId, Claim])[] = [
-  ["breakers", { roots: ["breaker", "circuit"], words: ["breaker", "pingpong", "ping_pong", "storm"] }],
+  ["breakers", { roots: ["breaker", "circuit", "mailbox"], words: ["breaker", "pingpong", "ping_pong", "storm", "mailbox"] }],
   [
     "limits",
     {
@@ -31,7 +31,7 @@ const CLAIMS: readonly (readonly [PanelId, Claim])[] = [
   [
     "market",
     {
-      roots: ["budget", "market", "epoch", "auction", "bid", "topup", "ledger", "price", "feasibility", "risk"],
+      roots: ["budget", "market", "epoch", "auction", "bid", "topup", "ledger", "price", "feasibility", "risk", "scaling"],
       words: ["epoch", "bid", "bids", "auction", "topup", "allocation", "feasibility", "risk"],
     },
   ],

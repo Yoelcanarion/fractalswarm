@@ -15,8 +15,10 @@ const OUTCOME: Record<Outcome, { label: string; tone: "good" | "warn" | "bad" | 
 
 const natural = (a: string, b: string): number => a.localeCompare(b, "en", { numeric: true });
 
-// Report fields the headline already shows.
-const SHOWN = new Set(["expected", "placed", "gaps", "hard_violations", "soft_score", "schedule", "violations", "violation_counts"]);
+// Report fields the headline, the schedule and the document already show.
+const SHOWN = new Set(["expected", "placed", "gaps", "hard_violations", "soft_score", "schedule", "violations", "violation_counts", "markdown"]);
+
+const clip = (text: string, max = 160): string => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
 function Schedule({ report }: { report: Record<string, unknown> }) {
   const placements = useMemo(() => placementsOf(report), [report]);
@@ -79,6 +81,9 @@ export function ResultsView({ view }: { view: ViewState }) {
   const violations = Array.isArray(report.violations) ? report.violations : [];
   const counts = Object.entries(typeof report.violation_counts === "object" && report.violation_counts ? report.violation_counts : {});
   const extra = Object.entries(report).filter(([key]) => !SHOWN.has(key));
+  // A report that is a document (the T3 web report) carries it as markdown. Shown as plain text:
+  // it quotes third-party pages, so it is never rendered as markup.
+  const document = typeof report.markdown === "string" ? report.markdown : null;
   const { contracts, judged } = results;
 
   return (
@@ -208,11 +213,19 @@ export function ResultsView({ view }: { view: ViewState }) {
                     {extra.map(([key, value]) => (
                       <tr key={key}>
                         <td className="mono">{key}</td>
-                        <td>{typeof value === "object" ? digest({ [key]: value }) : String(value)}</td>
+                        <td title={typeof value === "object" ? undefined : String(value)}>
+                          {typeof value === "object" ? digest({ [key]: value }) : clip(String(value))}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              )}
+              {document !== null && (
+                <>
+                  <Subhead hint={`${document.length.toLocaleString("en")} characters`}>Document</Subhead>
+                  <pre className="results__doc">{document}</pre>
+                </>
               )}
               <details className="results__raw">
                 <summary>The raw report</summary>

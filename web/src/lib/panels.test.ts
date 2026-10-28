@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { conserved, headline } from "./auction";
 import { breakerKind, secondsUntilProbe } from "./breakers";
 import { openCollisionCount } from "./collisions";
 import { burnRate, committed, ladderLevel, runCap } from "./economy";
@@ -143,7 +144,107 @@ describe("Market & budget", () => {
   });
 });
 
+// The payloads of the market makers (market/events.py): money in micro-dollars.
+describe("the epoch auction", () => {
+  const cleared = (epoch: number, grants: Record<string, number>, pool = 25_000, reserve = 75_000) => ({
+    goal_id: "root",
+    epoch,
+    mode: "auction",
+    resources: {
+      usd: { envelope: 500_000, reserve, pool, grants },
+      "rpm:muse-spark-1.3": { envelope: 3000, reserve: 450, pool: 0, grants: { o2: 2550 } },
+    },
+    caps: { o2: 300_000 },
+    base: { o2: 0 },
+  });
+
+  it("reads the epochs, the clearing of the root's market and its conservation invariant", () => {
+    const s = started()
+      .emit("market.epoch_closed", "o0", { goal_id: "root", owner: "o0", epoch: 0, reason: "start", at_ms: 0, completions: 0, member_epoch: 0 })
+      .emit("market.bids", "o0", { goal_id: "root", epoch: 0, bids: [{ child: "o2", resources: { usd: { q: 100, floor: 10 } }, value: 3, density: 0.03 }] })
+      .emit("market.cleared", "o0", cleared(0, { o2: 300_000, o3: 100_000 }))
+      .emit("market.epoch_closed", "o0", { goal_id: "root", owner: "o0", epoch: 1, reason: "timer", at_ms: 15_000, completions: 4, member_epoch: 0 })
+      .emit("market.cleared", "o2", { ...cleared(1, { o2: 200_000 }), goal_id: "track-ai" });
+    const { auction } = foldEvents(s.events).panels;
+    expect(auction.epochCount).toBe(2);
+    expect(auction.bidSets).toBe(1);
+    expect(auction.epochs.map((e) => [e.goalId, e.epoch, e.reason])).toEqual([["root", 0, "start"], ["root", 1, "timer"]]);
+    const root = auction.clearings.root;
+    expect(root).toMatchObject({ resource: "usd", mode: "auction", envelopeUsd: 0.5, reserveUsd: 0.075, poolUsd: 0.025, resources: 2 });
+    expect(root.grants).toEqual([{ child: "o2", usd: 0.3 }, { child: "o3", usd: 0.1 }]); // largest first
+    expect(conserved(root)).toBe(true); // 0.4 + 0.025 + 0.075 = 0.5
+    expect(auction.clearings["track-ai"].grants).toEqual([{ child: "o2", usd: 0.2 }]);
+    expect(conserved(auction.clearings["track-ai"])).toBe(false); // 0.2 + 0.025 + 0.075 is not 0.5: a broken clearing shows
+    expect(headline(auction)?.goalId).toBe("root");
+  });
+
+  it("falls back to the latest clearing when the root has none, and to no money resource", () => {
+    const s = started().emit("market.cleared", "o2", { ...cleared(3, { o4: 10_000 }), goal_id: "track-ai", resources: { "rpm:m": { envelope: 1, reserve: 0, pool: 0, grants: {} } } });
+    const { auction } = foldEvents(s.events).panels;
+    expect(headline(auction)).toMatchObject({ goalId: "track-ai", resource: null, grants: [] });
+  });
+
+  it("sums refunds and top-ups in dollars, and keeps the scaling decisions", () => {
+    const s = started()
+      .emit("market.refund", "o0", { goal_id: "root", epoch: 1, refunds: { o2: 20_000 }, total_micros: 20_000 })
+      .emit("market.refund", "o0", { goal_id: "root", epoch: 2, refunds: { o3: 5_000 }, total_micros: 5_000 })
+      .emit("market.topup", "o2.1", { goal_id: "track-ai", epoch: 1, child: "o2.1", requested_micros: 80_000, granted_micros: 60_000, reserve_left_micros: 15_000, cap_micros: 200_000 })
+      .emit("scaling.decided", "o2.1", { owner: "o2.1", kind: "agents", before: 1, after: 2, target: 2, reason: "2 ready contracts", detail: {} });
+    const { auction } = foldEvents(s.events).panels;
+    expect(auction.refundedUsd).toBeCloseTo(0.025, 9);
+    expect(auction.topups).toEqual([expect.objectContaining({ child: "o2.1", requestedUsd: 0.08, grantedUsd: 0.06, reserveLeftUsd: 0.015 })]);
+    expect(auction.grantedUsd).toBeCloseTo(0.06, 9);
+    expect(auction.scaling).toEqual([expect.objectContaining({ owner: "o2.1", kind: "agents", before: "1", after: "2", reason: "2 ready contracts" })]);
+  });
+
+  it("reads each type natively: none of them is also a generic market row", () => {
+    const s = started()
+      .emit("market.epoch_closed", "o0", { goal_id: "root", owner: "o0", epoch: 0, reason: "start" })
+      .emit("market.quota", "o0", { goal_id: "root", epoch: 0, model: "muse-spark-1.3", change: "init", fraction: 0.5 })
+      .emit("scaling.decided", "o0", { owner: "o0", kind: "orchestrators", before: 0, after: 3, target: 3, reason: "x" })
+      .emit("market.something_new", "o0", { goal_id: "root" });
+    expect(foldEvents(s.events).panels.economy.other.map((row) => row.type)).toEqual(["market.something_new"]);
+  });
+
+  it("puts a squad's cap on its row, one cap_set per epoch, without listing each one", () => {
+    const s = started();
+    for (const usd of [0.3, 0.25, 0.4]) s.emit("budget.cap_set", "o0", { level: "squad", key: "o2", usd });
+    s.emit("budget.cap_set", "o0", { level: "squad", key: "o3", usd: 0.1 });
+    call(s, "e1", "o2", "agent", 0.1);
+    s.emit("budget.shock", "@env", { level: "squad", key: "o2", usd: 0.05, reason: "trim o2" });
+    const { economy } = foldEvents(s.events).panels;
+    expect(economy.squads.o2).toMatchObject({ cap: 0.05, spent: 0.1 });
+    expect(economy.squads.o3.cap).toBe(0.1);
+    expect(economy.capChanges).toEqual([expect.objectContaining({ level: "squad", key: "o2", usd: 0.05, shock: true })]);
+  });
+});
+
 describe("Rate limits", () => {
+  it("keeps the AIMD quota of each model, and counts how often it moved", () => {
+    const quota = (epoch: number, change: string, fraction: number, extra: Record<string, unknown> = {}) => ({
+      goal_id: "root",
+      epoch,
+      model: "muse-spark-1.3",
+      change,
+      fraction,
+      limit_rpm: 3000,
+      limit_tpm: 4_000_000,
+      rpm: Math.round(3000 * fraction),
+      tpm: Math.round(4_000_000 * fraction),
+      pressure: false,
+      ...extra,
+    });
+    const s = started()
+      .emit("market.quota", "o0", quota(0, "init", 0.5))
+      .emit("market.quota", "o0", quota(1, "decrease", 0.35, { pressure: true }))
+      .emit("market.quota", "o0", quota(2, "increase", 0.4))
+      .emit("market.quota", "o0", quota(3, "increase", 0.45))
+      .emit("market.quota", "o0", quota(4, "hold", 0.45));
+    const { limits } = foldEvents(s.events).panels;
+    expect(limits.quotaOrder).toEqual(["muse-spark-1.3"]);
+    expect(limits.quotas["muse-spark-1.3"]).toMatchObject({ epoch: 4, change: "hold", fraction: 0.45, rpm: 1350, limitRpm: 3000, decreases: 1, increases: 2, pressure: false });
+  });
+
   it("keeps the latest quota the endpoint reported, per model", () => {
     const s = started();
     call(s, "e1", "o0", "agent", 0.01);
@@ -202,6 +303,41 @@ describe("Breakers", () => {
     expect(closed).toMatchObject({ state: "closed", trips: 1, untilMs: null });
     expect(closed.history.map((h) => h.event)).toEqual(["opened", "half_open", "closed"]);
     expect(breakers.transitions).toBe(3);
+  });
+
+  it("follows a channel breaker that both of its ends report, and the mailbox it fills", () => {
+    // The shapes of the recorded breaker-toy run: each end emits its own transitions, 250 ms apart.
+    const reason = "ping-pong: 6 alternations on negotiation with no new fact";
+    const both = (at: number, type: string, payload: Record<string, unknown>) => {
+      s.at(at).emit(type, "ping", { breaker: "channel:ping|pong", ...payload });
+      s.at(at + 250).emit(type, "pong", { breaker: "channel:ping|pong", ...payload });
+    };
+    const s = started();
+    both(0, "breaker.opened", { reason, trips: 1, until_ms: 15_000 });
+    s.at(250).emit("mailbox.delivered", "board", { count: 1, dropped: 0, owner: "pong", remaining: 0 });
+    s.at(500).emit("mailbox.delivered", "board", { count: 3, dropped: 1, owner: "ping", remaining: 2 });
+    let { breakers } = foldEvents(s.events).panels;
+    expect(breakers.rows["channel:ping|pong"]).toMatchObject({ kind: "channel", state: "open", trips: 1, reason });
+    expect(breakers.mailbox).toEqual({ deliveries: 2, items: 4, dropped: 1 });
+    both(15_000, "breaker.half_open", {});
+    both(25_000, "breaker.closed", {});
+    breakers = foldEvents(s.events).panels.breakers;
+    const row = breakers.rows["channel:ping|pong"];
+    expect(row).toMatchObject({ state: "closed", trips: 1 });
+    expect(row.history.map((h) => `${h.actor}:${h.event}`)).toEqual([
+      "ping:opened",
+      "pong:opened",
+      "ping:half_open",
+      "pong:half_open",
+      "ping:closed",
+      "pong:closed",
+    ]);
+    expect(breakers.other).toEqual([]); // mailbox.delivered is read, not shown as a generic row
+  });
+
+  it("shows mailbox events it has no fields for as generic rows", () => {
+    const s = started().emit("mailbox.overflowed", "board", { owner: "pong", dropped: 3 });
+    expect(foldEvents(s.events).panels.breakers.other.map((row) => row.type)).toEqual(["mailbox.overflowed"]);
   });
 
   it("reads the state words of a one-segment suffix too: half_open is not open", () => {

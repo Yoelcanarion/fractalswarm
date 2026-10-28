@@ -9,9 +9,12 @@
 //   run.halted         {reason, by}                            the kill switch
 //   effect.started / effect.completed (kind llm)                who spent it: role and model
 //
-// Market families that land later (epochs, bids, allocations, top-ups, feasibility, risk) show as
-// generic rows until this fold learns their fields.
+// The epoch auction's own events are read by auction.ts. With the auction on, its grants become
+// hard squad caps through ``budget.cap_set`` (level squad), once per squad per epoch: those set
+// the squad's cap here and are not listed one by one. Other market families that land later
+// (feasibility, risk, ...) show as generic rows until this fold learns their fields.
 
+import { AUCTION_TYPES } from "./auction";
 import { claimedBy } from "./families";
 import {
   appendCapped,
@@ -44,6 +47,7 @@ export interface SquadSpend {
   reserved: number;
   calls: number;
   refused: number;
+  cap: number | null; // the squad's hard cap, once the market (or a shock) has set one
 }
 
 export interface ModelSpend {
@@ -162,7 +166,7 @@ const runCapOf = (state: EconomyState): number | null =>
   state.runId === null ? null : (state.caps[`run:${state.runId}`] ?? null);
 
 function withSquad(state: EconomyState, squad: string, patch: (row: SquadSpend) => SquadSpend): Record<string, SquadSpend> {
-  const row = state.squads[squad] ?? { squad, spent: 0, reserved: 0, calls: 0, refused: 0 };
+  const row = state.squads[squad] ?? { squad, spent: 0, reserved: 0, calls: 0, refused: 0, cap: null };
   return { ...state.squads, [squad]: patch(row) };
 }
 
@@ -187,7 +191,12 @@ function setCap(state: EconomyState, event: RunEvent, shock: boolean): EconomySt
     shock,
     reason: asString(p.reason),
   };
-  const next = { ...state, caps: { ...state.caps, [`${level}:${key}`]: usdValue }, capChanges: [...state.capChanges, change] };
+  const caps = { ...state.caps, [`${level}:${key}`]: usdValue };
+  // A squad's cap belongs on the squad's row.
+  const squads = level === "squad" ? withSquad(state, key, (row) => ({ ...row, cap: usdValue })) : state.squads;
+  // The market re-sets every squad's cap each epoch: those are not listed one by one.
+  if (level === "squad" && !shock) return { ...state, caps, squads };
+  const next = { ...state, caps, squads, capChanges: [...state.capChanges, change] };
   return { ...next, burn: burnPoint(next, event.ts_virtual) };
 }
 
@@ -301,7 +310,7 @@ export function foldEconomy(state: EconomyState, event: RunEvent): EconomyState 
       return { ...state, callRole, models, roles: { ...state.roles, [roleName]: { ...roleRow, usd: roleRow.usd + cost } } };
     }
     default:
-      if (claimedBy(event.type) === "market" && !ECONOMY_TYPES.has(event.type)) {
+      if (claimedBy(event.type) === "market" && !ECONOMY_TYPES.has(event.type) && !AUCTION_TYPES.has(event.type)) {
         return { ...state, other: appendCapped(state.other, genericEntry(event), GENERIC_CAP) };
       }
       return state;

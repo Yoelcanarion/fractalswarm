@@ -2,6 +2,7 @@
 // beside the tree and the schedule. Each fold returns its input unchanged for an event it does
 // not read, so replay snapshots share whatever did not change.
 
+import { emptyAuction, foldAuction, type AuctionState } from "./auction";
 import { emptyBreakers, foldBreakers, type BreakersState } from "./breakers";
 import { emptyCollisions, foldCollisions, type CollisionsState } from "./collisions";
 import { emptyEconomy, foldEconomy, type EconomyState } from "./economy";
@@ -13,6 +14,7 @@ import type { RunEvent } from "./types";
 
 export interface PanelsState {
   economy: EconomyState;
+  auction: AuctionState;
   limits: LimitsState;
   breakers: BreakersState;
   memory: MemoryState;
@@ -23,6 +25,7 @@ export interface PanelsState {
 
 export const emptyPanels = (): PanelsState => ({
   economy: emptyEconomy(),
+  auction: emptyAuction(),
   limits: emptyLimits(),
   breakers: emptyBreakers(),
   memory: emptyMemory(),
@@ -34,6 +37,7 @@ export const emptyPanels = (): PanelsState => ({
 export function foldPanels(state: PanelsState, event: RunEvent): PanelsState {
   const next: PanelsState = {
     economy: foldEconomy(state.economy, event),
+    auction: foldAuction(state.auction, event),
     limits: foldLimits(state.limits, event),
     breakers: foldBreakers(state.breakers, event),
     memory: foldMemory(state.memory, event),

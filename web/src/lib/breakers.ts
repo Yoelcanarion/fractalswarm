@@ -3,11 +3,13 @@
 //   breaker.opened     {breaker, until_ms, trips, reason}      closed -> open (until_ms is virtual time)
 //   breaker.half_open  {breaker}                               open -> half-open: one probe goes through
 //   breaker.closed     {breaker}                               the probe succeeded
+//   mailbox.delivered  {owner, count, remaining, dropped}      what an open channel diverted, handed over
 //
-// Today only the model endpoint breaker emits them (``breaker: "model:<name>"``). The channel,
-// topic and global-spend breakers of spec §8 will use the same family, so any ``breaker.*`` type
-// is read by its last segment (``breaker.channel.opened`` opens a breaker too), and a segment
-// this fold does not know is kept as a plain transition.
+// ``breaker`` is ``model:<name>`` (the model endpoint), ``channel:<a>|<b>`` (the pair of
+// endpoints) or ``topic:<topic>`` (a storm). Both ends of a channel report their own transitions
+// under the one name, so the row keeps who reported each. Any ``breaker.*`` type is read by its
+// last segment (``breaker.channel_opened`` opens a breaker too), and a segment this fold does not
+// know is kept as a plain transition.
 
 import { appendCapped, asNumber, asString, GENERIC_CAP, genericEntry, type GenericEntry } from "./generic";
 import type { RunEvent } from "./types";
@@ -18,6 +20,7 @@ export type BreakerKind = "model" | "channel" | "topic" | "global" | "other";
 export interface Transition {
   seq: number;
   ts: number;
+  actor: string; // the endpoint that reported it
   event: string; // opened | half_open | closed | the suffix of an unknown breaker.* type
   reason: string;
 }
@@ -34,14 +37,28 @@ export interface BreakerRow {
   history: Transition[];
 }
 
+/** What the blackboard's mailboxes took over from open channels (comms/mailbox.py). */
+export interface Mailbox {
+  deliveries: number;
+  items: number;
+  dropped: number;
+}
+
 export interface BreakersState {
   rows: Record<string, BreakerRow>;
   order: string[];
   transitions: number;
+  mailbox: Mailbox;
   other: GenericEntry[];
 }
 
-export const emptyBreakers = (): BreakersState => ({ rows: {}, order: [], transitions: 0, other: [] });
+export const emptyBreakers = (): BreakersState => ({
+  rows: {},
+  order: [],
+  transitions: 0,
+  mailbox: { deliveries: 0, items: 0, dropped: 0 },
+  other: [],
+});
 
 const HISTORY_KEPT = 20;
 // The last segment of the type, or its last word: ``opened``, ``channel_opened``, ``topic_half_open``.
@@ -59,6 +76,20 @@ export function breakerKind(name: string): BreakerKind {
 }
 
 export function foldBreakers(state: BreakersState, event: RunEvent): BreakersState {
+  if (event.type === "mailbox.delivered") {
+    const { mailbox } = state;
+    return {
+      ...state,
+      mailbox: {
+        deliveries: mailbox.deliveries + 1,
+        items: mailbox.items + (asNumber(event.payload.count) ?? 0),
+        dropped: mailbox.dropped + (asNumber(event.payload.dropped) ?? 0),
+      },
+    };
+  }
+  if (event.type.startsWith("mailbox.")) {
+    return { ...state, other: appendCapped(state.other, genericEntry(event), GENERIC_CAP) };
+  }
   if (!event.type.startsWith("breaker.")) return state;
   const p = event.payload;
   const suffix = event.type.split(".").at(-1)!; // breaker.opened and breaker.channel.opened alike
@@ -93,8 +124,9 @@ export function foldBreakers(state: BreakersState, event: RunEvent): BreakersSta
   } else if (CLOSED.test(suffix)) {
     next = { ...next, state: "closed", openedTs: null, untilMs: null };
   }
-  next.history = appendCapped(row.history, { seq: event.seq, ts: event.ts_virtual, event: suffix, reason }, HISTORY_KEPT);
+  next.history = appendCapped(row.history, { seq: event.seq, ts: event.ts_virtual, actor: event.actor, event: suffix, reason }, HISTORY_KEPT);
   return {
+    ...state,
     rows: { ...state.rows, [name]: next },
     order: previous ? state.order : [...state.order, name],
     transitions: state.transitions + 1,

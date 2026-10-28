@@ -1125,6 +1125,20 @@ textarea {
   text-align: right;
 }
 
+.bars__track i.bars__fill--bad {
+  background: var(--bad);
+}
+
+.auction {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auction__line {
+  font-size: 12.5px;
+}
+
 .spendchips {
   display: flex;
   flex-wrap: wrap;
@@ -1583,6 +1597,19 @@ textarea {
   height: 30px;
   text-align: center;
   vertical-align: middle;
+}
+
+.results__doc {
+  margin: 0;
+  max-height: 360px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .results__raw pre {
