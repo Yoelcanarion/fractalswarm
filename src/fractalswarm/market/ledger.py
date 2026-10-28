@@ -10,6 +10,7 @@ one ``BEGIN IMMEDIATE`` transaction, so concurrent runs can never overshoot the 
 
 import sqlite3
 from collections import defaultdict
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -125,6 +126,30 @@ class SpendSummary(BaseModel):
     by_model: list[SpendRow]
 
 
+class OpenReservation(BaseModel):
+    reservation_id: str
+    run_id: str
+    model: str
+    reserved_usd: float
+    created_at: str | None
+
+
+def stale_reservations(
+    open_reservations: list[OpenReservation], now: datetime, after: timedelta
+) -> list[OpenReservation]:
+    """The open reservations older than ``after`` (or of unknown age).
+
+    No call runs for long, so these belong to calls cancelled in flight or cut off by a stopped
+    process. They stay open on purpose, because such a request may still have been billed: this
+    only names them, and releasing one is a human decision.
+    """
+    return [
+        row
+        for row in open_reservations
+        if row.created_at is None or now - datetime.fromisoformat(row.created_at) > after
+    ]
+
+
 class ProjectLedger:
     """The project ledger. Timestamps come from the caller: this module never reads a clock."""
 
@@ -235,3 +260,24 @@ class ProjectLedger:
             by_run=grouped["run_id"],
             by_model=grouped["model"],
         )
+
+    def open_reservations(self) -> list[OpenReservation]:
+        """The reservations not settled yet, oldest first."""
+        db = self._connect()
+        try:
+            rows = db.execute(
+                "SELECT reservation_id, run_id, model, reserved_usd, created_at FROM entries "
+                "WHERE status = 'reserved' ORDER BY seq"
+            ).fetchall()
+        finally:
+            db.close()
+        return [
+            OpenReservation(
+                reservation_id=reservation_id,
+                run_id=run_id,
+                model=model,
+                reserved_usd=reserved_usd,
+                created_at=created_at,
+            )
+            for reservation_id, run_id, model, reserved_usd, created_at in rows
+        ]

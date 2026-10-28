@@ -15,6 +15,7 @@ from the cassette through ``CassetteBackend``.
 """
 
 import random
+import sqlite3
 import time
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
@@ -163,6 +164,8 @@ class LLMClient:
         self.cassette = cassette
         self.project_ledger = project_ledger if mode != "replay" else None
         self.retry = retry or RetryPolicy()
+        # run/effect -> the project reservation id actually used (see _reserve_project)
+        self._reservations: dict[str, str] = {}
 
     def config_snapshot(self) -> dict[str, Any]:
         """What replay needs to rebuild the same requests and estimates."""
@@ -307,10 +310,23 @@ class LLMClient:
             return self.cassette.get(effect_id).refusal  # type: ignore[union-attr]
         if self.project_ledger is None:
             return None
-        refusal = self.project_ledger.reserve(
-            f"{run_id}/{effect_id}", run_id, model, self.estimate(request), at=_utc_now()
-        )
+        key = reservation_id = f"{run_id}/{effect_id}"
+        attempt = 1
+        while True:
+            try:
+                refusal = self.project_ledger.reserve(
+                    reservation_id, run_id, model, self.estimate(request), at=_utc_now()
+                )
+                break
+            except sqlite3.IntegrityError as error:
+                # An earlier recording under the same run id (an interrupted run, re-run) holds
+                # this id. This call is a new request, so it gets a reservation of its own.
+                if "reservation_id" not in str(error):
+                    raise
+                attempt += 1
+                reservation_id = f"{key}#{attempt}"
         if refusal is None:
+            self._reservations[key] = reservation_id
             return None
         return (
             f"project cap: ${refusal.committed_usd:.4f} committed of ${refusal.cap_usd:.2f}, "
@@ -319,7 +335,8 @@ class LLMClient:
 
     def _settle_project(self, effect_id: str, run_id: str, cost_usd: float) -> None:
         if self.project_ledger is not None:
-            self.project_ledger.settle(f"{run_id}/{effect_id}", cost_usd, at=_utc_now())
+            key = f"{run_id}/{effect_id}"
+            self.project_ledger.settle(self._reservations.pop(key, key), cost_usd, at=_utc_now())
 
     def _record(self, entry: CassetteEntry) -> CassetteEntry | None:
         if self.mode == "record":

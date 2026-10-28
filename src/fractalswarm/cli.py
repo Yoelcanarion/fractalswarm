@@ -457,19 +457,40 @@ def calibrate(
 @app.command()
 def spend() -> None:
     """Show the project ledger: real spend against the project cap."""
+    from datetime import UTC, datetime, timedelta
+
     from rich.console import Console
     from rich.table import Table
 
-    from fractalswarm.market.ledger import ProjectLedger
+    from fractalswarm.market.ledger import ProjectLedger, stale_reservations
 
     settings = _settings()
-    summary = ProjectLedger(settings.ledger_path, settings.project_cap_usd).summary()
+    ledger = ProjectLedger(settings.ledger_path, settings.project_cap_usd)
+    summary = ledger.summary()
     console = Console()
     console.print(f"ledger {settings.ledger_path}")
     console.print(
         f"spent ${summary.spent_usd:.4f}, reserved ${summary.reserved_usd:.4f}, "
         f"remaining ${summary.remaining_usd:.4f} of ${summary.cap_usd:.2f}"
     )
+    stale = stale_reservations(ledger.open_reservations(), datetime.now(UTC), timedelta(hours=1))
+    if stale:
+        stale_usd = sum(row.reserved_usd for row in stale)
+        by_run: dict[str, list[float]] = {}
+        for row in stale:
+            by_run.setdefault(row.run_id, []).append(row.reserved_usd)
+        console.print(
+            f"stale: {len(stale)} reservations (${stale_usd:.4f}) in {len(by_run)} runs have "
+            "been open for over an hour: calls cancelled in flight, or cut off by a stopped "
+            "process. They stay open on purpose, because such a request may still have been "
+            f"billed. If none was, ${summary.remaining_usd + stale_usd:.4f} remains."
+        )
+        table = Table(title="stale reservations by run")
+        for column in ("run", "reservations", "reserved $"):
+            table.add_column(column)
+        for run_id, amounts in by_run.items():
+            table.add_row(run_id, str(len(amounts)), f"{sum(amounts):.4f}")
+        console.print(table)
     for title, rows in (("by run", summary.by_run), ("by model", summary.by_model)):
         if not rows:
             continue

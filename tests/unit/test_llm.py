@@ -240,6 +240,23 @@ async def test_project_ledger_reserves_and_settles_real_spend(tmp_path: Path) ->
     assert llm.cassette.get("eff-2").refusal
 
 
+async def test_a_rerun_under_a_used_run_id_reserves_under_a_fresh_id(tmp_path: Path) -> None:
+    # An interrupted run left `r/eff-1` open in the project ledger. Re-running the same run id
+    # makes the same effect id: on Day 9 the call failed locally (UNIQUE reservation_id), and
+    # that local error, which never reached the cassette, broke the run's replay.
+    ledger = ProjectLedger(tmp_path / "ledger.sqlite", cap_usd=1.0)
+    assert ledger.reserve("r/eff-1", "r", "muse-spark-1.3", 0.02, at="t0") is None
+    llm = client(FakeBackend(), tmp_path, project_ledger=ledger)
+    outcome = await llm.call("eff-1", {"role": "agent", "input": "x"}, run_id="r", sleep=Sleeps())
+    assert outcome.status == "ok"
+    summary = ledger.summary()
+    assert summary.spent_usd == pytest.approx(outcome.result["cost_usd"])
+    # The old reservation stays open (its call may have been billed); the new one settled.
+    assert [row.reservation_id for row in ledger.open_reservations()] == ["r/eff-1"]
+    assert summary.reserved_usd == pytest.approx(0.02)
+    assert [(row.key, row.calls) for row in summary.by_run] == [("r", 2)]
+
+
 async def test_openai_backend_records_without_the_key(tmp_path: Path) -> None:
     seen: list[httpx2.Request] = []
 
