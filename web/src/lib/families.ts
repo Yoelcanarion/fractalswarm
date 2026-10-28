@@ -32,7 +32,7 @@ const CLAIMS: readonly (readonly [PanelId, Claim])[] = [
     "market",
     {
       roots: ["budget", "market", "epoch", "auction", "bid", "topup", "ledger", "price", "feasibility", "risk"],
-      words: ["epoch", "bid", "bids", "auction", "topup", "allocation"],
+      words: ["epoch", "bid", "bids", "auction", "topup", "allocation", "feasibility", "risk"],
     },
   ],
 ];

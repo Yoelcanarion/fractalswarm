@@ -44,9 +44,10 @@ export interface BreakersState {
 export const emptyBreakers = (): BreakersState => ({ rows: {}, order: [], transitions: 0, other: [] });
 
 const HISTORY_KEPT = 20;
-const OPENED = new Set(["opened", "open", "tripped"]);
-const HALF_OPEN = new Set(["half_open", "half-open", "halfopen"]);
-const CLOSED = new Set(["closed", "close", "recovered", "reset"]);
+// The last segment of the type, or its last word: ``opened``, ``channel_opened``, ``topic_half_open``.
+const OPENED = /(^|[_-])(opened|open|tripped)$/;
+const HALF_OPEN = /(^|[_-])half[_-]?open(ed)?$/;
+const CLOSED = /(^|[_-])(closed|close|recovered|reset)$/;
 
 export function breakerKind(name: string): BreakerKind {
   const lower = name.toLowerCase();
@@ -76,7 +77,11 @@ export function foldBreakers(state: BreakersState, event: RunEvent): BreakersSta
   };
   let next: BreakerRow = { ...row, lastSeq: event.seq };
   const reason = asString(p.reason);
-  if (OPENED.has(suffix)) {
+  // Half-open first: ``half_open`` also ends in ``_open``.
+  const known = HALF_OPEN.test(suffix) || OPENED.test(suffix) || CLOSED.test(suffix);
+  if (HALF_OPEN.test(suffix)) {
+    next = { ...next, state: "half_open", untilMs: null };
+  } else if (OPENED.test(suffix)) {
     next = {
       ...next,
       state: "open",
@@ -85,9 +90,7 @@ export function foldBreakers(state: BreakersState, event: RunEvent): BreakersSta
       untilMs: asNumber(p.until_ms),
       reason,
     };
-  } else if (HALF_OPEN.has(suffix)) {
-    next = { ...next, state: "half_open", untilMs: null };
-  } else if (CLOSED.has(suffix)) {
+  } else if (CLOSED.test(suffix)) {
     next = { ...next, state: "closed", openedTs: null, untilMs: null };
   }
   next.history = appendCapped(row.history, { seq: event.seq, ts: event.ts_virtual, event: suffix, reason }, HISTORY_KEPT);
@@ -95,7 +98,7 @@ export function foldBreakers(state: BreakersState, event: RunEvent): BreakersSta
     rows: { ...state.rows, [name]: next },
     order: previous ? state.order : [...state.order, name],
     transitions: state.transitions + 1,
-    other: OPENED.has(suffix) || HALF_OPEN.has(suffix) || CLOSED.has(suffix) ? state.other : appendCapped(state.other, genericEntry(event), GENERIC_CAP),
+    other: known ? state.other : appendCapped(state.other, genericEntry(event), GENERIC_CAP),
   };
 }
 

@@ -15,6 +15,8 @@ describe("which panel claims an event type", () => {
     expect(claimedBy("topup.requested")).toBe("market");
     expect(claimedBy("feasibility.reported")).toBe("market");
     expect(claimedBy("risk.scored")).toBe("market");
+    expect(claimedBy("plan.feasibility")).toBe("market");
+    expect(claimedBy("contract.risk")).toBe("market");
     expect(claimedBy("breaker.opened")).toBe("breakers");
     expect(claimedBy("breaker.channel.opened")).toBe("breakers");
     expect(claimedBy("quota.adjusted")).toBe("limits");

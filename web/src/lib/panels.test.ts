@@ -204,6 +204,18 @@ describe("Breakers", () => {
     expect(breakers.transitions).toBe(3);
   });
 
+  it("reads the state words of a one-segment suffix too: half_open is not open", () => {
+    const s = started()
+      .emit("breaker.channel_opened", "o1", { breaker: "channel:a>b", until_ms: 9000, trips: 1, reason: "storm" })
+      .emit("breaker.channel_half_open", "o1", { breaker: "channel:a>b" })
+      .emit("breaker.topic_opened", "o1", { breaker: "topic:t", until_ms: 9000, trips: 1, reason: "storm" })
+      .emit("breaker.topic_closed", "o1", { breaker: "topic:t" });
+    const { breakers } = foldEvents(s.events).panels;
+    expect(breakers.rows["channel:a>b"]).toMatchObject({ state: "half_open", trips: 1 });
+    expect(breakers.rows["topic:t"]).toMatchObject({ state: "closed", trips: 1 });
+    expect(breakers.other).toEqual([]);
+  });
+
   it("reads breaker types that land later by their suffix, and keeps unknown ones as transitions", () => {
     const s = started()
       .emit("breaker.channel.opened", "o1", { breaker: "channel:o1>o2", until_ms: 9000, trips: 1, reason: "ping-pong" })
