@@ -35,10 +35,12 @@ from fractalswarm.resume import (
     ReissueLedger,
     ResumeRefused,
     ResumeResult,
+    _timer_effect,
     repair_cassette,
     resume_run,
 )
 from fractalswarm.runs import RunPaths, record_run, replay_run
+from fractalswarm.verify.audit import audit_run
 
 REPO = Path(__file__).resolve().parents[2]
 TASKSPEC = REPO / "tasks" / "examples" / "t2-conference.yaml"
@@ -406,3 +408,96 @@ def test_the_resume_events_have_a_fixed_shape() -> None:
         validate_payload("run.resumed", payload | {"surprise": 1})
     reissued = {"effect_id": "eff-3.0", "kind": "llm", "ambiguous": True}
     assert validate_payload("effect.reissued", reissued)["reserved_usd"] == 0.0
+
+
+# -- the kill switch and the budget shock survive a crash -------------------------------------
+
+
+def control_on_round_2(run_dir: Path, request: dict):
+    sent = []
+
+    def script(body, attempt):
+        if "item 2" in str(body["input"]) and not sent:
+            sent.append(RunPaths(run_dir).request_control(request))
+        return "ok"
+
+    return script
+
+
+async def record_with_control(root: Path, name: str, request: dict) -> Path:
+    run_dir = root / name
+    await record_run(
+        "toy",
+        run_id=name,
+        run_dir=run_dir,
+        backend=FakeBackend(script=control_on_round_2(run_dir, request)),
+        params={"rounds": 3},
+    )
+    return run_dir
+
+
+async def test_a_halt_that_a_crash_cut_short_is_finished_and_nothing_runs_after_it(
+    tmp_path: Path,
+) -> None:
+    halted = await record_with_control(tmp_path, "halted", {"op": "halt", "reason": "stop"})
+    events = read_events(halted)
+    halt = next(e.seq for e in events if e.type == "run.halted")
+    assert halt < len(events) - 1
+    for cut in range(halt, len(events)):  # from the halt itself to the last event before the end
+        dest = tmp_path / f"cut-{cut}"
+        crashed_copy(halted, dest, cut)
+        resumed = await resume_run(dest, backend=FakeBackend())
+        after = [e.type for e in read_events(dest) if e.seq > halt]
+        allowed = {"effect.cancelled", "budget.settled", "actor.stopped", "run.resumed"}
+        assert set(after) <= allowed | {"run.completed"}, f"cut {cut}"
+        assert after[-1] == "run.completed" and resumed.run.completed.payload["alive"] == []
+        audit = await audit_run(dest, with_replay=True)
+        assert audit.ok and audit.replay_ok, f"cut {cut}: {audit.problems}"
+        # The halt was finished, not repeated: one reservation released per open effect.
+        assert [e.type for e in read_events(dest)].count("run.halted") == 1
+
+
+async def test_every_prefix_after_a_budget_shock_resumes_with_the_new_cap(tmp_path: Path) -> None:
+    shock = {"op": "budget", "level": "run", "key": None, "usd": 0.0, "reason": "CFO says stop"}
+    shocked = await record_with_control(tmp_path, "shocked", shock)
+    events = read_events(shocked)
+    at = next(e.seq for e in events if e.type == "budget.shock")
+    expected = [e.type for e in events if e.type == "budget.refused"]
+    assert expected
+    for cut in range(at, len(events)):
+        dest = tmp_path / f"cut-{cut}"
+        crashed_copy(shocked, dest, cut)
+        await resume_run(dest, backend=FakeBackend())
+        resumed = read_events(dest)
+        assert [e.type for e in resumed if e.type == "budget.shock"] == ["budget.shock"]
+        # Nothing was reserved after the shock; what it refused stays refused.
+        assert "budget.reserved" not in [e.type for e in resumed if e.seq > at]
+        assert (await replay_run(dest)).ok, f"cut {cut}"
+
+
+async def test_a_timer_open_at_the_crash_waits_only_what_it_had_left() -> None:
+    class Waits:  # stands in for the effect context: records the waits instead of making them
+        run_id = "r"
+
+        def __init__(self) -> None:
+            self.waited: list[int] = []
+
+        async def sleep(self, virtual_ms: int) -> None:
+            self.waited.append(virtual_ms)
+
+    def timer(effect_id: str, ts_virtual: int) -> Event:
+        payload = {"effect_id": effect_id, "kind": "timer", "request": {"delay_ms": 2000}}
+        return Event(
+            run_id="r", ts_virtual=ts_virtual, lamport=1, type="effect.started", actor="a",
+            idem_key=effect_id, payload=payload | {"tag": None}, seq=5, prev_hash="p", hash="h",
+        )  # fmt: skip
+
+    handler = _timer_effect(frozenset({"eff-1.0", "eff-2.0"}), vtime=10_000)
+    waits = Waits()
+    outcomes = [
+        await handler(timer("eff-1.0", 9_000), waits),  # open: 1 s of its 2 s is left
+        await handler(timer("eff-2.0", 1_000), waits),  # open and already due
+        await handler(timer("eff-3.0", 9_000), waits),  # started after the resume: all of it
+    ]
+    assert waits.waited == [1_000, 0, 2_000]
+    assert [outcome.latency_ms for outcome in outcomes] == [2_000, 2_000, 2_000]
