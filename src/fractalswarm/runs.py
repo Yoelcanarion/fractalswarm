@@ -33,6 +33,7 @@ SCENARIOS = {
     "single": "fractalswarm.actors.swarm:SINGLE",
     "pipeline": "fractalswarm.actors.swarm:PIPELINE",
     "chaos-toy": "fractalswarm.actors.chaos_toy:CHAOS_TOY",
+    "breaker-toy": "fractalswarm.actors.breaker_toy:BREAKER_TOY",
 }
 
 
