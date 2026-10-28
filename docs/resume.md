@@ -269,7 +269,7 @@ writer, an empty log) or the options are wrong.
 
 Proven by tests that kill a real process (`Popen.kill()`, `TerminateProcess` on Windows) at
 a chosen point and count, in a file the child processes share, every request the fake LLM
-received (`tests/integration/test_resume_kill.py`, 14 tests):
+received (`tests/integration/test_resume_kill.py`, 15 tests):
 
 - (a), (b) and local effects after a natural kill in the middle of a run;
 - (b) forced: the process stops right after `Cassette.record`;
@@ -278,21 +278,27 @@ received (`tests/integration/test_resume_kill.py`, 14 tests):
 - a kill during a takeover (first `ownership.remapped`, first `tree.adopted`) under kill-half;
 - a torn tail: the kill lands between a reservation and its `effect.started`, and between
   `effect.completed` and `budget.settled`;
+- the kill switch: the kill lands right after `run.halted`, with requests in flight; the halt
+  is finished and nothing is sent after it;
 - the live clock with 60 virtual seconds of downtime: nobody is declared dead;
 - a second crash during the resume;
-- a live log is not resumed; the real backend needs the spend flag and a key;
+- a live log is not resumed; the real backend needs the spend flag and a key; an unknown run is
+  refused;
 - the project ledger keeps the lost call reserved and the second send gets its own entry.
 
-Each of them ends with the same checks: the T2 program is complete and valid (48/48, 0 hard
-violations), the hash chain verifies, `replay --verify` matches the whole log, no request
-followed an effect of class (a) or (b), each ambiguous effect was sent exactly once more and
-is in `run.resumed` and `effect.reissued`, and every effect that started after the crash was
-sent once.
+Each of them that finishes a T2 run ends with the same checks: the program is complete and valid
+(48/48, 0 hard violations), the hash chain verifies, `replay --verify` matches the whole log,
+no request followed an effect of class (a) or (b), each ambiguous effect was sent exactly once
+more and is in `run.resumed` and `effect.reissued`, and every effect that started after the
+crash was sent once.
 
-In process (`test_resume_cuts.py`, 19 tests): a finished log cut at every sequence number of the
-toy run, with every, no, or every other open reply in the cassette; T2 cut where a reaction is
-half written, at the boot, and at random points; a halt cut short and every prefix after a
-budget shock; the refusals; the torn cassette line.
+In process (`tests/integration/test_resume_cuts.py`, 24 tests): a finished log cut at every
+sequence number of the toy run, with every, no, or every other open reply in the cassette; T2
+cut where a reaction is half written, at the boot, and at random points; the central, single
+and pipeline baselines under API faults, and the chaos-toy under C3, from random cuts; a halt
+cut short at every point and every prefix after a budget shock; the refusals (broken chain,
+resealed forgery, cassette missing a reply, corrupt cassette, empty log, a bundle, a live log);
+the torn cassette line; the pieces (`ReissueLedger`, the timer, the clock, the event shapes).
 
 Not proven:
 
@@ -305,11 +311,10 @@ Not proven:
 - **A control request that was consumed but not logged.** `RunPaths.poll_control` renames a
   request to `.done` before the driver appends `run.halted` or `budget.shock`. A kill in between
   loses a `halt`. The window is the time to apply one request. Fix: rename only after the
-  append.
+  append. (A halt that is already in the log is safe: see the kill-switch test.)
 - **Two resumes started in the same few milliseconds** can both pass the liveness probe. The
   second fails at its first append, but it may have sent requests by then.
-- **Scenarios other than the T2 swarm under the fake LLM.** The central, single and pipeline
-  baselines and `chaos-toy` were not killed.
-- **The kill switch across a real kill.** The halt case is cut in process, not killed.
+- **Real kills of the other scenarios.** The central, single and pipeline baselines and the
+  chaos-toy are cut in process, not killed.
 - **Anything with a different code version** from the one that recorded the log: resume refuses.
-- **The sub-window between `_settle_project` and `_record`** (section 3.3).
+- **The window between `_settle_project` and `_record`** (section 3.3).
