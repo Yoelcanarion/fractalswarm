@@ -493,8 +493,17 @@ class Runtime:
             bump = bump or admission.bump_member_epoch
         return Admission(bump_member_epoch=bump)
 
+    @staticmethod
+    def _origin(reaction: Reaction) -> str:
+        """What the keys and effect ids a reaction makes start with: the cause's seq. A budget
+        shock reaches every actor, so each one's reaction adds its own id and none collide."""
+        cause = reaction.cause
+        if cause.type == "budget.shock" and reaction.actor != KERNEL:
+            return f"{cause.seq}.{reaction.actor}"
+        return str(cause.seq)
+
     def _start_effect(self, reaction: Reaction, command: StartEffect) -> None:
-        effect_id = f"eff-{reaction.cause.seq}.{len(reaction.appended)}"
+        effect_id = f"eff-{self._origin(reaction)}.{len(reaction.appended)}"
         estimator = self.estimators.get(command.kind)
         usd = estimator(command.request) if estimator else 0.0
         if usd > 0:
@@ -577,7 +586,7 @@ class Runtime:
             lamport,
             causation_id=reaction.cause.seq,
             correlation_id=correlation_id,
-            idem_key=idem_key or f"{reaction.cause.seq}.{len(reaction.appended)}",
+            idem_key=idem_key or f"{self._origin(reaction)}.{len(reaction.appended)}",
         )
         reaction.appended.append(event)
         return event

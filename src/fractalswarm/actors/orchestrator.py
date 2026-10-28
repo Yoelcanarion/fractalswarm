@@ -42,6 +42,7 @@ the swarm, so they plan as well as it does.
 
 from typing import Any
 
+from fractalswarm.actors import market_maker
 from fractalswarm.actors.board import BOARD
 from fractalswarm.actors.integrator import finish_goal, leaf_outcome, merge_children
 from fractalswarm.baselines.supervisor import RESTART_TAG
@@ -130,6 +131,8 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "membership": bool(args.get("membership")),
         "relay": args.get("relay"),
         "contributor": bool(args.get("contributor")),
+        "market": args.get("market"),  # the economy's settings; None: no epochs (the default)
+        "mk": {},  # goal -> epoch bookkeeping of the markets this orchestrator makes
         "spawned": len(children),  # agents spawned so far, for replacement names
         "respawned": 0,  # orchestrators spawned into dead sibling groups
         "squads": 0,  # central: squads handed out to leaf goals so far
@@ -148,6 +151,14 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
 
 
 def orchestrator_handle(state: dict[str, Any], event: Event, view: View):
+    state, commands = _handle_event(state, event, view)
+    if state["market"] is not None and not (state["det"] and _zombie(state, view)):
+        state, more = market_maker.on_event(state, event, view, _emitter(state))
+        commands = [*commands, *more]
+    return state, commands
+
+
+def _handle_event(state: dict[str, Any], event: Event, view: View):
     if state["mode"] in CENTRAL_MODES:
         return _central(state, event, view)
     det = state["det"]
@@ -209,6 +220,8 @@ def _spawned(state: dict[str, Any], view: View):
     commands: list[Command] = []
     passed = {"membership": state["membership"], "relay": state["relay"]}
     passed["contributor"] = state["contributor"]
+    if state["market"] is not None:
+        passed["market"] = state["market"]
     for child in state["children"]:
         if state["leaf"] or state["mode"] in CENTRAL_MODES:
             commands.append(Spawn(actor_id=child, kind="agent", args=_agent_args(state)))
@@ -468,7 +481,8 @@ def _assign_children(state: dict[str, Any], gid: str, children: list[dict[str, A
             commands += more
         else:
             commands.append(Send(to=owners[child["id"]], topic="assign", body=body))
-    return state, commands
+    state, started = market_maker.start(state, gid, view)
+    return state, [*commands, *started]
 
 
 def _child_group(state: dict[str, Any], entry: dict[str, Any], view: View) -> list[str]:
@@ -613,6 +627,8 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
         state, agents, spawned = _live_agents(state, gid, view)
         entry = state["goals"][gid]
         commands += spawned
+    if ready:
+        commands += market_maker.request_topup(state, gid, [contracts[cid] for cid in ready], view)
     for cid in ready:
         contract = Contract.model_validate(contracts[cid])
         deps = {dep: entry["outputs"][dep] for dep in contract.depends_on}
@@ -791,6 +807,7 @@ def _verified(state: dict[str, Any], gid: str, cid: str, view: View):
         resolution = f"re-placed after {entry['collisions'][cid]} booking conflict(s)"
         payload = {"kind": "temporal", "goal_id": gid, "resolution": resolution}
         commands.append(_emit(state, gid, "collision.resolved", payload))
+    commands += market_maker.completed(state, gid, view)
     state, more = _dispatch(state, gid, view)
     return state, commands + more
 
@@ -820,6 +837,7 @@ def _retry(state: dict[str, Any], gid: str, cid: str, stage: str, reasons: list[
         failed = {"goal_id": gid, "contract_id": cid, "attempt": contract.attempt}
         failed |= {"reasons": reasons, "work": f"{gid}/{cid}"}
         commands.append(_emit(state, gid, "contract.failed", failed))
+        commands += market_maker.completed(state, gid, view)
         state = _set_status(state, gid, cid, "failed")
         state, more = _dispatch(state, gid, view)
         return state, commands + more
@@ -956,6 +974,9 @@ def _adopt(state: dict[str, Any], gid: str, view: View):
         entry |= {"phase": "running", "children": tracked}
         state = {**state, "child_of": state["child_of"] | dict.fromkeys(tracked, gid)}
     state = _put_goal(state, gid, entry)
+    resumed: list[Command] = []
+    if not leaf and entry["phase"] == "running":
+        state, resumed = market_maker.adopt(state, gid, view)
 
     group = members.get(previous).group if members.get(previous) is not None else None
     remapped = {"group": group, "key": gid, "owner": me, "previous": previous}
@@ -974,6 +995,7 @@ def _adopt(state: dict[str, Any], gid: str, view: View):
         idem = f"tree.adopted:{takeover}"
         commands.append(_emit(state, gid, "tree.adopted", payload | {"duties": duties}, idem))
 
+    commands += resumed
     if not state["scope"] and view.views.get("scope") is not None:
         state = {**state, "scope": view.views["scope"].latest}
     if entry["phase"] == "planning":  # the plan died with its owner: plan it again
@@ -1013,6 +1035,8 @@ def _respawn(state: dict[str, Any], level: int, group: str | None):
     args = {key: state[key] for key in ("fanout", "agents_per_leaf", "task", "max_attempts")}
     args |= {"max_steps": state["max_steps"], "level": level, "parent": group, "bare": True}
     args |= {"membership": True, "relay": state["relay"], "contributor": state["contributor"]}
+    if state["market"] is not None:
+        args["market"] = state["market"]
     state = {**state, "respawned": number}
     return state, [Spawn(actor_id=actor, kind="orchestrator", args=args)]
 
@@ -1299,6 +1323,15 @@ def _emit(
     if det is not None and entry is not None:
         payload = payload | {"fence": membership.token(det, entry["epoch"], gid)}
     return Emit(type=event_type, payload=payload, idem_key=idem_key)
+
+
+def _emitter(state: dict[str, Any]):
+    """``_emit`` for the market maker: the same fenced, owner-scoped write."""
+
+    def emit(gid: str, event_type: str, payload: dict[str, Any], idem_key: str | None = None):
+        return _emit(state, gid, event_type, payload, idem_key)
+
+    return emit
 
 
 def _fenced(state: dict[str, Any], gid: str, command: Command) -> Command:

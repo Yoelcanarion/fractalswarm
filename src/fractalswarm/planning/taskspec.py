@@ -34,6 +34,18 @@ class Scaling(BaseModel):
         return value
 
 
+class Market(BaseModel):
+    """How a parent splits its budget among its children (spec §7.2). ``proportional`` is the
+    default: no epochs run and money flows as before. ``auction`` runs the epoch auction."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["proportional", "auction"] = "proportional"
+    epoch_interval_s: float = Field(default=15.0, gt=0)
+    epoch_max_completions: int = Field(default=10, ge=1)
+    floor_usd: float = Field(default=0.08, gt=0)  # what a squad may always commit
+
+
 class TaskInputs(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -52,6 +64,7 @@ class TaskSpec(BaseModel):
     seed: str = "1"
     budget_usd: float | None = Field(default=None, gt=0)
     scaling: Scaling = Field(default_factory=Scaling)
+    market: Market = Field(default_factory=Market)
     max_steps: int = Field(default=8, ge=1)
     max_attempts: int = Field(default=6, ge=1)
     contributor_opt_in: bool = False
@@ -70,6 +83,14 @@ class TaskSpec(BaseModel):
                 mode=defaults["scaling"]["mode"],
                 fanout=list(exact["fanout"]),
                 agents_per_leaf=int(exact["agents_per_leaf"]),
+            )
+        if "market" not in data:
+            spec.market = Market(
+                **{
+                    key: value
+                    for key, value in defaults["market"].items()
+                    if key in Market.model_fields
+                }
             )
         if spec.budget_usd is None:
             spec.budget_usd = float(defaults["budget"]["run_cap_usd"])
@@ -111,4 +132,40 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
     recorded = spec.model_dump(mode="json")
     if fixture.resolve().is_relative_to(REPO_ROOT):  # no machine-specific paths in the log
         recorded["inputs"]["fixture"] = fixture.resolve().relative_to(REPO_ROOT).as_posix()
-    return {"spec": recorded, "corpus": corpus, "truth": truth}
+    if spec.market == Market():  # opt-in settings stay out of a default run's log
+        del recorded["market"]
+    params: dict[str, Any] = {"spec": recorded, "corpus": corpus, "truth": truth}
+    economy = market_params(spec)
+    if economy is not None:
+        params["market"] = economy
+    return params
+
+
+def market_params(spec: TaskSpec) -> dict[str, Any] | None:
+    """The economy's settings with every number resolved, or ``None`` when it is off.
+
+    The epoch machinery runs for ``market.mode: auction`` and for autoscale (which needs the
+    $ and rate-limit allocations). The numbers are recorded in the run's params, so replay
+    never reads a config file.
+    """
+    if spec.market.mode != "auction" and spec.scaling.mode != "autoscale":
+        return None
+    economy = _defaults()["market"]
+    limits = yaml.safe_load((CONFIG_DIR / "prices.yaml").read_text(encoding="utf-8"))["rate_limits"]
+    return {
+        "mode": spec.market.mode,
+        "epoch_interval_ms": round(spec.market.epoch_interval_s * 1000),
+        "epoch_max_completions": spec.market.epoch_max_completions,
+        "floor_usd": spec.market.floor_usd,
+        "plan_usd": economy["plan_usd"],
+        "contract_usd": economy["contract_usd"],
+        "contracts_per_leaf": economy["contracts_per_leaf"],
+        "rpm_per_agent": economy["rpm_per_agent"],
+        "tpm_per_agent": economy["tpm_per_agent"],
+        "fanout": list(spec.scaling.fanout),
+        "leaf_level": len(spec.scaling.fanout),
+        "limits": {
+            model: {"limit_rpm": found["rpm"], "limit_tpm": found["tpm"]}
+            for model, found in sorted(limits.items())
+        },
+    }

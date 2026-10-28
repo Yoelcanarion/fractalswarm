@@ -4,7 +4,9 @@
 ``{"spec": TaskSpec as a dict, "corpus": ..., "truth": ...}``, and optionally:
 - ``"chaos"``: a chaos plan, or ``{"profile": "C2", "seed": "1"}`` (spec §15.4). It spawns
   the chaos network and the monkey, and turns membership on;
-- ``"membership"``: failure detection and takeover (default: on with chaos).
+- ``"membership"``: failure detection and takeover (default: on with chaos);
+- ``"market"``: the economy's settings (``planning/taskspec.py: market_params``). Present
+  only when the epoch auction or autoscale is on; a log without it replays as off.
 
 ``central`` is the central baseline (spec §15.1) on the same task, the same LLM calls and the
 same chaos: one orchestrator plans every level and leads every squad, under the best-case
@@ -36,6 +38,7 @@ from fractalswarm.comms.chaos import (
 from fractalswarm.coord.membership import MembersView
 from fractalswarm.coord.tree import ROLE, TreeView
 from fractalswarm.kernel.scheduler import ActorKind, Command, Spawn
+from fractalswarm.market.view import MarketView
 from fractalswarm.planning.scope import ScopeView
 
 ROOT = "o0"
@@ -68,7 +71,14 @@ class SwarmScenario:
     }
 
     def reducers(self) -> list[Any]:
-        return [MembersView(), ProgressView(T2_PROGRESS), ActorsView(), TreeView(), ScopeView()]
+        return [
+            MembersView(),
+            ProgressView(T2_PROGRESS),
+            ActorsView(),
+            TreeView(),
+            ScopeView(),
+            MarketView(),
+        ]
 
     def boot(self, params: dict[str, Any]) -> list[Command]:
         spec = params["spec"]
@@ -98,6 +108,9 @@ class SwarmScenario:
             "relay": NET if membership and chaos is not None else None,
             "contributor": bool(params.get("contributor", spec.get("contributor_opt_in"))),
         }
+        market = params.get("market") if self.mode == "swarm" else None
+        if market is not None:
+            args["market"] = market
         commands: list[Command] = [Spawn(actor_id=BOARD, kind="board", args={})]
         if args["relay"] is not None:
             commands.append(Spawn(actor_id=NET, kind=NET, args={}))

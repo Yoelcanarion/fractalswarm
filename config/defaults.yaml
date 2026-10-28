@@ -29,10 +29,19 @@ membership:
   suspect_after_missed: 3
   dead_after_missed: 5
 
-# Epoch auction (spec §7.2): an epoch closes on whichever comes first.
+# Economy (spec §7.2). ``mode: proportional`` runs no epochs; ``auction`` runs the epoch
+# auction. An epoch closes on whichever comes first. The estimates price work that is not
+# planned yet, and size the bids of RPM and TPM slices (one agent's worth each).
 market:
+  mode: proportional
   epoch_interval_s: 15
   epoch_max_completions: 10
+  floor_usd: 0.08               # a squad may always commit this much: two worst-case calls
+  plan_usd: 0.01                # one planning call
+  contract_usd: 0.03            # a typical contract, all in; a smaller declared budget wins
+  contracts_per_leaf: 3         # contracts a leaf goal is expected to plan
+  rpm_per_agent: 30
+  tpm_per_agent: 120000
 
 # Circuit breakers (spec §8).
 breakers:
