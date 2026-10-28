@@ -193,3 +193,28 @@ class BudgetShock(Payload):
     key: str
     usd: float = Field(ge=0)
     reason: str = ""
+
+
+@register("run.resumed")
+class RunResumed(Payload):
+    """The process died and the run went on from its log (spec §8, docs/resume.md)."""
+
+    attempt: int  # 1 for the first resume of this run
+    log_events: int  # events in the log when the dead process was found
+    completed_tail: int = 0  # events appended to finish the reaction the crash cut
+    from_cassette: list[str] = []  # open effects answered from the cassette: no new request
+    ambiguous: list[str] = []  # open effects sent again: the provider may have run them already
+    rerun: dict[str, int] = {}  # local effects (timers, scans) run again, by kind
+    possible_extra_usd: float = 0.0  # what the ambiguous effects may have cost a second time
+    cassette_dropped_bytes: int = 0  # a torn last cassette line that was cut off
+
+
+@register("effect.reissued")
+class EffectReissued(Payload):
+    """An effect that may have run before the crash is sent again."""
+
+    effect_id: str
+    kind: str
+    ambiguous: bool
+    reserved_usd: float = 0.0
+    reason: str = ""
