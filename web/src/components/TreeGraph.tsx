@@ -11,7 +11,7 @@ import {
 } from "@xyflow/react";
 import { memo, useEffect, useMemo } from "react";
 
-import { colorOf, isLeafKind, layoutTree } from "../lib/layout";
+import { colorOf, isInfraKind, isLeafKind, layoutTree } from "../lib/layout";
 import { rootHolder, type ActorNode, type ViewState } from "../lib/reducer";
 
 // How long (in events) a message edge stays lit, and an adoption stays highlighted.
@@ -81,9 +81,10 @@ function buildGraph(view: ViewState): { nodes: Node<ActorData>[]; edges: Edge[] 
   const recent = view.messages.filter((m) => view.lastSeq - m.seq < MESSAGE_TAIL);
   const lit = new Set<string>();
   const edges: Edge[] = [];
+  const inTree = (id: string): boolean => view.actors[id] !== undefined && !isInfraKind(view.actors[id].kind);
   for (const id of view.order) {
     const actor = view.actors[id];
-    if (!actor.parent || !view.actors[actor.parent]) continue;
+    if (!inTree(id) || !actor.parent || !inTree(actor.parent)) continue;
     const talking = recent.some(
       (m) => (m.from === actor.parent && m.to === id) || (m.from === id && m.to === actor.parent),
     );
@@ -104,7 +105,7 @@ function buildGraph(view: ViewState): { nodes: Node<ActorData>[]; edges: Edge[] 
   }
   // Messages between actors that are not parent and child get their own animated edge.
   for (const m of recent) {
-    if (lit.has(`${m.from}->${m.to}`) || !view.actors[m.from] || !view.actors[m.to]) continue;
+    if (lit.has(`${m.from}->${m.to}`) || !inTree(m.from) || !inTree(m.to)) continue;
     edges.push({
       id: `msg-${m.seq}`,
       source: m.from,

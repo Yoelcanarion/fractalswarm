@@ -21,6 +21,11 @@ const GAP = 22;
 
 export const nodeWidth = (kind: string): number => (isLeafKind(kind) ? LEAF_WIDTH : NODE_WIDTH);
 
+// The blackboard, the chaos network and the chaos monkey are actors of the run, not of its
+// orchestrator tree. Laid out as roots they sit far to either side and shrink the tree to fit.
+export const INFRA_KINDS: ReadonlySet<string> = new Set(["board", "net", "chaos"]);
+export const isInfraKind = (kind: string): boolean => INFRA_KINDS.has(kind);
+
 export function childrenOf(state: ViewState, parent: string | null): string[] {
   return state.order.filter((id) => state.actors[id].parent === parent);
 }
@@ -59,6 +64,7 @@ export function layoutTree(state: ViewState): Placed[] {
 
   // An actor whose parent is unknown (or missing from the stream) is treated as a root.
   const roots = state.order.filter((id) => {
+    if (isInfraKind(state.actors[id].kind)) return false;
     const parent = state.actors[id].parent;
     return parent === null || !state.actors[parent];
   });

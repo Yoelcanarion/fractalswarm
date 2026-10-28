@@ -1,9 +1,11 @@
+import { isInfraKind } from "../lib/layout";
 import type { ViewState } from "../lib/reducer";
 
 export function Counters({ view }: { view: ViewState }) {
   const c = view.counters;
-  const alive = view.order.filter((id) => view.actors[id].status === "alive").length;
-  const down = view.order.filter((id) => ["killed", "dead"].includes(view.actors[id].status)).length;
+  const tree = view.order.filter((id) => !isInfraKind(view.actors[id].kind));
+  const alive = tree.filter((id) => view.actors[id].status === "alive").length;
+  const down = tree.filter((id) => ["killed", "dead"].includes(view.actors[id].status)).length;
   return (
     <div className="counters">
       <div className="stat stat--hero" title="LLM tokens spent on membership, ownership and takeover">

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-import { postControl, type ControlResult } from "../lib/api";
+import { NewTaskForm } from "../components/NewTaskForm";
 import { useRun } from "../store";
 
 export function RunsPage() {
@@ -43,31 +43,7 @@ export function RunsPage() {
           </tbody>
         </table>
       </section>
-      <NewTask />
+      <NewTaskForm />
     </div>
-  );
-}
-
-// MVI fallback (day-07 plan): a TaskSpec YAML upload instead of a form.
-function NewTask() {
-  const [yaml, setYaml] = useState("");
-  const [result, setResult] = useState<ControlResult | null>(null);
-  return (
-    <section className="panel newtask">
-      <header className="panel__title">New task (TaskSpec YAML)</header>
-      <input
-        type="file"
-        accept=".yaml,.yml"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (file) setYaml(await file.text());
-        }}
-      />
-      <textarea value={yaml} onChange={(e) => setYaml(e.target.value)} placeholder="goal: ..." rows={8} spellCheck={false} />
-      <button className="btn" disabled={!yaml.trim()} onClick={async () => setResult(await postControl("api/tasks", { yaml }))}>
-        Submit for planning
-      </button>
-      {result && <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>{result.detail}</div>}
-    </section>
   );
 }

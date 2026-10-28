@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from "react";
 
+import { eventGroup } from "../lib/eventlog";
 import { SPEEDS } from "../lib/playback";
+import type { RunEvent } from "../lib/types";
 import { useRun } from "../store";
 
 const MARK_TYPES: Record<string, string> = {
@@ -8,7 +10,15 @@ const MARK_TYPES: Record<string, string> = {
   "member.dead": "mark--dead",
   "tree.adopted": "mark--adopt",
   "collision.detected": "mark--collision",
+  "run.halted": "mark--dead",
+  "breaker.opened": "mark--dead",
+  "escalation.raised": "mark--dead",
+  "budget.shock": "mark--warn",
 };
+
+// The chaos network's faults come by the thousand; they would paint the whole track.
+const markOf = (event: RunEvent): string | undefined =>
+  eventGroup(event) === "net-fault" ? undefined : MARK_TYPES[event.type];
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
 
@@ -29,7 +39,11 @@ export function Timeline() {
   }, [playing, tick]);
 
   const marks = useMemo(
-    () => events.filter((e) => MARK_TYPES[e.type]).map((e) => ({ seq: e.seq, ts: e.ts_virtual, cls: MARK_TYPES[e.type], type: e.type })),
+    () =>
+      events.flatMap((e) => {
+        const cls = markOf(e);
+        return cls ? [{ seq: e.seq, ts: e.ts_virtual, cls, type: e.type }] : [];
+      }),
     [events],
   );
 
