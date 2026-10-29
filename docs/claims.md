@@ -9,8 +9,9 @@ and the command that reproduces it. A claim whose evidence is not recorded yet i
 Claims the rules forbid are listed under "Not claimed", with the reason, so that nobody makes
 them by accident.
 
-**Status:** skeleton, Thu Oct 29. The comparison claims wait for the decision gate on Fri Oct 30
-(`bench/PREREG.md` §7). Until then, nothing in the comparison section may be quoted.
+**Status:** decision gate held with Yoel on Thu Oct 29 (`bench/PREREG.md` §7): **outcome B**
+accepted. R2 is the comparison headline, with R3 next to it; R1 is not claimed. The tagline is
+settled once the real runs exist. The real-model evidence is pending.
 
 ## Rules
 
@@ -35,21 +36,26 @@ them by accident.
 | S5 | "Every run replays bit-for-bit from a hash-verified log; `fractalswarm demo --verify` needs no API key." | `demo --verify` and `replay RUN --verify` MATCH at the release commit, on runs recorded after the handler freeze (Sun Nov 1). The Phase 1 real runs verify at 8fddeba, not at HEAD (8ac7536 changed the email scan and the takeover keys; progress, Day 10), so they are not evidence for this claim. Run ids: TBD | pending |
 | S6 | "Shared log, not shared brain." | Description of the design; the log is a central component (stated limitation, `bench/REPORT.md` §6) | allowed, always with the limitation |
 
-## Against the rivals (decision gate, Fri Oct 30)
+## Against the rivals (decision gate, Thu Oct 29: outcome B)
+
+The $0 evidence: `fractalswarm bench verdicts bench/results/rivals-gate bench/results/sweeps`
+prints `bench/results/verdicts.txt` (PREREG sha 25d4a75919b3, code 3e723a8; 574 cells, fake LLM,
+simulated clock), and `bench/results/honesty.json` holds every comparison.
 
 | # | Claim, as worded | Allowed when | Evidence | Status |
 |---|---|---|---|---|
-| R1 | "Recovery stays local to the affected subtree." | Outcome A, with the measured blocking time and blast radius, and the failure model named | `bench verdicts --prereg` on the gate and the sweeps (`honesty.json`). Run ids: TBD | pending gate |
-| R2 | "Resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism." | Outcome B, or A | as R1 | pending gate |
-| R3 | The conditions where the gap shrinks or reverses: per-process view, fast external restart, short detection | Always, next to R1 or R2 | the regime map and the per-process ratio | pending gate |
+| R1 | "Recovery stays local to the affected subtree." | Outcome A, with the measured blocking time and blast radius, and the failure model named | Locality ties against `durable-max` at the gate (T2, C2 and C3) | **not claimed** (outcome B) |
+| R2 | "Resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism." | Outcome B, or A | At the six gate points, stall time and extra cost tie with `durable-max`; every run of every workflow completes. Real rows: pending | **allowed** at $0 (gate, Oct 29); the real rows are to be added |
+| R3 | The conditions, stated next to R2: against `durable-max` on T2 at C3, locality holds when the supervisor needs 1–3 s more to restart a coordinator (coordinator-dependency time 0.28 and 0.19 of the supervisor's); it ties at the default assumptions (both detect a failure in 5 s, no extra restart) and when both detect in 1–10 s; it fails when an external supervisor detects and restarts within 0.5–1 s while the swarm keeps its 5 s detection (13.2 and 5.7 times the supervisor's). Per process, each coordinator process failing at the same rate, the two are comparable (ratio 0.90), and the supervisor recovers sooner. The swarm's failure detector also produces false deaths (1.25–2.25 per run at C2–C3), the supervisors none. | Always, next to R2 | `honesty.json`, the regime map (`bench/results/regime.png`), `bench/REPORT.md` §4.5–4.9 | **allowed**, always with R2 |
 
-## To decide at the gate
+## Decided at the gate
 
-- The Phase 0 headline, "FractalSwarm finishes without a supervisor, and without stopping the
-  world or paying twice for lost work", measures stall time and extra cost against the
-  in-process supervisor. Against the durable supervisors, which also keep their workers running,
-  it is not a comparison claim. Its wording is settled at the gate, from the stall and duplicate
-  cost the gate measures.
+- **The tagline** ("Kill half the brains. It still finishes — without stalling or paying twice")
+  is settled from the real runs (Yoel, Oct 29), not before. At $0 it holds against the
+  in-process supervisor (`central`; T2 at C3: stall 1.2 against 34.3 s, extra cost −1.0% against
+  +66.6%), not against `durable-max` (ties), and not literally: on T1 at C3 the swarm stalls
+  14.8 s on average, and it pays a little twice (T2 at C3: $0.015 per run). Until then neither
+  the tagline nor the Phase 0 headline is quoted.
 
 ## Not claimed
 
