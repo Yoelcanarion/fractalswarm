@@ -267,6 +267,10 @@ def full_region(locality_: str = "holds") -> list[Regime]:
     return gate + swept
 
 
+# What the fixture's ratios (0.1, 0.2, 0.3) look like next to a locality verdict.
+DESCRIPTIVE = "ratios of the seed means, descriptive (no verdict): cdt 0.10, blast 0.20, idle 0.30"
+
+
 def test_outcome_a_needs_locality_at_the_gate_and_at_every_plausible_point() -> None:
     outcome = decide(full_region())
     assert outcome.label == "A" and outcome.against == "durable-max" and not outcome.conditions
@@ -276,12 +280,20 @@ def test_outcome_a_needs_locality_at_the_gate_and_at_every_plausible_point() -> 
     }
 
 
+def test_every_locality_verdict_of_the_outcome_carries_the_ratios_of_the_seed_means() -> None:
+    outcome = decide(full_region())
+    for point in [*outcome.gate, *outcome.plausible]:
+        assert (point["cdt_ratio"], point["blast_ratio"], point["idle_ratio"]) == (0.1, 0.2, 0.3)
+
+
 def test_one_plausible_point_that_ties_makes_it_outcome_b_with_the_condition() -> None:
     region = [r for r in full_region() if (r.axis, r.value) != ("rival_recovery_ms", 1000)]
     region.append(regime("ties", "rival_recovery_ms", 1000))
     outcome = decide(region)
     assert outcome.label == "B"
-    assert outcome.conditions == ["locality ties at rival_recovery_ms=1000 (t2_conference, C3)"]
+    assert outcome.conditions == [
+        f"locality ties at rival_recovery_ms=1000 (t2_conference, C3); {DESCRIPTIVE}"
+    ]
 
 
 def test_a_failing_gate_makes_it_outcome_b() -> None:
@@ -291,8 +303,15 @@ def test_a_failing_gate_makes_it_outcome_b() -> None:
     ]
     outcome = decide(region)
     assert outcome.label == "B" and outcome.conditions == [
-        "locality fails at gate (t2_conference, C3)"
+        f"locality fails at gate (t2_conference, C3); {DESCRIPTIVE}"
     ]
+
+
+def test_a_ratio_that_does_not_exist_prints_as_a_dash() -> None:
+    region = [r for r in full_region() if r.profile != "C3" or r.axis is not None]
+    region.append(regime("ties", profile="C3", idle_ratio=None))
+    (condition,) = decide(region).conditions
+    assert condition.endswith("cdt 0.10, blast 0.20, idle -")
 
 
 def test_points_outside_the_plausible_region_scope_the_claim_but_do_not_decide_it() -> None:
@@ -304,9 +323,10 @@ def test_points_outside_the_plausible_region_scope_the_claim_but_do_not_decide_i
     outcome = decide(full_region() + extra)
     assert outcome.label == "A"
     assert outcome.conditions == [
-        "locality ties at recovery_ms=500 (t2_conference, C3), outside the plausible region",
+        "locality ties at recovery_ms=500 (t2_conference, C3), outside the plausible region; "
+        + DESCRIPTIVE,
         "locality fails at agent_latency_scale=0.25 (t2_conference, C3), "
-        "outside the plausible region",
+        "outside the plausible region; " + DESCRIPTIVE,
     ]
 
 
@@ -445,7 +465,10 @@ def test_a_slow_swarm_at_one_setting_is_outcome_b_and_says_where() -> None:
     )
     honesty = evaluate(sources)
     assert honesty.outcome.label == "B"
-    assert honesty.outcome.conditions == ["locality ties at recovery_ms=10000 (t2_conference, C3)"]
+    assert honesty.outcome.conditions == [
+        "locality ties at recovery_ms=10000 (t2_conference, C3); ratios of the seed means, "
+        "descriptive (no verdict): cdt 0.80, blast 0.20, idle 0.12"  # 8 / 10, 20 / 100, 5 / 40
+    ]
 
 
 # -- the per-process view --------------------------------------------------------------------
@@ -621,6 +644,9 @@ def test_the_tool_reads_results_directories_and_writes_honesty_json(tmp_path: Pa
     assert again == honesty
     text = render_text(honesty)
     assert "Outcome PENDING" in text and "H4a" in text and "rivals-gate" in text
+    # the gate's locality verdicts come with the ratios of the seed means, said to be descriptive
+    assert "gate C2: locality holds; ratios of the seed means, descriptive (no verdict)" in text
+    assert "descriptive, and no verdict" in text  # the regime map says so too
     assert verdicts([tmp_path], prereg=None).sources == ["rivals-gate"]  # a directory of them
 
 

@@ -203,7 +203,7 @@ class Regime(BaseModel):
 class Outcome(BaseModel):
     label: Literal["A", "B", "pending"]
     against: str
-    gate: list[dict[str, str]]
+    gate: list[dict[str, Any]]  # task, profile, locality, and the descriptive ratios
     plausible: list[dict[str, Any]]
     conditions: list[str]
 
@@ -445,10 +445,24 @@ def regimes_of(comparisons: Sequence[Comparison]) -> list[Regime]:
     return regimes
 
 
+def ratio_text(cdt: float | None, blast: float | None, idle: float | None) -> str:
+    """The ratios of the seed means that sit next to a locality verdict. They are descriptive:
+    the verdict is the one PREREG §4 derives, seed by seed, and these are shown beside it."""
+    return (
+        "ratios of the seed means, descriptive (no verdict): "
+        f"cdt {_num(cdt)}, blast {_num(blast)}, idle {_num(idle)}"
+    )
+
+
+def ratios_of(r: Regime) -> dict[str, float | None]:
+    return {"cdt_ratio": r.cdt_ratio, "blast_ratio": r.blast_ratio, "idle_ratio": r.idle_ratio}
+
+
 def decide(regimes: Sequence[Regime]) -> Outcome:
     """PREREG §7. A needs locality against the deciding rival on the deciding task at the gate
     (C2 and C3, default assumptions) and at every point of the plausible region; B is anything
-    else; pending while a point it needs has no data."""
+    else; pending while a point it needs has no data. Every locality verdict it prints comes
+    with the ratios of the seed means, descriptive."""
     ours = [r for r in regimes if r.rival == DECIDING_RIVAL and r.task == DECIDING_TASK]
     gate = {r.profile: r for r in ours if r.axis is None and r.profile in GATE_PROFILES}
     swept = {(r.axis, r.value): r for r in ours if r.plausible and r.profile == "C3"}
@@ -460,13 +474,15 @@ def decide(regimes: Sequence[Regime]) -> Outcome:
     for r in deciding:
         if r.locality != "holds":
             conditions.append(
-                f"locality {r.locality} at {where(r.axis, r.value)} ({r.task}, {r.profile})"
+                f"locality {r.locality} at {where(r.axis, r.value)} ({r.task}, {r.profile}); "
+                + ratio_text(r.cdt_ratio, r.blast_ratio, r.idle_ratio)
             )
     for r in ours:  # outside the plausible region: the scope of the claim, not its test
         if r not in deciding and r.profile == "C3" and r.locality in ("ties", "fails"):
             conditions.append(
                 f"locality {r.locality} at {where(r.axis, r.value)} ({r.task}, {r.profile}), "
-                "outside the plausible region"
+                "outside the plausible region; "
+                + ratio_text(r.cdt_ratio, r.blast_ratio, r.idle_ratio)
             )
     if missing:
         label: Literal["A", "B", "pending"] = "pending"
@@ -479,10 +495,12 @@ def decide(regimes: Sequence[Regime]) -> Outcome:
         label=label,
         against=DECIDING_RIVAL,
         gate=[
-            {"task": r.task, "profile": r.profile, "locality": r.locality} for r in gate.values()
+            {"task": r.task, "profile": r.profile, "locality": r.locality, **ratios_of(r)}
+            for r in gate.values()
         ],
         plausible=[
-            {"axis": r.axis, "value": r.value, "locality": r.locality} for r in swept.values()
+            {"axis": r.axis, "value": r.value, "locality": r.locality, **ratios_of(r)}
+            for r in swept.values()
         ],
         conditions=conditions,
     )
@@ -796,9 +814,14 @@ def render_text(honesty: Honesty) -> str:
     ]
     outcome = honesty.outcome
     out.append(f"Outcome {outcome.label.upper()} (read against {outcome.against}, {DECIDING_TASK})")
-    out += [f"  gate {g['profile']}: locality {g['locality']}" for g in outcome.gate]
+
+    def shown(point: dict[str, Any]) -> str:
+        return ratio_text(point["cdt_ratio"], point["blast_ratio"], point["idle_ratio"])
+
+    out += [f"  gate {g['profile']}: locality {g['locality']}; {shown(g)}" for g in outcome.gate]
     out += [
-        f"  {where(p['axis'], p['value'])}: locality {p['locality']}" for p in outcome.plausible
+        f"  {where(p['axis'], p['value'])}: locality {p['locality']}; {shown(p)}"
+        for p in outcome.plausible
     ]
     out += [f"  condition: {c}" for c in outcome.conditions]
     out += ["", "Hypotheses: swarm wins / ties / losses (n/a) against each rival"]
@@ -812,7 +835,11 @@ def render_text(honesty: Honesty) -> str:
     gate = _gate_lines(honesty.comparisons)
     if gate:
         out += ["", "The gate, default assumptions, by task and rival"] + gate
-    out += ["", "Regime map: locality of the swarm against each rival (ratios swarm / rival)"]
+    out += [
+        "",
+        "Regime map: locality of the swarm against each rival (the verdict is PREREG 4's; the "
+        "ratios are swarm / rival\n  of the seed means, descriptive, and no verdict)",
+    ]
     for r in honesty.regimes:
         flag = "*" if r.plausible else " "
         head = f" {flag}{r.source:<22} {where(r.axis, r.value):<24} {r.task[:2]} {r.profile:<3}"
