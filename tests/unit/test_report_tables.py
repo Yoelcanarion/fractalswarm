@@ -115,7 +115,13 @@ def test_the_jitter_tables_are_laid_out_from_the_sweeps_own_rows(tmp_path: Path)
     out.mkdir(parents=True)
     write_results(jitter_sweep(), out)
     made = {n: t.splitlines() for n, t in report_tables(tmp_path).items() if n.startswith("jitter")}
-    assert list(made) == ["jitter_plans", "jitter_locality", "jitter_means", "jitter_seeds"]
+    assert list(made) == [
+        "jitter_plans",
+        "jitter_locality",
+        "jitter_tally",
+        "jitter_means",
+        "jitter_seeds",
+    ]
     assert made["jitter_plans"][2:] == [  # the crash points of the plan, by seed and setting
         "| 1 | 20 / 35 / 50 / 65 / 80 | 21 / 34 / 54 / 64 / 80 | 22 / 33 / 62 / 63 / 80 |",
         "| 2 | 20 / 35 / 50 / 65 / 80 | 25 / 37 / 54 / 69 / 77 | 34 / 42 / 62 / 72 / 78 |",
@@ -125,6 +131,8 @@ def test_the_jitter_tables_are_laid_out_from_the_sweeps_own_rows(tmp_path: Path)
         "| ±5 | holds | 0.20 | 0.20 | 0.20 | holds | 0.20 | 0.20 | 0.20 |",
         "| ±15 | ties | 0.60 | 0.20 | 0.20 | ties | 0.60 | 0.20 | 0.20 |",  # (2 + 10) / 2 / 10
     ]
+    assert len(made["jitter_tally"]) == 2 + 9  # H1-H6 and the stall, one row each
+    assert "| H4a Dependency time (s) | 2 / 1 / 0 | 2 / 1 / 0 |" in made["jitter_tally"]  # 0, 5, 15
     assert len(made["jitter_means"]) == 2 + 3 * 3
     assert "| 0 | swarm | 2.0 | 20.0 | 8.0 | 10.0 | 0.0 |" in made["jitter_means"]
     assert "| ±15 | swarm | 6.0 | 20.0 | 8.0 | 10.0 | 0.0 |" in made["jitter_means"]
