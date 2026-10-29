@@ -356,6 +356,30 @@ the node buttons, which is the rest of the gap to Phase 1.
   stop per node.
 - The 60 fps budget of step 5 is not met (see above); reported, not hidden.
 
+### Lite motion switch (prepared Oct 29; in the source, NOT in the committed bundle until the next build)
+The coordinator asked for the three CSS toggles as one switch, so the quiet window needs one build. `lib/lite.ts` and
+`styles/lite.css`: `?lite=all`, or `?lite=anim,filter,shadow`, in the query string or in the hash query, sets
+`<html data-lite="...">`. It is off by default and changes nothing without the attribute. Parts:
+- `anim`: the dashed-line animation of the lit edges (React Flow moves `stroke-dashoffset` on the main thread);
+- `filter`: the `drop-shadow` glow of a talking edge (the edge keeps its colour and width);
+- `shadow`: the `box-shadow` rings of the nodes and the colour easing of their state changes.
+
+The rules out-rank the ones they switch off by specificity (no `!important`), and a page can flip the parts while it
+runs by setting the attribute. `lite.test.ts` keeps the part list and the CSS in step (every part has a rule, every rule
+is keyed on a part). **A trade, not a free win:** with `shadow` the adopted and restarted rings, the cue for a takeover,
+are not drawn, and with `anim` the lit edges keep their dashes but stop moving. Whether any part is worth it, and
+whether it should switch on by itself at a high speed, is for the measurements and the coordinator; nothing turns it on.
+
+### Plan for the quiet window (one build, read-only server on scratch dirs, nothing written to the repo but the notes)
+1. `npm --prefix web run build` (about 4 s), restore `favicon.svg`.
+2. `lite_check.mjs` (scratch, not in git): opens the swarm run where edges are lit and reads the computed
+   `animation-name`, `filter` and `box-shadow` with and without each part, so a lite number is known to come from a switch
+   that changed something.
+3. `final.mjs`: the lens re-shoot (demo scenes as full frames, Phase 1 scenes as drawer clips, MISMATCH checked by the script).
+4. `compare.mjs`, variants taken in turns: `before` (Phase 1 UI), `old` (before the clock fix), `new` (this build),
+   `new-lite`, `new-lite-anim`, `new-lite-filter`, `new-lite-shadow` (the product switch in the same build), and the
+   injected-CSS variants as a cross-check. 3 counted rounds after one warm-up: about 10 minutes for 7 variants.
+
 ### Still to do (needs a slot or a later merge)
 1. A quiet window: absolute frame times, the fix measured, the three CSS toggles tried; re-shoot the lens scenes on the
    final build, using `demo-backup` wherever a badge is visible. **The app verifies a completed run as soon as it opens
@@ -365,7 +389,8 @@ the node buttons, which is the rest of the gap to Phase 1.
    (MATCH, with the new chip "Takeover OK ✓ 7 hand-overs"), the Phase 1 scenes as clips of the lens drawer, which leave the
    strip out. The scratch script `final.mjs` (not in git) enforces it: a shot whose region overlaps a MISMATCH badge goes
    to `internal/` and is marked `publishable: false`.
-2. (done, second slot) The static bundle is rebuilt for the chip fix of Oct 29.
+2. (done, second slot) The static bundle is rebuilt for the chip fix of Oct 29. The next build, in the window, also takes
+   in the lite switch above.
 3. W2's merge is in arena (24995b5): the chip screenshot against the real endpoint (a server on scratch dirs; the demo
    bundle shows "Takeover OK ✓ 7 hand-overs" with MATCH), and a run of the Verify button against the guard. Both come
    with the quiet window, after the coordinator's combined merge.
