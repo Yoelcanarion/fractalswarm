@@ -119,7 +119,8 @@ def run(
         str,
         typer.Option(
             help="swarm | central | single | pipeline | durable-max | durable "
-            "(all but the swarm: baselines)"
+            "(all but the swarm: baselines) | ablation (a T2 TaskSpec's notes through the "
+            "regex parser and through Muse; no orchestrators)"
         ),
     ] = "swarm",
     chaos: Annotated[
@@ -175,9 +176,17 @@ def run(
     from fractalswarm.runs import record_run
     from fractalswarm.safety.firewall import Firewall, HeuristicBackend, default_backend
 
-    if scenario not in ("swarm", "central", "single", "pipeline", "durable-max", "durable"):
+    if scenario not in (
+        "swarm",
+        "central",
+        "single",
+        "pipeline",
+        "durable-max",
+        "durable",
+        "ablation",
+    ):
         raise typer.BadParameter(
-            "--scenario must be swarm, central, single, pipeline, durable-max or durable"
+            "--scenario must be swarm, central, single, pipeline, durable-max, durable or ablation"
         )
     firewall = firewall or ("auto" if backend == "real" else "heuristic")
     if firewall not in ("auto", "heuristic"):
@@ -186,6 +195,10 @@ def run(
         raise typer.BadParameter("--budget-usd must be above 0")
     settings = _settings()
     spec = TaskSpec.load(taskspec)
+    if scenario == "ablation" and spec.task != "t2_conference":
+        raise typer.BadParameter("--scenario ablation reads the emails and abstracts of a T2 task")
+    if scenario == "ablation" and chaos == "kill-half":
+        raise typer.BadParameter("--chaos kill-half has nothing to kill in an ablation")
     if budget_usd is not None:
         spec = spec.model_copy(update={"budget_usd": budget_usd})
     params = run_params(spec)
@@ -236,6 +249,11 @@ def run(
     scanner.warm()  # before the clock starts
 
     run_id = run_id or f"{taskspec.stem}-{datetime.now():%Y%m%d-%H%M%S}"
+    scenario_ref = scenario  # a name in runs.SCENARIOS, or the path of a scenario object
+    if scenario == "ablation":
+        from fractalswarm.bench.tasks.t2_conference.ablation import SCENARIO
+
+        scenario_ref = SCENARIO
     if start_barrier is not None:
         from fractalswarm.runs import wait_at_barrier
 
@@ -246,7 +264,7 @@ def run(
             raise typer.Exit(1) from None
     result = asyncio.run(
         record_run(
-            scenario,
+            scenario_ref,
             run_id=run_id,
             run_dir=settings.runs_dir / run_id,
             backend=llm,
@@ -265,6 +283,18 @@ def run(
     spent = result.completed.payload["spent_usd"]
     typer.echo(f"run {result.run_id}: {result.events} events, head {result.head_hash}")
     typer.echo(f"run dir {result.paths.root}  spent ${spent:.6f} ({backend} LLM)")
+    if scenario == "ablation":
+        from fractalswarm.bench.tasks.t2_conference.ablation import summary_lines
+
+        done = ablation_outcome(result.paths)
+        if done is None:
+            typer.echo("no ablation.done: the run ended without a result")
+            raise typer.Exit(1)
+        for line in summary_lines(done):
+            typer.echo(line)
+        if not done["complete"]:
+            raise typer.Exit(1)
+        return
     outcome = task_outcome(result.paths)
     if outcome is None:
         typer.echo("no task.result: the run ended without a result")
@@ -402,6 +432,13 @@ def task_outcome(paths) -> dict | None:
     """The payload of the run's ``task.result`` event, if any."""
     with paths.open_log() as log:
         results = [event.payload for event in log.read() if event.type == "task.result"]
+    return results[-1] if results else None
+
+
+def ablation_outcome(paths) -> dict | None:
+    """The payload of the run's ``ablation.done`` event, if any."""
+    with paths.open_log() as log:
+        results = [event.payload for event in log.read() if event.type == "ablation.done"]
     return results[-1] if results else None
 
 

@@ -7,6 +7,7 @@ notes run on the fake backend, whose Muse is the parser itself.
 
 import asyncio
 import json
+import re
 import threading
 import time
 from pathlib import Path
@@ -14,6 +15,7 @@ from pathlib import Path
 import pytest
 from starlette.exceptions import HTTPException
 from starlette.testclient import TestClient
+from typer.testing import CliRunner
 
 from fractalswarm.api.app import create_app
 from fractalswarm.api.lens import ABLATION_TYPES, AblationJobs, ablation_view
@@ -32,13 +34,15 @@ from fractalswarm.bench.tasks.t2_conference.ablation import (
 )
 from fractalswarm.bench.tasks.t2_conference.generator import generate
 from fractalswarm.bench.workflows import fake_backend
+from fractalswarm.cli import app as cli
 from fractalswarm.llm.fake import FakeBackend
 from fractalswarm.planning.planner import read_blocks
 from fractalswarm.planning.taskspec import TaskSpec, run_params
-from fractalswarm.runs import record_run, replay_run
+from fractalswarm.runs import RunPaths, record_run, replay_run
 
 REPO = Path(__file__).resolve().parents[2]
 DEMO = REPO / "demo"
+EXAMPLES = REPO / "tasks" / "examples"
 SLOTS = [
     {"index": i, "start": start, "end": end}
     for i, (start, end) in enumerate(
@@ -663,3 +667,93 @@ def test_the_params_a_cli_run_records_carry_the_notes(tmp_path: Path) -> None:
     done = done_of(run_dir)
     assert done["notes"] == 80 and done["complete"] and done["backend"] == "fake"
     assert asyncio.run(replay_run(run_dir)).ok
+
+
+# -- fractalswarm run --scenario ablation -------------------------------------------------------
+
+CONFERENCE = EXAMPLES / "t2-conference.yaml"
+
+
+@pytest.fixture
+def cli_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The CLI writes its runs and its project ledger into a scratch dir."""
+    monkeypatch.setenv("FRACTALSWARM_RUNS_DIR", str(tmp_path))
+    monkeypatch.setenv("FRACTALSWARM_LEDGER_PATH", str(tmp_path / "ledger.sqlite"))
+    return tmp_path
+
+
+def run_ablation(*flags: str, run_id: str = "abl"):
+    args = ["run", str(CONFERENCE), "--scenario", "ablation", "--run-id", run_id, *flags]
+    return CliRunner().invoke(cli, args)
+
+
+def flat(text: str) -> str:
+    """A usage error comes in a box that wraps its lines: read it without the box."""
+    return " ".join(re.sub(r"[|─-╿]", " ", text).split())
+
+
+def test_the_cli_runs_the_ablation_on_a_t2_taskspec_and_prints_the_result(cli_env: Path) -> None:
+    result = run_ablation()
+    assert result.exit_code == 0, result.output
+    events = load_events(cli_env / "abl")
+    assert events[-1].type == "run.completed"
+    done = done_of(cli_env / "abl")
+    assert done["notes"] == 80 and done["complete"] and done["backend"] == "fake"
+    lines = result.output.splitlines()
+    assert lines[0].startswith(f"run abl: {len(events)} events, head ")
+    assert f"spent ${events[-1].payload['spent_usd']:.6f} (fake LLM)" in lines[1]
+    assert lines[2] == "ablation: the parser understood 80 of 80 notes, Muse 80 of 80"
+    assert lines[3] == "  both 80, only Muse 0, only the parser 0, neither 0"
+    assert [c["id"] for c in done["caveats"] if c["applies"]] == ["generator", "fake"]
+    assert lines[4:] == [f"  caveat: {c['text']}" for c in done["caveats"] if c["applies"]]
+    assert "task.result" not in result.output
+    verified = CliRunner().invoke(cli, ["replay", "abl", "--verify"])
+    assert verified.exit_code == 0 and verified.output.startswith("MATCH"), verified.output
+
+
+def test_a_run_the_cli_recorded_is_an_ablation_for_the_routes(cli_env: Path) -> None:
+    assert run_ablation().exit_code == 0
+    client = TestClient(create_app(cli_env, DEMO, cli_env / "bench", Path("none")))
+    body = client.get("/api/ablation/abl").json()
+    assert body["status"] == "completed" and body["progress"] == {"done": 80, "of": 80}
+    assert body["result"]["headline"] == done_of(cli_env / "abl")["headline"]
+    rows = client.get("/api/runs/abl/calls").json()["calls"]
+    assert len(rows) == 80 and {row["purpose"] for row in rows} == {"ablation"}
+
+
+def test_the_cli_refuses_an_ablation_it_cannot_run_before_recording_anything(cli_env: Path) -> None:
+    other = CliRunner().invoke(
+        cli,
+        ["run", str(EXAMPLES / "t1-extraction.yaml"), "--scenario", "ablation", "--run-id", "t1"],
+    )
+    assert other.exit_code == 2
+    assert "reads the emails and abstracts of a T2 task" in flat(other.output)
+    half = run_ablation("--chaos", "kill-half", run_id="half")
+    assert half.exit_code == 2 and "has nothing to kill in an ablation" in flat(half.output)
+    unknown = CliRunner().invoke(cli, ["run", str(CONFERENCE), "--scenario", "nope"])
+    assert unknown.exit_code == 2 and "durable-max, durable or ablation" in flat(unknown.output)
+    assert not (cli_env / "t1").exists() and not (cli_env / "half").exists()
+
+
+def test_a_cli_ablation_cut_by_its_deadline_says_so_and_exits_1(
+    cli_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("fractalswarm.bench.tasks.t2_conference.ablation.DEADLINE_MS", 1)
+    result = run_ablation(run_id="late")
+    assert result.exit_code == 1, result.output
+    done = done_of(cli_env / "late")
+    assert not done["complete"]
+    assert done["headline"] == "the parser understood 80 of 80 notes, Muse 0 of 80"
+    lines = result.output.splitlines()
+    assert f"ablation: {done['headline']}" in lines
+    assert "  the deadline cut the run: the notes without an answer count as missed" in lines
+
+
+def test_a_cli_ablation_halted_before_it_ended_has_no_result_and_exits_1(cli_env: Path) -> None:
+    halt = {"op": "halt", "reason": "operator pressed stop", "by": "human"}
+    RunPaths(cli_env / "halted").request_control(halt)  # what `fractalswarm halt` leaves behind
+    result = run_ablation(run_id="halted")
+    assert result.exit_code == 1, result.output
+    assert "no ablation.done: the run ended without a result" in result.output
+    seen = [e.type for e in load_events(cli_env / "halted")]
+    assert "run.halted" in seen and "ablation.done" not in seen
