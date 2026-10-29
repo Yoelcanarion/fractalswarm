@@ -1,6 +1,8 @@
 // The HTTP and WebSocket client for the FractalSwarm API (src/fractalswarm/api).
 
 import { DEFAULT_CAPABILITIES, parseCapabilities, type Capabilities } from "./controls";
+import { readCallDetail, readCalls, readMeter, type CallDetail, type CallsResponse, type Meter } from "./lens";
+import { readTakeover, type TakeoverSummary } from "./takeover";
 import type { RunEvent, RunListing, VerifyReport } from "./types";
 
 async function json<T>(response: Response): Promise<T> {
@@ -37,6 +39,44 @@ export async function loadAllEvents(runId: string, fromSeq = 1): Promise<RunEven
 
 export const verifyRun = (runId: string) =>
   fetch(`api/runs/${encodeURIComponent(runId)}/verify`, { method: "POST" }).then((r) => json<VerifyReport>(r));
+
+/** The takeover check of a finished run. Null when the server does not expose it (404, 405 or 501),
+ * which the chip takes to mean "show nothing". */
+export async function fetchTakeover(runId: string): Promise<TakeoverSummary | null> {
+  const response = await fetch(`api/runs/${encodeURIComponent(runId)}/takeover`);
+  if (response.status === 404 || response.status === 405 || response.status === 501) return null;
+  const report = readTakeover(await json<unknown>(response));
+  if (!report) throw new Error("the server sent a takeover report without a verdict");
+  return report;
+}
+
+// ---- the Muse lens (api/lens.py) ----
+// A server without the routes answers 404 for a run it lists. The lens treats that as "not offered"
+// (null), as opposed to a failure, so an older server shows no meter instead of an error.
+
+const runUrl = (runId: string, path: string) => `api/runs/${encodeURIComponent(runId)}/${path}`;
+
+/** Every LLM call of a run, in the order they started. */
+export async function fetchCalls(runId: string): Promise<CallsResponse | null> {
+  const response = await fetch(runUrl(runId, "calls"));
+  if (response.status === 404) return null;
+  const body = await json<unknown>(response);
+  return Array.isArray((body as { calls?: unknown })?.calls) ? readCalls(body) : null;
+}
+
+/** The Muse meter of a whole run: $ and tokens by model, cache share, coordination tokens. */
+export async function fetchMeter(runId: string): Promise<Meter | null> {
+  const response = await fetch(runUrl(runId, "models"));
+  if (response.status === 404) return null;
+  return readMeter(await json<unknown>(response));
+}
+
+/** One call in full: its prompt, its answer, the facts it published next to their sources. */
+export async function fetchCallDetail(runId: string, effectId: string): Promise<CallDetail> {
+  const detail = readCallDetail(await fetch(runUrl(runId, `calls/${encodeURIComponent(effectId)}`)).then((r) => json<unknown>(r)));
+  if (!detail) throw new Error(`the server sent no call ${effectId}`);
+  return detail;
+}
 
 export const benchResults = () =>
   fetch("api/bench/results").then((r) => json<{ source: string; fixture: boolean; data: unknown }>(r));

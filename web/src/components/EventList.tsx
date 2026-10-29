@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { NOISE_GROUPS, recent, summarize, tone, type EventFilter } from "../lib/eventlog";
 import type { RunEvent } from "../lib/types";
 import { useRunStore } from "../store";
+import { LensButton } from "./lens/LensButton";
 
 const PAGE = 300;
 
@@ -89,7 +90,10 @@ export function EventList({ events, cursor, groups }: Props) {
                 {event.seq}
               </button>
               <span className="evrow__t mono">{(event.ts_virtual / 1000).toFixed(2)}s</span>
-              <span className="evrow__type">{event.type}</span>
+              <span className="evrow__type">
+                {event.type}
+                <LensButton effectId={event.payload?.effect_id} />
+              </span>
               <span className="evrow__actor">{event.actor}</span>
               <span className="evrow__text">{summarize(event)}</span>
             </div>

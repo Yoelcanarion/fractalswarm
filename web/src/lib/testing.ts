@@ -3,6 +3,8 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import type { StoreApi } from "zustand/vanilla";
+
 import type { RunEvent } from "./types";
 
 export const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
@@ -12,6 +14,18 @@ export function loadJsonl(relativePath: string): RunEvent[] {
     .split("\n")
     .filter((line) => line.trim())
     .map((line) => JSON.parse(line) as RunEvent);
+}
+
+/** A JSON fixture from lib/fixtures/: API responses captured from recorded runs. */
+export function loadFixture<T>(name: string): T {
+  return JSON.parse(readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), "utf-8")) as T;
+}
+
+/** zustand gives the server renderer a store's *initial* state, and component tests render on the
+ * server (renderToStaticMarkup). This makes them see the store's current state instead. */
+export function renderCurrent<T>(store: StoreApi<T>): StoreApi<T> {
+  store.getInitialState = store.getState;
+  return store;
 }
 
 /** Builds a stream of events with consecutive seqs. */

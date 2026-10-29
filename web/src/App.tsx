@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { RunStrip } from "./components/RunStrip";
 import { StatusBadge, ThemeToggle } from "./components/ui";
-import { VerifyBadge } from "./components/VerifyBadge";
 import { SPEEDS } from "./lib/playback";
 import { ChartsPage } from "./pages/ChartsPage";
 import { EventsPage } from "./pages/EventsPage";
@@ -146,12 +146,12 @@ export function App() {
               </select>
               <span className="mono muted">{scenario?.split(":").at(-1) ?? ""}</span>
               <StatusBadge status={runStatus} />
-              <VerifyBadge />
             </div>
           )}
           <ThemeToggle />
         </div>
       </header>
+      {route.page === "run" && runId && <RunStrip />}
       <main className="content">
         {route.page === "run" && route.view === "overview" && <RunPage />}
         {route.page === "run" && route.view === "plan" && <PlanPage />}

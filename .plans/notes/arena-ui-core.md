@@ -10,11 +10,12 @@ Branch `Yoelcanarion/arena-ui-core`. Web only: no Python was touched.
 | 2 Fonts and icons, offline | done (bundle not yet checked for network use: needs a build slot) |
 | 3 Store factory, shared clock, fixed step | done |
 | 4 Reducer additions | done, checked against `takeover.analyze` on 3 real runs |
-| 5 Motion | next |
-| 6 Controls state | next |
+| 5 Motion | done (frame times still to measure: needs a slot) |
+| 6 Controls state | done |
 | 7 Shared components | done: `Stat`, `ModelBadge`, `Card`, `Skeleton`, `Tooltip`, `ThemeToggle` |
-| 8 Proof surfaces | next |
-| 9 Muse lens | next (fixture until W3 merges) |
+| 8 Proof surfaces | done: timeline marks, replay badge, takeover chip (against `GET api/runs/{id}/takeover`, 404 fallback) |
+| 9 Muse lens | done: drawer, Muse meter, fixtures from two recorded runs (W3's API is merged) |
+| Build, screenshots, frame times | waiting for a slot |
 
 ## For W5: what to build on
 
@@ -102,8 +103,10 @@ Display values, as a pure fold. The official numbers are Python's (`/api/runs/{i
 - Count-up runs on real time. It is off (`animate={false}`) in the live counters.
 
 ## Open questions
-- Which endpoint backs the "takeover OK" chip (step 8)? `/api/runs/{id}/takeover`?
-- The W3 lens shapes and the W1 fixture, when they merge.
+- Answered (Oct 29): the takeover chip reads `GET api/runs/{id}/takeover`, which W2 adds (at least `ok` and `violations`).
+  It is built against that, with a 404 fallback. **W2: please send the whole `TakeoverReport` if you can** (`successions`,
+  `adoptions`, `kills`): the chip then says how many heirs were recomputed. With only `ok` and `violations` it still
+  works, deciding "No takeover to check" from the log.
 
 ## Status when the usage limit hit (Oct 29, 01:47 CET)
 
@@ -144,3 +147,75 @@ Not run since `fd9b341`, because they need a SLOT: web build, `uv run pytest`, r
 `ControlButton` / `useControlState`, `StatusBadge`, store fields `runStatus`, `capabilities` and `epoch` (counts jumps),
 `clock.motion()` (animation time, deterministic in fixed-step mode), `ClockScope` (`--now` for CSS decay),
 `lib/chartMotion.ts`, `marksOf` in `lib/timeline.ts`.
+
+## Steps 8 and 9, finished (Oct 29)
+
+At this point: web typecheck clean, vitest 24 files / 356 tests. No Python was touched. Not run (they need a slot): the
+web build into `src/fractalswarm/api/static/`, `uv run pytest`, ruff, `demo --verify`, screenshots, frame times.
+
+### The Muse lens (step 9)
+**Where it lives.** `lib/lens.ts` (types, tolerant readers, the meter fold, the readable form of an answer),
+`lensStore.ts` (one lens per run store, so W5's two arena stores get one each), `components/lens/` (`LensDock`,
+`CallList`, `CallView`, `Output`, `MuseMeter`, `LensButton`), `styles/lens.css` (tokens only).
+
+**How a person opens it.** Click a node of the tree (that actor's calls, at the call it had reached on the playhead),
+click the Muse meter (every call of the run), or the sparkle button on an `effect.*` row of the event feed or list (that
+call). Esc or the X closes it. A second click on the same node closes it. Nodes are buttons: Tab, Enter and Space work.
+
+**It follows the playhead.** The drawer is `position:absolute` inside `.run`, above the timeline, so the scrubber stays
+in reach. A call that has started but not ended shows what the model was given and "Waiting for the model", never its
+answer; a call that has not started shows only when it starts. Scrubbing back therefore shows a call in flight and then
+not started.
+
+**What one call shows.** Model badge, effort, purpose and where it sits in the plan; input, cached, reasoning and output
+tokens, cost with its breakdown, latency; notices (cancelled and billed the estimate, refused, reissued, incomplete); the
+answer in the shape of the call:
+- facts next to the source sentence each came from, with the evidence highlighted and its field named (offsets are UTF-16
+  and checked against the text);
+- plan tracks and contracts, placements, a judge's verdict with its reasons, workspace writes, memory searches;
+- "In the model's own words" for the sentences the model wrote;
+- then, folded, the prompt it was given, the raw answer, and the events its answer caused.
+
+Text that came from outside (abstracts, emails, a model's own output) is rendered as text, never as markup, and the
+input blocks that came from outside are labelled untrusted. A test feeds a source with `<script>` and `<img onerror>`.
+
+**The Muse meter.** Dollars and tokens per model, "N% of input tokens served from cache", "coordination tokens N ·
+recovery tokens N" (a green check at zero, a warning otherwise; computed from the calls, never asserted), and "N calls
+lost · $X" when a baseline lost calls to crashes. Before the end of the run it is folded from the calls that had ended by
+the playhead (`foldMeter`); at the end it is the server's own `/models`. `lens.test.ts` checks that the fold equals the
+server on both fixtures, so the meter does not jump at the last event. On a server without the lens routes (404) the
+meter and the drawer stay out of the way.
+
+**Fixtures.** `lib/fixtures/lens-demo-backup.json` (79 calls: Wonder plan, Spark plans, extract, place, judge, blurb;
+$0.4948; 60.6% of input tokens cached; coordination and recovery tokens 0) and `lens-central-c3.json` (103 calls, 27
+cancelled by coordinator crashes and chaos, $0.1458 lost). They hold the verbatim `/calls` and `/models` responses and a
+trimmed set of `/calls/{effect_id}`, captured with starlette's TestClient on the recorded runs. Nothing secret or
+personal is in them (speakers and emails are the synthetic `example.org` ones).
+
+**API read.** `GET api/runs/{id}/calls`, `/calls/{effect_id}`, `/models`, as in `arena-meta.md`. A 404, or a body with no
+`calls` list, means "no lens here".
+
+### Proof surfaces (step 8)
+- **Run strip** under the top bar (`components/RunStrip.tsx`): the Muse meter on the left, the takeover chip and the
+  replay badge on the right. The 60 px top bar has no room for the meter at 1920 px.
+- **Takeover chip** (`lib/takeover.ts`, `components/TakeoverChip.tsx`; store field `takeover`, action `runTakeover`):
+  - needs a boolean `ok`; reads `violations`, and counts `successions` (heirs), `adoptions` and `kills` when they are lists;
+  - "Takeover OK ✓ N heirs" when heirs were recomputed and none differ from the one the run used;
+  - "No takeover to check" when no goal changed hands: the report counts zero, or, when the report does not count, the
+    log has no `ownership.remapped` and no `tree.adopted` (the two events the check starts from). The real swarm run
+    with chaos has 12 and 12; the central baseline has none, and `takeover.real.test.ts` keeps both;
+  - "Takeover check failed: N violations", with the first ones on hover;
+  - nothing on 404, 405 or 501; "Takeover check unavailable" on any other error; nothing while a run is recording.
+
+### Deviations (this part)
+- `VerifyBadge` moved from the top bar into the run strip (same component, same behaviour).
+- The chip says "No takeover to check" instead of "Takeover OK" for a run with no takeover. A pass with nothing to
+  check would claim a proof the run never exercised.
+- The tree nodes are now buttons (`role="button"`, `tabIndex=0`); React Flow's own node focus is off so there is one tab
+  stop per node.
+
+### Still to do
+Ask for a slot, then: merge arena again (it holds a static build of my first merge), build into
+`src/fractalswarm/api/static/` with the stale hashed assets removed, `tests/integration/test_api.py`, the merge check,
+ruff, `demo --verify`; 1920x1080 before/after screenshots on a real run (Playwright Chromium headless); frame times on
+`t2-real-c3-swarm-seed1b` (14,047 events) at 20x with `?frames`.
