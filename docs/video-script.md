@@ -1,9 +1,9 @@
 # Video script — v0 (3:00, English voice-over)
 
-**Status:** draft v0, written on Oct 28 before the evidence exists.
-- Every `{{placeholder}}` is filled from `docs/claims.md` after the decision gate and the final runs (v1, Nov 1).
-- Act 3 has two versions. Use **A** or **B**, according to the outcome of the decision gate (spec §C.4). Never mix them.
+**Status:** draft v0.1. The decision gate (Oct 29, with Yoel) chose **outcome B**, so Act 3 has only version B; version A is removed.
+- Every `{{placeholder}}` left is filled from `docs/claims.md` once the final runs exist.
 - Every number and claim must have a row in `docs/claims.md` before recording.
+- The tagline is settled from the real runs (claims, "Decided at the gate"); nothing here quotes it.
 
 **The story:** three questions, in this order.
 1. What problem does FractalSwarm solve?
@@ -108,27 +108,20 @@ Anything that doesn't answer one of them stays out of the video.
 - **Face-to-face counters:** idle agent-seconds, time to recover, cost, duplicated work and reassignments.
 - **Caption, always visible:** "Rival: ideal durable supervisor — 5 s detection · 0 s restart · workers survive · same log".
 
-**Voice-over, version A** (the gate found a clear, robust gap; ≈ 70 words):
+**Voice-over (outcome B; ≈ 68 words):**
 > Is that better than a good supervisor? We gave the rival every advantage we could: its workers survive, it loses nothing, and it restarts the moment it detects the crash.
-> Under the same {{crashes}} crashes, both teams finish the same work, at the same cost. The difference is who waits. When the supervisor is down, all twelve agents wait. When one of our coordinators dies, only its own branch waits: {{cdt_ratio}} less waiting, across {{seeds}} seeds.
+> Under the same failures, it matched us: the same work, the same cost. So our claim is narrower, and still useful: FractalSwarm reaches the resilience of an ideal durable supervisor, without a supervisor, a standby or an election service.
 
-**Voice-over, version B** (no clear gap; ≈ 72 words):
-> Is that better than a good supervisor? We gave the rival every advantage we could: its workers survive, it loses nothing, and it restarts the moment it detects the crash.
-> Under the same failures, it matched us: the same work, the same cost{{, and about the same waiting}}. So our claim is narrower, and still useful: FractalSwarm reaches the resilience of an ideal durable supervisor, without a supervisor, a standby or an election service.
-
-**Key points, A:** every advantage given to the rival · same work, same cost · the difference is who waits · all 12 agents against one branch · {{cdt_ratio}} less waiting.
-**Key points, B:** every advantage given to the rival · it matched us on work and cost · the claim: the same resilience with no supervisor, standby or election service.
+**Key points:** every advantage given to the rival · it matched us on work and cost · the claim: comparable resilience with no supervisor, standby or election service (`docs/claims.md` R2, S3).
+**Not said here:** that recovery stays local, or that the swarm waits less (R1 is not claimed under B). The on-screen run may show one subtree pausing, which is what that run did; the voice-over does not generalize it.
 
 ### s7-where-it-helps (2:14–2:26)
 **On screen:** the "where it helps" panel: the regime map (detection latency × coordination density), the wins/ties/losses table, and the per-process line.
 
-**Voice-over, version A (≈ 36 words):**
-> It helps most when failures are frequent, detection is slow, and the work needs many decisions. With very fast restarts, or if every coordinator fails as often as the supervisor, the gap {{shrinks_or_flips}}. We show both.
+**Voice-over (outcome B; ≈ 38 words):**
+> It helps when a supervisor is slow to restart a coordinator. Against a fast external restart it loses, and in our main setting it ties. This panel shows exactly where it helps, where it ties and where it loses.
 
-**Voice-over, version B (≈ 30 words):**
-> It would help when {{conditions_where_A_holds}}. In our main setting it does not, and this panel shows exactly where it helps, where it ties and where it loses.
-
-**Key points:** where it helps · where it ties or loses · both failure models shown.
+**Key points:** helps when the supervisor restarts slowly · loses against a fast external restart · ties in the main setting · both failure models shown (`docs/claims.md` R3).
 
 ### s8-proof (2:26–2:36)
 **On screen:**
@@ -165,13 +158,11 @@ Anything that doesn't answer one of them stays out of the video.
 | `{{run_cost}}` | `final_report` of the replayed run |
 | `{{ablation_parser}}`, `{{ablation_muse}}`, `{{ablation_total}}` | The ablation result on the live input |
 | `{{tokens_in}}`, `{{tokens_cached}}`, `{{call_cost}}`, `{{call_latency}}` | The lens, on the chosen call |
-| `{{rival_down_s}}`, `{{crashes}}` | The arena pair's chaos plan and recovery report |
-| `{{cdt_ratio}}`, `{{seeds}}` | Gate or headline runs (H2 / H4 in PREREG) |
-| `{{shrinks_or_flips}}`, `{{conditions_where_A_holds}}` | The sensitivity sweep and the per-process view |
+| `{{rival_down_s}}` | The arena pair's chaos plan and recovery report |
 | `{{heirs}}` | `fractalswarm takeover` on the replayed swarm run |
 
 ## Checks before recording
-- [ ] The outcome (A or B) has been decided with Yoel, and only that version is in the final script.
+- [x] The outcome has been decided with Yoel (B, Oct 29), and only that version is in the script.
 - [ ] Every placeholder is filled and matches a row of `docs/claims.md`.
 - [ ] No "simpler", "cheaper" or "more reliable" appears without its own row in `docs/claims.md`.
 - [ ] The rival's assumptions are on screen in `s6`.
