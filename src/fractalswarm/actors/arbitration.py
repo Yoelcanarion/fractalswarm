@@ -25,19 +25,29 @@ goals: the track goal when both sessions are in one track, the root otherwise.
 4. **Effect on the work** (``gate``, from ``orchestrator._dispatch``). A contract whose input
    facts are in dispute waits for the ruling, at most ``HOLD_MS`` after the dispute opened, and
    then goes out with the ruled values laid over its own.
+5. **The answer** (``answer``, from the ``control.injected`` branch of ``orchestrator._handle``).
+   A person's answer to an escalation is ``control.injected{op: "answer", to: "goal:<id>",
+   body: {escalation_id, choice}}``; the owner of that goal, as its own tree has it at that event
+   (after a takeover, the heir), judges it against the log: the escalation must exist at that goal,
+   nobody may have answered it before, ``timeout_ms`` must not have run out, and the choice must be
+   one of its options. The verdict is ``escalation.answered`` either way. The ruling is already
+   in force, so a choice equal to it confirms it and nothing else moves; another candidate
+   overrules it (``arbitration.overruled`` and ``fact.overrule`` to the board, which replaces the
+   verified fact). Contracts already placed keep their value; those not yet dispatched take the
+   person's.
 
 Off unless the run asks for it (``arbitration: true``); with it off no event, spawn argument or
-prompt differs from a run without this module.
+prompt differs from a run without this module, and a run that nobody answers is the run it was.
 """
 
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, NamedTuple
 
 from pydantic import BaseModel, ConfigDict
 
 from fractalswarm.bench.tasks.t2_conference import arbitration as t2
-from fractalswarm.kernel.events import Event, Payload, register
+from fractalswarm.kernel.events import GOAL_CONTROL, Event, Payload, register
 from fractalswarm.kernel.ids import canonical_json
 from fractalswarm.kernel.scheduler import Command, Send, StartEffect, View
 from fractalswarm.planning.planner import parse_json, plan_request
@@ -47,6 +57,10 @@ HOLD_TAG = "arb.hold"  # a contract waiting for its ruling wakes on this timer: 
 TOPIC_REQUEST = "arbitration.request"  # the board to the LCA owner: a dispute opened
 TOPIC_RULING = "arbitration.ruling"  # the arbiter to the squads that wait for it
 TOPIC_RESOLVE = "fact.resolve"  # the arbiter to the board
+TOPIC_OVERRULE = "fact.overrule"  # the arbiter to the board: a person's choice replaces the ruling
+OP_ANSWER = "answer"  # the op of the control.injected that answers an escalation
+HUMAN = "human"  # who answers: the only source of a control
+MAX_ANSWER_CHARS = 200  # the longest id or choice an answer logs of what a person sent
 ROOT_GOAL = "root"
 HOLD_MS = 30_000
 MIN_CONFIDENCE = 0.6
@@ -129,6 +143,34 @@ class EscalationOpened(Payload):
     fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
 
 
+@register("escalation.answered")
+class EscalationAnswered(Payload):
+    """A person's answer to an escalation, as the owner of its goal judged it. ``accepted`` means
+    the choice was one of the options, in time, and the first answer; ``overruled`` that it named
+    another candidate than the ruling. An answer that is not accepted changes nothing but this
+    entry, and ``reason`` says why."""
+
+    id: str
+    choice: str
+    by: str
+    accepted: bool
+    overruled: bool
+    reason: str = ""
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
+
+
+@register("arbitration.overruled")
+class ArbitrationOverruled(Payload):
+    """A person chose another candidate than the ruling's: from now on its value is the fact's."""
+
+    key: str
+    winner: str  # the candidate's label
+    contract: str  # its idem key, which the board matches
+    value: Any  # the chosen value, which the contracts not yet dispatched take over
+    work: str = ""  # the chosen contract's goal/contract
+    fence: dict[str, Any] | None = None  # the owner's fencing token (spec §5.2)
+
+
 class ArbiterRuling(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -153,9 +195,21 @@ class Dispute:
     opened_ms: int
     candidates: list[dict[str, Any]]
     ruling: dict[str, Any] | None = None
+    escalation: dict[str, Any] | None = None  # escalation.opened, plus opened_ms and seq
+    answers: list[dict[str, Any]] = field(default_factory=list)  # escalation.answered, all of them
+    overruled: dict[str, Any] | None = None  # arbitration.overruled: a person's choice
 
     def goals(self) -> list[str]:
         return sorted({s["goal"] for c in self.candidates for s in c["by"] if s["goal"]})
+
+    def answer(self) -> dict[str, Any] | None:
+        """The accepted answer, the one that settles the escalation (the others were ignored)."""
+        return next((a for a in self.answers if a["accepted"]), None)
+
+    def value(self) -> Any:
+        """The value the fact stands on: the ruling's, or the person's choice over it."""
+        assert self.ruling is not None, "a dispute with no ruling has no value yet"
+        return (self.overruled or self.ruling)["value"]
 
 
 @dataclass
@@ -180,6 +234,7 @@ class DisputesView:
         self.works: dict[str, tuple[str, str]] = {}  # contract idem key -> (goal, contract id)
         self.disputes: dict[str, Dispute] = {}
         self.calls: dict[str, list[Call]] = {}  # key -> its calls, in the order they started
+        self.escalations: dict[str, str] = {}  # escalation id -> the key it is about
         self._by_effect: dict[str, tuple[str, Call]] = {}
 
     # -- queries --------------------------------------------------------------------------
@@ -189,6 +244,11 @@ class DisputesView:
 
     def get(self, key: str) -> Dispute | None:
         return self.disputes.get(key)
+
+    def escalated(self, escalation_id: str) -> Dispute | None:
+        """The dispute an escalation was opened for."""
+        key = self.escalations.get(escalation_id)
+        return self.disputes.get(key) if key is not None else None
 
     def open_disputes(self) -> list[Dispute]:
         return [d for _, d in sorted(self.disputes.items()) if d.ruling is None]
@@ -220,10 +280,32 @@ class DisputesView:
             dispute = self.disputes.get(payload["key"])
             if dispute is not None and dispute.ruling is None:
                 dispute.ruling = payload
+        elif kind == "escalation.opened":
+            self._escalated(event)
+        elif kind == "escalation.answered":
+            self._answered(event)
+        elif kind == "arbitration.overruled":
+            dispute = self.disputes.get(payload["key"])
+            if dispute is not None and dispute.ruling is not None and dispute.overruled is None:
+                dispute.overruled = payload
         elif kind in ("effect.started", "effect.completed", "effect.cancelled"):
             found = _tagged(payload.get("tag"))
             if found is not None:
                 self._call(event, *found)
+
+    def _escalated(self, event: Event) -> None:
+        payload = event.payload
+        dispute = self.disputes.get(payload["key"])
+        if dispute is not None and dispute.escalation is None:
+            dispute.escalation = payload | {"opened_ms": event.ts_virtual, "seq": event.seq}
+            self.escalations[payload["id"]] = payload["key"]
+
+    def _answered(self, event: Event) -> None:
+        dispute = self.escalated(event.payload["id"])
+        if dispute is not None:  # an answer to an id nobody opened has nothing to attach to
+            dispute.answers.append(
+                event.payload | {"seq": event.seq, "ts_virtual": event.ts_virtual}
+            )
 
     def _detected(self, event: Event) -> None:
         payload = event.payload
@@ -608,7 +690,7 @@ def gate(
         if dispute is None:
             continue
         if dispute.ruling is not None:
-            ruled[key] = dispute.ruling["value"]
+            ruled[key] = dispute.value()  # the ruling's, or the person's choice over it
         elif view.now < dispute.opened_ms + HOLD_MS:
             until = max(until or 0, dispute.opened_ms + HOLD_MS)
     if until is not None:
@@ -620,3 +702,88 @@ def tags_in_flight(view: View, actor: str) -> list[str]:
     """The actor's own arbitration calls in flight: what a crash that loses them cancels."""
     disputes = view.views.get("disputes")
     return disputes.tags_in_flight(actor) if disputes is not None else []
+
+
+# -- the answer of a person -----------------------------------------------------------------
+
+
+def overruling_of(view: View, key: str) -> dict[str, Any] | None:
+    """The overruling the log holds for a key: the only one the board applies."""
+    disputes = view.views.get("disputes")
+    dispute = disputes.get(key) if disputes is not None else None
+    return dispute.overruled if dispute is not None else None
+
+
+def _owns(view: View, actor: str, goal: str) -> bool:
+    """The goal is this actor's by its own tree. Where the tree does not know the goal (the
+    central modes have one orchestrator for all of them) whoever holds it owns it."""
+    tree = view.views.get("tree")
+    owner = tree.owner_of(goal) if tree is not None else None
+    return owner is None or owner == actor
+
+
+def judge(
+    disputes: DisputesView, goal: str, asked: str, chosen: str, now: int
+) -> tuple[Dispute | None, dict[str, Any] | None, str]:
+    """The log's verdict on an answer: the dispute, the candidate chosen, and why the answer
+    cannot be accepted (``""`` when it can). Only the log is read, so an heir judges as the dead
+    owner would have: the escalation must exist at this goal, nobody may have answered it, its
+    ``timeout_ms`` must not have run out (an answer exactly at the end is in time), and the choice
+    must be one of its options."""
+    dispute = disputes.escalated(asked)
+    found = dispute.escalation if dispute is not None else None
+    if dispute is None or found is None or dispute.ruling is None or found["goal_id"] != goal:
+        return None, None, f"no escalation {asked} is open at {goal}"
+    if (earlier := dispute.answer()) is not None:
+        return dispute, None, f"the escalation was already answered ({earlier['choice']})"
+    late = now - found["opened_ms"] - found["timeout_ms"]
+    if late > 0:
+        why = f"the answer came {late} ms after the time to answer ({found['timeout_ms']} ms)"
+        return dispute, None, why
+    picked = next((c for c in dispute.candidates if c["label"] == chosen), None)
+    if picked is None or chosen not in found["options"]:
+        return dispute, None, f"{chosen} is not one of the options ({', '.join(found['options'])})"
+    return dispute, picked, ""
+
+
+def answer(state: dict[str, Any], view: View, event: Event, tools: Tools) -> list[Command]:
+    """A person's answer to an escalation: ``control.injected`` with ``op: "answer"``, ``to``
+    ``goal:<id>`` and ``body: {escalation_id, choice}``. Every orchestrator gets it; the owner of
+    the goal, as its own tree has it now (after a takeover, the heir), acts. The verdict is
+    logged as ``escalation.answered`` whatever it is. A choice that names another candidate than
+    the ruling also logs ``arbitration.overruled`` and orders the board to replace the verified
+    fact; one that names the ruled candidate confirms it and nothing else moves."""
+    control = event.payload
+    disputes = view.views.get("disputes")
+    if disputes is None or not control["to"].startswith(GOAL_CONTROL):
+        return []
+    goal = control["to"].removeprefix(GOAL_CONTROL)
+    if goal not in state["goals"] or not _owns(view, state["id"], goal):
+        return []  # somebody else's goal: its owner answers
+    asked, chosen = control["body"].get("escalation_id"), control["body"].get("choice")
+    if not isinstance(asked, str) or not isinstance(chosen, str):
+        return []  # not an answer: the API checks the body before it sends one
+    asked, chosen = asked[:MAX_ANSWER_CHARS], chosen[:MAX_ANSWER_CHARS]
+    dispute, picked, why = judge(disputes, goal, asked, chosen, view.now)
+    ruled = dispute.ruling["winner"] if dispute is not None and dispute.ruling else ""
+    overruled = picked is not None and chosen != ruled
+    reason = why or (f"overrules {ruled} with {chosen}" if overruled else "confirms the ruling")
+    logged = {
+        "id": asked,
+        "choice": chosen,
+        "by": HUMAN,
+        "accepted": picked is not None,
+        "overruled": overruled,
+        "reason": reason,
+    }
+    idem = f"escalation.answered:{event.seq}"  # one verdict per control, whoever writes it
+    commands: list[Command] = [tools.emit(goal, "escalation.answered", logged, idem)]
+    if overruled and dispute is not None and picked is not None:
+        first = picked["by"][0]
+        chose = {"key": dispute.key, "winner": chosen, "contract": first["contract"]}
+        chose |= {"value": picked["value"], "work": first["work"]}
+        idem = f"arbitration.overruled:{dispute.key}"
+        commands.append(tools.emit(goal, "arbitration.overruled", chose, idem))
+        order = {"key": dispute.key, "contract": first["contract"], "by": state["id"]}
+        commands.append(Send(to=tools.board, topic=TOPIC_OVERRULE, body=order))
+    return commands
