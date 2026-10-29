@@ -6,6 +6,8 @@ import { parseArenaRoute, type ArenaRoute } from "./arena/route";
 import { AblationPage } from "./ablation/AblationPage";
 import { parseAblationRoute, type AblationRoute } from "./ablation/route";
 import { RunStrip } from "./components/RunStrip";
+import { DirectorPage } from "./director/DirectorPage";
+import { parseDirectorRoute, type DirectorRoute } from "./director/route";
 import { IntakePage } from "./intake/IntakePage";
 import { parseIntakeRoute, type IntakeRoute } from "./intake/route";
 import { StatusBadge, ThemeToggle } from "./components/ui";
@@ -44,11 +46,14 @@ type Route =
   | { page: "arena"; arena: ArenaRoute }
   | { page: "intake"; intake: IntakeRoute }
   | { page: "ablation"; ablation: AblationRoute }
+  | { page: "director"; director: DirectorRoute }
   | { page: "helps" }
   | { page: "charts" }
   | { page: "runs" };
 
 function parseHash(hash: string): Route {
+  const director = parseDirectorRoute(hash);
+  if (director) return { page: "director", director };
   const arena = parseArenaRoute(hash);
   if (arena) return { page: "arena", arena };
   const intake = parseIntakeRoute(hash);
@@ -114,6 +119,9 @@ export function App() {
       });
     }
   }, [route, runs, runId, openRun, store]);
+
+  // Director mode is the frame of the video: none of the app around it. After the hooks, so they run in the same order.
+  if (route.page === "director") return <DirectorPage route={route.director} />;
 
   return (
     <div className="app">

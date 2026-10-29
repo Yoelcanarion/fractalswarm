@@ -1,0 +1,15 @@
+{
+  "id": "s8-proof",
+  "title": "The proof: replay verified, every heir recomputed",
+  "stage": "arena",
+  "duration_ms": 10000,
+  "steps": [
+    { "do": "seek", "to": "end" },
+    { "do": "camera", "fit": { "region": "swarm-head" }, "pad": 0.35, "ms": 1200 },
+    { "do": "highlight", "target": { "region": "swarm-head" }, "ms": 3800 },
+    { "do": "wait", "ms": 4000 },
+    { "do": "camera", "fit": { "region": "rival-head" }, "pad": 0.35, "ms": 1200 },
+    { "do": "highlight", "target": { "region": "rival-head" }, "ms": 3200 },
+    { "do": "wait", "ms": 3400 }
+  ]
+}

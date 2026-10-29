@@ -101,7 +101,7 @@ export const ArenaBoard = memo(function ArenaBoard({ frame, label, rootLabel }: 
             ...(actor.outage ? ringVars(actor.outage) : {}),
           } as CSSProperties;
           return (
-            <g key={node.id} className={`coord coord--${state}${adopted ? " coord--adopted" : ""}`} transform={`translate(${p.x} ${p.y})`} style={style}>
+            <g key={node.id} className={`coord coord--${state}${adopted ? " coord--adopted" : ""}`} data-actor={node.id} transform={`translate(${p.x} ${p.y})`} style={style}>
               <title>{`${node.id} · ${CHIP_WORDS[state]}`}</title>
               <rect className="coord__box" width={CHIP_W} height={CHIP_H} rx={8} />
               <text className="coord__id" x={CHIP_W / 2 - (state === "down" ? 5 : 0)} y={CHIP_H / 2} dy="0.35em" textAnchor="middle">
@@ -135,7 +135,7 @@ export const ArenaBoard = memo(function ArenaBoard({ frame, label, rootLabel }: 
           const adopted = actor.adoptedTs !== undefined && state !== "down";
           const style = { ...owner(node.parent ? colour(node.parent) : colour(node.id)), ...(adopted ? glowVars(actor.adoptedTs!, fadeLife(ADOPTION_LIFE_MS)) : {}) };
           return (
-            <g key={node.id} className={`dot dot--${state}${adopted ? " dot--adopted" : ""}`} transform={`translate(${p.x} ${p.y})`} style={style}>
+            <g key={node.id} className={`dot dot--${state}${adopted ? " dot--adopted" : ""}`} data-actor={node.id} transform={`translate(${p.x} ${p.y})`} style={style}>
               <title>{`${node.id} · ${state}`}</title>
               <circle className="dot__body" cx={DOT / 2} cy={DOT / 2} r={DOT / 2 - 1.5} />
               {state === "down" && <path className="dot__cross" d={`M${DOT * 0.32} ${DOT * 0.32}L${DOT * 0.68} ${DOT * 0.68}M${DOT * 0.68} ${DOT * 0.32}L${DOT * 0.32} ${DOT * 0.68}`} />}

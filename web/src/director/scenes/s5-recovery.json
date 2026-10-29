@@ -1,0 +1,25 @@
+{
+  "id": "s5-recovery",
+  "title": "No boss: every survivor computes the same heir",
+  "stage": "run",
+  "duration_ms": 22000,
+  "steps": [
+    { "do": "seek", "to": "crash:2-3s" },
+    { "do": "camera", "fit": { "region": "tree" }, "pad": 0.02, "ms": 900 },
+    { "do": "caption", "text": "Shared log, not shared brain.", "ms": 6000 },
+    { "do": "play" },
+    { "do": "wait", "until": "crash:2", "timeout_ms": 8000 },
+    { "do": "highlight", "target": { "actor": "$crashed:2" }, "ms": 3000 },
+    { "do": "wait", "until": "recovered:2", "timeout_ms": 12000 },
+    { "do": "caption", "text": "heir = highest hash(goal, member)", "style": "overlay", "ms": 3500 },
+    { "do": "highlight", "target": { "actor": "$heir:2" }, "ms": 3500 },
+    { "do": "wait", "ms": 2800 },
+    { "do": "seek", "to": "crash:1-2s" },
+    { "do": "wait", "until": "crash:1", "timeout_ms": 8000 },
+    { "do": "highlight", "target": { "actor": "$crashed:1" }, "ms": 3000 },
+    { "do": "wait", "until": "recovered:1", "timeout_ms": 12000 },
+    { "do": "highlight", "target": { "actor": "$root" }, "ms": 3500 },
+    { "do": "wait", "ms": 2800 },
+    { "do": "pause" }
+  ]
+}

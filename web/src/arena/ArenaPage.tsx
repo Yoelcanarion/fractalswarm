@@ -82,16 +82,18 @@ export function ArenaPage({ route }: { route: ArenaRoute }) {
   );
 }
 
-interface ArenaViewProps {
+export interface ArenaViewProps {
   session: PairSession;
   pairs: PairListing[] | null;
   runs: RunListing[];
   official: { left: Official | null; right: Official | null };
   left: string | null;
   right: string | null;
+  /** Without the picker: a director's frame has no app chrome. What the rival is granted stays on screen. */
+  bare?: boolean;
 }
 
-function ArenaView({ session, pairs, runs, official, left, right }: ArenaViewProps) {
+export function ArenaView({ session, pairs, runs, official, left, right, bare = false }: ArenaViewProps) {
   const { clock } = session;
   const leftEvents = useStore(session.left, (s) => s.events);
   const rightEvents = useStore(session.right, (s) => s.events);
@@ -126,7 +128,7 @@ function ArenaView({ session, pairs, runs, official, left, right }: ArenaViewPro
   return (
     <div className="arena" tabIndex={-1} onKeyDown={onKeyDown}>
       <header className="arena__bar">
-        <PairPicker left={left} right={right} pairs={pairs} runs={runs} />
+        {!bare && <PairPicker left={left} right={right} pairs={pairs} runs={runs} />}
         {chosen && !loading && !loadError && (
           <p className="arena__assumptions" title="What the rival is granted. It comes from the run's own parameters.">
             {assumptions.caption}
