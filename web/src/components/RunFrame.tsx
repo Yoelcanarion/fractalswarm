@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { useRunStoreShallow } from "../store";
+import { LensDock } from "./lens/LensDock";
 import { Timeline } from "./Timeline";
 
 /** What every view of a run shares: the empty and error states, and the replay scrubber at the
@@ -13,6 +14,7 @@ export function RunFrame({ children }: { children: ReactNode }) {
   return (
     <div className="run">
       {children}
+      <LensDock />
       <Timeline />
     </div>
   );

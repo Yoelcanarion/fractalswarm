@@ -932,7 +932,7 @@ uv run fractalswarm run tasks/examples/t2-conference.yaml --backend real --confi
 | Its own plan and judge calls | 5 |
 | Chaos agent kills | 3 |
 
-Its restart re-dispatched 22 contracts, because `TreeView` never registers central goals. **So the old cost gap is mostly a design artifact.** New rivals:
+Its restart re-dispatched the work its stopped workers had lost: 21 of its 23 re-dispatches follow a "lost in a crash" rejection. **So the old cost gap comes mostly from the baseline's in-process design.** *(Corrected Thu Oct 29: this line said the restart re-dispatched 22 contracts because `TreeView` never registers central goals; the log does not show that. See the Phase 2 entry of Oct 29.)* New rivals:
 - **`durable-max`:** workers survive, and its own calls are durable;
 - **`durable`:** realistic, so its own in-flight calls are lost.
 
@@ -1063,6 +1063,20 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
   - `rival_recovery_ms` 0.5 s joins the plausible region, since spec §A defines the fast external restart as rival at 0.5–1 s;
   - §5 states the network profile of the sweeps, and that only the swarm's detector can declare false deaths there (an advantage granted to the rival).
   - Accepted as a deviation: the gate uses seeds 1–4, not the spec's 1–3, which is stricter because every seed must agree.
+  - Amended in place before any run (e74a1b2, its new §9 records both changes). From the first gate run on, it changes only by appended, dated amendments.
+- **Correction of the forensic finding** (arena spec §0, the Day 10 entry, `bench/REPORT.md` §1). W1 found it while reading the old central C3 run (`t2-real-c3-central-seed1`), and I checked it on the log:
+  - its 41 dispatches of 18 pieces of work hold 23 re-dispatches: 21 follow a "lost in a crash" rejection, and 2 are of one contract (`track-data/d2/place`) re-dispatched after its result was logged;
+  - so the claim "re-dispatched 22 contracts whose results were already in the log" was wrong. The cost gap comes from the in-process design: a crash stops its workers, and their work is paid again;
+  - the arena spec and the Day 10 entry are corrected in place, with a dated note. W1 corrected the REPORT sentence on its branch; it reaches arena with W1's merge.
+- **`docs/claims.md`** skeleton (5c2158a), a day early: the rules, the system claims, the gate claims, what is not claimed. Nothing in the comparison section may be quoted before the gate.
+- **W2's API guard** (cf5b8ce on arena-intake), asked for in review because the spend gate makes the server worth attacking: a Host allowlist (against DNS rebinding), JSON-only POSTs (against cross-site simple requests), and an Origin check on the events WebSocket. 50 new tests. The UI's Verify POST needs a JSON header; W4 fixes it, and W4 merges before W2.
+- **W4 steps 8–9** (5e213de, from 6632486, web only): the Muse lens, the takeover chip, JSON POSTs, the rebuilt static bundle. Found while checking: a Chromium 130 renderer crash on a container query (now a media query). Frame times are pending: at 20x the Phase 2 UI is slower than Phase 1 in the same harness (main thread bound), measured on a busy machine, so only relative; W4 gets a quiet window for absolute numbers and a lens re-shoot.
+- **W2 steps 5–6** (8531784, from 9361e55): arena pairs (`--chaos-plan`, `--start-barrier`, `POST /api/arena`, `GET /api/pairs`), real spend from the UI (`api/spend.py`: preflight token bound to the request, the word SPEND, caps re-read from the ledger at launch, one billed job, loopback only, off unless `FRACTALSWARM_ALLOW_UI_REAL`), real intake behind the same gate, the takeover and capabilities endpoints, LIVE markers for resume and LangGraph, the API guard.
+  - reviewed: no billed path without a redeemed token; nothing reserves or calls the model in a preflight; a chaos-plan file lands in `run.started` params, so replay needs no file;
+  - checks on the merged arena (8531784): full suite 1457 passed with PromptGuard, ruff clean, web typecheck clean, vitest 373 passed, `demo --verify` and the golden replays MATCH, references 43 of 43 identical to `arena-c2b5e08` (still the shared BEFORE).
+- **W2 step 7 (live control) approved** with conditions: a new run param marks runs that accept controls (the approval hold needs it plus `auto_approve: false`); controls for approve, replan and answer are addressed to a goal and handled by its current owner, so they survive a takeover; replay tests in a fresh process, crash of the addressee included; merge_ready by Sat Oct 31, 16:00.
+- **Known, not new:** W4 saw `Replay MISMATCH` on the Phase 1 real runs in the UI. Day 10 already records it: they verify at 8fddeba, not at HEAD (8ac7536 changed the email scan and the takeover keys). `docs/claims.md` now says the replay claim needs runs recorded after the handler freeze.
+- **The $0 gate v2 ran** (W1, at 7bac37d, PREREG locked at blob 4df0c2b): 128 cells, 0 failed, about 4 min. I recomputed the deciding per-seed ratios from `results.csv`; they match W1's report. Against `durable-max` on T2, locality **ties** at C2 and C3: blast radius wins on every seed, but coordinator-dependency time and idle agent-seconds, though about 2.5–3 times lower on the seed means, are not below half on every seed (C3 seeds 2 and 3 at 0.51). So outcome A cannot be reached, and the outcome is B whatever the sweeps show; they map the conditions. Cost ties with `durable-max`, so "cheaper" is not claimed against it. The swarm loses H5 (false deaths, 1.25–2.25 per run at C2–C3). The low-memory reaper stopped the gate once at 30 of 128 cells; it resumed in the foreground. Workers now run every heavy command in the foreground, in chunks under 9 minutes.
 
 **Supervision notes**
 - **Memory went down to 1.0 GB free at 00:53:** W3's suite, plus an unslotted probe of W1's (900 MB). W1 stopped it. Rule added: a worker script that runs several fake runs, or holds more than about 300 MB, needs a slot.

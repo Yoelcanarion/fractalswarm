@@ -126,6 +126,20 @@ def run(
     chaos: Annotated[
         str, typer.Option(help="C0-C3, or kill-half: the root, two track leads, two sessions")
     ] = "C0",
+    chaos_plan: Annotated[
+        Path | None,
+        typer.Option(
+            help="a ChaosPlan JSON file, used instead of --chaos: "
+            "the same plan for both runs of an arena pair"
+        ),
+    ] = None,
+    start_barrier: Annotated[
+        Path | None,
+        typer.Option(
+            help="a directory: warm up, write <run_id>.ready there, and wait "
+            "for a file named go before the clock starts"
+        ),
+    ] = None,
     firewall: Annotated[
         str | None,
         typer.Option(
@@ -196,7 +210,9 @@ def run(
         params["cross_audit"] = True
     if feasibility_report:
         params["feasibility_report"] = True
-    if chaos == "kill-half":
+    if chaos_plan is not None:
+        params |= chaos_plan_params(chaos_plan)
+    elif chaos == "kill-half":
         params |= {"chaos": kill_half_plan(spec.seed), "membership": True}
     elif chaos in ("C0", "C1", "C2", "C3"):
         params |= {"chaos": {"profile": chaos, "seed": spec.seed}}
@@ -238,6 +254,14 @@ def run(
         from fractalswarm.bench.tasks.t2_conference.ablation import SCENARIO
 
         scenario_ref = SCENARIO
+    if start_barrier is not None:
+        from fractalswarm.runs import wait_at_barrier
+
+        try:
+            wait_at_barrier(start_barrier, run_id)
+        except TimeoutError as exc:
+            typer.echo(f"start barrier: {exc}")
+            raise typer.Exit(1) from None
     result = asyncio.run(
         record_run(
             scenario_ref,
@@ -385,6 +409,23 @@ def kill_half_plan(seed: str) -> dict:
         for at, target in zip(CRASH_POINTS, targets, strict=True)
     )
     return ChaosPlan(profile="kill-half", seed=seed, actions=actions).model_dump(mode="json")
+
+
+def chaos_plan_params(path: Path) -> dict:
+    """The run params for a ChaosPlan JSON file. A plan that crashes coordinators turns the
+    failure detector on, as ``--chaos kill-half`` does: the takeover needs it."""
+    import json
+
+    from fractalswarm.api.arena import parse_plan
+
+    try:
+        plan = parse_plan(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError) as exc:
+        raise typer.BadParameter(f"--chaos-plan {path}: {exc}") from None
+    params: dict = {"chaos": plan.model_dump(mode="json")}
+    if any(action.kind == "kill_coordinator" for action in plan.actions):
+        params["membership"] = True
+    return params
 
 
 def task_outcome(paths) -> dict | None:
@@ -870,12 +911,26 @@ def _serve(runs_dir: Path, host: str, port: int, open_run: str | None, browser: 
     import uvicorn
 
     from fractalswarm.api.app import create_app
+    from fractalswarm.api.spend import Spend
 
+    settings = _settings()
+    spend = Spend.from_settings(settings)
+    try:
+        spend.gate.refuse_exposed(host)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--host") from None
     url = f"http://{host}:{port}/" + (f"#/run/{open_run}" if open_run else "")
     typer.echo(f"FractalSwarm UI on {url}  (Ctrl+C to stop)")
     if browser:
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
-    app_ = create_app(runs_dir, private_dir=_settings().private_dir)
+    if spend.gate.allow_real:
+        typer.echo(
+            "real runs from the UI are ON (FRACTALSWARM_ALLOW_UI_REAL): a billed run "
+            "needs a preflight token and the word SPEND"
+        )
+    app_ = create_app(
+        runs_dir, private_dir=settings.private_dir, spend=spend, allowed_hosts=(host,)
+    )
     uvicorn.run(app_, host=host, port=port, log_level="warning")
 
 

@@ -49,9 +49,15 @@ The old `central` baseline lost 27 LLM calls at C3 in its real run (`t2-real-c3-
 | Its own plan and judge calls, which a process death genuinely loses (the swarm lost 1 such call) | 5 |
 | Chaos agent kills, which hit both systems (the swarm lost 2) | 3 |
 
-Its restart also never reuses results already in the log, because `TreeView` never registers central goals, so it re-dispatched 22 contracts.
+Its restart re-dispatched the work its stopped workers had lost. The run has 41 dispatches of 18 pieces of work, so 23 are re-dispatches:
+- 21 follow a "lost in a crash" rejection;
+- 2 are of one contract (`track-data/d2/place`), re-dispatched twice after its result had been logged.
 
-**Conclusion:** the old +32 % / +75 % cost gap is mostly a design artifact. It is not evidence against a well-built supervisor. The old row stays as a reference, with this explanation next to it.
+W1's duplicate count for this run is 42 calls paid twice ($0.22), more than the whole $0.10 gap to the swarm ($0.601 against $0.501).
+
+*Corrected Thu Oct 29 (found by W1, checked on the log by the coordinator):* this paragraph used to say that the restart re-dispatched 22 contracts whose results were already in the log, because `TreeView` never registers central goals. The log does not show that.
+
+**Conclusion:** the old cost gap comes mostly from the baseline's in-process design: a crash stops its workers, and their work is done and paid for again. It is not evidence against a well-built supervisor. The old row stays as a reference, with this explanation next to it.
 
 ---
 

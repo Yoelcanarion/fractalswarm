@@ -558,10 +558,10 @@ def test_a_bad_request_is_a_422_and_a_real_backend_is_not_run_here(client: TestC
     assert bad.status_code == 422 and "cases.0" in bad.json()["error"]
     twice = post({"source": "inline", "cases": [SAMPLE[0], SAMPLE[0]]})
     assert twice.status_code == 422 and "unique" in twice.json()["error"]
-    garbage = client.post(
+    broken = client.post(
         "/api/ablation", content=b"{nope", headers={"content-type": "application/json"}
     )
-    assert garbage.status_code == 422
+    assert broken.status_code == 422
     real = post({"backend": "real"})
     assert real.status_code == 501 and "coordinator" in real.json()["error"]
 

@@ -288,5 +288,16 @@ export function cellCollision(state: ScheduleState, key: string): Collision | un
   return found;
 }
 
+/** When the last ruling mark stops fading, in virtual ms: ``-Infinity`` when no collision has been
+ * ruled. It counts every ruled collision, not only the ones a cell shows, so it is never early. */
+export function rulingsEnd(state: ScheduleState, lifeMs: number): number {
+  let end = -Infinity;
+  for (const id of state.collisionOrder) {
+    const ruled = state.collisions[id]?.resolvedTs;
+    if (ruled !== undefined) end = Math.max(end, ruled + lifeMs);
+  }
+  return end;
+}
+
 export const openCollisions = (state: ScheduleState): number =>
   state.collisionOrder.filter((id) => state.collisions[id].status === "open").length;

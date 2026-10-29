@@ -73,7 +73,7 @@ from fractalswarm.planning import scope as scoping
 from fractalswarm.planning.contracts import Contract
 from fractalswarm.planning.dag import Dag
 from fractalswarm.planning.planner import plan_request
-from fractalswarm.runs import RunPaths, RunResult, default_run_cap_usd
+from fractalswarm.runs import LiveMarker, RunPaths, RunResult, default_run_cap_usd
 from fractalswarm.verify.checks import run_checks
 from fractalswarm.verify.judge import judge_request, read_verdict
 
@@ -910,7 +910,8 @@ async def record_langgraph(
             runner=EffectRunner({"llm": client.effect()}, EffectContext(run_id, run_clock)),
             reducers=[ProgressView(T2_PROGRESS)],
         )
-        completed = await runtime.drive(program)
+        with LiveMarker(paths.live):
+            completed = await runtime.drive(program)
         store.export_jsonl(paths.events_jsonl)
         return RunResult(run_id, paths, completed, store.head_hash, store.last_seq)
 
