@@ -10,6 +10,7 @@ runs are ordinary runs, listed and streamed like any other.
 
 import threading
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -17,6 +18,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from fractalswarm.api.jobs import (
     ACTIVE,
+    Approval,
+    Approve,
     JobError,
     JobManager,
     available_scenarios,
@@ -27,6 +30,7 @@ from fractalswarm.api.jobs import (
 from fractalswarm.bench.profiles import half_the_brains_plan
 from fractalswarm.comms.chaos import ChaosPlan, build_plan
 from fractalswarm.intake.store import new_id, read_json, safe_id, utc_now, write_json
+from fractalswarm.planning.taskspec import TaskSpec
 from fractalswarm.runs import BARRIER_GO
 
 RIVALS = ("durable-max", "durable", "central", "single", "pipeline")
@@ -73,6 +77,8 @@ class ArenaRequest(BaseModel):
     backend: Literal["fake", "real"] = "fake"
     pair_id: str | None = None
     budget_usd: float | None = Field(default=None, gt=0)
+    preflight_token: str | None = None  # billed pairs only (api/spend.py)
+    confirm: str | None = None
 
 
 def rivals_available() -> list[str]:
@@ -99,8 +105,24 @@ def pick_plan(request: ArenaRequest, seed: str) -> ChaosPlan:
     return build_plan(request.chaos, seed)
 
 
-def launch_arena(manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
-    """Start both runs of a pair as one job. Returns the pair and its job."""
+@dataclass(frozen=True)
+class Pair:
+    """A pair request, checked: everything a preflight prices and a launch starts."""
+
+    request: ArenaRequest
+    spec: TaskSpec
+    rival: str
+    plan: ChaosPlan
+    params: dict[str, Any]
+    private: bool
+
+    def fields(self) -> dict[str, Any]:
+        """The request as a preflight token binds it: with the rival it resolved to."""
+        return self.request.model_dump(mode="json") | {"rival": self.rival}
+
+
+def parse_arena(manager: JobManager, body: dict[str, Any]) -> Pair:
+    """The pair a request asks for, or ``JobError(422)`` saying what is wrong with it."""
     try:
         request = ArenaRequest.model_validate(body)
     except ValidationError as exc:
@@ -108,12 +130,22 @@ def launch_arena(manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
         where = ".".join(str(part) for part in first["loc"])
         raise JobError(422, f"{where}: {first['msg']}") from None
     spec = check_spec(request.spec)
-    if request.backend != "fake":
-        raise JobError(403, "real pairs need the preflight flow (POST /api/tasks/preflight)")
     rival = pick_rival(request.rival)
     plan = pick_plan(request, spec.seed)
     params = check_inputs(manager, spec)
     private = spec.inputs.intake is not None or spec.inputs.inline is not None
+    return Pair(request, spec, rival, plan, params, private)
+
+
+def launch_arena(
+    manager: JobManager, body: dict[str, Any], approve: Approve | None = None
+) -> dict[str, Any]:
+    """Start both runs of a pair as one job. Returns the pair and its job. A billed pair
+    (``backend: real``) starts only if ``approve`` clears it (api/spend.py)."""
+    pair = parse_arena(manager, body)
+    request, rival = pair.request, pair.rival
+    if request.backend == "real" and approve is None:
+        raise JobError(403, "real pairs need the preflight flow (POST /api/arena/preflight)")
     pair_id = request.pair_id or new_id("pair")
     sides = (("left", "swarm", f"{pair_id}-swarm"), ("right", rival, f"{pair_id}-{rival}"))
     try:
@@ -121,16 +153,33 @@ def launch_arena(manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
             safe_id(run_id, "pair id")
     except ValueError as exc:
         raise JobError(422, str(exc)) from None
-    manifest_path = manager.private.pairs / f"{pair_id}.json"
+    approval = approve("arena", pair.fields(), len(sides)) if request.backend == "real" else None
+    try:
+        return start_pair(manager, pair, pair_id, sides, approval)
+    except BaseException:
+        if approval is not None:
+            approval.undo()  # nothing started: the preflight token is given back
+        raise
 
+
+def start_pair(
+    manager: JobManager,
+    pair: Pair,
+    pair_id: str,
+    sides: tuple[tuple[str, str, str], ...],
+    approval: Approval | None,
+) -> dict[str, Any]:
+    request, spec, plan, private = pair.request, pair.spec, pair.plan, pair.private
+    billed = approval is not None
+    manifest_path = manager.private.pairs / f"{pair_id}.json"
     with manager.lock:
         if manifest_path.exists():
             raise JobError(409, f"pair id {pair_id!r} is already used")
         for _, _, run_id in sides:
             manager.check_run_id(run_id)
-        warnings = manager.check_launch(request.clock)
-        label = f"swarm vs {rival}, {plan.profile}, seed {spec.seed}"
-        job = manager.new_job("arena", label, request.clock, False, private)
+        warnings = manager.check_launch(request.clock, real=billed)
+        label = f"swarm vs {pair.rival}, {plan.profile}, seed {spec.seed}"
+        job = manager.new_job("arena", label, request.clock, billed, private)
         job["pair_id"] = pair_id
         try:
             directory = manager.job_dir(job["id"])
@@ -146,12 +195,20 @@ def launch_arena(manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
                     scenario=scenario,
                     clock=request.clock,
                     speed=request.speed,
-                    budget_usd=request.budget_usd,
+                    backend=request.backend,
+                    budget_usd=approval.run_cap_usd if approval else request.budget_usd,
                     plan=plan_path,
                     barrier=barrier,
+                    billed=billed,
                 )
                 runs[side] = manager.spawn(
-                    job, run_id=run_id, role=side, scenario=scenario, args=args, private=private
+                    job,
+                    run_id=run_id,
+                    role=side,
+                    scenario=scenario,
+                    args=args,
+                    private=private,
+                    extra_env=approval.env if approval else None,
                 )
         except BaseException:
             manager.abort_launch(job)
@@ -166,9 +223,10 @@ def launch_arena(manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
             "clock": request.clock,
             "speed": request.speed,
             "private": private,
-            "rival": rival,
+            "rival": pair.rival,
+            "billed": billed,
             "chaos": {"name": plan.profile, "actions": len(plan.actions)},
-            "input": params.get("input"),
+            "input": pair.params.get("input"),
             **{
                 side: {
                     "run_id": run["run_id"],
@@ -195,6 +253,7 @@ def launch_arena(manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
         "right": manifest["right"]["run_id"],
         "state": shown["state"],
         "private": private,
+        "billed": billed,
         "warnings": warnings,
         "pair": pair_view(manager, manifest),
         "job": shown,

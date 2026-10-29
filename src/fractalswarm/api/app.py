@@ -11,8 +11,12 @@ Launching: ``POST /api/tasks`` starts a run as a job (``api/jobs.py``: one subpr
 ``POST /api/intake`` (Muse reads pasted text), ``GET /api/intake/{id}``, then
 ``POST /api/intake/{id}/approve``; a task then runs on ``inputs.intake``. These need a private
 directory (``FRACTALSWARM_PRIVATE_DIR``), where what a person typed lives; without one they
-answer 503. The remaining control endpoints (plan approval, chaos, escalations) answer 501
-until the runtime behind them lands; ``GET /api/capabilities`` says which controls are real.
+answer 503. ``POST /api/arena`` starts a pair of runs on one input under one chaos plan.
+A billed run (``backend: real``) is refused unless it carries the token of a preflight
+(``POST /api/tasks/preflight``, ``/api/arena/preflight``) and the word SPEND, and the server was
+started with ``FRACTALSWARM_ALLOW_UI_REAL`` (``api/spend.py``). The remaining control endpoints
+(plan approval, chaos, escalations) answer 501 until the runtime behind them lands;
+``GET /api/capabilities`` says which controls are real.
 A finished run also has ``/metrics`` (the official numbers) and ``/takeover`` (what its log
 proves about the coordinator kills).
 """
@@ -36,6 +40,7 @@ from fractalswarm.api import arena, jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
 from fractalswarm.api.jobs import JobError, JobManager
 from fractalswarm.api.lens import lens_routes
+from fractalswarm.api.spend import Spend, preflight_arena, preflight_task
 from fractalswarm.api.ws import stream_events
 from fractalswarm.config import CONFIG_DIR
 from fractalswarm.intake import service
@@ -59,17 +64,25 @@ def create_app(
     bench_dir: Path = BENCH_RESULTS_DIR,
     static_dir: Path = STATIC_DIR,
     private_dir: Path | None = None,
+    spend: Spend | None = None,
 ) -> Starlette:
     catalog = Catalog(runs_dir, demo_dir, private_dir)
     private = PrivateDir(private_dir) if private_dir is not None else None
     manager = JobManager(private, runs_dir, catalog) if private is not None else None
     verified: dict[tuple[str, str], dict[str, Any]] = {}
+    # Without a gate no billed run can start and no ledger is read.
+    spending = spend or (Spend.locked(private_dir) if private_dir is not None else None)
     takeovers: dict[tuple[str, str], dict[str, Any]] = {}
 
     def need_private() -> tuple[PrivateDir, JobManager]:
         if private is None or manager is None:
             raise HTTPException(503, "the API was started without a private directory")
         return private, manager
+
+    def need_spend() -> Spend:
+        need_private()
+        assert spending is not None
+        return spending
 
     def entry(request: Request) -> RunEntry:
         try:
@@ -246,16 +259,36 @@ def create_app(
         _, jobs_ = need_private()
         body = await _json_body(request)
         try:
-            job = await anyio.to_thread.run_sync(jobs.launch_run, jobs_, body)
+            job = await anyio.to_thread.run_sync(jobs.launch_run, jobs_, body, need_spend().approve)
         except JobError as exc:
             raise job_error(exc) from None
         return JSONResponse(launched(job), status_code=202)
+
+    async def preflight_task_route(request: Request) -> JSONResponse:
+        _, jobs_ = need_private()
+        body = await _json_body(request)
+        try:
+            answer = await anyio.to_thread.run_sync(preflight_task, need_spend(), jobs_, body)
+        except JobError as exc:
+            raise job_error(exc) from None
+        return JSONResponse(answer)
+
+    async def preflight_arena_route(request: Request) -> JSONResponse:
+        _, jobs_ = need_private()
+        body = await _json_body(request)
+        try:
+            answer = await anyio.to_thread.run_sync(preflight_arena, need_spend(), jobs_, body)
+        except JobError as exc:
+            raise job_error(exc) from None
+        return JSONResponse(answer)
 
     async def launch_pair(request: Request) -> JSONResponse:
         _, jobs_ = need_private()
         body = await _json_body(request)
         try:
-            started = await anyio.to_thread.run_sync(arena.launch_arena, jobs_, body)
+            started = await anyio.to_thread.run_sync(
+                arena.launch_arena, jobs_, body, need_spend().approve
+            )
         except JobError as exc:
             raise job_error(exc) from None
         return JSONResponse(started, status_code=202)
@@ -413,6 +446,8 @@ def create_app(
         Route("/api/bench/results", bench_results),
         Route("/api/runs/{run_id}/metrics", run_metrics),
         Route("/api/tasks", launch_task, methods=["POST"]),
+        Route("/api/tasks/preflight", preflight_task_route, methods=["POST"]),
+        Route("/api/arena/preflight", preflight_arena_route, methods=["POST"]),
         Route("/api/arena", launch_pair, methods=["POST"]),
         Route("/api/pairs", list_pairs),
         Route("/api/pairs/{pair_id}", get_pair),

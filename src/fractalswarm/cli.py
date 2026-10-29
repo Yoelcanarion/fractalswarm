@@ -874,12 +874,20 @@ def _serve(runs_dir: Path, host: str, port: int, open_run: str | None, browser: 
     import uvicorn
 
     from fractalswarm.api.app import create_app
+    from fractalswarm.api.spend import Spend
 
     url = f"http://{host}:{port}/" + (f"#/run/{open_run}" if open_run else "")
     typer.echo(f"FractalSwarm UI on {url}  (Ctrl+C to stop)")
     if browser:
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
-    app_ = create_app(runs_dir, private_dir=_settings().private_dir)
+    settings = _settings()
+    spend = Spend.from_settings(settings)
+    if spend.gate.allow_real:
+        typer.echo(
+            "real runs from the UI are ON (FRACTALSWARM_ALLOW_UI_REAL): a billed run "
+            "needs a preflight token and the word SPEND"
+        )
+    app_ = create_app(runs_dir, private_dir=settings.private_dir, spend=spend)
     uvicorn.run(app_, host=host, port=port, log_level="warning")
 
 

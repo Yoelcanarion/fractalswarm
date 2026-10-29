@@ -26,6 +26,8 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -424,6 +426,20 @@ def available_scenarios() -> list[str]:
     return [name for name in RUN_SCENARIOS if name in SCENARIOS]
 
 
+@dataclass(frozen=True)
+class Approval:
+    """What a billed launch was cleared to do. ``api/spend.py`` decides; this module runs
+    it: the cap of each run, the environment of its processes (the ledger they bill to),
+    and how to give the preflight token back if the launch starts nothing."""
+
+    run_cap_usd: float
+    env: dict[str, str]
+    undo: Callable[[], None]
+
+
+Approve = Callable[[str, dict[str, Any], int], Approval]  # (kind, request, runs)
+
+
 class TaskRequest(BaseModel):
     """``POST /api/tasks``: a TaskSpec and how to run it."""
 
@@ -439,6 +455,8 @@ class TaskRequest(BaseModel):
     budget_usd: float | None = Field(default=None, gt=0)
     cross_audit: bool = False
     feasibility_report: bool = False
+    preflight_token: str | None = None  # billed runs only (api/spend.py)
+    confirm: str | None = None
 
     @field_validator("scenario")
     @classmethod
@@ -491,44 +509,56 @@ def check_inputs(manager: JobManager, spec: TaskSpec) -> dict[str, Any]:
         raise JobError(422, str(exc)) from None
 
 
-def launch_run(manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
-    """Start a run on the fake backend as a job: ``fractalswarm run`` in its own process."""
+def launch_run(
+    manager: JobManager, body: dict[str, Any], approve: Approve | None = None
+) -> dict[str, Any]:
+    """Start a run as a job: ``fractalswarm run`` in its own process. A billed run
+    (``backend: real``) starts only if ``approve`` clears it (api/spend.py)."""
     request, spec = parse_request(body)
-    if request.backend != "fake":
+    real = request.backend == "real"
+    if real and approve is None:
         raise JobError(403, "real runs need the preflight flow (POST /api/tasks/preflight)")
     private = spec.inputs.intake is not None or spec.inputs.inline is not None
     check_inputs(manager, spec)
     run_id = request.run_id or new_id("ui")
-    with manager.lock:
-        manager.check_run_id(run_id)
-        warnings = manager.check_launch(request.clock)
-        label = f"{request.scenario} {request.chaos} seed {spec.seed}"
-        job = manager.new_job("run", label, request.clock, False, private)
-        try:
-            args = run_args(
-                manager.write_spec(job, request.spec),
-                run_id,
-                scenario=request.scenario,
-                clock=request.clock,
-                speed=request.speed,
-                backend=request.backend,
-                budget_usd=request.budget_usd,
-                chaos=request.chaos,
-                cross_audit=request.cross_audit,
-                feasibility_report=request.feasibility_report,
-            )
-            manager.spawn(
-                job,
-                run_id=run_id,
-                role="run",
-                scenario=request.scenario,
-                args=args,
-                private=private,
-            )
-        except BaseException:
-            manager.abort_launch(job)
-            raise
-        return manager.finish_launch(job, warnings)
+    approval = approve("task", request.model_dump(mode="json"), 1) if real and approve else None
+    try:
+        with manager.lock:
+            manager.check_run_id(run_id)
+            warnings = manager.check_launch(request.clock, real=real)
+            label = f"{request.scenario} {request.chaos} seed {spec.seed}"
+            job = manager.new_job("run", label, request.clock, real, private)
+            try:
+                args = run_args(
+                    manager.write_spec(job, request.spec),
+                    run_id,
+                    scenario=request.scenario,
+                    clock=request.clock,
+                    speed=request.speed,
+                    backend=request.backend,
+                    budget_usd=approval.run_cap_usd if approval else request.budget_usd,
+                    chaos=request.chaos,
+                    cross_audit=request.cross_audit,
+                    feasibility_report=request.feasibility_report,
+                    billed=real,
+                )
+                manager.spawn(
+                    job,
+                    run_id=run_id,
+                    role="run",
+                    scenario=request.scenario,
+                    args=args,
+                    private=private,
+                    extra_env=approval.env if approval else None,
+                )
+            except BaseException:
+                manager.abort_launch(job)
+                raise
+            return manager.finish_launch(job, warnings)
+    except BaseException:
+        if approval is not None:
+            approval.undo()  # nothing started: the preflight token is given back
+        raise
 
 
 def run_args(
@@ -545,14 +575,18 @@ def run_args(
     barrier: Path | None = None,
     cross_audit: bool = False,
     feasibility_report: bool = False,
+    billed: bool = False,
 ) -> list[str]:
     """The ``fractalswarm run`` command line. ``plan`` (a ChaosPlan file) replaces ``chaos``;
-    ``barrier`` parks the process after it warms up until the launcher says go."""
+    ``barrier`` parks the process after it warms up until the launcher says go; ``billed``
+    says the run spends real money: it confirms that, and never repeats a paid request."""
     args = ["run", str(spec_path), "--run-id", run_id, "--scenario", scenario]
     args += ["--chaos-plan", str(plan)] if plan is not None else ["--chaos", chaos]
     args += ["--clock", clock, "--speed", str(speed), "--backend", backend]
     if barrier is not None:
         args += ["--start-barrier", str(barrier)]
+    if billed:
+        args += ["--confirm-real-spend", "--no-paid-retries"]
     if budget_usd is not None:
         args += ["--budget-usd", str(budget_usd)]
     if cross_audit:
