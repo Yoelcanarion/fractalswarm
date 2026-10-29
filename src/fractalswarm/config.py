@@ -36,6 +36,13 @@ class Settings(BaseSettings):
         default=SHARED_DIR / "ledger.sqlite", validation_alias="FRACTALSWARM_LEDGER_PATH"
     )
     runs_dir: Path = Field(default=Path("runs"), validation_alias="FRACTALSWARM_RUNS_DIR")
+    # What the user typed (intake runs, approved inputs, runs on them) and the job records.
+    # Outside the repo, like the secrets: nothing in here is ever committed or bundled.
+    private_dir: Path = Field(
+        default=SHARED_DIR / "private", validation_alias="FRACTALSWARM_PRIVATE_DIR"
+    )
+    # The API launches a real (billed) run only when the server was started with this on.
+    allow_ui_real: bool = Field(default=False, validation_alias="FRACTALSWARM_ALLOW_UI_REAL")
 
     def secret_values(self) -> list[str]:
         """Every secret's value, for redaction. Never print the result."""

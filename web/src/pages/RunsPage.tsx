@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 
 import { NewTaskForm } from "../components/NewTaskForm";
-import { useRun } from "../store";
+import { StatusBadge } from "../components/ui";
+import { useRunStore, useRunStoreShallow } from "../store";
 
 export function RunsPage() {
-  const { runs, runsError, loadRuns } = useRun();
+  const { runs, runsError } = useRunStoreShallow((s) => ({ runs: s.runs, runsError: s.runsError }));
+  const loadRuns = useRunStore((s) => s.loadRuns);
   useEffect(() => {
     void loadRuns();
   }, [loadRuns]);
@@ -34,7 +36,9 @@ export function RunsPage() {
                 </td>
                 <td>{run.source}</td>
                 <td className="mono">{run.scenario}</td>
-                <td>{run.status === "running" ? <span className="badge badge--live">● live</span> : run.status}</td>
+                <td>
+                  <StatusBadge status={run.status} />
+                </td>
                 <td>{run.events}</td>
                 <td>{(run.duration_ms / 1000).toFixed(2)} s</td>
                 <td className="mono">{run.head?.slice(0, 12)}</td>
