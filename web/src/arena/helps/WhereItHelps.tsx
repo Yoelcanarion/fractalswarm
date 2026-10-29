@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import { systemName } from "../assumptions";
 import "./helps.css";
-import { CLAIMS, headlineClaim } from "./claims";
+import { CLAIMS, claimsToShow, type Claim, type Claims } from "./claims";
 import { rivalOrder, type Honesty } from "./honesty";
 import { LOCALITY_WORD, rivalLabel, taskName } from "./labels";
 import { Model } from "./Model";
@@ -11,21 +11,25 @@ import { Mark, RegimeMap } from "./RegimeMap";
 import { ruleLines } from "./tally";
 import { TallyTable, type OpenList } from "./TallyTable";
 
-/** What a claim on screen says about its wording: still to be settled at the decision gate, or settled in docs/claims.md. */
-function Claim({ id, quoted = false }: { id: keyof typeof CLAIMS; quoted?: boolean }) {
-  const claim = CLAIMS[id];
+/** A claim on screen, in the words of docs/claims.md, with the status that file gives it: wording still to be settled
+ * at the decision gate, or allowed, with whatever the file adds to "allowed" (the evidence it rests on). */
+function ClaimLine({ claim, quoted = false }: { claim: Claim; quoted?: boolean }) {
   return (
     <span className="claim">
       <span className="claim__text">{quoted ? `“${claim.text}”` : claim.text}</span>
-      {claim.placeholder && <span className="claim__tag">Placeholder wording, pending the decision gate</span>}
+      {claim.status === "pending" ? (
+        <span className="claim__tag">Placeholder wording, pending the decision gate</span>
+      ) : (
+        <span className="claim__status">Status in docs/claims.md: {claim.note}</span>
+      )}
     </span>
   );
 }
 
 /** The pre-registered outcome: what the decision rule read at the gate, and the headline it allows. */
-function OutcomeStrip({ honesty }: { honesty: Honesty }) {
+function OutcomeStrip({ honesty, claims }: { honesty: Honesty; claims: Claims }) {
   const { outcome } = honesty;
-  const headline = headlineClaim(outcome.label);
+  const { headline, conditions } = claimsToShow(outcome.label, claims);
   const task = outcome.gate[0] ? ` on ${taskName(outcome.gate[0].task)}` : "";
   return (
     <section className="outcome" data-helps="outcome" aria-label="Pre-registered outcome">
@@ -45,14 +49,18 @@ function OutcomeStrip({ honesty }: { honesty: Honesty }) {
           ))}
           {outcome.gate.length > 0 && <Model kind="crash" />}
         </p>
-        {headline && (
+        {headline ? (
           <p className="outcome__claim">
-            <Claim id={headline.id} quoted />
+            <ClaimLine claim={headline} quoted />
+          </p>
+        ) : (
+          <p className="outcome__claim outcome__claim--none">No headline claim is allowed for outcome {outcome.label} (docs/claims.md).</p>
+        )}
+        {conditions && (
+          <p className="outcome__claim outcome__claim--next">
+            <ClaimLine claim={conditions} />
           </p>
         )}
-        <p className="outcome__claim outcome__claim--next">
-          <Claim id="R3" />
-        </p>
       </div>
     </section>
   );
@@ -90,10 +98,12 @@ export interface WhereItHelpsProps {
   rival?: string;
   /** A cell of the table to start with open, for a director's scene. */
   open?: OpenList | null;
+  /** The claims it may quote: docs/claims.md as the build has it. A test passes others. */
+  claims?: Claims;
 }
 
 /** The "where it helps" panel: where the swarm's recovery is local, where it ties, where it loses, and under which failure model. */
-export function WhereItHelps({ honesty, rival: start, open: startOpen = null }: WhereItHelpsProps) {
+export function WhereItHelps({ honesty, rival: start, open: startOpen = null, claims = CLAIMS }: WhereItHelpsProps) {
   const rivals = useMemo(() => rivalOrder(honesty), [honesty]);
   const [rival, setRival] = useState(start !== undefined && rivals.includes(start) ? start : honesty.outcome.against);
   const [open, setOpen] = useState<OpenList | null>(startOpen);
@@ -117,7 +127,7 @@ export function WhereItHelps({ honesty, rival: start, open: startOpen = null }: 
           </label>
         </div>
       </header>
-      <OutcomeStrip honesty={honesty} />
+      <OutcomeStrip honesty={honesty} claims={claims} />
       <div className="helps__body">
         <RegimeMap honesty={honesty} rival={rival} />
         <TallyTable honesty={honesty} rivals={rivals} against={honesty.outcome.against} open={open} onOpen={setOpen} />

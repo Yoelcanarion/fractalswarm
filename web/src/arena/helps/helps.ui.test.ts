@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { systemName } from "../assumptions";
-import { CLAIMS } from "./claims";
+import { CLAIMS, type Claims } from "./claims";
 import { HelpsView } from "./HelpsPage";
 import { regimeRows } from "./regime";
 import { occurrences, parsedSample, plainText } from "./testing";
@@ -35,7 +35,39 @@ describe("the outcome strip", () => {
 
   it("marks a claim that docs/claims.md still has pending as placeholder wording, and only those", () => {
     const shown = [CLAIMS.R2, CLAIMS.R3];
-    expect(occurrences(render(), PLACEHOLDER)).toBe(shown.filter((claim) => claim.placeholder).length);
+    expect(occurrences(render(), PLACEHOLDER)).toBe(shown.filter((claim) => claim.status === "pending").length);
+    const pending: Claims = { ...CLAIMS, R2: { ...CLAIMS.R2, status: "pending" }, R3: { ...CLAIMS.R3, status: "allowed" } };
+    expect(occurrences(render({ claims: pending }), PLACEHOLDER)).toBe(1);
+    const both: Claims = { ...pending, R3: { ...CLAIMS.R3, status: "pending" } };
+    expect(occurrences(render({ claims: both }), PLACEHOLDER)).toBe(2);
+  });
+
+  it("gives an allowed claim the status docs/claims.md gives it, in its words, where the evidence it rests on is told", () => {
+    const text = plainText(render());
+    expect(text).toContain(`Status in docs/claims.md: ${CLAIMS.R2.note}`);
+    expect(text).toContain(`Status in docs/claims.md: ${CLAIMS.R3.note}`);
+    const pending: Claims = { ...CLAIMS, R2: { ...CLAIMS.R2, status: "pending" } };
+    expect(plainText(render({ claims: pending }))).not.toContain(`Status in docs/claims.md: ${CLAIMS.R2.note}`);
+  });
+
+  it("quotes a claim docs/claims.md does not allow nowhere, and says there is no headline instead", () => {
+    const refused: Claims = { ...CLAIMS, R2: { ...CLAIMS.R2, status: "not claimed" } };
+    const text = plainText(render({ claims: refused }));
+    expect(text).not.toContain(CLAIMS.R2.text);
+    expect(text).not.toContain(CLAIMS.R3.text);
+    expect(text).toContain("No headline claim is allowed for outcome B (docs/claims.md).");
+  });
+
+  it("does not quote the claim of outcome A while docs/claims.md has it not claimed", () => {
+    const h = parsedSample();
+    const outcomeA = { ...h, outcome: { ...h.outcome, label: "A" } };
+    const refused: Claims = { ...CLAIMS, R1: { ...CLAIMS.R1, status: "not claimed" } };
+    const text = plainText(render({ honesty: outcomeA, claims: refused }));
+    expect(text).toContain("Pre-registered outcome A");
+    expect(text).not.toContain(CLAIMS.R1.text);
+    expect(text).toContain("No headline claim is allowed for outcome A (docs/claims.md).");
+    const allowed: Claims = { ...CLAIMS, R1: { ...CLAIMS.R1, status: "allowed" } };
+    expect(plainText(render({ honesty: outcomeA, claims: allowed }))).toContain(`“${CLAIMS.R1.text}”`);
   });
 
   it("never calls the file a sample: it is the committed results, or nothing is shown", () => {

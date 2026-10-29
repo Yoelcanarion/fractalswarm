@@ -186,6 +186,7 @@
 }
 
 .outcome__claim {
+  max-width: 120ch;
   margin: var(--space-2) 0 0;
   font-size: var(--fs-base);
   color: var(--text-primary);
@@ -194,6 +195,18 @@
 .outcome__claim--next {
   margin-top: var(--space-1);
   color: var(--text-secondary);
+}
+
+.outcome__claim--none {
+  color: var(--text-secondary);
+}
+
+/* what docs/claims.md adds to "allowed": small print under the claim, on its own line */
+.claim__status {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--fs-label);
 }
 
 .claim__tag {
