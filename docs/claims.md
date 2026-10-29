@@ -32,7 +32,7 @@ them by accident.
 | S2 | "Any orchestrator can die mid-run, the root included, and the run still finishes." | The kill-half demo bundle: kills, successions and adoptions from its takeover report. Run ids: TBD | pending |
 | S3 | "No process manager, standby or election service." | By construction: recovery is the HRW rule over the membership in the log | allowed by construction |
 | S4 | "Zero LLM tokens spent on coordination." | Coordination tokens per run, `bench/REPORT.md` §4 (secondary table). Run ids: TBD | pending |
-| S5 | "Every run replays bit-for-bit from a hash-verified log; `fractalswarm demo --verify` needs no API key." | `demo --verify` and `replay RUN --verify` MATCH on the final bundle. Run ids: TBD | pending |
+| S5 | "Every run replays bit-for-bit from a hash-verified log; `fractalswarm demo --verify` needs no API key." | `demo --verify` and `replay RUN --verify` MATCH at the release commit, on runs recorded after the handler freeze (Sun Nov 1). The Phase 1 real runs verify at 8fddeba, not at HEAD (8ac7536 changed the email scan and the takeover keys; progress, Day 10), so they are not evidence for this claim. Run ids: TBD | pending |
 | S6 | "Shared log, not shared brain." | Description of the design; the log is a central component (stated limitation, `bench/REPORT.md` §6) | allowed, always with the limitation |
 
 ## Against the rivals (decision gate, Fri Oct 30)
