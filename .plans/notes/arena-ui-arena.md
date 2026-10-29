@@ -201,12 +201,22 @@ slot for that is queued behind the second paid block):
    need to grow if the tree re-lays out after an adoption: look at it on the final pair);
 4. on the run page the note covered the **verify badge** at the right end of the strip, not only a few pixels of the
    takeover chip as first thought: the run stage now starts under a 36 px band that holds the note;
+   the first look in a browser (below) found that the stage's own minimum height is the whole frame, so under the band it
+   was still 1080 px and the page's timeline ran 36 px out of the bottom: the run stage resets it;
 5. the `tooltip` step, used by s8 on both proof chips (`swarm-proof`, `rival-proof`); the coordinator's answer to the
    question about the hover was yes, with exactly the title words, which is why the words are read off the page.
 6. a verdict chip has no hover text until its check has come back, and on a long log that is not at once: the page does
    not start a take whose tooltips point at a chip that says nothing yet. It waits for the text, up to 30 s after
    everything else is ready (`TIP_WAIT_POLLS`), and then starts anyway: the take warns "has no hover text" and the
    recorder flags it in the sidecar.
+
+First look at the MP2 sources in a browser (Oct 29, 21:27, slot, fake pair `t2-swarm-killhalf` / `t2-central-killhalf`, a
+sample of s1, s4, s5, s6 and s8, no flag in any sidecar): the arena fits the frame with its timeline (s1, s6, s8); the
+camera stays inside the stage (s8's rival head, at the right edge); both tooltips of s8 are drawn under their chips with
+the chips' own words, the swarm's ("6 hand-overs: the heir of each, recomputed from the log, is the one the run used.")
+and the rival's (the recovery report's three checks); s5's tree fills the frame at pad 0.02 with 38 px left and right,
+the heir and the root rings land on the right nodes; the note sits in the run page's band and covers nothing. One
+thing was wrong and is fixed in the sources, to be seen again: the run stage's minimum height (above).
 
 Rule from the coordinator (Oct 29): `real` is flipped to `true` in `sources.json` in the same commit that points
 it at the final real pair, when the run ids are handed over; never before, and never by hand in a take.

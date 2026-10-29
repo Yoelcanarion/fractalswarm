@@ -173,8 +173,11 @@ html.dir-on body {
   padding-top: var(--dir-band);
 }
 
+/* The stage's own minimum is the whole frame (.dir__stage.app): without this reset it stays that tall under the band, and the
+   run page's timeline runs 36 px out of the bottom of the frame. */
 .dir[data-stage="run"] .dir__stage--fit {
   height: calc(1080px - var(--dir-band));
+  min-height: 0;
 }
 
 .dir[data-stage="run"] .dir__note {

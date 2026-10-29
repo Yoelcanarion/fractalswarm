@@ -192,7 +192,7 @@ describe("the pages that say a scene cannot be shown", () => {
     expect(read("./director.css")).toMatch(/\.dir\[data-stage="arena"\] \.dir__note \{\s*left: 24px;\s*right: auto;/);
     // the run page's strip is full: its stage starts under a band that is the note's
     expect(read("./director.css")).toMatch(/\.dir\[data-stage="run"\] \.dir__camera \{\s*padding-top: var\(--dir-band\);/);
-    expect(read("./director.css")).toMatch(/\.dir\[data-stage="run"\] \.dir__stage--fit \{\s*height: calc\(1080px - var\(--dir-band\)\);/);
+    expect(read("./director.css")).toMatch(/\.dir\[data-stage="run"\] \.dir__stage--fit \{\s*height: calc\(1080px - var\(--dir-band\)\);\s*min-height: 0;/);
   });
 
   it("says which runs a scene needs, and where to give them", () => {
