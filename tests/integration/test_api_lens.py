@@ -538,7 +538,11 @@ def test_prompts_split_into_free_text_data_and_untrusted_blocks() -> None:
         "contract_id": "c",
         "attempt": 2,
     }
-    assert call_ref("arbitrate|speaker:S1:availability|0", "")["kind"] == "arbitrate"
+    assert call_ref("arbitrate|speaker:S1:availability|2", "") == {
+        "kind": "arbitrate",
+        "key": "speaker:S1:availability",
+        "attempt": 2,
+    }
     assert call_ref(None, "") == {"kind": None}
 
 

@@ -227,6 +227,8 @@ def call_ref(tag: str | None, prompt_text: str) -> dict[str, Any]:
         }
     if kind == "ablate" and len(parts) >= 2:
         return {"kind": "ablate", "note_id": parts[1]}
+    if kind == "arbitrate" and len(parts) >= 3:  # arbitrate|<fact key>|<attempt>
+        return {"kind": "arbitrate", "key": "|".join(parts[1:-1]), "attempt": _int(parts[-1])}
     agent = AGENT_TAG.match(tag or "")
     head = CONTRACT_HEAD.search(prompt_text[:600])
     if agent and head:
