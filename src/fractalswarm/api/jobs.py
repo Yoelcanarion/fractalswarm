@@ -20,6 +20,7 @@ import asyncio
 import contextlib
 import copy
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -144,7 +145,9 @@ class JobManager:
         return self.view(job)
 
     def listing(self) -> list[dict[str, Any]]:
-        newest_first = sorted(self.jobs.values(), key=lambda j: j["created_at"], reverse=True)
+        newest_first = sorted(
+            self.jobs.values(), key=lambda j: (j["created_at"], j["id"]), reverse=True
+        )
         return [self.view(job, tail=False) for job in newest_first]
 
     def active(self) -> list[dict[str, Any]]:
@@ -251,8 +254,7 @@ class JobManager:
             "pair_id": None,
         }
         self.job_dir(job_id).mkdir(parents=True, exist_ok=False)
-        self.jobs[job_id] = job
-        return job
+        return job  # not listed until ``finish_launch``: a half-started job is never seen
 
     def run_dir(self, run_id: str, private: bool) -> Path:
         return (self.private.runs if private else self.runs_dir) / run_id
@@ -291,16 +293,19 @@ class JobManager:
         env["PYTHONIOENCODING"] = "utf-8"
         env |= extra_env or {}
         log_name = f"{role}-{run_id}.log"
-        with (self.job_dir(job["id"]) / log_name).open("ab") as log:
-            proc = subprocess.Popen(
-                [*LAUNCH, *args],
-                cwd=REPO_ROOT,
-                env=env,
-                stdin=subprocess.DEVNULL,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                **DETACHED,
-            )
+        try:
+            with (self.job_dir(job["id"]) / log_name).open("ab") as log:
+                proc = subprocess.Popen(
+                    [*LAUNCH, *args],
+                    cwd=REPO_ROOT,
+                    env=env,
+                    stdin=subprocess.DEVNULL,
+                    stdout=log,
+                    stderr=subprocess.STDOUT,
+                    **DETACHED,
+                )
+        except OSError as exc:
+            raise JobError(500, f"could not start the process: {exc}") from None
         run = {
             "run_id": run_id,
             "role": role,
@@ -316,8 +321,17 @@ class JobManager:
 
     def finish_launch(self, job: dict[str, Any], warnings: list[str]) -> dict[str, Any]:
         job["warnings"] = warnings
+        self.jobs[job["id"]] = job
         self._save(job)
         return self.view(job)
+
+    def abort_launch(self, job: dict[str, Any]) -> None:
+        """Undo a launch that failed half way: stop what started, drop the job's directory."""
+        for run in job["runs"]:
+            proc = self.procs.pop((job["id"], run["run_id"]), None)
+            if proc is not None:
+                kill_tree(proc.pid)
+        shutil.rmtree(self.job_dir(job["id"]), ignore_errors=True)
 
     # -- cancelling -------------------------------------------------------------------------
 
@@ -437,16 +451,20 @@ def launch_run(manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
         warnings = manager.check_launch(request.clock)
         label = f"{request.scenario} {request.chaos} seed {spec.seed}"
         job = manager.new_job("run", label, request.clock, False, private)
-        spec_path = write_spec(manager, job, request)
-        args = run_args(request, spec_path, run_id)
-        manager.spawn(
-            job,
-            run_id=run_id,
-            role="run",
-            scenario=request.scenario,
-            args=args,
-            private=private,
-        )
+        try:
+            spec_path = write_spec(manager, job, request)
+            args = run_args(request, spec_path, run_id)
+            manager.spawn(
+                job,
+                run_id=run_id,
+                role="run",
+                scenario=request.scenario,
+                args=args,
+                private=private,
+            )
+        except BaseException:
+            manager.abort_launch(job)
+            raise
         return manager.finish_launch(job, warnings)
 
 
@@ -482,13 +500,17 @@ def launch_intake(manager: JobManager, intake_id: str, backend: str = "fake") ->
     with manager.lock:
         warnings = manager.check_launch("sim", real=backend == "real")
         job = manager.new_job("intake", f"intake {intake_id}", "sim", backend == "real", True)
-        manager.spawn(
-            job,
-            run_id=intake_id,
-            role="intake",
-            scenario="intake",
-            args=["intake", intake_id, "--backend", backend],
-            private=True,
-            runs_dir=manager.private.intake,
-        )
+        try:
+            manager.spawn(
+                job,
+                run_id=intake_id,
+                role="intake",
+                scenario="intake",
+                args=["intake", intake_id, "--backend", backend],
+                private=True,
+                runs_dir=manager.private.intake,
+            )
+        except BaseException:
+            manager.abort_launch(job)
+            raise
         return manager.finish_launch(job, warnings)

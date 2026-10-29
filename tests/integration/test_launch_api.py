@@ -61,7 +61,9 @@ class Api:
 
 
 @pytest.fixture
-def api(tmp_path: Path) -> Api:
+def api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Api:
+    # the processes it starts inherit this environment: no ledger of the real project
+    monkeypatch.setenv("FRACTALSWARM_LEDGER_PATH", str(tmp_path / "ledger.sqlite"))
     return Api(tmp_path)
 
 
@@ -95,6 +97,7 @@ def test_a_task_runs_as_a_job_in_its_own_process(api: Api) -> None:
 
     again = JobManager(PrivateDir(api.private), api.runs, Catalog(api.runs))
     assert again.get(launched["job_id"])["state"] == "completed"  # jobs survive a restart
+    assert not (api.runs.parent / "ledger.sqlite").exists()  # a fake run never opens the ledger
 
 
 def test_the_run_replays_from_the_directory_the_job_wrote(api: Api) -> None:
@@ -144,6 +147,17 @@ def test_without_a_private_dir_the_launch_endpoints_say_so(tmp_path: Path) -> No
         assert answer.status_code == 503 and "private directory" in answer.json()["error"]
 
 
+def test_a_process_that_cannot_start_leaves_no_job_behind(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(jobs, "LAUNCH", [str(api.runs / "no-such-python")])
+    answer = api.post("/api/tasks", {"spec": FIXTURE_SPEC, "run_id": "ui-nostart"})
+    assert answer.status_code == 500 and "could not start" in answer.json()["error"]
+    assert api.get("/api/jobs").json() == []
+    assert not list((api.private / "jobs").glob("*"))
+    assert not (api.runs / "ui-nostart").exists()
+
+
 def test_a_job_that_is_not_known_is_404(api: Api) -> None:
     assert api.get("/api/jobs/nope").status_code == 404
     assert api.post("/api/jobs/nope/cancel").status_code == 404
@@ -172,6 +186,7 @@ def fake_job(manager_: JobManager, clock: str, real: bool = False) -> dict[str, 
     run = {"run_id": "x", "role": "run", "scenario": "swarm", "pid": 1, "exit_code": None}
     job["runs"].append(run | {"dir": str(manager_.runs_dir / "x"), "log": "x.log"})
     manager_.procs[(job["id"], "x")] = Alive()  # type: ignore[assignment]
+    manager_.finish_launch(job, [])
     return job
 
 
