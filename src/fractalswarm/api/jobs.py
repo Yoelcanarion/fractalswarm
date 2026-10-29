@@ -540,6 +540,7 @@ def launch_run(
                     chaos=request.chaos,
                     cross_audit=request.cross_audit,
                     feasibility_report=request.feasibility_report,
+                    live_control=True,
                     billed=real,
                 )
                 manager.spawn(
@@ -576,10 +577,12 @@ def run_args(
     cross_audit: bool = False,
     feasibility_report: bool = False,
     billed: bool = False,
+    live_control: bool = False,
 ) -> list[str]:
     """The ``fractalswarm run`` command line. ``plan`` (a ChaosPlan file) replaces ``chaos``;
     ``barrier`` parks the process after it warms up until the launcher says go; ``billed``
-    says the run spends real money: it confirms that, and never repeats a paid request."""
+    says the run spends real money: it confirms that, and never repeats a paid request;
+    ``live_control`` makes the run take a person's controls (api/controls.py sends them)."""
     args = ["run", str(spec_path), "--run-id", run_id, "--scenario", scenario]
     args += ["--chaos-plan", str(plan)] if plan is not None else ["--chaos", chaos]
     args += ["--clock", clock, "--speed", str(speed), "--backend", backend]
@@ -593,6 +596,8 @@ def run_args(
         args.append("--cross-audit")
     if feasibility_report:
         args.append("--feasibility-report")
+    if live_control:
+        args.append("--live-control")
     return args
 
 

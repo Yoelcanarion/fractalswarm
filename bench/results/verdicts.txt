@@ -1,0 +1,245 @@
+Verdicts under bench/PREREG.md (sha 25d4a75919b3); sources: rivals-gate, agent_latency_scale, agents, per-process-rivals, per-process-swarm, recovery_ms, recovery_ms_extreme, rival_recovery_ms, rival_restart_ms
+Code: 3e723a8ab0e3
+Every verdict is the swarm's: win = better by the minimum effect on every seed.
+
+Outcome B (read against durable-max, t2_conference)
+  gate C2: locality ties; ratios of the seed means, descriptive (no verdict): cdt 0.40, blast 0.34, idle 0.37
+  gate C3: locality ties; ratios of the seed means, descriptive (no verdict): cdt 0.37, blast 0.29, idle 0.47
+  recovery_ms=1000: locality ties; ratios of the seed means, descriptive (no verdict): cdt 0.95, blast 0.78, idle 0.84
+  recovery_ms=2000: locality ties; ratios of the seed means, descriptive (no verdict): cdt 0.65, blast 0.53, idle 0.77
+  recovery_ms=2500: locality ties; ratios of the seed means, descriptive (no verdict): cdt 0.26, blast 0.20, idle 0.20
+  recovery_ms=5000: locality ties; ratios of the seed means, descriptive (no verdict): cdt 0.48, blast 0.32, idle 0.62
+  recovery_ms=10000: locality ties; ratios of the seed means, descriptive (no verdict): cdt 0.35, blast 0.22, idle 0.36
+  rival_recovery_ms=500: locality fails; ratios of the seed means, descriptive (no verdict): cdt 13.20, blast 1.43, idle 25.32
+  rival_recovery_ms=1000: locality fails; ratios of the seed means, descriptive (no verdict): cdt 5.71, blast 1.11, idle 10.37
+  rival_restart_ms=0: locality ties; ratios of the seed means, descriptive (no verdict): cdt 0.48, blast 0.32, idle 0.62
+  rival_restart_ms=1000: locality holds; ratios of the seed means, descriptive (no verdict): cdt 0.28, blast 0.24, idle 0.31
+  rival_restart_ms=3000: locality holds; ratios of the seed means, descriptive (no verdict): cdt 0.19, blast 0.22, idle 0.21
+  condition: locality ties at gate (t2_conference, C2); ratios of the seed means, descriptive (no verdict): cdt 0.40, blast 0.34, idle 0.37
+  condition: locality ties at gate (t2_conference, C3); ratios of the seed means, descriptive (no verdict): cdt 0.37, blast 0.29, idle 0.47
+  condition: locality ties at recovery_ms=1000 (t2_conference, C3); ratios of the seed means, descriptive (no verdict): cdt 0.95, blast 0.78, idle 0.84
+  condition: locality ties at recovery_ms=2000 (t2_conference, C3); ratios of the seed means, descriptive (no verdict): cdt 0.65, blast 0.53, idle 0.77
+  condition: locality ties at recovery_ms=2500 (t2_conference, C3); ratios of the seed means, descriptive (no verdict): cdt 0.26, blast 0.20, idle 0.20
+  condition: locality ties at recovery_ms=5000 (t2_conference, C3); ratios of the seed means, descriptive (no verdict): cdt 0.48, blast 0.32, idle 0.62
+  condition: locality ties at recovery_ms=10000 (t2_conference, C3); ratios of the seed means, descriptive (no verdict): cdt 0.35, blast 0.22, idle 0.36
+  condition: locality fails at rival_recovery_ms=500 (t2_conference, C3); ratios of the seed means, descriptive (no verdict): cdt 13.20, blast 1.43, idle 25.32
+  condition: locality fails at rival_recovery_ms=1000 (t2_conference, C3); ratios of the seed means, descriptive (no verdict): cdt 5.71, blast 1.11, idle 10.37
+  condition: locality ties at rival_restart_ms=0 (t2_conference, C3); ratios of the seed means, descriptive (no verdict): cdt 0.48, blast 0.32, idle 0.62
+  condition: locality ties at agent_latency_scale=0.25 (t2_conference, C3), outside the plausible region; ratios of the seed means, descriptive (no verdict): cdt 0.34, blast 0.31, idle 0.34
+  condition: locality ties at agent_latency_scale=0.5 (t2_conference, C3), outside the plausible region; ratios of the seed means, descriptive (no verdict): cdt 0.45, blast 0.36, idle 0.38
+  condition: locality ties at agent_latency_scale=1 (t2_conference, C3), outside the plausible region; ratios of the seed means, descriptive (no verdict): cdt 0.48, blast 0.32, idle 0.62
+  condition: locality ties at agents=4 (t2_conference, C3), outside the plausible region; ratios of the seed means, descriptive (no verdict): cdt 1.44, blast 0.93, idle 1.32
+  condition: locality ties at agents=8 (t2_conference, C3), outside the plausible region; ratios of the seed means, descriptive (no verdict): cdt 0.94, blast 0.86, idle 1.03
+  condition: locality ties at agents=12 (t2_conference, C3), outside the plausible region; ratios of the seed means, descriptive (no verdict): cdt 0.48, blast 0.32, idle 0.62
+  condition: locality ties at agents=24 (t2_conference, C3), outside the plausible region; ratios of the seed means, descriptive (no verdict): cdt 0.50, blast 0.33, idle 0.46
+  condition: locality ties at agents=48 (t2_conference, C3), outside the plausible region; ratios of the seed means, descriptive (no verdict): cdt 0.54, blast 0.46, idle 0.53
+  condition: locality ties at recovery_ms=500 (t2_conference, C3), outside the plausible region; ratios of the seed means, descriptive (no verdict): cdt 0.74, blast 0.57, idle 0.23
+
+Hypotheses: swarm wins / ties / losses (n/a) against each rival
+  H1   Preserved work  [preserved_pct; expected: durable-max >= swarm ~ durable >> central]
+       vs durable-max    0 /  23 /   4   (0 n/a)
+       vs durable       11 /  16 /   0   (0 n/a)
+       vs central        6 /   0 /   0   (0 n/a)
+  H2   Extra cost  [extra_cost_pct; expected: swarm and durable-max tie]
+       vs durable-max    9 /  18 /   0   (0 n/a)
+       vs durable       16 /  11 /   0   (0 n/a)
+       vs central        6 /   0 /   0   (0 n/a)
+  H3   Time to recover  [ttr_own_mean_s; expected: the supervisor wins or ties]
+       vs durable-max    1 /  22 /   4   (0 n/a)
+       vs durable        1 /  22 /   4   (0 n/a)
+       vs central        0 /   6 /   0   (0 n/a)
+  H4a  Locality: coordinator-dependency time  [cdt_s; expected: swarm <= 0.5 x rival]
+       vs durable-max    8 /  17 /   2   (0 n/a)
+       vs durable       19 /   7 /   1   (0 n/a)
+       vs central        6 /   0 /   0   (0 n/a)
+  H4b  Locality: blast radius  [blast_sessions_mean_pct; expected: swarm <= 0.5 x rival]
+       vs durable-max   15 /  12 /   0   (0 n/a)
+       vs durable       19 /   8 /   0   (0 n/a)
+       vs central        6 /   0 /   0   (0 n/a)
+  H4c  Locality: idle agent-seconds  [idle_agent_s; expected: swarm <= 0.5 x rival]
+       vs durable-max    9 /  16 /   2   (0 n/a)
+       vs durable       16 /   9 /   2   (0 n/a)
+       vs central        0 /   2 /   4   (0 n/a)
+  H5   Unnecessary reassignments  [unnecessary_reassignments; expected: durable ~ 0; swarm = false deaths]
+       vs durable-max    0 /   7 /  20   (0 n/a)
+       vs durable        0 /   7 /  20   (0 n/a)
+       vs central        0 /   2 /   4   (0 n/a)
+  H6   Duplicated spend  [dup_chaos_pct; expected: durable-max = 0 <= swarm]
+       vs durable-max    0 /  26 /   1   (0 n/a)
+       vs durable        9 /  18 /   0   (0 n/a)
+       vs central        6 /   0 /   0   (0 n/a)
+  S    Stall time (reported, not a hypothesis)  [stall_s; expected: reported]
+       vs durable-max    2 /  25 /   0   (0 n/a)
+       vs durable        9 /  18 /   0   (0 n/a)
+       vs central        2 /   4 /   0   (0 n/a)
+
+The gate, default assumptions, by task and rival
+  rivals-gate, t1_extraction: swarm against durable-max, verdict (swarm / durable-max)
+    H1   preserved_pct              C1 tie   (100.00 / 100.00)  C2 tie   (100.00 / 100.00)  C3 tie*  (94.10 / 100.00)
+    H2   extra_cost_pct             C1 tie   (0.68 / 0.82)  C2 tie   (2.31 / 2.89)  C3 tie*  (5.66 / 3.04)
+    H3   ttr_own_mean_s             C1 tie*  (4.94 / 5.00)  C2 tie   (5.33 / 5.00)  C3 tie*  (5.89 / 5.00)
+    H4a  cdt_s                      C1 win   (0.00 / 10.47)  C2 win   (7.82 / 30.90)  C3 tie*  (19.04 / 37.53)
+    H4b  blast_sessions_mean_pct    C1 win   (0.00 / 54.17)  C2 win   (13.89 / 51.39)  C3 tie*  (16.67 / 43.33)
+    H4c  idle_agent_s               C1 win   (0.00 / 17.30)  C2 win   (11.26 / 60.07)  C3 tie*  (19.79 / 47.81)
+    H5   unnecessary_reassignments  C1 tie   (0.00 / 0.00)  C2 loss  (1.50 / 0.00)  C3 loss  (1.50 / 0.00)
+    H6   dup_chaos_pct              C1 tie   (0.00 / 0.00)  C2 tie   (0.00 / 0.00)  C3 tie   (0.94 / 0.00)
+    S    stall_s                    C1 tie*  (5.77 / 0.00)  C2 tie*  (1.26 / 6.25)  C3 tie*  (14.83 / 0.48)
+  rivals-gate, t1_extraction: swarm against durable, verdict (swarm / durable)
+    H1   preserved_pct              C1 win   (100.00 / 63.33)  C2 win   (100.00 / 67.33)  C3 tie*  (94.10 / 74.43)
+    H2   extra_cost_pct             C1 tie   (0.68 / 3.44)  C2 tie*  (2.31 / 9.92)  C3 tie*  (5.66 / 12.46)
+    H3   ttr_own_mean_s             C1 tie*  (4.94 / 5.00)  C2 tie   (5.33 / 5.00)  C3 tie*  (5.89 / 5.00)
+    H4a  cdt_s                      C1 win   (0.00 / 15.00)  C2 win   (7.82 / 47.34)  C3 tie*  (19.04 / 60.61)
+    H4b  blast_sessions_mean_pct    C1 win   (0.00 / 66.67)  C2 win   (13.89 / 69.44)  C3 win   (16.67 / 53.33)
+    H4c  idle_agent_s               C1 win   (0.00 / 26.24)  C2 win   (11.26 / 93.63)  C3 win   (19.79 / 75.88)
+    H5   unnecessary_reassignments  C1 tie   (0.00 / 0.00)  C2 loss  (1.50 / 0.00)  C3 loss  (1.50 / 0.00)
+    H6   dup_chaos_pct              C1 tie   (0.00 / 2.59)  C2 tie*  (0.00 / 6.89)  C3 tie*  (0.94 / 9.37)
+    S    stall_s                    C1 tie*  (5.77 / 0.92)  C2 tie   (1.26 / 1.42)  C3 tie*  (14.83 / 20.90)
+  rivals-gate, t1_extraction: swarm against central, verdict (swarm / central)
+    H1   preserved_pct              C1 win   (100.00 / 0.00)  C2 win   (100.00 / 0.00)  C3 win   (94.10 / 0.00)
+    H2   extra_cost_pct             C1 win   (0.68 / 8.21)  C2 win   (2.31 / 35.99)  C3 win   (5.66 / 65.63)
+    H3   ttr_own_mean_s             C1 tie*  (4.94 / 5.00)  C2 tie   (5.33 / 5.00)  C3 tie*  (5.89 / 5.00)
+    H4a  cdt_s                      C1 win   (0.00 / 30.00)  C2 win   (7.82 / 90.00)  C3 win   (19.04 / 138.75)
+    H4b  blast_sessions_mean_pct    C1 win   (0.00 / 100.00)  C2 win   (13.89 / 100.00)  C3 win   (16.67 / 92.50)
+    H4c  idle_agent_s               C1 tie   (0.00 / 0.00)  C2 loss  (11.26 / 0.00)  C3 loss  (19.79 / 0.00)
+    H5   unnecessary_reassignments  C1 tie   (0.00 / 0.00)  C2 loss  (1.50 / 0.00)  C3 loss  (1.50 / 0.00)
+    H6   dup_chaos_pct              C1 win   (0.00 / 7.41)  C2 win   (0.00 / 33.52)  C3 win   (0.94 / 60.93)
+    S    stall_s                    C1 tie*  (5.77 / 11.24)  C2 win   (1.26 / 15.99)  C3 tie*  (14.83 / 37.05)
+  rivals-gate, t2_conference: swarm against durable-max, verdict (swarm / durable-max)
+    H1   preserved_pct              C1 tie   (100.00 / 100.00)  C2 tie*  (93.75 / 96.88)  C3 tie   (90.53 / 94.83)
+    H2   extra_cost_pct             C1 tie*  (-3.87 / 1.20)  C2 tie*  (-2.23 / 3.88)  C3 tie*  (-1.02 / 8.37)
+    H3   ttr_own_mean_s             C1 tie   (4.69 / 5.00)  C2 tie*  (5.48 / 5.00)  C3 tie*  (5.99 / 5.00)
+    H4a  cdt_s                      C1 win   (0.00 / 5.47)  C2 tie*  (7.85 / 19.73)  C3 tie*  (12.03 / 32.86)
+    H4b  blast_sessions_mean_pct    C1 win   (0.00 / 25.00)  C2 win   (13.89 / 40.28)  C3 win   (10.83 / 37.50)
+    H4c  idle_agent_s               C1 win   (0.00 / 6.06)  C2 tie*  (10.97 / 29.42)  C3 tie*  (17.41 / 36.73)
+    H5   unnecessary_reassignments  C1 tie   (0.00 / 0.00)  C2 loss  (1.25 / 0.00)  C3 loss  (2.25 / 0.00)
+    H6   dup_chaos_pct              C1 tie   (0.00 / 0.00)  C2 tie   (0.00 / 0.00)  C3 tie   (1.34 / 0.00)
+    S    stall_s                    C1 tie*  (1.46 / 2.15)  C2 tie*  (4.93 / 9.86)  C3 tie*  (1.22 / 2.40)
+  rivals-gate, t2_conference: swarm against durable, verdict (swarm / durable)
+    H1   preserved_pct              C1 win   (100.00 / 66.67)  C2 tie*  (93.75 / 66.38)  C3 tie*  (90.53 / 68.86)
+    H2   extra_cost_pct             C1 tie*  (-3.87 / 5.16)  C2 win   (-2.23 / 13.11)  C3 win   (-1.02 / 12.99)
+    H3   ttr_own_mean_s             C1 tie   (4.69 / 5.00)  C2 tie*  (5.48 / 5.00)  C3 tie*  (5.99 / 5.00)
+    H4a  cdt_s                      C1 win   (0.00 / 12.10)  C2 win   (7.85 / 37.58)  C3 win   (12.03 / 48.83)
+    H4b  blast_sessions_mean_pct    C1 win   (0.00 / 37.50)  C2 win   (13.89 / 45.83)  C3 win   (10.83 / 32.50)
+    H4c  idle_agent_s               C1 win   (0.00 / 16.06)  C2 tie*  (10.97 / 58.99)  C3 win   (17.41 / 50.56)
+    H5   unnecessary_reassignments  C1 tie   (0.00 / 0.00)  C2 loss  (1.25 / 0.00)  C3 loss  (2.25 / 0.00)
+    H6   dup_chaos_pct              C1 tie*  (0.00 / 3.85)  C2 tie*  (0.00 / 7.84)  C3 tie*  (1.34 / 8.21)
+    S    stall_s                    C1 tie*  (1.46 / 2.52)  C2 tie*  (4.93 / 1.35)  C3 tie*  (1.22 / 13.82)
+  rivals-gate, t2_conference: swarm against central, verdict (swarm / central)
+    H1   preserved_pct              C1 win   (100.00 / 0.00)  C2 win   (93.75 / 0.00)  C3 win   (90.53 / 0.00)
+    H2   extra_cost_pct             C1 win   (-3.87 / 13.82)  C2 win   (-2.23 / 46.98)  C3 win   (-1.02 / 66.65)
+    H3   ttr_own_mean_s             C1 tie   (4.69 / 5.00)  C2 tie*  (5.48 / 5.00)  C3 tie*  (5.99 / 5.00)
+    H4a  cdt_s                      C1 win   (0.00 / 28.75)  C2 win   (7.85 / 83.75)  C3 win   (12.03 / 118.75)
+    H4b  blast_sessions_mean_pct    C1 win   (0.00 / 91.67)  C2 win   (13.89 / 88.89)  C3 win   (10.83 / 75.00)
+    H4c  idle_agent_s               C1 tie   (0.00 / 0.00)  C2 loss  (10.97 / 0.00)  C3 loss  (17.41 / 0.00)
+    H5   unnecessary_reassignments  C1 tie   (0.00 / 0.00)  C2 loss  (1.25 / 0.00)  C3 loss  (2.25 / 0.25)
+    H6   dup_chaos_pct              C1 win   (0.00 / 10.96)  C2 win   (0.00 / 44.60)  C3 win   (1.34 / 59.66)
+    S    stall_s                    C1 tie*  (1.46 / 16.03)  C2 tie*  (4.93 / 30.64)  C3 win   (1.22 / 34.27)
+
+Regime map: locality of the swarm against each rival (the verdict is PREREG 4's; the ratios are swarm / rival
+  of the seed means, descriptive, and no verdict)
+  agent_latency_scale    agent_latency_scale=0.25 t2 C3  vs durable     holds  cdt 0.26  blast 0.32  idle 0.33
+  agent_latency_scale    agent_latency_scale=0.25 t2 C3  vs durable-max ties   cdt 0.34  blast 0.31  idle 0.34
+  agent_latency_scale    agent_latency_scale=0.5  t2 C3  vs durable     holds  cdt 0.29  blast 0.33  idle 0.25
+  agent_latency_scale    agent_latency_scale=0.5  t2 C3  vs durable-max ties   cdt 0.45  blast 0.36  idle 0.38
+  agent_latency_scale    agent_latency_scale=1    t2 C3  vs durable     holds  cdt 0.28  blast 0.36  idle 0.40
+  agent_latency_scale    agent_latency_scale=1    t2 C3  vs durable-max ties   cdt 0.48  blast 0.32  idle 0.62
+  agent_latency_scale    agent_latency_scale=2    t2 C3  vs durable     holds  cdt 0.24  blast 0.27  idle 0.24
+  agent_latency_scale    agent_latency_scale=2    t2 C3  vs durable-max holds  cdt 0.23  blast 0.21  idle 0.19
+  agents                 agents=4                 t2 C3  vs durable     ties   cdt 0.80  blast 0.87  idle 1.12
+  agents                 agents=4                 t2 C3  vs durable-max ties   cdt 1.44  blast 0.93  idle 1.32
+  agents                 agents=8                 t2 C3  vs durable     ties   cdt 0.52  blast 0.69  idle 0.71
+  agents                 agents=8                 t2 C3  vs durable-max ties   cdt 0.94  blast 0.86  idle 1.03
+  agents                 agents=12                t2 C3  vs durable     holds  cdt 0.28  blast 0.36  idle 0.40
+  agents                 agents=12                t2 C3  vs durable-max ties   cdt 0.48  blast 0.32  idle 0.62
+  agents                 agents=24                t2 C3  vs durable     holds  cdt 0.33  blast 0.30  idle 0.34
+  agents                 agents=24                t2 C3  vs durable-max ties   cdt 0.50  blast 0.33  idle 0.46
+  agents                 agents=48                t2 C3  vs durable     holds  cdt 0.32  blast 0.36  idle 0.42
+  agents                 agents=48                t2 C3  vs durable-max ties   cdt 0.54  blast 0.46  idle 0.53
+ *recovery_ms            recovery_ms=1000         t2 C3  vs durable     ties   cdt 0.28  blast 0.39  idle 0.23
+ *recovery_ms            recovery_ms=1000         t2 C3  vs durable-max ties   cdt 0.95  blast 0.78  idle 0.84
+ *recovery_ms            recovery_ms=2000         t2 C3  vs durable     ties   cdt 0.30  blast 0.36  idle 0.34
+ *recovery_ms            recovery_ms=2000         t2 C3  vs durable-max ties   cdt 0.65  blast 0.53  idle 0.77
+ *recovery_ms            recovery_ms=2500         t2 C3  vs durable     ties   cdt 0.14  blast 0.20  idle 0.12
+ *recovery_ms            recovery_ms=2500         t2 C3  vs durable-max ties   cdt 0.26  blast 0.20  idle 0.20
+ *recovery_ms            recovery_ms=5000         t2 C3  vs durable     holds  cdt 0.28  blast 0.36  idle 0.40
+ *recovery_ms            recovery_ms=5000         t2 C3  vs durable-max ties   cdt 0.48  blast 0.32  idle 0.62
+ *recovery_ms            recovery_ms=10000        t2 C3  vs durable     holds  cdt 0.29  blast 0.26  idle 0.37
+ *recovery_ms            recovery_ms=10000        t2 C3  vs durable-max ties   cdt 0.35  blast 0.22  idle 0.36
+  recovery_ms            recovery_ms=20000        t2 C3  vs durable     holds  cdt 0.36  blast 0.35  idle 0.48
+  recovery_ms            recovery_ms=20000        t2 C3  vs durable-max holds  cdt 0.33  blast 0.29  idle 0.39
+  recovery_ms_extreme    recovery_ms=500          t2 C3  vs durable     ties   cdt 0.26  blast 0.33  idle 0.08
+  recovery_ms_extreme    recovery_ms=500          t2 C3  vs durable-max ties   cdt 0.74  blast 0.57  idle 0.23
+ *rival_recovery_ms      rival_recovery_ms=500    t2 C3  vs durable     fails  cdt 4.58  blast 0.83  idle 9.32
+ *rival_recovery_ms      rival_recovery_ms=500    t2 C3  vs durable-max fails  cdt 13.20  blast 1.43  idle 25.32
+ *rival_recovery_ms      rival_recovery_ms=1000   t2 C3  vs durable     ties   cdt 1.70  blast 0.56  idle 2.85
+ *rival_recovery_ms      rival_recovery_ms=1000   t2 C3  vs durable-max fails  cdt 5.71  blast 1.11  idle 10.37
+ *rival_restart_ms       rival_restart_ms=0       t2 C3  vs durable     holds  cdt 0.28  blast 0.36  idle 0.40
+ *rival_restart_ms       rival_restart_ms=0       t2 C3  vs durable-max ties   cdt 0.48  blast 0.32  idle 0.62
+ *rival_restart_ms       rival_restart_ms=1000    t2 C3  vs durable     holds  cdt 0.21  blast 0.27  idle 0.30
+ *rival_restart_ms       rival_restart_ms=1000    t2 C3  vs durable-max holds  cdt 0.28  blast 0.24  idle 0.31
+ *rival_restart_ms       rival_restart_ms=3000    t2 C3  vs durable     holds  cdt 0.18  blast 0.29  idle 0.28
+ *rival_restart_ms       rival_restart_ms=3000    t2 C3  vs durable-max holds  cdt 0.19  blast 0.22  idle 0.21
+  rivals-gate            gate                     t1 C1  vs central     holds  cdt 0.00  blast 0.00  idle -
+  rivals-gate            gate                     t1 C1  vs durable     holds  cdt 0.00  blast 0.00  idle 0.00
+  rivals-gate            gate                     t1 C1  vs durable-max holds  cdt 0.00  blast 0.00  idle 0.00
+  rivals-gate            gate                     t1 C2  vs central     ties   cdt 0.09  blast 0.14  idle -
+  rivals-gate            gate                     t1 C2  vs durable     holds  cdt 0.17  blast 0.20  idle 0.12
+  rivals-gate            gate                     t1 C2  vs durable-max holds  cdt 0.25  blast 0.27  idle 0.19
+  rivals-gate            gate                     t1 C3  vs central     ties   cdt 0.14  blast 0.18  idle -
+  rivals-gate            gate                     t1 C3  vs durable     ties   cdt 0.31  blast 0.31  idle 0.26
+  rivals-gate            gate                     t1 C3  vs durable-max ties   cdt 0.51  blast 0.38  idle 0.41
+  rivals-gate            gate                     t2 C1  vs central     holds  cdt 0.00  blast 0.00  idle -
+  rivals-gate            gate                     t2 C1  vs durable     holds  cdt 0.00  blast 0.00  idle 0.00
+  rivals-gate            gate                     t2 C1  vs durable-max holds  cdt 0.00  blast 0.00  idle 0.00
+  rivals-gate            gate                     t2 C2  vs central     ties   cdt 0.09  blast 0.16  idle -
+  rivals-gate            gate                     t2 C2  vs durable     holds  cdt 0.21  blast 0.30  idle 0.19
+  rivals-gate            gate                     t2 C2  vs durable-max ties   cdt 0.40  blast 0.34  idle 0.37
+  rivals-gate            gate                     t2 C3  vs central     ties   cdt 0.10  blast 0.14  idle -
+  rivals-gate            gate                     t2 C3  vs durable     holds  cdt 0.25  blast 0.33  idle 0.34
+  rivals-gate            gate                     t2 C3  vs durable-max ties   cdt 0.37  blast 0.29  idle 0.47
+  (* in the plausible region)
+
+False deaths: live coordinators a detector gave away (the supervisors have none)
+  agent_latency_scale    agent_latency_scale=0.25 t2 C3  swarm 1.67 per run (most 3, 3 runs), $0.0052 paid twice; supervisors most 0
+  agent_latency_scale    agent_latency_scale=0.5  t2 C3  swarm 1.00 per run (most 1, 3 runs), $0.0032 paid twice; supervisors most 0
+  agent_latency_scale    agent_latency_scale=1    t2 C3  swarm 2.33 per run (most 4, 3 runs), $0.0011 paid twice; supervisors most 0
+  agent_latency_scale    agent_latency_scale=2    t2 C3  swarm 2.33 per run (most 3, 3 runs), $0.0008 paid twice; supervisors most 0
+  agents                 agents=4                 t2 C3  swarm 1.00 per run (most 3, 3 runs), $0.0104 paid twice; supervisors most 0
+  agents                 agents=8                 t2 C3  swarm 1.67 per run (most 4, 3 runs), $0.0014 paid twice; supervisors most 0
+  agents                 agents=12                t2 C3  swarm 2.33 per run (most 4, 3 runs), $0.0011 paid twice; supervisors most 0
+  agents                 agents=24                t2 C3  swarm 1.67 per run (most 2, 3 runs), $0.0018 paid twice; supervisors most 0
+  agents                 agents=48                t2 C3  swarm 2.33 per run (most 3, 3 runs), $0.0006 paid twice; supervisors most 0
+  recovery_ms            recovery_ms=1000         t2 C3  swarm 12.67 per run (most 19, 3 runs), $0.0141 paid twice; supervisors most 0
+  recovery_ms            recovery_ms=2000         t2 C3  swarm 4.67 per run (most 6, 3 runs), $0.0319 paid twice; supervisors most 0
+  recovery_ms            recovery_ms=2500         t2 C3  swarm 1.33 per run (most 2, 3 runs), $0.0007 paid twice; supervisors most 0
+  recovery_ms            recovery_ms=5000         t2 C3  swarm 2.33 per run (most 4, 3 runs), $0.0011 paid twice; supervisors most 0
+  recovery_ms            recovery_ms=10000        t2 C3  swarm 0.33 per run (most 1, 3 runs), $0.0010 paid twice; supervisors most 0
+  recovery_ms            recovery_ms=20000        t2 C3  swarm 0.67 per run (most 1, 3 runs), $0.0046 paid twice; supervisors most 0
+  recovery_ms_extreme    recovery_ms=500          t2 C3  swarm 24.67 per run (most 28, 3 runs), $0.0959 paid twice; supervisors most 0
+  rival_recovery_ms      rival_recovery_ms=500    t2 C3  swarm 2.33 per run (most 4, 3 runs), $0.0011 paid twice; supervisors most 0
+  rival_recovery_ms      rival_recovery_ms=1000   t2 C3  swarm 2.33 per run (most 4, 3 runs), $0.0011 paid twice; supervisors most 0
+  rival_restart_ms       rival_restart_ms=0       t2 C3  swarm 2.33 per run (most 4, 3 runs), $0.0011 paid twice; supervisors most 0
+  rival_restart_ms       rival_restart_ms=1000    t2 C3  swarm 2.33 per run (most 4, 3 runs), $0.0011 paid twice; supervisors most 0
+  rival_restart_ms       rival_restart_ms=3000    t2 C3  swarm 2.33 per run (most 4, 3 runs), $0.0011 paid twice; supervisors most 0
+  rivals-gate            gate                     t1 C1  swarm 0.00 per run (most 0, 4 runs), $0.0000 paid twice; supervisors most 0
+  rivals-gate            gate                     t1 C2  swarm 1.50 per run (most 2, 4 runs), $0.0000 paid twice; supervisors most 0
+  rivals-gate            gate                     t1 C3  swarm 1.50 per run (most 3, 4 runs), $0.0017 paid twice; supervisors most 0
+  rivals-gate            gate                     t2 C1  swarm 0.00 per run (most 0, 4 runs), $0.0000 paid twice; supervisors most 0
+  rivals-gate            gate                     t2 C2  swarm 1.25 per run (most 2, 4 runs), $0.0000 paid twice; supervisors most 0
+  rivals-gate            gate                     t2 C3  swarm 2.25 per run (most 4, 4 runs), $0.0050 paid twice; supervisors most 0
+
+Per process, t2_conference: expected impact per hour = rate x sum over levels
+  swarm level 0 x1 (o0; 4 runs, 0 skipped): cdt_s 0.00, idle_agent_s 0.00, ttr_own_mean_s 5.62, blast_agents_mean_pct 0.00
+  swarm level 1 x3 (o1, o2, o3; 12 runs, 0 skipped): cdt_s 0.00, idle_agent_s 0.00, ttr_own_mean_s 4.62, blast_agents_mean_pct 0.00
+  swarm level 2 x6 (o1.1, o1.2, o2.1, o2.2, o3.1, o3.2; 24 runs, 0 skipped): cdt_s 1.29, idle_agent_s 2.57, ttr_own_mean_s 4.62, blast_agents_mean_pct 8.33
+  swarm expected: cdt_s 7.71, idle_agent_s 15.42, ttr_own_mean_s 47.25, blast_agents_mean_pct 50.00
+  durable-max (one o0): cdt_s 8.55, idle_agent_s 17.10, ttr_own_mean_s 5.00, blast_agents_mean_pct 50.00
+    ratio swarm / durable-max: cdt_s 0.90 (comparable), idle_agent_s 0.90 (comparable), ttr_own_mean_s 9.45 (rival lower), blast_agents_mean_pct 1.00 (comparable)
+  durable (one o0): cdt_s 9.13, idle_agent_s 18.25, ttr_own_mean_s 5.00, blast_agents_mean_pct 50.00
+    ratio swarm / durable: cdt_s 0.84 (comparable), idle_agent_s 0.84 (comparable), ttr_own_mean_s 9.45 (rival lower), blast_agents_mean_pct 1.00 (comparable)
+  central (one o0): cdt_s 30.00, idle_agent_s 0.00, ttr_own_mean_s 5.00, blast_agents_mean_pct 100.00
+    ratio swarm / central: cdt_s 0.26 (swarm lower), idle_agent_s - (rival lower), ttr_own_mean_s 9.45 (rival lower), blast_agents_mean_pct 0.50 (swarm lower)
+
+wrote bench\results\honesty.json
+      bench\results\regime.png
+      bench\results\regime.json

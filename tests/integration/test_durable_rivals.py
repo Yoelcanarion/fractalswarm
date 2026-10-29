@@ -10,10 +10,12 @@ guard that they keep at least as much work as the process-tree baseline they rep
 """
 
 import asyncio
+import json
 from collections import Counter
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
 from fractalswarm.actors.orchestrator import heartbeat_interval_ms
 from fractalswarm.actors.swarm import CENTRAL, DURABLE, DURABLE_MAX, PIPELINE, SINGLE, SWARM
@@ -22,10 +24,13 @@ from fractalswarm.baselines.supervisor import RESTART_TAG
 from fractalswarm.bench.profiles import RESTART_DELAY_MS, half_the_brains_plan
 from fractalswarm.bench.scoring import load_events, score_run
 from fractalswarm.bench.workflows import fake_backend
+from fractalswarm.cli import app as cli
 from fractalswarm.comms.chaos import ChaosAction, ChaosPlan, build_plan, plan_from
 from fractalswarm.kernel.events import Event
 from fractalswarm.planning.taskspec import TaskSpec, run_params
 from fractalswarm.runs import record_run, replay_run
+from fractalswarm.verify.recovery import analyze as recovery_report
+from fractalswarm.verify.recovery import check_run
 
 REPO = Path(__file__).resolve().parents[2]
 TASKSPEC = REPO / "tasks" / "examples" / "t2-conference.yaml"
@@ -366,3 +371,144 @@ def test_the_swarm_declares_a_dead_member_dead_within_the_detection_time_it_is_g
         assert 1000 <= delay <= 2400, (death.payload["member"], delay)
     spawned = [e for e in of(log, "actor.spawned") if e.payload["actor_id"] == "o0"]
     assert spawned[0].payload["args"]["detect_ms"] == 2000
+
+
+# -- the recovery check reads these runs -------------------------------------------------
+
+CHECKS_THAT_APPLY = {
+    "swarm": {"no_repeat"},
+    "central": {"restarted", "quiet", "no_repeat"},
+    "durable-max": {"restarted", "quiet", "consumed", "own_calls", "no_repeat"},
+    "durable": {"restarted", "quiet", "consumed", "own_calls", "no_repeat"},
+}
+
+
+def violations(events: list[Event], check: str) -> list[str]:
+    """The kinds of violation ``fractalswarm recovery`` finds in a (tampered) log."""
+    report = recovery_report(events)
+    return [v.kind for c in report.checks if c.name == check for v in c.violations]
+
+
+def without(events: list[Event], dropped: Event) -> list[Event]:
+    return [e for e in events if e.seq != dropped.seq]
+
+
+def test_the_recovery_check_holds_on_every_system_and_applies_what_each_one_promises(
+    arena: dict[str, Path],
+) -> None:
+    for mode, run in arena.items():
+        report = check_run(run)
+        assert report.system == mode and report.supervised == (mode != "swarm"), mode
+        assert {c.name for c in report.checks if c.applies} == CHECKS_THAT_APPLY[mode], mode
+        assert report.ok, (mode, [v.detail for c in report.checks for v in c.violations])
+        assert report.metrics.crashes == 5 and len(report.metrics.outages) == 5, mode
+
+
+@pytest.mark.parametrize("mode", DURABLE_MODES)
+def test_the_recovery_check_reports_each_restart_it_finds(
+    arena: dict[str, Path], mode: str
+) -> None:
+    report = check_run(arena[mode])
+    assert [r.crash for r in report.restarts] == [1, 2, 3, 4, 5]
+    assert all(r.down_s == r.announced_s == RESTART_DELAY_MS / 1000 for r in report.restarts)
+    assert all(r.workers_stopped == 0 for r in report.restarts)
+    assert sum(r.results_logged for r in report.restarts) > 0
+    assert all(r.results_consumed == r.results_logged for r in report.restarts)
+    in_flight = sum(r.own_in_flight for r in report.restarts)
+    cancelled = sum(r.own_cancelled for r in report.restarts)
+    assert in_flight > 0 and cancelled == (in_flight if mode == "durable" else 0)
+
+
+def test_the_process_tree_restart_respawns_the_workers_it_stopped(arena: dict[str, Path]) -> None:
+    report = check_run(arena["central"])
+    assert [r.workers_stopped for r in report.restarts] == [12] * 5
+    assert report.ok, "the respawn after the restart timer is not the coordinator's doing"
+
+
+def test_a_coordinator_that_acts_while_down_is_caught(arena: dict[str, Path]) -> None:
+    log = load_events(arena["durable-max"])
+    crashed, restarted, _ = outages(log)[0]
+    sent = next(e for e in during(log, crashed, restarted) if e.type == "msg.sent")
+    forged = [e.model_copy(update={"actor": "o0"}) if e.seq == sent.seq else e for e in log]
+    assert violations(forged, "quiet") == ["authored-while-down"]
+    assert violations(log, "quiet") == []
+
+
+def test_a_result_logged_while_down_that_is_never_consumed_is_caught(
+    arena: dict[str, Path],
+) -> None:
+    log = load_events(arena["durable-max"])
+    crashed, restarted, adopted = next(o for o in outages(log) if o[2].payload["results"])
+    result = next(
+        e
+        for e in during(log, crashed, restarted)
+        if e.type == "msg.sent" and e.payload["topic"] == "contract.result"
+    )
+    body = result.payload["body"]
+    consumed = next(
+        e
+        for e in of(log, "contract.completed")
+        if e.seq > restarted.seq
+        and (e.payload["goal_id"], e.payload["contract_id"], e.payload["attempt"])
+        == (body["goal_id"], body["contract_id"], body["attempt"])
+    )
+    assert violations(without(log, consumed), "consumed") == ["result-not-consumed"]
+    unnamed = adopted.model_copy(update={"payload": adopted.payload | {"results": []}})
+    swapped = [unnamed if e.seq == adopted.seq else e for e in log]
+    assert set(violations(swapped, "consumed")) == {"adoption-mismatch"}
+
+
+def test_a_durable_max_that_loses_an_own_call_is_caught(arena: dict[str, Path]) -> None:
+    # The durable log, told it is a durable-max: its cancelled plan and judge calls are a fault.
+    log = load_events(arena["durable"])
+    started = of(log, "run.started")[0]
+    payload = started.payload | {"scenario": "fractalswarm.actors.swarm:DURABLE_MAX"}
+    claimed = [
+        e.model_copy(update={"payload": payload}) if e.seq == started.seq else e for e in log
+    ]
+    found = violations(claimed, "own_calls")
+    assert found and set(found) == {"own-call-cancelled"}
+    assert violations(log, "own_calls") == []
+
+
+def test_a_durable_that_keeps_an_own_call_it_should_have_lost_is_caught(
+    arena: dict[str, Path],
+) -> None:
+    log = load_events(arena["durable"])
+    cancelled = next(
+        e for e in of(log, "effect.cancelled") if e.actor == "o0" and e.payload["kind"] != "timer"
+    )
+    # The call it kept stays in flight in the log, so every later crash sees it as well.
+    found = violations(without(log, cancelled), "own_calls")
+    assert found and set(found) == {"own-calls-mismatch"}
+
+
+def test_an_attempt_dispatched_twice_is_caught_in_a_swarm_log_too(arena: dict[str, Path]) -> None:
+    for mode in ("swarm", "durable-max"):
+        log = load_events(arena[mode])
+        sent = of(log, "contract.dispatched")[0]
+        again = sent.model_copy(update={"seq": log[-1].seq + 1, "idem_key": "again"})
+        assert "contract-redispatched" in violations([*log, again], "no_repeat"), mode
+        assert violations(log, "no_repeat") == [], mode
+
+
+def test_a_crash_with_no_restart_in_the_log_is_caught(arena: dict[str, Path]) -> None:
+    log = load_events(arena["durable"])
+    last = of(log, "baseline.restarted")[-1]
+    assert violations(without(log, last), "restarted") == ["no-restart"]
+
+
+def test_the_commands_send_a_supervisor_log_to_recovery(arena: dict[str, Path], tmp_path) -> None:
+    runner = CliRunner()
+    for mode in ("central", *DURABLE_MODES):
+        told = runner.invoke(cli, ["takeover", str(arena[mode])])
+        assert told.exit_code == 2, mode
+        assert "supervisor log: use `fractalswarm recovery" in told.output, mode
+        assert "VIOLATION" not in told.output, mode
+        shown = runner.invoke(cli, ["recovery", str(arena[mode]), "--json", str(tmp_path / mode)])
+        assert shown.exit_code == 0 and "RECOVERY OK" in shown.output, shown.output
+        saved = json.loads((tmp_path / mode).read_text(encoding="utf-8"))
+        assert saved["system"] == mode and saved["ok"] is True
+        assert [c["name"] for c in saved["checks"]][0] == "restarted"
+    kills = runner.invoke(cli, ["takeover", str(arena["swarm"])])
+    assert kills.exit_code == 0, kills.output  # a swarm log is still read by takeover

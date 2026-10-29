@@ -348,8 +348,8 @@ describe("the takeover chip", () => {
     await run.getState().runTakeover();
     return text(render(run, TakeoverChip));
   };
-  const counted = { ok: true, violations: [], heirs: 0, adoptions: 0, kills: 0 };
-  const uncounted = { ok: true, violations: [], heirs: null, adoptions: null, kills: null };
+  const counted = { ok: true, violations: [], heirs: 0, reclaims: 0, adoptions: 0, kills: 0 };
+  const uncounted = { ok: true, violations: [], heirs: null, reclaims: null, adoptions: null, kills: null };
   /** A log in which a goal changed hands. */
   const handedOver = (): RunEvent[] => {
     const s = new Stream().at(0).emit("run.started", "@kernel", { seed: "0", scenario: "t", params: {}, clock: "sim" });
@@ -358,7 +358,7 @@ describe("the takeover chip", () => {
   };
 
   it("says Takeover OK when every heir checks out", async () => {
-    expect(await chip(async () => ({ ...counted, heirs: 6, adoptions: 5, kills: 5 }))).toBe("Takeover OK ✓ 6 heirs");
+    expect(await chip(async () => ({ ...counted, heirs: 6, adoptions: 5, kills: 5 }))).toBe("Takeover OK ✓ 6 hand-overs");
   });
 
   it("does not claim a takeover that never happened", async () => {

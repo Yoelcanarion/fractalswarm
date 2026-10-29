@@ -8,6 +8,10 @@
 - ``"channel_breakers"``: the bus's channel and topic-storm breakers on every orchestrator's
   endpoint (``comms/channel_breakers.py``): ``True``, or a dict of ``GuardPolicy`` overrides
   (default: the spec's ``channel_breakers``, off). Nothing is recorded for a run without it;
+- ``"live_control"``: the run was launched to take a person's controls (``control.injected``;
+  the API sets it, ``fractalswarm run --live-control``): a kill at a progress point, and the
+  root plan held for approval when the TaskSpec says ``auto_approve: false``. Absent, the run
+  ignores such controls;
 - ``"market"``: the economy's settings (``planning/taskspec.py: market_params``). Present
   only when the epoch auction or autoscale is on; a log without it replays as off;
 - ``"arbitration"``: Wonder rules a semantic dispute between two contracts' facts at the lowest
@@ -162,6 +166,12 @@ class SwarmScenario:
             args["audit"] = True
         if bool(params.get("feasibility_report", spec.get("feasibility_report"))):
             args["feasibility"] = True
+        # A run launched to take a person's controls (the API's) holds the root plan for the
+        # person when the TaskSpec says auto_approve: false. A run that cannot get an answer
+        # never waits for one.
+        live = bool(params.get("live_control"))
+        if live and spec.get("auto_approve", True) is False:
+            args["human_approval"] = True
         arbitration = bool(params.get("arbitration", spec.get("arbitration")))
         if arbitration:
             if spec["task"] not in TASK_HOOKS:
@@ -186,6 +196,8 @@ class SwarmScenario:
                 "crash_mode": "signal" if self.mode in CENTRAL_MODES else "stop",
                 "expected_work": expected_contracts(spec["task"], params["corpus"]),
             }
+            if live:
+                monkey["live_control"] = True
             commands.append(Spawn(actor_id=CHAOS, kind=CHAOS, args=monkey))
         return commands
 

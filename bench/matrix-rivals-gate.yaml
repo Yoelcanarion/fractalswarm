@@ -1,0 +1,19 @@
+# The $0 gate v2 (arena spec §C.1, backend-design §3): the swarm against the durable
+# supervisors and today's in-process supervisor, on both tasks at C0-C3, with the fake LLM on
+# calibrated latencies (config/fake_calibration.json) and the sim clock. 4 x 2 x 4 x 4 = 128 runs.
+#   uv run fractalswarm bench bench/matrix-rivals-gate.yaml --fake
+#   uv run fractalswarm bench verdicts bench/results/rivals-gate --prereg
+# Fake only: it makes no real call. The rules that read it are bench/PREREG.md, committed first.
+# `central` is the in-process supervisor (a crash stops its workers); durable-max and durable
+# are the arena's rivals (workers survive; durable loses its own plan and judge calls in flight).
+name: rivals-gate
+workflows: [swarm, durable-max, durable, central]
+tasks: [t2_conference, t1_extraction]
+profiles: [C0, C1, C2, C3]
+seeds: [1, 2, 3, 4]
+contributor: false
+out_dir: results/rivals-gate
+chart_task: t2_conference
+notes: >
+  Fake LLM, sim clock, $0. The same crash points, agent kills, network and API fault seeds for
+  every workflow (arena spec §A). Detection is 5 s for everyone and the rivals restart at once.

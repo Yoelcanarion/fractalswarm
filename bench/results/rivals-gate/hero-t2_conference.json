@@ -1,0 +1,540 @@
+{
+  "panels": [
+    {
+      "label": "Stall time (s)",
+      "metric": "stall_s",
+      "note": "no agent work in flight anywhere"
+    },
+    {
+      "label": "Extra cost vs C0 (%)",
+      "metric": "extra_cost_pct",
+      "note": "same workflow, task and seed"
+    },
+    {
+      "label": "Completion (%)",
+      "metric": "completion_rate",
+      "note": ""
+    },
+    {
+      "label": "Validity (%)",
+      "metric": "validity_rate",
+      "note": ""
+    },
+    {
+      "label": "Coordination tokens / run",
+      "metric": "coordination_tokens",
+      "note": "LLM tokens spent on coordination"
+    }
+  ],
+  "series": {
+    "central": {
+      "color": "#eb6834",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3203434375,
+          "cost_usd_max": 0.391778,
+          "cost_usd_min": 0.28371225,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/central__t2_conference__C0__s1",
+            "runs/central__t2_conference__C0__s2",
+            "runs/central__t2_conference__C0__s3",
+            "runs/central__t2_conference__C0__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 0.18275,
+          "stall_s_max": 0.731,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.36326075,
+          "cost_usd_max": 0.42025,
+          "cost_usd_min": 0.32761675,
+          "extra_cost_pct": 13.818675684449579,
+          "extra_cost_pct_max": 19.455003721980006,
+          "extra_cost_pct_min": 7.267381016800329,
+          "profile": "C1",
+          "runs": [
+            "runs/central__t2_conference__C1__s1",
+            "runs/central__t2_conference__C1__s2",
+            "runs/central__t2_conference__C1__s3",
+            "runs/central__t2_conference__C1__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 16.0305,
+          "stall_s_max": 49.122,
+          "stall_s_min": 5.0,
+          "validity_rate": 75.0,
+          "x": 1
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.4709409375,
+          "cost_usd_max": 0.57568175,
+          "cost_usd_min": 0.398187,
+          "extra_cost_pct": 46.9806296894257,
+          "extra_cost_pct_max": 53.408603259112,
+          "extra_cost_pct_min": 36.898471101515156,
+          "profile": "C2",
+          "runs": [
+            "runs/central__t2_conference__C2__s1",
+            "runs/central__t2_conference__C2__s2",
+            "runs/central__t2_conference__C2__s3",
+            "runs/central__t2_conference__C2__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 30.64275,
+          "stall_s_max": 72.002,
+          "stall_s_min": 15.841,
+          "validity_rate": 100.0,
+          "x": 3
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.536768875,
+          "cost_usd_max": 0.705875,
+          "cost_usd_min": 0.43370575,
+          "extra_cost_pct": 66.64739230304318,
+          "extra_cost_pct_max": 80.17218935213309,
+          "extra_cost_pct_min": 49.10997617435014,
+          "profile": "C3",
+          "runs": [
+            "runs/central__t2_conference__C3__s1",
+            "runs/central__t2_conference__C3__s2",
+            "runs/central__t2_conference__C3__s3",
+            "runs/central__t2_conference__C3__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 34.27275,
+          "stall_s_max": 53.41,
+          "stall_s_min": 25.823,
+          "validity_rate": 75.0,
+          "x": 5
+        }
+      ]
+    },
+    "durable": {
+      "color": "#6250d6",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3203434375,
+          "cost_usd_max": 0.391778,
+          "cost_usd_min": 0.28371225,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/durable__t2_conference__C0__s1",
+            "runs/durable__t2_conference__C0__s2",
+            "runs/durable__t2_conference__C0__s3",
+            "runs/durable__t2_conference__C0__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 0.18275,
+          "stall_s_max": 0.731,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.33561831249999996,
+          "cost_usd_max": 0.39318125,
+          "cost_usd_min": 0.2967785,
+          "extra_cost_pct": 5.16291898430545,
+          "extra_cost_pct_max": 11.551486438632617,
+          "extra_cost_pct_min": 0.358174782657517,
+          "profile": "C1",
+          "runs": [
+            "runs/durable__t2_conference__C1__s1",
+            "runs/durable__t2_conference__C1__s2",
+            "runs/durable__t2_conference__C1__s3",
+            "runs/durable__t2_conference__C1__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 2.5195,
+          "stall_s_max": 10.078,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 1
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3606565,
+          "cost_usd_max": 0.41865474999999996,
+          "cost_usd_min": 0.32837675,
+          "extra_cost_pct": 13.109918064059533,
+          "extra_cost_pct_max": 17.718565097657667,
+          "extra_cost_pct_min": 6.860198888145824,
+          "profile": "C2",
+          "runs": [
+            "runs/durable__t2_conference__C2__s1",
+            "runs/durable__t2_conference__C2__s2",
+            "runs/durable__t2_conference__C2__s3",
+            "runs/durable__t2_conference__C2__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 1.3515000000000001,
+          "stall_s_max": 2.052,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 3
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3607669375,
+          "cost_usd_max": 0.4304665,
+          "cost_usd_min": 0.3094165,
+          "extra_cost_pct": 12.989944257020742,
+          "extra_cost_pct_max": 27.872572310675476,
+          "extra_cost_pct_min": 5.152125020435179,
+          "profile": "C3",
+          "runs": [
+            "runs/durable__t2_conference__C3__s1",
+            "runs/durable__t2_conference__C3__s2",
+            "runs/durable__t2_conference__C3__s3",
+            "runs/durable__t2_conference__C3__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 13.821,
+          "stall_s_max": 42.18,
+          "stall_s_min": 1.376,
+          "validity_rate": 100.0,
+          "x": 5
+        }
+      ]
+    },
+    "durable-max": {
+      "color": "#008300",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3203434375,
+          "cost_usd_max": 0.391778,
+          "cost_usd_min": 0.28371225,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/durable-max__t2_conference__C0__s1",
+            "runs/durable-max__t2_conference__C0__s2",
+            "runs/durable-max__t2_conference__C0__s3",
+            "runs/durable-max__t2_conference__C0__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 0.18275,
+          "stall_s_max": 0.731,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3234056875,
+          "cost_usd_max": 0.38343225,
+          "cost_usd_min": 0.28371225,
+          "extra_cost_pct": 1.204483049738263,
+          "extra_cost_pct_max": 5.353895132760093,
+          "extra_cost_pct_min": -2.130224259657265,
+          "profile": "C1",
+          "runs": [
+            "runs/durable-max__t2_conference__C1__s1",
+            "runs/durable-max__t2_conference__C1__s2",
+            "runs/durable-max__t2_conference__C1__s3",
+            "runs/durable-max__t2_conference__C1__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 2.14775,
+          "stall_s_max": 4.151,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 1
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3329101875,
+          "cost_usd_max": 0.40570249999999997,
+          "cost_usd_min": 0.2934595,
+          "extra_cost_pct": 3.8768754197338473,
+          "extra_cost_pct_max": 7.555936835856728,
+          "extra_cost_pct_min": 0.8926883103041645,
+          "profile": "C2",
+          "runs": [
+            "runs/durable-max__t2_conference__C2__s1",
+            "runs/durable-max__t2_conference__C2__s2",
+            "runs/durable-max__t2_conference__C2__s3",
+            "runs/durable-max__t2_conference__C2__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 9.85725,
+          "stall_s_max": 34.668,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 3
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3468034375,
+          "cost_usd_max": 0.4241955,
+          "cost_usd_min": 0.30817675,
+          "extra_cost_pct": 8.36692412762836,
+          "extra_cost_pct_max": 13.418860425698705,
+          "extra_cost_pct_min": 3.1513822116338566,
+          "profile": "C3",
+          "runs": [
+            "runs/durable-max__t2_conference__C3__s1",
+            "runs/durable-max__t2_conference__C3__s2",
+            "runs/durable-max__t2_conference__C3__s3",
+            "runs/durable-max__t2_conference__C3__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 2.404,
+          "stall_s_max": 7.886,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 5
+        }
+      ]
+    },
+    "swarm": {
+      "color": "#2a78d6",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.32673518749999997,
+          "cost_usd_max": 0.388767,
+          "cost_usd_min": 0.29353,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/swarm__t2_conference__C0__s1",
+            "runs/swarm__t2_conference__C0__s2",
+            "runs/swarm__t2_conference__C0__s3",
+            "runs/swarm__t2_conference__C0__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 0.60225,
+          "stall_s_max": 1.903,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3146016875,
+          "cost_usd_max": 0.39253275,
+          "cost_usd_min": 0.28449475,
+          "extra_cost_pct": -3.873778039989359,
+          "extra_cost_pct_max": 1.0265560590058826,
+          "extra_cost_pct_min": -11.88586206683207,
+          "profile": "C1",
+          "runs": [
+            "runs/swarm__t2_conference__C1__s1",
+            "runs/swarm__t2_conference__C1__s2",
+            "runs/swarm__t2_conference__C1__s3",
+            "runs/swarm__t2_conference__C1__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 1.4589999999999999,
+          "stall_s_max": 2.247,
+          "stall_s_min": 0.518,
+          "validity_rate": 100.0,
+          "x": 1
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3194786875,
+          "cost_usd_max": 0.37982525,
+          "cost_usd_min": 0.28095425,
+          "extra_cost_pct": -2.230596025554988,
+          "extra_cost_pct_max": 0.5372534323578493,
+          "extra_cost_pct_min": -6.779185810875263,
+          "profile": "C2",
+          "runs": [
+            "runs/swarm__t2_conference__C2__s1",
+            "runs/swarm__t2_conference__C2__s2",
+            "runs/swarm__t2_conference__C2__s3",
+            "runs/swarm__t2_conference__C2__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 4.9345,
+          "stall_s_max": 16.146,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 3
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.32427893750000003,
+          "cost_usd_max": 0.401935,
+          "cost_usd_min": 0.2819745,
+          "extra_cost_pct": -1.015565510426519,
+          "extra_cost_pct_max": 3.3871187626521833,
+          "extra_cost_pct_min": -6.440666156246601,
+          "profile": "C3",
+          "runs": [
+            "runs/swarm__t2_conference__C3__s1",
+            "runs/swarm__t2_conference__C3__s2",
+            "runs/swarm__t2_conference__C3__s3",
+            "runs/swarm__t2_conference__C3__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 1.224,
+          "stall_s_max": 4.611,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 5
+        }
+      ]
+    }
+  },
+  "task": "t2_conference",
+  "title": "rivals-gate",
+  "x": [
+    0,
+    1,
+    3,
+    5
+  ],
+  "x_label": "Coordinators killed"
+}

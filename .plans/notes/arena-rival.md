@@ -77,5 +77,119 @@ Arena plan, seed 1, all four runs finish `ok` with 0 hard violations and replay 
 
 The swarm's five kills were `o0`, `o3.2`, `o3.1`, `o1.1`, `o1.2`: no crash was skipped. In this run `durable-max` makes the same number of calls as the swarm and shows no stall, so a comparison with it cannot rest on those two numbers; it rests on the other metrics (Part 2).
 
+## Part 2: metrics, knobs, checker (no new event, no payload field changed)
+
+### What was built
+- `bench/recovery.py`: every recovery metric, as pure functions of the log with one rule for swarm and supervisor logs. The module docstring is the definition, with the exact event boundaries: outage windows, `ttr_own_s` and `ttr_drain_s`, wait intervals, `cdt_s`, `blocked_total_s`, blast radius (sessions and agents), exposure, idle agent-seconds (the session reading is primary, `own` and `wide` bracket it), unnecessary reassignments (and false-death remaps), duplicated work split by cause (`coordinator_crash`, `agent_kill`, `false_death`, `other`) and preserved work.
+- Wiring: `RunMetrics` fields (defaults, never logged), `score_run` columns and `RESULT_COLUMNS` in `harness.py`, `Matrix.knobs` and `Cell.knobs` in `registry.py` (`knobs` column `a=1;b=0.5`), `cell_backend` in `bench/workflows.py`, a per-role latency scale in `llm/calibrate.py` (`agent_latency_scale`).
+- `bench rescore OUT`: recomputes the metrics of the cells on disk from their logs, at $0. A cell whose run directory is gone keeps its old metrics and is reported; a pre-arena number that moves is printed as MOVED (exit 1 only if a cell failed to score).
+- `verify/recovery.py` and `fractalswarm recovery RUN [--json]`: a table per crash, and the supervisor checks: `restarted`, `quiet` (o0 authors only timers, plus the respawn of the workers a process-tree crash stopped), `consumed` (durable: every result logged while down is consumed after the restart, and `supervisor.adopted.results` is exactly that set), `own_calls` (durable-max cancels no own call; durable cancels exactly the calls in flight), `no_repeat` (no call paid twice, no contract dispatched twice). Exit 1 on a violation.
+- `fractalswarm takeover RUN` on a supervisor log (`baseline.crashed` present) exits **2** and says to use `recovery` (`verify/takeover.py`: `SupervisorLog`, `is_supervisor_log`, `duplicates_of`). On a swarm log it is unchanged.
+- CLI: `bench` is now a group (`bench MATRIX.yaml` still means `bench run MATRIX.yaml`): `run`, `rescore`, `verdicts`.
+
+### Checked on the recorded arena runs (fake LLM, seed 1, T2, arena plan)
+`recovery` is green on all four: durable-max (6 results consumed, 0 own cancelled), durable (5 in flight, 5 cancelled), central (12 workers stopped per crash, `quiet` holds with the respawn allowance) and swarm (`no_repeat` only).
+
+## Part 3: protocol tooling
+
+### What was built
+- `bench/PREREG.md`: the hypotheses H1-H6 (H4 read as H4a cdt, H4b blast, H4c idle), the minimum effects, the tie rule, the failure models, the decision rules of spec §C.4. **Amended in place on Thu Oct 29 before any gate run, on the coordinator's review:** `rival_recovery_ms` 0.5 s joined the plausible region, and §5 states the C3 fault profile and the false-death asymmetry in the swarm's detector (§9 records both). Its SHA is `blake2b(digest_size=6)` of the file with line endings normalised; honesty.json and regime.json carry it.
+- `bench/verdicts.py` and `fractalswarm bench verdicts OUT... [--prereg] [--json PATH]`: applies PREREG mechanically to results dirs (a dir with `cells/`, a `results.json`, or a dir of those). It always prints. Only with `--prereg` does it write `honesty.json` (to `--json`, else the first OUT) and draw `regime.png` and `regime.json` next to it.
+- `bench/charts.py`: the durable modes in `KNOWN_WORKFLOWS` (appended, so existing colours stay), `recovery_chart` (six panels against the coordinators killed, or against a sweep axis at the matrix's most chaotic profile) and `regime_chart` (the locality ratios against each rival at every regime point). `harness.draw_charts` draws them from `run_matrix`: a sweep matrix gets the recovery chart along its axis and no hero chart (it would average over the knob).
+- Matrices in `bench/`: `matrix-rivals-gate.yaml` (128 cells), `matrix-sweep-recovery.yaml` (0.5 s taken out), `matrix-sweep-recovery-extreme.yaml` (0.5 s alone), `matrix-sweep-restart.yaml`, `matrix-sweep-fast-restart.yaml`, `matrix-sweep-density.yaml`, `matrix-sweep-width.yaml`, `matrix-per-process-swarm.yaml`, `matrix-per-process-rivals.yaml`. Outputs go to `results/rivals-gate` and `results/sweeps/<axis>`.
+
+### `honesty.json` (schema_version 1; `Honesty` in `bench/verdicts.py`)
+- `prereg{path, sha}`, `sources[]`, `rules{...}` (the minimum effects and floors, as applied).
+- `outcome{label: A|B|pending, against, gate[], plausible[], conditions[]}`: the outcome PREREG §7 derives, and the points that decide it. The headline sentence is not in it. Each `gate[]` and `plausible[]` entry carries `cdt_ratio`, `blast_ratio` and `idle_ratio` (the ratios of the seed means, swarm / rival, marked descriptive: no verdict), and each `conditions[]` line prints them.
+- `code{commit, dirty}`: the commit and tree state the verdicts were produced at (3e723a8, clean).
+- `false_deaths[]{workflow, task, profile, axis, value, runs, remaps_mean, remaps_max, spent_usd_mean}`: the swarm's false deaths per run, and the work paid twice because of them (`dup_false_death_usd`); the supervisors read 0 by construction.
+- `hypotheses[]{id, name, metric, expected, tally{rival: {win, tie, loss, na}}}`, `tally` overall.
+- `comparisons[]{hypothesis, metric, rival, source, task, profile, axis, value, knobs, agents, seeds, swarm, rival_value, ratio, difference, verdict, mixed}`: every comparison, losses and ties included. `verdict` is the swarm's: win, tie, loss, n/a, incomplete.
+- `regimes[]{source, axis, value, plausible, task, profile, rival, locality: holds|ties|fails|n/a, cdt_ratio, blast_ratio, idle_ratio}`: one row per regime point (the "where it helps" panel).
+- `per_process[]{task, swarm_levels[{level, targets, count, runs, skipped, impact}], swarm_expected, rivals, ratio, reading: swarm lower|comparable|rival lower|n/a}`.
+- Suggested path: `bench verdicts bench/results/rivals-gate bench/results/sweeps --prereg --json bench/results/honesty.json`.
+
+### Cost of one fake sim run (this machine, one process per run, peak working set)
+| cell (T2, seed 1) | wall | events | peak memory | disk |
+|---|---|---|---|---|
+| swarm C3 | 5.7 s | 16K | 125 MB | 17 MB |
+| central C3 | 1.4 s | 2.7K | 76 MB | 5 MB |
+| durable-max C3 | 1.1 s | 1.9K | 73 MB | 4 MB |
+| durable C3 | 1.2 s | 2.5K | 75 MB | 4.5 MB |
+| swarm C3, T1 | 3.7 s | 10K | 104 MB | 11 MB |
+| swarm C3, `recovery_ms` 2500 | 8.8 s | 25K | 156 MB | 26 MB |
+| swarm C3, `recovery_ms` 1000 | 19 s | 56K | 267 MB | 56 MB |
+| swarm C0, `recovery_ms` 500 | 23 s | 58K | 298 MB | 63 MB |
+| swarm C3, `recovery_ms` 500 | 60 s | 152K | 614 MB | 149 MB |
+| swarm C3, 48 agents | 36 s | 103K | 445 MB | 101 MB |
+
+Estimates for the matrices (sequential, one process each; interpolated between the measured points, so give or take 30%): gate 3-5 min, under 150 MB; `recovery_ms` sweep (1-20 s) about 5 min, under 300 MB; its 0.5 s extreme about 5 min and 620 MB, 0.6 GB of runs; `rival_restart_ms` about 2 min; `rival_recovery_ms` about 1 min; latency scale about 3 min; width about 6 min and 450 MB; per-process about 2 min. About 25-30 min in all, 2-3 GB of `runs/` (gitignored). The summaries are small.
+
+### Deviations from the brief and the design
+1. **honesty.json is written by `bench/verdicts.py`, not `charts.py`.** The verdict rules and the file's model live together, and the chart reads the model.
+2. **`--prereg` gates the writing** of `honesty.json`; without it `bench verdicts` only prints. `--json` without `--prereg` is refused.
+3. The `takeover` exit code on a supervisor log is 2 (the brief says only that it points to `recovery`).
+4. The `recovery_ms` sweep omits 0.5 s: its swarm runs take a minute and 600 MB at C3, so it has its own matrix (`matrix-sweep-recovery-extreme.yaml`), read in the same column of the regime map and outside the plausible region.
+5. The gate's seeds 3-4 generate fixtures under `tasks/fixtures` the first time they run. I first said not to commit them, then did (0284766, eight files): a second generation is byte-identical to them, and a fresh generation of seeds 1-2 equals the tracked blobs, so the gate reproduces from the branch. `tasks/fixtures` is not in the brief's file list: drop that commit if you would rather they stayed generated.
+6. Two measuring processes (`recovery_ms` 500 at C3, 614 MB; 48 agents, 445 MB) went over 300 MB before I had asked for a SLOT, and the harness tests ran their toy matrices (34 s) without one. Nothing else heavy has run.
+
+## Part 4: the $0 gate, the sweeps and the per-process probes (fake LLM, scratch dirs; no real call)
+
+### Where things are
+- **Committed results** (b053a07): `bench/results/rivals-gate/` (128 cells), `bench/results/sweeps/<axis>/` (378 cells) and `sweeps/per-process-{swarm,rivals}/` (68 cells): `cells/`, `results.csv`, `results.json`, charts. Over everything, in `bench/results/`: `honesty.json`, `verdicts.txt`, `regime.png`, `regime.json` (code 3e723a8, clean tree, PREREG sha 25d4a75919b3, outcome **B**). The gate alone has its own copies in `rivals-gate/` (outcome PENDING: no sweeps). The run bundles `runs/` (about 5 GB) are gitignored.
+- **REPORT**: sections 3, 4, 6, 7 and Appendices A-B are written from those files. The headline, the §5 reading and the conclusions are marked `[PLACEHOLDER]`; §1's central row stays as corrected in 7bac37d. The tables are laid out from `results.json` and `honesty.json` by a scratch script (not in the repo; say if you want it committed).
+- **Cost**: 574 cells, 0 failed, about 29 min of compute, $0. Peak working set: gate 145 MB; `recovery_ms` 1-20 s 418 MB (my estimate was under 300 MB, so it was low); `recovery_ms` 0.5 s 730 MB; width sweep 561 MB; the rest 130-147 MB. Free memory at each start was 2.49-3.03 GB.
+
+### Facts the runs showed (the REPORT has the tables)
+- **Gate.** Against `durable-max` the swarm's wins are all locality (blast radius 5 of 6 points, cdt and idle 3 of 6); H1, H2, H3, H6 and stall tie at all six; H5 is a loss at the four points with chaos beyond C1 (false deaths). Locality ties at T2 C2 and C3 because not every seed reaches the threshold (C2 seed 1; C3 seeds 2 and 3), although the ratios of the seed means are below 0.5. No seeds were added.
+- **Sweeps.** Outcome B: the plausible region has 2 holds (`rival_restart_ms` 1 and 3 s), 6 ties and 2 fails (`rival_recovery_ms` 0.5 and 1 s: the supervisor is back after 0.5-1 s while the swarm keeps 5 s detection; cdt ratio 13.2 and 5.7). Against `durable` locality holds at 13 of 21 sweep points.
+- **H2.** The 9 sweep wins against `durable-max` are 3-seed cells; at the gate T2 C3 the per-seed differences are 12.34, 15.06, 5.24, 4.89 against 5, so the 4-seed verdict is a tie. In dollars the swarm is cheaper on all four seeds at T2 C3, but the C0 bases differ.
+- **False deaths** (swarm, T2 C3 per run): 24.7 at `recovery_ms` 0.5 s ($0.096 paid twice), 12.7 at 1 s, 4.7 at 2 s, 1.3 at 2.5 s, 2.3 at 5 s, 0.3 at 10 s, 0.7 at 20 s; gate 0 at C1, 1.25-1.50 at C2, 1.50 (T1) and 2.25 (T2) at C3. Not monotone; not traced.
+- **Per process** (T2): swarm levels 0/1/2 cdt 0.00/0.00/1.29, idle 0.00/0.00/2.57; expected per hour cdt 7.71, idle 15.42, ttr 47.25. Ratios r: 0.90 (cdt), 0.90 (idle), 9.45 (ttr), 1.00 (blast) against `durable-max`: comparable except ttr, where the rival is lower; against `central` cdt 0.26 and blast 0.50 (swarm lower), idle undefined (central 0).
+- **C0 twin.** On T1 the four systems are identical at C0 (46 calls, same cost and makespan, all 4 seeds). On T2 the swarm's makespan is 3.5-5.0 s longer on all 4 seeds and it makes 3 and 4 more calls on seeds 2 and 3 (one more `place` re-dispatch and its judge). Cause not traced to the end. Extra cost is against each system's own C0, so it starts from different bases on T2.
+- **T1 stall.** The swarm's 5.8 s (C1) and 14.8 s (C3) against 0.0 and 0.5 s come from three runs, each mostly one stretch with a judge or sub-planner call in flight and no agent call: C1 seed 2 (15.95 s), C3 seed 1 (22.19 s), C3 seed 3 (32.67 of 37.12 s). In C3 seed 3 the root planner call took 64.0 s (two attempts, a 503 overload with a 60 s Retry-After) against 3.9 s in the other three.
+- **Unpaired API draws.** The draw is keyed `api-fault:{seed}:{effect_id}:{n}` and effect ids differ between workflows, so each workflow gets the same fault rate and seed but not the same faults on the same calls. About 1.5% of attempts at C3 draw the 60 s overload. No change in this phase (the coordinator's decision); it is in the REPORT's limitations.
+- **T2 seed 3** is invalid at C0 for all four workflows (`placed 40/48, hard violations 8, gaps 2`), so T2 validity reads 75-81%. Not traced.
+- **H4c against `central`** is a loss at C2 and C3 by construction (central's idle agent-seconds is 0: its workers stop with it), which makes its locality read ties; cdt and blast are wins on every seed.
+
+### Changes since Part 3 (after the first gate)
+1. **`honesty.json`** gained `code{commit, dirty}` and `false_deaths[]`, and `outcome.gate[]`/`plausible[]` carry the three descriptive ratios; `render_text` prints them next to every locality verdict. The regime chart's title is neutral and its footnote says which marker is the verdict and which line is descriptive. (Commits 7dace82, 0b7fdeb, 3e723a8.)
+2. **`bench/recovery.py`: `payload["fault"]` became `payload.get("fault")`** at three sites (the crash scan, `_partitions` and the heal search). A chaos event without a fault key made `score_run` raise `KeyError` (found at the merge check by `test_breaker_trips_and_chaos_events_are_counted_when_present`: my regression). Real logs always carry the key, so no figure of any of the 574 cells changes. New test `test_a_chaos_event_without_a_fault_is_skipped_by_every_scan`, which fails on the old code. (268fa3e.)
+3. **`harness.draw_charts` draws no chart for a matrix that has a single-crash probe**, also when its C0 twin is in the same matrix (it was `all`, now `any`): the per-process matrices had drawn hero and recovery charts that average over the probes' targets. New test `test_probes_beside_their_c0_twin_get_no_chart_either`, which fails on the old condition. The eight chart files it had produced under `sweeps/per-process-*` are removed from the results. No metric, run or verdict is affected.
+4. **`bench/workflows.py` module docstring** said "at C0 they make the same LLM calls"; it now says that this holds on T1 and nearly on T2, and that API fault draws are keyed per effect id. Docstring only.
+5. **Text I did not write, in `bench/REPORT.md`**: the status banner, the `$0 gate` row of §3, the empty tables and intro paragraphs of §4 (replaced by the results), the last bullet of §6 ("TBD: anything the runs reveal"). §5 keeps the skeleton's two bullets under a `[PLACEHOLDER]` and a flag on the first one (its "only one doesn't stall or pay twice" is not what the gate shows against `durable-max`).
+
+### Merge checks (arena 24995b5 merged into this branch at 2b58d12, then these notes)
+- **Merge**: arena 24995b5 (W3 step 3), clean (`cli.py` auto-merged). The arena tip has since moved to 6ffa8fa (W3 follow-up, W4's takeover chip); that is not merged here.
+- **Tests**: unit 965 passed, 3 deselected (the PromptGuard ones: this venv has no safety extra); integration 764 passed in three chunks (251 + 271 + 242, 3m43 + 3m29 + 5m31); `ruff check` and `ruff format --check` clean (294 files). Before the merge, at 268fa3e: 894 unit + 539 integration.
+- **$0 references**: recorded on the merged tree with `scripts/refs/record_refs.ps1` and compared with the shared `arena-c2b5e08`: 43 of 43 runs identical.
+- **Demo**: `fractalswarm demo --verify --no-serve` reads `MATCH backup: 8177 events, head b052b4bc33cfe1b54c7b6ceb2872de26`, exit 0. Without `--no-serve` the command goes on to serve the UI, and port 8765 was in use.
+- **Verdicts**: `bench verdicts` over the committed results, re-run on the merged tree, prints the same text as `bench/results/verdicts.txt` apart from the `Code:` stamp.
+- **Merged**: the coordinator merged this branch into the arena as 0025e22 (clean), accepted deviations 1, 2 and 5, kept the fixture commit, and asked for the follow-up below.
+
+## Part 5: the follow-up for W5 (on the arena tip 0025e22, which holds Parts 2-3)
+
+My branch was moved to the arena tip with `git merge --ff-only` (nothing of the arena's changed), so that the follow-up sits on W2's current `api/app.py` and on `docs/claims.md`.
+
+### What was built
+- **`recovery` in `GET /api/runs/{id}/metrics`** (`api/app.py`, `run_metrics`): the top-level key that was reserved and null is now the run's `RecoveryMetrics` from `bench/recovery.py`, the object `metrics.recovery` already carried: `idle_agent_s`, `ttr_own_mean_s`, `cdt_s`, `blast_*`, `dup_*`, `preserved_*`, `false_death_remaps`, and one `outages[]` row per crash or partition. A mean over no crashes is null (a run with no crash: `crashes: 0`, `ttr_own_mean_s: null`); the whole of it is never null, because the route scores the log it is given, a run still recording included.
+- **`GET /api/runs/{id}/recovery`**: the `RecoveryReport` of `verify/recovery.py` as JSON (`run_id`, `events`, `system`, `supervised`, `metrics`, `restarts[]`, `checks[]`, `ok`), shaped like `/takeover`: 409 until the run has completed, 404 for an unknown run, cached per (run path, head hash). For a swarm log `restarts` is empty and only the table and `no_repeat` apply; its kills are `/takeover`'s.
+- **`GET /api/bench/honesty`** (the coordinator's second request, for W5's where-it-helps panel): `bench/results/honesty.json` as committed, parsed and returned as the body; 404 until the file exists. Tests: the committed file comes back equal, and 404 without it (`tests/integration/test_api_recovery.py`).
+- **`bench/tables.py`** and `fractalswarm bench tables [NAME] [--results DIR] [--check REPORT]`: the generator of the REPORT's 26 tables (the scratch script of Parts 3-4, typed, in the repo). It reads `honesty.json` and `rivals-gate/results.json`, prints the tables, and `--check` exits 1 naming any table that is not in the report word for word. Its output is byte-identical to what the REPORT holds. The per-seed win rule of `gate_t2_seeds` is `verdicts.judge` on `verdicts.RULES`, not a second copy of the floors; the seed columns come from the rows. `tests/unit/test_report_tables.py`: every table is in `bench/REPORT.md` word for word, a moved number is named, and the CLI.
+- **REPORT**: the headline placeholder cites `bench/PREREG.md` §7 for what a headline may say and `docs/claims.md` for the claims the project makes; the *cheaper* sentence of §4.2 cites both; §7 says how the tables are made and checked. Only text of mine, plus the headline placeholder's pointer, which was the coordinator's to fix.
+
+### Tests
+- `tests/integration/test_api_recovery.py` (7): `/metrics` over the real C3 swarm run (5 crashes, `ttr_own_mean_s` 4.73), over a run with no crash (null means) and over a run still recording; `/recovery` over the swarm run, over a `durable-max` T2 run with one crash (one restart row, the five checks ok, `ttr_own_mean_s` equal to the restart's `down_s`), 409 and 404, and one computation per head.
+- `tests/integration/test_launch_api.py` (W2's file): one assertion pinned `recovery` to null for a launched run. It now says that the key is the run's own recovery and that a run without chaos has no crash. A one-line consequence of filling the key.
+
+## Part 6: the matrix of the real rival rows (spec C.6; prepared at $0, never run by me)
+
+`bench/matrix-rivals-real.yaml`, with `tests/integration/test_bench_rivals_real.py` (the matrix loads and registers every cell, shares the results dir with v1 and the final matrix, and its cap covers what is left after v1).
+- **Cells**: durable-max and durable x {T2, T1} x C0-C3 x 2 seeds = 32 paid cells, Contributor routing, run cap $0.50, the settings of `matrix-final.yaml`. The four in-house workflows are listed too (96 cells in all): the harness writes `results.json`, `results.csv` and the charts from the cells of the matrix it ran (`load_results(out_dir, matrix)`), so a matrix of the two rivals alone in `results/v1` would overwrite v1's with rivals-only versions. Their cells with a result file are skipped, so what is paid is the 32 rival cells, the 32 T1 rows of the final matrix and the 3 T2 pipeline cells that v1 never finished. Run it instead of `matrix-final.yaml`; after `matrix-final.yaml` it pays only the 32 rival cells. Run again when everything is done, it pays nothing and writes `results.json` and the charts again from all six workflows.
+- **Dry-run** (this tree: v1 has 29 of 32 T2 cells; missing: pipeline C2 s2, C3 s1, C3 s2): 96 cells, 29 done, 67 to run, worst case $33.50 (cap $33.50); the rival cells $16.00 (32 x $0.50). Every cell registered. `matrix-final.yaml` has the same 3 cells to run: its worst case is $17.50 against its cap of $16.00, and `bench run` refuses a real run when the worst case exceeds the cap. Not changed.
+- **One cell at a time**: `run_matrix` loops over the cells and awaits each; there is no concurrency. The order is workflow, then task, then profile, then seed (rivals first in the list). A real run is on the live clock, so the time is the sum of the makespans. Resumable: a cell with a result file is skipped, but a cell that died before it was scored is wiped and run again in full, and its first spend is lost.
+- **Expected cost** (projection, not a measurement): the v1 means over its 29 cells are $0.307 and 339 s per run; on T2 real cost over the fake gate's cost is x0.995 for the swarm and x1.043 for `central` (seeds 1-2), and real time over sim time is about x2.0. The fake cost of the 32 rival cells, times those ratios, is $8.2-8.4 (durable-max T2 $2.4-2.5, T1 $1.5-1.6; durable T2 $2.6-2.7, T1 $1.6) and about 1.5 hours in all; there is no real T1 run yet, so the T1 ratio is the T2 one.
+- **The command refuses** a real run when the worst case exceeds the matrix cap or the project ledger's remainder.
+
 ## Open questions
 - None blocking.

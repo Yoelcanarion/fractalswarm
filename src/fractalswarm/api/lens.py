@@ -12,7 +12,10 @@ Routes (``lens_routes``), all under ``/api/runs/{run_id}``:
 - ``/calls/{effect_id}``: the row plus the prompt, the output, the decision it caused and, for an
   extraction call, each fact next to the sentence of the source it came from;
 - ``/models``: the "Muse meter": dollars and tokens by model, the cache share, and the
-  coordination and recovery tokens, which are computed from roles and tags, never hard-coded.
+  coordination and recovery tokens, which are computed from roles and tags, never hard-coded;
+- ``/disputes``: the semantic disputes of the run (``actors/arbitration.py``), each with its
+  candidates, its arbitration calls, its ruling and escalation, and for one still open when the
+  log ends, what it was waiting for.
 
 Dollars and tokens follow ``bench/scoring.py`` (``llm_calls``), so the lens totals are the bench
 numbers: a call cut off by a crash is billed the same estimate, and says so (``estimated``).
@@ -1162,6 +1165,12 @@ def _count(rows: list[dict[str, Any]], name: str) -> dict[str, int]:
 # -- the ablation ---------------------------------------------------------------------------
 
 ABLATION_TYPES = ("run.started", "run.completed", "run.halted", "ablation.note", "ablation.done")
+DISPUTE_TYPES = (
+    "collision.detected",
+    "arbitration.requested",
+    "arbitration.ruled",
+    "escalation.opened",
+)
 MAX_ABLATION_NOTES = 200
 MAX_RUNNING_ABLATIONS = 2
 
@@ -1316,6 +1325,108 @@ def ablation_view(events: list[Event], jobs: AblationJobs, run_id: str) -> dict[
     }
 
 
+def _candidate(candidate: dict[str, Any]) -> dict[str, Any]:
+    by = candidate["by"]
+    return {
+        "label": candidate["label"],
+        "value": candidate["value"],
+        "works": sorted({s["work"] for s in by}),
+        "sources": sorted({source for s in by for source in s["sources"]}),
+    }
+
+
+def _why_open(dispute: dict[str, Any]) -> str:
+    """What an unruled dispute was waiting for when the log ended, in one sentence."""
+    calls = dispute["calls"]
+    if not calls:
+        return "no arbitration call was made: nobody had taken the dispute up when the log ended"
+    last = calls[-1]
+    cancel = last["cancel"]
+    if cancel is not None:
+        if cancel["kind"] == "actor_stopped" and cancel["reason"] == "done":
+            who = last["actor"]
+            return f"{who} finished its work before the arbiter answered; its call was cancelled"
+        return f"the arbiter's call was cancelled: {cancel['detail']}"
+    if last["status"] == "inflight":
+        return "the arbiter's call was still in flight when the log ended"
+    if last["status"] != "ok":
+        return f"the arbiter's call ended {last['status']} and no later attempt was made"
+    return "the arbiter's answer is in the log and no ruling followed it"
+
+
+def disputes_view(lens: RunLens, events: list[Event]) -> dict[str, Any]:
+    """The semantic disputes of a run (``actors/arbitration.py``) as its log ends: the key two
+    contracts published different values for, the candidates, the arbitration calls, the ruling
+    and any escalation. A run never waits on a person, so a dispute can still be open when it
+    ends: ``open`` counts those, and ``why_open`` says what each was waiting for."""
+    by_key: dict[str, dict[str, Any]] = {}
+    for event in events:
+        payload = event.payload
+        if event.type == "collision.detected":
+            if payload.get("kind") != "semantic":
+                continue
+            for conflict in payload["conflicts"]:
+                dispute = by_key.setdefault(
+                    conflict["key"],
+                    {
+                        "key": conflict["key"],
+                        "subject": conflict["subject"],
+                        "status": "open",
+                        "opened_seq": event.seq,
+                        "opened_ts": event.ts_virtual,
+                        "goal_id": payload["goal_id"],
+                        "holder": payload["holder"],
+                        "lca": None,
+                        "candidates": [],
+                        "calls": [],
+                        "ruling": None,
+                        "escalation": None,
+                        "why_open": None,
+                    },
+                )
+                if dispute["ruling"] is None:  # the board's last word before the ruling
+                    dispute["candidates"] = [_candidate(c) for c in conflict["candidates"]]
+            continue
+        dispute = by_key.get(payload.get("key", ""))
+        if dispute is None:
+            continue
+        if event.type == "arbitration.requested":
+            dispute["lca"] = payload["lca"]
+        elif event.type == "arbitration.ruled" and dispute["ruling"] is None:
+            kept = ("winner", "work", "reason", "confidence", "evidence", "by", "attempt")
+            kept += ("reused", "arbiter")
+            dispute["ruling"] = {name: payload[name] for name in kept}
+            dispute["ruling"] |= {"seq": event.seq, "ts_virtual": event.ts_virtual}
+            dispute["lca"] = payload["lca"]
+            dispute["status"] = "ruled"
+        elif event.type == "escalation.opened":
+            kept = ("id", "options", "default", "confidence", "timeout_ms")
+            dispute["escalation"] = {name: payload[name] for name in kept}
+            dispute["escalation"] |= {"ts_virtual": event.ts_virtual}
+    for row in lens.rows:
+        ref = row["ref"]
+        dispute = by_key.get(ref.get("key", "")) if ref["kind"] == "arbitrate" else None
+        if dispute is not None:
+            kept = ("effect_id", "actor", "status", "model", "cost_usd", "estimated")
+            kept += ("started_ts", "ended_ts")
+            dispute["calls"].append(
+                {name: row[name] for name in kept}
+                | {"attempt": ref["attempt"], "cancel": row["cancel"]}
+            )
+    ended = lens.halted is not None or any(e.type == "run.completed" for e in lens.events)
+    disputes = sorted(by_key.values(), key=lambda d: d["opened_seq"])
+    for dispute in disputes:
+        if dispute["ruling"] is None:
+            dispute["why_open"] = _why_open(dispute)
+    return {
+        "run_id": lens.entry.id,
+        "ended": ended,
+        "count": len(disputes),
+        "open": sum(1 for d in disputes if d["ruling"] is None),
+        "disputes": disputes,
+    }
+
+
 async def _ablation_request(request: Request) -> AblationRequest:
     raw = await request.body()
     try:
@@ -1384,6 +1495,11 @@ def lens_routes(catalog: Catalog) -> list[Route]:
     async def models(request: Request) -> JSONResponse:
         return JSONResponse((await lens_of(request)).models())
 
+    async def disputes(request: Request) -> JSONResponse:
+        lens = await lens_of(request)
+        events = await anyio.to_thread.run_sync(read_typed, catalog, lens.entry, DISPUTE_TYPES)
+        return JSONResponse(disputes_view(lens, events))
+
     jobs = AblationJobs()
 
     def pending(run_id: str) -> dict[str, Any] | None:
@@ -1445,6 +1561,7 @@ def lens_routes(catalog: Catalog) -> list[Route]:
         Route("/api/runs/{run_id}/calls", calls),
         Route("/api/runs/{run_id}/calls/{effect_id}", call),
         Route("/api/runs/{run_id}/models", models),
+        Route("/api/runs/{run_id}/disputes", disputes),
         Route("/api/ablation", start_ablation, methods=["POST"]),
         Route("/api/ablation/{run_id}", ablation_status),
     ]

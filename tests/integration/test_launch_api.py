@@ -93,7 +93,9 @@ def test_a_task_runs_as_a_job_in_its_own_process(api: Api) -> None:
     metrics = api.get("/api/runs/ui-fixture/metrics").json()
     assert metrics["task"] == "t2_conference" and metrics["scenario"] == "swarm"
     assert metrics["metrics"]["completed"] is True and metrics["metrics"]["valid"] is True
-    assert metrics["metrics"]["llm_calls"] > 0 and metrics["recovery"] is None
+    assert metrics["metrics"]["llm_calls"] > 0
+    assert metrics["recovery"] == metrics["metrics"]["recovery"]  # a run without chaos:
+    assert metrics["recovery"]["crashes"] == 0 and metrics["recovery"]["outages"] == []
 
     again = JobManager(PrivateDir(api.private), api.runs, Catalog(api.runs))
     assert again.get(launched["job_id"])["state"] == "completed"  # jobs survive a restart

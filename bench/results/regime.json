@@ -1,0 +1,602 @@
+{
+  "against": "durable-max",
+  "columns": [
+    {
+      "axis": "gate",
+      "series": {
+        "central|t1_extraction": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": null,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.1388888888888889,
+            "cdt_ratio": 0.08684166666666668,
+            "idle_ratio": null,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.1801801801801802,
+            "cdt_ratio": 0.13721081081081082,
+            "idle_ratio": null,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C3"
+          }
+        ],
+        "central|t2_conference": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": null,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.15625,
+            "cdt_ratio": 0.09373432835820895,
+            "idle_ratio": null,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.14444444444444443,
+            "cdt_ratio": 0.10128,
+            "idle_ratio": null,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C3"
+          }
+        ],
+        "durable-max|t1_extraction": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": 0.0,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.27027027027027023,
+            "cdt_ratio": 0.252965546259285,
+            "idle_ratio": 0.18752549257905823,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.38461538461538464,
+            "cdt_ratio": 0.5073350121917096,
+            "idle_ratio": 0.4138706438522362,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C3"
+          }
+        ],
+        "durable-max|t2_conference": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": 0.0,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.3448275862068966,
+            "cdt_ratio": 0.39792931277008275,
+            "idle_ratio": 0.3729124703602662,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.2888888888888889,
+            "cdt_ratio": 0.3660602186865113,
+            "idle_ratio": 0.4739701037383941,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C3"
+          }
+        ],
+        "durable|t1_extraction": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": 0.0,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.2,
+            "cdt_ratio": 0.1650999693701877,
+            "idle_ratio": 0.12030107308685357,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.3125,
+            "cdt_ratio": 0.3140962185705801,
+            "idle_ratio": 0.2607515279310743,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C3"
+          }
+        ],
+        "durable|t2_conference": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": 0.0,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.30303030303030304,
+            "cdt_ratio": 0.20888741061034427,
+            "idle_ratio": 0.1859505182950086,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.33333333333333337,
+            "cdt_ratio": 0.24628584885375815,
+            "idle_ratio": 0.34427177841614215,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C3"
+          }
+        ]
+      },
+      "x": [
+        "C1",
+        "C2",
+        "C3"
+      ]
+    },
+    {
+      "axis": "recovery_ms",
+      "series": {
+        "durable-max|t2_conference": [
+          {
+            "blast_ratio": 0.5714285714285714,
+            "cdt_ratio": 0.73824,
+            "idle_ratio": 0.2296195652173913,
+            "locality": "ties",
+            "plausible": false,
+            "x": 500.0
+          },
+          {
+            "blast_ratio": 0.7777777777777779,
+            "cdt_ratio": 0.9511012605624046,
+            "idle_ratio": 0.8376924503802635,
+            "locality": "ties",
+            "plausible": true,
+            "x": 1000.0
+          },
+          {
+            "blast_ratio": 0.5333333333333333,
+            "cdt_ratio": 0.6542157148205149,
+            "idle_ratio": 0.7690548157830244,
+            "locality": "ties",
+            "plausible": true,
+            "x": 2000.0
+          },
+          {
+            "blast_ratio": 0.19999999999999998,
+            "cdt_ratio": 0.2582602255896092,
+            "idle_ratio": 0.200344698057759,
+            "locality": "ties",
+            "plausible": true,
+            "x": 2500.0
+          },
+          {
+            "blast_ratio": 0.3225806451612903,
+            "cdt_ratio": 0.48265571237974864,
+            "idle_ratio": 0.6195865432577731,
+            "locality": "ties",
+            "plausible": true,
+            "x": 5000.0
+          },
+          {
+            "blast_ratio": 0.22448979591836735,
+            "cdt_ratio": 0.35028467211164865,
+            "idle_ratio": 0.35571001858702944,
+            "locality": "ties",
+            "plausible": true,
+            "x": 10000.0
+          },
+          {
+            "blast_ratio": 0.2857142857142857,
+            "cdt_ratio": 0.3325365838271043,
+            "idle_ratio": 0.38562756841639506,
+            "locality": "holds",
+            "plausible": false,
+            "x": 20000.0
+          }
+        ],
+        "durable|t2_conference": [
+          {
+            "blast_ratio": 0.3333333333333333,
+            "cdt_ratio": 0.25633333333333336,
+            "idle_ratio": 0.0845,
+            "locality": "ties",
+            "plausible": false,
+            "x": 500.0
+          },
+          {
+            "blast_ratio": 0.38888888888888895,
+            "cdt_ratio": 0.28230747090991326,
+            "idle_ratio": 0.22991548722126057,
+            "locality": "ties",
+            "plausible": true,
+            "x": 1000.0
+          },
+          {
+            "blast_ratio": 0.36363636363636365,
+            "cdt_ratio": 0.2997579523147001,
+            "idle_ratio": 0.33690614655095286,
+            "locality": "ties",
+            "plausible": true,
+            "x": 2000.0
+          },
+          {
+            "blast_ratio": 0.19999999999999998,
+            "cdt_ratio": 0.13575792058453617,
+            "idle_ratio": 0.1237849497597204,
+            "locality": "ties",
+            "plausible": true,
+            "x": 2500.0
+          },
+          {
+            "blast_ratio": 0.35714285714285715,
+            "cdt_ratio": 0.28018696795320364,
+            "idle_ratio": 0.40487917946340624,
+            "locality": "holds",
+            "plausible": true,
+            "x": 5000.0
+          },
+          {
+            "blast_ratio": 0.2619047619047619,
+            "cdt_ratio": 0.29397546743898806,
+            "idle_ratio": 0.3738897315381782,
+            "locality": "holds",
+            "plausible": true,
+            "x": 10000.0
+          },
+          {
+            "blast_ratio": 0.35294117647058826,
+            "cdt_ratio": 0.35771220410298843,
+            "idle_ratio": 0.4799563757825604,
+            "locality": "holds",
+            "plausible": false,
+            "x": 20000.0
+          }
+        ]
+      },
+      "x": [
+        500.0,
+        1000.0,
+        2000.0,
+        2500.0,
+        5000.0,
+        10000.0,
+        20000.0
+      ]
+    },
+    {
+      "axis": "rival_restart_ms",
+      "series": {
+        "durable-max|t2_conference": [
+          {
+            "blast_ratio": 0.3225806451612903,
+            "cdt_ratio": 0.48265571237974864,
+            "idle_ratio": 0.6195865432577731,
+            "locality": "ties",
+            "plausible": true,
+            "x": 0.0
+          },
+          {
+            "blast_ratio": 0.23809523809523814,
+            "cdt_ratio": 0.278779726094069,
+            "idle_ratio": 0.30699437045173694,
+            "locality": "holds",
+            "plausible": true,
+            "x": 1000.0
+          },
+          {
+            "blast_ratio": 0.2173913043478261,
+            "cdt_ratio": 0.19101722077609287,
+            "idle_ratio": 0.21271106138618384,
+            "locality": "holds",
+            "plausible": true,
+            "x": 3000.0
+          }
+        ],
+        "durable|t2_conference": [
+          {
+            "blast_ratio": 0.35714285714285715,
+            "cdt_ratio": 0.28018696795320364,
+            "idle_ratio": 0.40487917946340624,
+            "locality": "holds",
+            "plausible": true,
+            "x": 0.0
+          },
+          {
+            "blast_ratio": 0.2702702702702703,
+            "cdt_ratio": 0.21429350847748257,
+            "idle_ratio": 0.2994711999528527,
+            "locality": "holds",
+            "plausible": true,
+            "x": 1000.0
+          },
+          {
+            "blast_ratio": 0.29411764705882354,
+            "cdt_ratio": 0.1819886767308142,
+            "idle_ratio": 0.28358057511617996,
+            "locality": "holds",
+            "plausible": true,
+            "x": 3000.0
+          }
+        ]
+      },
+      "x": [
+        0.0,
+        1000.0,
+        3000.0
+      ]
+    },
+    {
+      "axis": "rival_recovery_ms",
+      "series": {
+        "durable-max|t2_conference": [
+          {
+            "blast_ratio": 1.4285714285714286,
+            "cdt_ratio": 13.197119999999998,
+            "idle_ratio": 25.315217391304348,
+            "locality": "fails",
+            "plausible": true,
+            "x": 500.0
+          },
+          {
+            "blast_ratio": 1.1111111111111112,
+            "cdt_ratio": 5.712841113727663,
+            "idle_ratio": 10.368391764051198,
+            "locality": "fails",
+            "plausible": true,
+            "x": 1000.0
+          }
+        ],
+        "durable|t2_conference": [
+          {
+            "blast_ratio": 0.8333333333333334,
+            "cdt_ratio": 4.582333333333334,
+            "idle_ratio": 9.316,
+            "locality": "fails",
+            "plausible": true,
+            "x": 500.0
+          },
+          {
+            "blast_ratio": 0.5555555555555556,
+            "cdt_ratio": 1.6956950783273714,
+            "idle_ratio": 2.845738723144283,
+            "locality": "ties",
+            "plausible": true,
+            "x": 1000.0
+          }
+        ]
+      },
+      "x": [
+        500.0,
+        1000.0
+      ]
+    },
+    {
+      "axis": "agent_latency_scale",
+      "series": {
+        "durable-max|t2_conference": [
+          {
+            "blast_ratio": 0.3076923076923077,
+            "cdt_ratio": 0.34488296435168597,
+            "idle_ratio": 0.34306031958504146,
+            "locality": "ties",
+            "plausible": false,
+            "x": 0.25
+          },
+          {
+            "blast_ratio": 0.358974358974359,
+            "cdt_ratio": 0.4524962391876645,
+            "idle_ratio": 0.37896192798199546,
+            "locality": "ties",
+            "plausible": false,
+            "x": 0.5
+          },
+          {
+            "blast_ratio": 0.3225806451612903,
+            "cdt_ratio": 0.48265571237974864,
+            "idle_ratio": 0.6195865432577731,
+            "locality": "ties",
+            "plausible": false,
+            "x": 1.0
+          },
+          {
+            "blast_ratio": 0.20689655172413796,
+            "cdt_ratio": 0.22757977387578546,
+            "idle_ratio": 0.19355232416222062,
+            "locality": "holds",
+            "plausible": false,
+            "x": 2.0
+          }
+        ],
+        "durable|t2_conference": [
+          {
+            "blast_ratio": 0.31578947368421056,
+            "cdt_ratio": 0.2611030229026754,
+            "idle_ratio": 0.3277473464342044,
+            "locality": "holds",
+            "plausible": false,
+            "x": 0.25
+          },
+          {
+            "blast_ratio": 0.3255813953488373,
+            "cdt_ratio": 0.2888213201574307,
+            "idle_ratio": 0.24829789603437613,
+            "locality": "holds",
+            "plausible": false,
+            "x": 0.5
+          },
+          {
+            "blast_ratio": 0.35714285714285715,
+            "cdt_ratio": 0.28018696795320364,
+            "idle_ratio": 0.40487917946340624,
+            "locality": "holds",
+            "plausible": false,
+            "x": 1.0
+          },
+          {
+            "blast_ratio": 0.2727272727272727,
+            "cdt_ratio": 0.24369950825430278,
+            "idle_ratio": 0.24272969781781606,
+            "locality": "holds",
+            "plausible": false,
+            "x": 2.0
+          }
+        ]
+      },
+      "x": [
+        0.25,
+        0.5,
+        1.0,
+        2.0
+      ]
+    },
+    {
+      "axis": "agents",
+      "series": {
+        "durable-max|t2_conference": [
+          {
+            "blast_ratio": 0.9285714285714285,
+            "cdt_ratio": 1.4410770692054518,
+            "idle_ratio": 1.3247095634035406,
+            "locality": "ties",
+            "plausible": false,
+            "x": 4.0
+          },
+          {
+            "blast_ratio": 0.8571428571428572,
+            "cdt_ratio": 0.9398126044402004,
+            "idle_ratio": 1.0262237220966595,
+            "locality": "ties",
+            "plausible": false,
+            "x": 8.0
+          },
+          {
+            "blast_ratio": 0.3225806451612903,
+            "cdt_ratio": 0.48265571237974864,
+            "idle_ratio": 0.6195865432577731,
+            "locality": "ties",
+            "plausible": false,
+            "x": 12.0
+          },
+          {
+            "blast_ratio": 0.33333333333333337,
+            "cdt_ratio": 0.4994358023696301,
+            "idle_ratio": 0.4622868623972776,
+            "locality": "ties",
+            "plausible": false,
+            "x": 24.0
+          },
+          {
+            "blast_ratio": 0.45714285714285713,
+            "cdt_ratio": 0.538888888888889,
+            "idle_ratio": 0.5270322740968534,
+            "locality": "ties",
+            "plausible": false,
+            "x": 48.0
+          }
+        ],
+        "durable|t2_conference": [
+          {
+            "blast_ratio": 0.8666666666666666,
+            "cdt_ratio": 0.7965543976606047,
+            "idle_ratio": 1.1234919776898695,
+            "locality": "ties",
+            "plausible": false,
+            "x": 4.0
+          },
+          {
+            "blast_ratio": 0.6923076923076923,
+            "cdt_ratio": 0.518026908779894,
+            "idle_ratio": 0.7086870069059888,
+            "locality": "ties",
+            "plausible": false,
+            "x": 8.0
+          },
+          {
+            "blast_ratio": 0.35714285714285715,
+            "cdt_ratio": 0.28018696795320364,
+            "idle_ratio": 0.40487917946340624,
+            "locality": "holds",
+            "plausible": false,
+            "x": 12.0
+          },
+          {
+            "blast_ratio": 0.30303030303030304,
+            "cdt_ratio": 0.3281132100448763,
+            "idle_ratio": 0.3414736870253503,
+            "locality": "holds",
+            "plausible": false,
+            "x": 24.0
+          },
+          {
+            "blast_ratio": 0.36363636363636365,
+            "cdt_ratio": 0.3247166791861263,
+            "idle_ratio": 0.42099288492435194,
+            "locality": "holds",
+            "plausible": false,
+            "x": 48.0
+          }
+        ]
+      },
+      "x": [
+        4.0,
+        8.0,
+        12.0,
+        24.0,
+        48.0
+      ]
+    }
+  ],
+  "outcome": "B",
+  "prereg": {
+    "path": "bench/PREREG.md",
+    "sha": "25d4a75919b3"
+  },
+  "rows": [
+    {
+      "hypothesis": "H4a",
+      "label": "CDT, swarm / rival",
+      "metric": "cdt_ratio"
+    },
+    {
+      "hypothesis": "H4b",
+      "label": "blast radius, swarm / rival",
+      "metric": "blast_ratio"
+    }
+  ],
+  "threshold": 0.5,
+  "title": ""
+}

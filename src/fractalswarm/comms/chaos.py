@@ -40,6 +40,7 @@ from fractalswarm.kernel.scheduler import ActorKind, Command, Emit, Send, SetTim
 NET = "net"
 CHAOS = "chaos"
 CONFIG_TOPIC = "net.config"
+ACTION_KINDS = ("kill_coordinator", "kill_agents", "partition")
 CRASH_TOPIC = "chaos.crash"
 
 
@@ -371,7 +372,10 @@ class MonkeyState:
     until_ms: int | None = None  # stop polling then, even if progress stalls
     crash_mode: str = "stop"  # stop | signal (send CRASH_TOPIC to a supervised coordinator)
     expected_work: int = 0  # the task's total work, for the progress clock
+    live_control: bool = False  # a person's controls may add actions (control.injected)
     next_action: int = 0
+    # A chaos.poll timer is pending; an injected action starts one if none is.
+    polling: bool = False
     agents_killed: int = 0
     killed: list[str] = field(default_factory=list)  # stopped by this monkey
     partitions: dict[str, str] = field(default_factory=dict)  # id -> isolated member
@@ -396,6 +400,7 @@ class ChaosMonkey:
             until_ms=args.get("until_ms"),
             crash_mode=args.get("crash_mode", "stop"),
             expected_work=int(args.get("expected_work", 0)),
+            live_control=bool(args.get("live_control")),
         )
 
     def handle(self, state: MonkeyState, event: Event, view: View):
@@ -405,8 +410,11 @@ class ChaosMonkey:
                 faults = state.plan.net.model_dump(mode="json")
                 commands.append(Send(to=NET, topic=CONFIG_TOPIC, body={"faults": faults}))
             if state.plan.actions:
+                state.polling = True
                 commands.append(SetTimer(delay_ms=state.poll_ms, tag="chaos.poll"))
             return state, commands
+        if event.type == "control.injected":
+            return self._injected(state, event, view)
         if event.type != "effect.completed":
             return state, []
         tag = event.payload["tag"] or ""
@@ -423,9 +431,64 @@ class ChaosMonkey:
             state.next_action += 1
             commands += self._act(state, action, fraction, view)
         more = state.next_action < len(actions) and not progress.complete(state.expected_work)
-        if more and (state.until_ms is None or view.now < state.until_ms):
+        state.polling = more and (state.until_ms is None or view.now < state.until_ms)
+        if state.polling:
             commands.append(SetTimer(delay_ms=state.poll_ms, tag="chaos.poll"))
         return state, commands
+
+    def _injected(self, state: MonkeyState, event: Event, view: View):
+        """A person's kill (the arena's button): ``control.injected`` with ``op: "chaos"`` and a
+        ``ChaosAction`` as its body (``kill_agent`` stands for ``kill_agents``; one that names no
+        agent also says how many, ``count``, and the agents are drawn now). It joins the actions
+        still to come, in order of ``at``, so the poll fires it when the progress gets there (at
+        once if it already has). A body that is not an action is ignored: the API checks it before
+        it is sent. A run that was not launched to take controls (``live_control``), and one whose
+        work is done, ignore it."""
+        if not state.live_control or event.payload["op"] != "chaos":
+            return state, []
+        if view.views["progress"].complete(state.expected_work):
+            return state, []
+        body = dict(event.payload["body"])
+        count = body.pop("count", 1)
+        if body.get("kind") == "kill_agent":
+            body["kind"] = "kill_agents"
+        try:
+            action = ChaosAction.model_validate(body)
+        except ValueError:
+            return state, []
+        if action.kind not in ACTION_KINDS or action.duration_ms < 0:
+            return state, []  # a plan's own kinds are checked when it acts: nothing may kill a run
+        if action.kind == "kill_agents":
+            if not isinstance(count, int) or isinstance(count, bool) or not 1 <= count <= 100:
+                return state, []
+            added = self._named_agents(state, action, count, event, view)
+        else:
+            added = [action]
+        if not added:
+            return state, []
+        pending = (*state.plan.actions[state.next_action :], *added)
+        ordered = sorted(pending, key=lambda found: (found.at, found.kind))
+        actions = (*state.plan.actions[: state.next_action], *ordered)
+        state.plan = state.plan.model_copy(update={"actions": actions})
+        if state.polling:
+            return state, []
+        state.polling = True
+        return state, [SetTimer(delay_ms=state.poll_ms, tag="chaos.poll")]
+
+    def _named_agents(
+        self, state: MonkeyState, action: ChaosAction, count: int, event: Event, view: View
+    ) -> list[ChaosAction]:
+        """A person's agent kill names its agents: the one in the body, or ``count`` of those
+        alive now, by the seeded draw of this very event."""
+        if action.target is not None:
+            return [action]
+        alive = [
+            agent
+            for agent in view.views["actors"].alive(state.agent_kinds)
+            if agent in view.alive and agent not in state.killed
+        ]
+        picks = sorted(view.rng(f"inject:{event.seq}").sample(alive, min(count, len(alive))))
+        return [action.model_copy(update={"target": pick}) for pick in picks]
 
     def _act(
         self, state: MonkeyState, action: ChaosAction, fraction: float, view: View
@@ -491,11 +554,17 @@ class ChaosMonkey:
                 for agent in actors.alive(state.agent_kinds)
                 if agent in view.alive and agent not in state.killed
             ]
-            quota = math.floor(action.agent_share * actors.seen(state.agent_kinds) + 1e-9)
-            count = min(max(quota - state.agents_killed, 0), len(alive))
-            rng = view.rng(f"kill_agents:{state.next_action}")
-            victims = sorted(rng.sample(alive, count))
-            state.agents_killed += count
+            if action.target is not None:  # a person named the agent (control.injected)
+                victims = [action.target] if action.target in alive else []
+                if not victims:
+                    skipped = {"fault": action.kind, "progress": at, "detail": {"skipped": True}}
+                    return [Emit(type="chaos.injected", payload=skipped)]
+            else:
+                quota = math.floor(action.agent_share * actors.seen(state.agent_kinds) + 1e-9)
+                count = min(max(quota - state.agents_killed, 0), len(alive))
+                rng = view.rng(f"kill_agents:{state.next_action}")
+                victims = sorted(rng.sample(alive, count))
+                state.agents_killed += count
             state.killed += victims
             commands: list[Command] = []
             for victim in victims:
