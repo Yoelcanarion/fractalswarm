@@ -1,0 +1,330 @@
+/* The shared components (components/ui) and the interaction states every control shares.
+   Imported after styles.css, so it can refine what is there. Colours come from tokens.css only. */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- focus: one ring, drawn as an outline so it survives forced-colors mode ---- */
+:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+}
+
+/* ---- hover: only where a pointer can hover, so a tap never leaves a control looking stuck ---- */
+@media (hover: hover) {
+  .btn:hover:not(:disabled),
+  .badge--button:hover {
+    border-color: var(--border-strong);
+  }
+
+  .tab:hover:not(.tab--on) {
+    background: var(--hover-wash);
+    color: var(--text-primary);
+  }
+
+  .icon-btn:hover {
+    background: var(--hover-wash);
+    color: var(--text-primary);
+  }
+
+  .card--interactive:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-ring-hover);
+  }
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard),
+    scale var(--dur-base) ease-out;
+}
+
+.icon-btn:active:not(:disabled) {
+  scale: 0.96;
+}
+
+/* ---- stat ---- */
+.stat__value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.stat__affix {
+  font-size: 0.55em;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.stat--good .stat__value {
+  color: var(--ok-text);
+}
+
+.stat--bad .stat__value {
+  color: var(--danger-text);
+}
+
+.stat--warn .stat__value {
+  color: var(--warn-text);
+}
+
+.stat--accent .stat__value {
+  color: var(--accent-text);
+}
+
+.stat__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.stat__delta--good {
+  color: var(--ok-text);
+}
+
+.stat__delta--bad {
+  color: var(--danger-text);
+}
+
+.stat__delta--warn {
+  color: var(--warn-text);
+}
+
+.stat__delta--accent {
+  color: var(--accent-text);
+}
+
+/* ---- model badge ---- */
+.model-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.model-badge__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.model-badge[data-model="wonder"] .model-badge__dot {
+  background: var(--model-wonder);
+}
+
+.model-badge[data-model="spark"] .model-badge__dot {
+  background: var(--model-spark);
+}
+
+.model-badge[data-model="contributor"] .model-badge__dot {
+  background: var(--model-contributor);
+}
+
+.model-badge[data-model="guard"] .model-badge__dot {
+  background: var(--model-guard);
+}
+
+.model-badge__version {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- card ---- */
+.card--good {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+}
+
+.card--bad {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.card--warn {
+  border-color: var(--warn-border);
+  background: var(--warn-bg);
+}
+
+.card--flush {
+  padding: 0;
+}
+
+.card--flush > .panel__title {
+  padding: 14px 14px 0;
+}
+
+.card__heading,
+.card__actions {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.card__actions {
+  align-items: center;
+  gap: 8px;
+}
+
+.card--interactive {
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+/* ---- skeleton ---- */
+.skeleton {
+  display: block;
+  width: 100%;
+  height: 1em;
+  border-radius: var(--radius-1);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.skeleton--circle {
+  border-radius: 50%;
+}
+
+.skeleton-text {
+  display: grid;
+  gap: 8px;
+}
+
+.skeleton-group {
+  display: block;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---- tooltip ---- */
+.tip {
+  position: relative;
+  display: inline-flex;
+}
+
+/* A disabled control swallows pointer events; let the wrapper see the hover instead. */
+.tip > :disabled {
+  pointer-events: none;
+}
+
+.tip__bubble {
+  position: absolute;
+  z-index: var(--z-tooltip);
+  width: max-content;
+  max-width: 260px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-overlay);
+  color: var(--text-primary);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  line-height: var(--lh-body);
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: left;
+  white-space: normal;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-fast) var(--ease-standard),
+    visibility 0s linear var(--dur-fast);
+}
+
+/* Reaches the trigger across the gap, so the pointer can move onto the bubble and keep it open. */
+.tip__bubble::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.tip[data-open="true"] .tip__bubble {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transition:
+    opacity var(--dur-fast) var(--ease-standard) 300ms,
+    visibility 0s linear 300ms;
+}
+
+.tip[data-placement="top"] .tip__bubble {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  translate: -50% 0;
+}
+
+.tip[data-placement="bottom"] .tip__bubble {
+  top: calc(100% + 8px);
+  left: 50%;
+  translate: -50% 0;
+}
+
+.tip[data-placement="top-end"] .tip__bubble {
+  bottom: calc(100% + 8px);
+  right: 0;
+}
+
+.tip[data-placement="bottom-end"] .tip__bubble {
+  top: calc(100% + 8px);
+  right: 0;
+}
+
+.tip[data-placement="left"] .tip__bubble {
+  right: calc(100% + 8px);
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.tip[data-placement="right"] .tip__bubble {
+  left: calc(100% + 8px);
+  top: 50%;
+  translate: 0 -50%;
+}

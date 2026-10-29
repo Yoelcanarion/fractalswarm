@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import { NOISE_GROUPS, recent, summarize, tone, type EventFilter } from "../lib/eventlog";
 import type { RunEvent } from "../lib/types";
-import { useRun } from "../store";
+import { useRunStore } from "../store";
 
 const PAGE = 300;
 
@@ -19,7 +19,7 @@ export function EventList({ events, cursor, groups }: Props) {
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set(NOISE_GROUPS));
   const [limit, setLimit] = useState(PAGE);
   const [open, setOpen] = useState<number | null>(null);
-  const seek = useRun((s) => s.seek);
+  const seek = useRunStore((s) => s.seek);
 
   const filter: EventFilter = useMemo(() => ({ text, hidden }), [text, hidden]);
   const rows = useMemo(() => recent(events, cursor, filter, limit), [events, cursor, filter, limit]);

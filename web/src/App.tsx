@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { StatusBadge, ThemeToggle } from "./components/ui";
 import { VerifyBadge } from "./components/VerifyBadge";
 import { SPEEDS } from "./lib/playback";
 import { ChartsPage } from "./pages/ChartsPage";
@@ -10,7 +11,7 @@ import { ResultsPage } from "./pages/ResultsPage";
 import { RunPage } from "./pages/RunPage";
 import { RunsPage } from "./pages/RunsPage";
 import { SecurityPage } from "./pages/SecurityPage";
-import { useRun } from "./store";
+import { useRunStore, useRunStoreApi, type RunStoreApi } from "./store";
 
 // `#/run/<id>[/plan|panels|security|results|events]?at=end|<event count>&speed=<1-20>&play` opens a replay at
 // a given point, for shareable links and the video. Every view of a run shares the playhead.
@@ -54,8 +55,8 @@ function parseHash(hash: string): Route {
 const viewHash = (runId: string | null, view: RunView): string =>
   `#/run/${runId === null ? "" : encodeURIComponent(runId)}${view === "overview" ? "" : `/${view}`}`;
 
-function applyPlayback({ at, speed, play }: Playback) {
-  const s = useRun.getState();
+function applyPlayback(store: RunStoreApi, { at, speed, play }: Playback) {
+  const s = store.getState();
   if (speed) s.setSpeed(speed);
   if (at === "end") s.seek(s.events.length);
   else if (at && Number.isFinite(Number(at))) s.seek(Number(at));
@@ -64,15 +65,23 @@ function applyPlayback({ at, speed, play }: Playback) {
 
 export function App() {
   const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
-  const { runs, runId, view, live, loadRuns, openRun } = useRun();
-  const blocked = view.panels.security.quarantines.length + view.panels.security.violations.length;
+  const store = useRunStoreApi();
+  const runs = useRunStore((s) => s.runs);
+  const runId = useRunStore((s) => s.runId);
+  const runStatus = useRunStore((s) => s.runStatus);
+  const scenario = useRunStore((s) => s.view.scenario);
+  const blocked = useRunStore((s) => s.view.panels.security.quarantines.length + s.view.panels.security.violations.length);
+  const loadRuns = useRunStore((s) => s.loadRuns);
+  const loadCapabilities = useRunStore((s) => s.loadCapabilities);
+  const openRun = useRunStore((s) => s.openRun);
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash(window.location.hash));
     window.addEventListener("hashchange", onHash);
     void loadRuns();
+    void loadCapabilities();
     return () => window.removeEventListener("hashchange", onHash);
-  }, [loadRuns]);
+  }, [loadRuns, loadCapabilities]);
 
   // Open the run named in the URL, or else the first listed one (the demo bundle first).
   useEffect(() => {
@@ -80,13 +89,13 @@ export function App() {
     const wanted = route.runId ?? runs[0]?.id ?? null;
     if (wanted && wanted !== runId) {
       void openRun(wanted).then(() => {
-        const s = useRun.getState();
+        const s = store.getState();
         if (s.live || s.runId !== wanted) return;
-        applyPlayback(route.playback);
+        applyPlayback(store, route.playback);
         void s.runVerify();
       });
     }
-  }, [route, runs, runId, openRun]);
+  }, [route, runs, runId, openRun, store]);
 
   return (
     <div className="app">
@@ -119,26 +128,29 @@ export function App() {
             Runs
           </a>
         </nav>
-        {route.page === "run" && runId && (
-          <div className="topbar__run">
-            <select
-              value={runId}
-              onChange={(e) => {
-                window.location.hash = viewHash(e.target.value, route.view);
-              }}
-              aria-label="run"
-            >
-              {runs.map((run) => (
-                <option key={run.id} value={run.id}>
-                  {run.id}
-                </option>
-              ))}
-            </select>
-            <span className="mono muted">{view.scenario?.split(":").at(-1) ?? ""}</span>
-            {live ? <span className="badge badge--live">● LIVE</span> : <span className="badge badge--muted">REPLAY</span>}
-            <VerifyBadge />
-          </div>
-        )}
+        <div className="topbar__right">
+          {route.page === "run" && runId && (
+            <div className="topbar__run">
+              <select
+                value={runId}
+                onChange={(e) => {
+                  window.location.hash = viewHash(e.target.value, route.view);
+                }}
+                aria-label="run"
+              >
+                {runs.map((run) => (
+                  <option key={run.id} value={run.id}>
+                    {run.id}
+                  </option>
+                ))}
+              </select>
+              <span className="mono muted">{scenario?.split(":").at(-1) ?? ""}</span>
+              <StatusBadge status={runStatus} />
+              <VerifyBadge />
+            </div>
+          )}
+          <ThemeToggle />
+        </div>
       </header>
       <main className="content">
         {route.page === "run" && route.view === "overview" && <RunPage />}

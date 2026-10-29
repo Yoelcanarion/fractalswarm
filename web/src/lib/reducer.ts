@@ -13,15 +13,33 @@
 //   ownership.assigned  {key, owner}
 //   ownership.remapped  {key | keys, owner [to], previous [from], duties?}   duties ["root"] = root succession
 //
+// The baselines' supervised coordinator (baseline.crashed -> baseline.restarted) takes the node
+// through "restarting": ``outage`` carries what the restart ring needs, and ``supervision`` keeps one
+// record per crash (lib/supervision.ts). ``arena`` holds the running counters of the arena
+// (lib/arena.ts).
+//
 // The supporting panels (Market & budget, Rate limits, Breakers, Memory, Collisions, Escalations,
 // Results) are folded in ``panels``; ``groups`` counts events per list group for the event list.
 
+import { emptyArena, fingerprint, foldArena, type ArenaState } from "./arena";
 import { eventGroup } from "./eventlog";
+import { asNumber, asString } from "./generic";
 import { emptyPanels, foldPanels, type PanelsState } from "./panels";
 import { emptySchedule, foldSchedule, type ScheduleState } from "./schedule";
+import { emptySupervision, foldSupervision, type SupervisionState } from "./supervision";
 import type { RunEvent } from "./types";
 
-export type ActorStatus = "alive" | "stopped" | "killed" | "dead";
+// "restarting": a supervised coordinator that crashed and is on its way back (see ``outage``).
+export type ActorStatus = "alive" | "stopped" | "killed" | "dead" | "restarting";
+
+/** A crashed coordinator's way back: the ring fills from ``sinceTs`` over ``restartInMs`` of
+ * virtual time (lib/decay.ts restartProgress). */
+export interface Outage {
+  crash: number;
+  sinceTs: number;
+  sinceSeq: number;
+  restartInMs: number;
+}
 
 export interface ActorNode {
   id: string;
@@ -32,12 +50,25 @@ export interface ActorNode {
   status: ActorStatus;
   suspected: boolean;
   statusSeq?: number;
+  statusTs?: number;
+  stopReason?: string; // actor.stopped's reason: "crash" is a stop the restart undoes, "chaos" is not
+  outage?: Outage;
+  restartedTs?: number;
   adoptedBy?: string;
   adoptedSeq?: number;
+  adoptedTs?: number;
   duties: string[];
   llmCalls: number;
   tokens: number;
   lastActiveSeq: number;
+}
+
+/** An LLM call between effect.started and its completion or cancellation. */
+export interface InflightCall {
+  actor: string;
+  coordination: boolean;
+  key: string; // fingerprint of the request: the same request twice is the same work done twice
+  tag: string; // the effect's tag; an agent's is "<contract idem_key>:<step>"
 }
 
 export interface MessageFlash {
@@ -86,10 +117,12 @@ export interface ViewState {
   chaos: ChaosEntry[];
   netFaults: Record<string, number>; // drop | delay | duplicate | reorder | partition_drop -> count
   ownership: Record<string, string>;
-  inflight: Record<string, { actor: string; coordination: boolean }>;
+  inflight: Record<string, InflightCall>;
   counters: Counters;
   schedule: ScheduleState;
   panels: PanelsState;
+  supervision: SupervisionState;
+  arena: ArenaState;
   groups: Record<string, number>;
 }
 
@@ -132,6 +165,8 @@ export const emptyView = (): ViewState => ({
   },
   schedule: emptySchedule(),
   panels: emptyPanels(),
+  supervision: emptySupervision(),
+  arena: emptyArena(),
   groups: {},
 });
 
@@ -161,7 +196,7 @@ function bump(state: ViewState, patch: Partial<Counters>): ViewState {
 const asList = (value: unknown): string[] =>
   Array.isArray(value) ? value.map(String) : value === undefined || value === null ? [] : [String(value)];
 
-function markDown(state: ViewState, ids: string[], status: ActorStatus, seq: number): ViewState {
+function markDown(state: ViewState, ids: string[], status: ActorStatus, seq: number, ts: number): ViewState {
   let next = state;
   for (const id of ids) {
     const actor = next.actors[id];
@@ -171,6 +206,7 @@ function markDown(state: ViewState, ids: string[], status: ActorStatus, seq: num
     next = patchActor(next, id, {
       status: keep ? "killed" : status,
       statusSeq: keep ? actor.statusSeq : seq,
+      statusTs: keep ? actor.statusTs : ts,
       suspected: false,
     });
   }
@@ -188,7 +224,7 @@ function adopt(state: ViewState, event: RunEvent): ViewState {
   let next = state;
   for (const child of children) {
     if (child === adopter) continue;
-    next = patchActor(next, child, { parent: adopter, adoptedBy: adopter, adoptedSeq: event.seq });
+    next = patchActor(next, child, { parent: adopter, adoptedBy: adopter, adoptedSeq: event.seq, adoptedTs: event.ts_virtual });
   }
   next = addDuties(next, adopter, asList(p.duties));
   return bump(next, { adoptions: 1 });
@@ -231,7 +267,8 @@ function foldCore(state: ViewState, event: RunEvent): ViewState {
       const killed = KILL_REASONS.has(String(p.reason ?? ""));
       // chaos.injected already counted a targeted kill; the stop that follows must not count it twice.
       const fresh = killed && state.actors[id] !== undefined && state.actors[id].status !== "killed";
-      const next = markDown(state, [id], killed ? "killed" : "stopped", event.seq);
+      const stopped = markDown(state, [id], killed ? "killed" : "stopped", event.seq, event.ts_virtual);
+      const next = patchActor(stopped, id, { stopReason: String(p.reason ?? "") });
       return fresh ? bump(next, { kills: 1 }) : next;
     }
     case "msg.sent": {
@@ -246,7 +283,12 @@ function foldCore(state: ViewState, event: RunEvent): ViewState {
       if (p.kind !== "llm") return state;
       const inflight = {
         ...state.inflight,
-        [p.effect_id]: { actor: event.actor, coordination: isCoordinationCall(p) },
+        [p.effect_id]: {
+          actor: event.actor,
+          coordination: isCoordinationCall(p),
+          key: fingerprint(p.request),
+          tag: typeof p.tag === "string" ? p.tag : "",
+        },
       };
       const actor = state.actors[event.actor];
       const next = actor
@@ -279,16 +321,42 @@ function foldCore(state: ViewState, event: RunEvent): ViewState {
       let next: ViewState = { ...state, chaos: [...state.chaos, entry] };
       if (kind.startsWith("kill")) {
         const fresh = targets.filter((id) => next.actors[id] !== undefined && next.actors[id].status !== "killed");
-        next = bump(markDown(next, targets, "killed", event.seq), { kills: fresh.length });
+        next = bump(markDown(next, targets, "killed", event.seq, event.ts_virtual), { kills: fresh.length });
       }
       return next;
     }
     case "member.suspected":
       return patchActor(state, String(p.member), { suspected: true });
     case "member.dead":
-      return bump(markDown(state, [String(p.member)], "dead", event.seq), { deaths: 1 });
+      return bump(markDown(state, [String(p.member)], "dead", event.seq, event.ts_virtual), { deaths: 1 });
     case "tree.adopted":
       return adopt(state, event);
+    case "baseline.crashed": {
+      // The supervisor's node goes down and starts coming back; the chaos kill that caused it had
+      // marked it killed for good.
+      const coordinator = asString(p.coordinator, event.actor);
+      const outage: Outage = {
+        crash: asNumber(p.crash) ?? 0,
+        sinceTs: event.ts_virtual,
+        sinceSeq: event.seq,
+        restartInMs: asNumber(p.restart_in_ms) ?? 0,
+      };
+      return patchActor(state, coordinator, {
+        status: "restarting",
+        statusSeq: event.seq,
+        statusTs: event.ts_virtual,
+        suspected: false,
+        outage,
+      });
+    }
+    case "baseline.restarted":
+      return patchActor(state, asString(p.coordinator, event.actor), {
+        status: "alive",
+        statusSeq: event.seq,
+        statusTs: event.ts_virtual,
+        restartedTs: event.ts_virtual,
+        outage: undefined,
+      });
     case "ownership.assigned":
       return { ...state, ownership: { ...state.ownership, [String(p.key)]: String(p.owner) } };
     case "ownership.remapped": {
@@ -307,7 +375,7 @@ function foldCore(state: ViewState, event: RunEvent): ViewState {
 export function foldEvent(state: ViewState, event: RunEvent): ViewState {
   const core = foldCore(state, event);
   const group = eventGroup(event);
-  return {
+  const folded: ViewState = {
     ...core,
     lastSeq: event.seq,
     lastTs: event.ts_virtual,
@@ -317,8 +385,10 @@ export function foldEvent(state: ViewState, event: RunEvent): ViewState {
     counters: { ...core.counters, events: core.counters.events + 1 },
     schedule: foldSchedule(core.schedule, event),
     panels: foldPanels(core.panels, event),
+    supervision: foldSupervision(core.supervision, event),
     groups: { ...core.groups, [group]: (core.groups[group] ?? 0) + 1 },
   };
+  return { ...folded, arena: foldArena(folded.arena, event, state, folded) };
 }
 
 export const foldEvents = (events: RunEvent[], from: ViewState = emptyView()): ViewState =>

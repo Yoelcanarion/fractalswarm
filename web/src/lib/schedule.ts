@@ -44,6 +44,7 @@ export interface Collision {
   status: "open" | "resolved";
   detectedSeq: number;
   resolvedSeq?: number;
+  resolvedTs?: number; // virtual ms: the ruling is marked on the cell for a while after it
   arbiter?: string;
   rule?: string;
   winner?: string;
@@ -256,6 +257,7 @@ export function foldSchedule(state: ScheduleState, event: RunEvent): ScheduleSta
           ...open,
           status: "resolved",
           resolvedSeq: event.seq,
+          resolvedTs: event.ts_virtual,
           arbiter: String(p.arbiter ?? event.actor),
           rule: p.rule ?? p.resolution,
           winner: p.winner,

@@ -1037,11 +1037,40 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
   - reviewed: the cassette attempts expose no headers, run ids resolve through the catalogue, the cache is bounded;
   - checks: W3's full suite, 1097 passed and 3 skipped (PromptGuard, no safety extra in its venv), at 839e8fe; on the merged tree, ruff and format clean, the API tests (57) pass, `demo --verify` and the golden replays MATCH;
   - no $0 reference comparison: the change is outside the paths that need one.
+- **W1 part 1, the durable rivals** (6ca97ee, from e7c918d):
+  - modes `durable-max` and `durable`; new events `goal.opened` and `supervisor.adopted`; `baseline.crashed` and `baseline.restarted` keep their payloads; `half_the_brains_plan(seed)` in `bench/profiles.py`;
+  - reviewed at 4c0fbb9 (gated by the new modes, `sweep_knobs` empty by default); e7c918d adds only notes;
+  - W1's checks: full suite 1106 passed; $0 references 43 of 43 identical.
+- **W3 step 2, the ablation** (9140dce, from 73a33fe):
+  - a scenario addressed by its module path, with new events `ablation.note` and `ablation.done`; `POST /api/ablation` refuses the real backend (501);
+  - no `hash()`, clock, randomness or unsorted set in `ablation.py`;
+  - W3's checks: suite 1133 passed (PromptGuard deselected); $0 references 43 of 43 identical.
+- **Checks on arena after both merges** (9140dce):
+  - full suite 1173 passed with the PromptGuard tests;
+  - `ruff check` and `ruff format --check` clean;
+  - `demo --verify` and the demo/backup and demo/toy replays MATCH;
+  - $0 references 43 of 43 identical to phase0-3b1fe9b.
+- **W4 first merge** (9351497, from f553f66; W4 had merged arena first):
+  - design tokens and the store factory W5 builds on, plus steps 5, 6 and 8 (motion, controls with a capabilities fallback, timeline marks);
+  - web only; four new dependencies, all pinned (fontsource Inter and JetBrains Mono, lucide-react, motion); no `innerHTML`, `eval` or external URL;
+  - checks: typecheck clean, vitest 266 passed, build ok; the API tests (115) pass and `demo --verify` MATCHes on the new static build (4ce9463, self-hosted fonts, stale assets removed).
 
 **Supervision notes**
 - **Memory went down to 1.0 GB free at 00:53:** W3's suite, plus an unslotted probe of W1's (900 MB). W1 stopped it. Rule added: a worker script that runs several fake runs, or holds more than about 300 MB, needs a slot.
 - **`demo --verify` serves the UI and opens a browser by default** (found by W3). Workers now use `--no-serve --no-browser`.
 - **W1's probe:** the detector handles sub-second detection on the fake LLM (no false deaths, replay MATCH). Events grow like 1/heartbeat interval: 5.6K events at 5 s, 22K at 1 s, 42K at 0.5 s (1.4, 7.4 and 16.2 s of wall time per run). This is input for the sweep plan.
+- **Claude Code reaped background suites** when memory was critical and the session idle (W3's suite at 01:24). Workers now keep their session active while a heavy command runs (foreground chunks under 10 minutes), and run `pytest -m 'not promptguard'`; the coordinator runs PromptGuard at merge.
+- **W2's mailbox jammed for an hour:** its `check` replayed one unacknowledged batch, so it never saw 8 messages, two GOs among them. Every dispatch now says to `--ack` each batch.
+- **All sessions hit the usage limit at 00:45–00:52**, the coordinator's included; the work stopped until about 11:50. The four sessions were gone by then (Orca: `terminal_missing`). Each worker was restarted as a new Task with a resume spec on its existing worktree (old Tasks marked superseded, old terminals released):
+
+  | worker | dispatch |
+  |---|---|
+  | W1 rival | ctx_5463f633197d |
+  | W2 intake | ctx_cde5b22d50e0 |
+  | W3 meta | ctx_f6c6b5f6a730 |
+  | W4 ui-core | ctx_263bbad4ceee |
+
+- **A plain `uv sync` in the coordinator worktree removes the safety extra**, and the PromptGuard tests then skip silently. Use `uv sync --extra safety` there.
 
 **Spend:** no real calls.
 - Settled: $11.8194 before and after.
