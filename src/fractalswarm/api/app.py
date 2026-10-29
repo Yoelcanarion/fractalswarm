@@ -49,7 +49,7 @@ from starlette.staticfiles import StaticFiles
 from fractalswarm.api import arena, jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
 from fractalswarm.api.controls import (
-    ID,
+    TOKEN,
     ControlError,
     answer_control,
     approve_control,
@@ -326,7 +326,7 @@ def create_app(
         does not)."""
         body = await _json_body(request)
         run_id, eid = request.path_params["run_id"], request.path_params["eid"]
-        if not ID.fullmatch(eid):
+        if not TOKEN.fullmatch(eid):
             raise HTTPException(422, "the escalation id is not valid")
         inbox, _ = live_inbox(run_id)
         goal = body.get("goal_id") or escalation_goal(entry_of(run_id), eid)

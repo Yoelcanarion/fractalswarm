@@ -18,7 +18,7 @@ reference for everything W2 built. It is updated at each merge point.
 | Real intake from the UI (`POST /api/intake/preflight`, the same gate; coordinator's Q1) | done |
 | `LIVE` marker for `resume.py` and `baselines/langgraph_teams.py` (coordinator's Q2) | done |
 | API hardening (`api/guard.py`: Host allowlist, JSON-only POST, WebSocket origin; `serve` loopback-only with real spend on) | done |
-| 7. Live control (kernel) | approved with conditions (see the open questions); starts after the steps 5-6 merge |
+| 7. Live control (`control.injected`, a kill at a progress point, plan approve / replan, the API routes) | done, tested; see "Live control (step 7)" below. `merge_ready` pending the slot for the full suite and the references |
 
 ## Deviations and decisions
 
@@ -75,6 +75,12 @@ reference for everything W2 built. It is updated at each merge point.
 
 ## Replay safety
 
+- Step 7 adds one event type, `control.injected`, and no field to any existing payload model. It is an
+  `@env` event, so replay re-applies it where the log has it (`kernel/replay.py::_advance`); a log without
+  one replays exactly as before, and the default runs (no `live_control`) are the 43 references unchanged.
+  Several requests in one inbox poll are now injected one at a time, each on an empty queue (the replay
+  places an outside event after draining, and a batch of five kills did not replay MATCH until
+  `apply_control` did the same; found by the kill-half test).
 - No field was added to any existing event payload model. New event types: `intake.proposed`,
   `intake.refused`, `intake.failed` (`intake/events.py`).
 - Gated by new inputs that old logs don't have: `TaskInputs.inline`, `TaskInputs.intake`
@@ -97,6 +103,18 @@ All approved by the coordinator.
   LangGraph baseline showed as `interrupted` in the catalog while they ran, and so could not be halted
   from the API. `tests/integration/test_run_status.py` pins both (the marker is there for every call each
   runner sends, and gone at the end; the tests fail without the three lines).
+- Step 7 (functions touched, approved by the coordinator as "minimal and gated"):
+  `actors/orchestrator.py`: `orchestrator_init` (the `human_approval` flag, only when asked), `_handle` (the
+  `approval|<goal>` timer and the `control.injected` branch), `_central_step` (the same timer), `_planned` (the
+  hold, only with the flag), `_opt_ins` (hands the flag to the orchestrators it spawns); new `_hold_timer`,
+  `_hold_tick`, `_controlled`, `_approve`. `comms/chaos.py`: `MonkeyState` (two fields), `ChaosMonkey.init`,
+  `.handle` (a branch and the poll flag), `._act` (the `kill_agents` branch, for a named agent); new `_injected`,
+  `_named_agents`, `ACTION_KINDS`. `kernel/events.py` (`ControlInjected`, `GOAL_CONTROL`), `kernel/scheduler.py`
+  (`Runtime.inject`, `_origin`), `kernel/replay.py` (`_advance`, one branch), `kernel/effects.py`
+  (`apply_control`: the `inject` request and the drain between requests). `planning/taskspec.py`: a comment on
+  `auto_approve`, nothing else. Not on the coordinator's list, one gated block each: `actors/swarm.py`
+  (`SwarmScenario.boot` hands `live_control` to the root and the monkey) and, mine already, `cli.py` (`run
+  --live-control`), `api/jobs.py` (`run_args`, `launch_run`) and `api/arena.py` (`start_pair`).
 - `tests/conftest.py` (new): `TestClient` defaults to `http://127.0.0.1` and joins WebSocket paths onto its base
   URL, because the API now refuses `Host: testserver` (the guard above).
 - Five existing tests send what the UI sends, a JSON content type on a POST that had none:
@@ -120,16 +138,10 @@ and change no event payload; a run launched without a chaos-plan file or a barri
 
 ## Open questions for the coordinator
 
-1. **Step 7, live control: approved by the coordinator (Oct 29) on these conditions.** (a) It starts after the
-   steps 5-6 `merge_ready`. (b) `control.injected{op, body, to}` is a new ENV event type; no field is added to an
-   existing payload model. (c) Nothing changes unless a control is injected: the default runs stay 43 of 43
-   identical to `arena-c2b5e08` and every recorded run still replays MATCH. (d) Tests show a run with injected
-   controls (a kill at a progress point, a human approve, a re-plan with feedback) replaying MATCH, in a fresh
-   process too. (e) W3 answers its `escalation.opened` through `control.injected`; the op and body shape are
-   agreed with the coordinator first. (f) `merge_ready` by Sat Oct 31, 16:00 CET or it is dropped (scheduled
-   plans chosen before the launch are the fallback, and they work today: `POST /api/arena` takes a full
-   ChaosPlan). Until it lands `GET /api/capabilities` says `chaos` and `approve` are `false` and those routes
-   answer 501.
+1. **Step 7, live control: done** (conditions of the coordinator, Oct 29: a `live_control` run param, addressing
+   by goal, the tests below, the files, W3's `answer` shape). Open points for the coordinator are in the
+   `merge_ready`: the plan hold when the root dies, `kill_half` and the two kinds that cannot be injected, and
+   that `answer` is W3's to handle.
 2. **`LIVE` for the other runners is done** (deviation 11, your Q2). Closed.
 
 ## Private directory layout
@@ -273,9 +285,10 @@ and `status` in `completed | halted | running | interrupted | empty`.
 
 ### What this server can do, and what a finished run proves
 
-`GET /api/capabilities` → `{ "tasks": true, "chaos": false, "approve": false, "budget": true, "halt": true,
-"real": false }`. A control that is `false` answers 501 (`tasks` is false, and the launch routes answer 503,
-when the API has no private directory). `real` is an extra key beyond the five you asked for: it is true when
+`GET /api/capabilities` → `{ "tasks": true, "chaos": true, "approve": true, "budget": true, "halt": true,
+"real": false }`. `chaos` and `approve` act on a live run the API launched (409 for any other run, see
+"Live control (step 7)"); `tasks` is false, and the launch routes answer 503, when the API has no private
+directory. `real` is an extra key beyond the five you asked for: it is true when
 a billed launch can pass the gate (the server runs with `FRACTALSWARM_ALLOW_UI_REAL=1` and has a key), so the UI
 can show or grey out the "real" choice without posting a preflight. It is false by default. The run catalogue's `status` is one of `running | completed | halted |
 interrupted | empty`.
@@ -298,6 +311,56 @@ for an unknown run.
 ```
 
 For `demo/backup`: `ok` true, no violations, 5 kills, 8177 events.
+
+### Live control (step 7): `control.injected`
+
+A person's controls enter the log as one ENV event, `control.injected`, payload **`{op: str, body: object, to:
+str}`** (extra keys forbidden, `body` defaults to `{}`), `actor` `@env`. The driver records it when it finds the
+request in the run's control inbox, on an empty delivery queue (like a completion, a halt or a budget shock), and
+delivers it: to one actor (`to` = its id), to every live actor (`to` = `*`), or, for `to` = `goal:<id>`, to every
+live actor, of which the goal's owner acts. **Every reducer (view) sees the event** like any appended event
+(`Runtime._append` applies all reducers), so a view such as W3's `DisputesView` can read an answer from the log.
+A halted run records it and delivers nothing. A control for an actor that is gone is in the log and does nothing.
+
+A run takes controls only when it was launched with `params.live_control` (recorded in `run.started`): `fractalswarm
+run --live-control`, which the API passes for every job and every pair. A run without it records a control and
+ignores it (the monkey and the orchestrators check), and the API answers 409.
+
+| op | `to` | `body` | who acts |
+|---|---|---|---|
+| `chaos` | `chaos` | `{kind, at, target?, agent_share?, duration_ms?, count?}`: `kill_coordinator`, `kill_agents` (alias `kill_agent`), `partition`; `at` 0 to 1 | the chaos monkey: it joins the actions still to come, in order of `at`, and the poll fires it when the progress gets there (at once if it already has). A `kill_agent` with no `target` draws `count` (default 1) of the agents alive at the injection, seeded by the event's seq. |
+| `approve` | `goal:<id>` | `{}`, or `{plan_hash}` | the goal's owner, if the goal waits for approval and `plan_hash` (when given) is the held plan's |
+| `replan` | `goal:<id>` | `{feedback, plan_hash?}` | the same; `plan.rejected {goal_id, attempt, errors: [feedback]}`, then the planner is asked again with the feedback |
+| `answer` | `goal:<escalation.opened.goal_id>` | `{escalation_id, choice}` | **W3's** arbiter (agreed with the coordinator and W3); my code ignores the op |
+
+**The plan hold.** A TaskSpec with `auto_approve: false` and a run with `live_control` make the root goal's plan wait
+for a person: `plan.proposed` (as always), then nothing until `approve` (`plan.approved` with `by: "human"`, the same
+envelope and scope token) or `replan`. A `approval|root` timer (5 virtual s) keeps the run alive while it waits, and
+after 30 virtual minutes the hold ends by itself with `by: "timeout"`. The swarm, `central`, `durable-max`,
+`durable`, `single` and `pipeline` all hold. A CLI run (no `live_control`) with `auto_approve: false` does not wait.
+Controls are resolved by goal, at the event, by the goal's owner as that actor's own view has it
+(`TreeView.owner_of`): after a takeover that is the heir, so a click that lands after the root died and its heir took
+over is handled by the heir. A root that dies while it holds the plan takes the plan with it: its heir proposes a
+new one and holds again, and a control that arrives between the death and the heir's takeover is lost with the plan
+(it is in the log, the heir proposes again, and the UI asks again; `plan_hash` in the body makes sure an answer to
+a plan that is gone cannot approve its replacement). A central process loses a control while it is down (its restart
+waits on, the hold included). The timer, the hold and the state key exist only for a run that asked for them, so
+a default run logs what it always did.
+
+**The routes** (`api/controls.py`; every body is validated, nothing is sent for a bad one):
+
+| Route | Body | Sends |
+|---|---|---|
+| `POST /api/runs/{id}/chaos` | `{kind, at?, target?, count?}`; `kind` is `kill_coordinator`, `kill_agent` or `kill_half` | `chaos` controls to `chaos`. `kill_half` sends five `kill_coordinator` at the same `at`, targeted `o0, o2.1, o1, o3.2, o2` (the ten orchestrators of T2: `cli.kill_half_plan`'s five, a test keeps them equal); `at` defaults to 0 (now); `profile` and other keys are ignored |
+| `POST /api/runs/{id}/approve` | `{goal_id?: "root", approve?: true, reason?, plan_hash?}` (what the UI's buttons post) | `approve`; with `approve: false`, `replan` with `reason` (or `feedback`) as the feedback |
+| `POST /api/runs/{id}/escalations/{eid}` | `{choice, goal_id?}` | `answer` `{escalation_id: eid, choice}` to `goal:<goal_id>`; the goal is read from the log's `escalation.*` event that carries `eid` (as `id`, `escalation_id` or `eid`) and its `goal_id`, so the body needs it only if the log does not say |
+| `POST /api/pairs/{pair_id}/chaos`, `.../approve` | the same | the same controls into both runs of a pair; each run's own monkey or owner acts, so the rival crashes where the swarm loses a coordinator |
+
+200 `{"ok": true, "detail": "..."}`; a pair adds `"runs": {run_id: "requested" | "skipped: <why>"}`. 404 unknown run,
+pair or escalation; 409 the run is a recording, not live, was not launched to take controls, does not wait for
+approval, or (a pair) no run can take it; 422 a bad body. `api_storm` and `net_fault` answer 422: they are set when
+the chaos network starts, so they belong to the plan a run is launched with (`POST /api/arena` takes a full
+ChaosPlan). The lens shows a `control.injected` as its type (no sentence yet; `api/lens.py` is W3's).
 
 ### Arena: a swarm and a rival on one input
 
@@ -536,5 +599,17 @@ Results at `cf5b8ce` (machine shared with W1's gate, one process): the 5 live-cl
 17.9 s (slowest 10.7 s); the whole suite `pytest -m "not promptguard"` 1451 passed (1158 in 6m49s for `unit`
 and the integration files a-l, 293 in 7m33s for m-z), 3 deselected; `ruff check` and `ruff format --check`
 clean (238 files).
+
+Step 7: `test_live_control.py` (T2 swarm runs on the fake LLM, each replayed in process and in a fresh process:
+a kill injected at a progress point fires there and in order with the planned ones, a named target, a named agent
+and `count` agents drawn, a kill of an agent that is not there is logged as skipped, kill-half from the button
+finishes, a run without `live_control` and a halted run only record the control, nonsense changes nothing; the plan
+hold: approve, replan with feedback in the second planner prompt, an answer for another plan or goal or by `*` or by
+actor id changes nothing, the `timeout` end, a CLI run never waits, the five rivals hold too; the heir of a root that
+died holding the plan answers, an approval that beats the heir is lost and asked again, a rival that crashed holding
+the plan waits on after its restart; a run resumed on and before the approval), `test_live_control_api.py` (every
+route, every refusal, the pairs, the shapes), `test_live_control_e2e.py` (a real subprocess run launched, killed and
+approved over HTTP, then `verify` and a fresh-process replay MATCH). Mutation-checked: removing the replay branch,
+the `live_control` gates, the plan-hash check or the goal broadcast fails the tests that name them.
 
 None of these calls the API. Live-clock tests and anything that starts several runs run only in a slot.

@@ -34,7 +34,8 @@ CHAOS_KINDS = ("kill_half", "kill_coordinator", "kill_agent")
 NOT_LIVE_KINDS = ("api_storm", "net_fault")
 # T2's ten orchestrators, killed in this order: ``cli.kill_half_plan`` (a test keeps them equal).
 KILL_HALF_TARGETS = ("o0", "o2.1", "o1", "o3.2", "o2")
-ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,63}")
+ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,63}")  # an actor id
+TOKEN = re.compile(r"\S{1,200}")  # a goal or escalation id: ``arbitration:<fact key>`` is one
 MAX_TEXT = 2000
 
 
@@ -76,7 +77,7 @@ def approve_control(body: dict[str, Any]) -> dict[str, Any]:
     """The control for ``POST /api/runs/{id}/approve``: ``{"goal_id"?, "approve"?, "reason"?,
     "plan_hash"?}``. ``approve: false`` sends the plan back (``replan``) with ``reason`` (or
     ``feedback``) as the planner's feedback."""
-    goal = _text(body.get("goal_id", ROOT_GOAL), "goal_id", 64, ID) or ROOT_GOAL
+    goal = _text(body.get("goal_id", ROOT_GOAL), "goal_id", 200, TOKEN) or ROOT_GOAL
     approve = body.get("approve", True)
     if not isinstance(approve, bool):
         raise ControlError("approve must be true or false")
@@ -98,8 +99,10 @@ def answer_control(escalation_id: str, goal_id: str, body: dict[str, Any]) -> di
     choice = _text(body.get("choice"), "choice", MAX_TEXT)
     if not choice:
         raise ControlError("choice is required: what the person decided")
-    if not ID.fullmatch(goal_id):
+    if not TOKEN.fullmatch(goal_id):
         raise ControlError("goal_id is not a goal id")
+    if not TOKEN.fullmatch(escalation_id):
+        raise ControlError("the escalation id is not valid")
     detail = {"escalation_id": escalation_id, "choice": choice}
     return control(GOAL_CONTROL + goal_id, "answer", detail)
 
