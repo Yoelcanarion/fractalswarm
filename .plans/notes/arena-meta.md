@@ -6,8 +6,8 @@ Owner of: `api/lens.py`, the ablation, Wonder arbitration. Only the coordinator 
 | Step | State |
 |---|---|
 | 1. Muse lens API (merge point 1) | **done**, see below |
-| 2. Ablation (merge point 2, own commit) | **done** (own commit), see "Step 2" below |
-| 3. Wonder arbitration (merge point 2, own commit) | waits for W1's durable modes |
+| 2. Ablation (merge point 2, own commit) | **done and merged** into arena at 9140dce (my 73a33fe); see "Step 2" below |
+| 3. Wonder arbitration (merge point 2, own commit) | **built, tested at $0, merge_ready**; suite green, references 43/43; see "Step 3" below |
 
 ---
 
@@ -53,11 +53,12 @@ interface Usage { input_tokens: number; cached_tokens: number; output_tokens: nu
                   reasoning_tokens: number; searches: number }   // cached ⊂ input, reasoning ⊂ output
 
 interface CallRef {                       // what the call is for
-  kind: "plan" | "judge" | "agent" | "ablate" | string | null;
+  kind: "plan" | "judge" | "agent" | "ablate" | "arbitrate" | string | null;
   goal_id?: string; attempt?: number;
   contract_id?: string;                   // judge, agent
   contract_kind?: string; step?: number;  // agent turns only ("extract", "place", "blurb")
   note_id?: string;                       // kind "ablate": the note this Muse call read (step 2)
+  key?: string;                           // kind "arbitrate": the disputed fact (step 3); attempt: 1, 2 after a takeover
 }
 
 interface Routing { contributor: boolean; reason: string;
@@ -297,7 +298,12 @@ Real bodies (fake backend, two posted notes): `POST` → `{"run_id":"ablation-b7
 
 ### Running it with the real Muse (the coordinator's, with Yoel's OK)
 - `POST /api/ablation` never spends: `backend: "real"` is a 501. A real run needs the real plumbing the CLI and W2's job manager already have (key, firewall, project ledger, preflight, SPEND).
-- **Request for the coordinator (cli.py is W1/W2's, so I have not touched it):** `fractalswarm run <t2 taskspec> --scenario ablation` needs `run` to accept `ablation` in its `--scenario` check, to pass `fractalswarm.bench.tasks.t2_conference.ablation.SCENARIO` to `record_run`, and to print `ablation.done`'s headline instead of looking for a `task.result` (it would otherwise exit 1 with "no task.result", though the run is recorded). About 10 lines. I checked with a scratch run that the params `run` builds from the T2 TaskSpec drive the scenario (80 notes, 408 events, replay MATCH, fake-priced $0.13 for the 80 calls; the T2 TaskSpec's own cap is $2). W2's job manager would need the same scenario allowance to launch it from the UI. I can make the cli.py edit and test it at $0 if you say so.
+- **The CLI edit** (`cli.py` is W1/W2's; the coordinator said GO, so it is one additive edit, listed in the merge): `fractalswarm run <t2 taskspec> --scenario ablation` now works. It is made on top of arena's `--scenario` check with W1's durable modes.
+  - `run` accepts `ablation` in its `--scenario` check and passes `ablation.SCENARIO` (the `module:attr` path) to `record_run`, so `runs.py` is untouched.
+  - It refuses, before anything is recorded: a TaskSpec whose `task` is not `t2_conference` (the ablation reads a T2 corpus), and `--chaos kill-half` (there is nothing to kill). `C1`–`C3` still inject API faults on the Muse calls. The other flags (`--cross-audit`, `--feasibility-report`, the TaskSpec's market and scaling) are recorded in the params and ignored, as they are for the baselines.
+  - It prints `ablation.done` instead of looking for a `task.result`: the headline, how the notes split (both, only Muse, only the parser, neither), what cut the run short, and the caveats that apply. The text comes from `ablation.summary_lines`. Exit 1 when the run has no `ablation.done` (halted) or the deadline cut it (`complete: false`); 0 otherwise.
+  - Checked at $0 (fake backend, scratch dirs): `t2-conference.yaml` gives 80 notes, 408 events, fake-priced $0.130851, `replay --verify` MATCH. Five tests (`tests/integration/test_ablation.py`, section "fractalswarm run --scenario ablation"): the output and the replay, a CLI-recorded run read by `GET /api/ablation/{run_id}` and the lens, the refusals, a run cut by its deadline, a run halted before it ended. Eight mutations of the edit are each caught by one of them.
+  - W2's job manager needs the same allowance to launch an ablation from the UI: `ablation.SCENARIO` as the scenario and a T2 TaskSpec's `run_params`.
 - Cost: 80 Spark calls on the generator's notes (fake-priced $0.13); the budget line in backend-design §3 says ≈ $0.5 for intake and ablation together.
 
 ### Deviations
@@ -312,7 +318,67 @@ Real bodies (fake backend, two posted notes): `POST` → `{"run_id":"ablation-b7
 - The regex's preference defaults to `none` and its availability to "all available", exactly as the fake T2 model does; a note it cannot read counts against it.
 
 ### $0 reference comparison
-(see the end of this file once recorded)
+- **Suite:** 1133 passed at 73a33fe, accepted by the coordinator.
+- **References:** 43 of 43 runs identical to the Phase 0 set (`~/.fractalswarm/refs/phase0-3b1fe9b`) by `compare_refs.py`: the 11 CLI runs and the 32-cell fake matrix. The ablation adds a scenario addressed by its `module:attr` path and two new event types, and touches no default path, so the default-path logs did not move.
 
-## Step 3 — arbitration (not started)
-Waits for the coordinator's word that W1's durable modes have merged. Deadline: merged by Sun Nov 1, 14:00, or dropped before the 20:00 freeze.
+## Step 3 — Wonder arbitration at the LCA
+
+Built on arena `b443893` (W1's durable modes and W2 steps 1–4 are in). Off unless `params.arbitration` is set; nothing in a default run's events moves.
+
+### What a dispute looks like in the log
+1. Two contracts publish different availability for one speaker (`speaker:S02:availability`). The board marks the fact `disputed` and logs `fact.published{status: "disputed"}` and `collision.detected{kind: "semantic", goal_id: <the later publisher's goal>, holder: <its agent>, conflicts: [{key, subject, candidates: [{label, value, by: [{work, contract, goal, agent, squad, sources, lamport}]}]}]}`. One candidate per distinct value (canonical JSON), labelled A, B, … once and for good. A retry of the same work (`goal/contract`) takes back its earlier word; a rival with the same value is not a dispute.
+2. The board sends `arbitration.request{key}` to the owner of the lowest common ancestor goal (the tree's owner of the LCA, else the root's). The owner takes the dispute up at once, on every tick (`_reconcile` for the swarm, the 1 s `central.tick` for the central modes), and after a takeover or restart.
+3. `arbitration.requested{key, subject, attempt, lca, arbiter, candidates: [work, …], fence}`, then one `llm` effect tagged `arbitrate|<key>|<attempt>`, role `arbiter` = **muse-wonder-1.0, effort high, 8192 tokens** (checked in the cassette). The prompt carries the candidates' values, the key/subject and the speaker's email as `<<<UNTRUSTED …>>>` blocks; the header and the instructions carry none of it. Not a coordination token (`coordination_tokens == 0`).
+4. `arbitration.ruled{key, subject, winner (label), work, contract, value, reason, confidence, evidence: [email ids], attempt, by: arbiter | agreement | fallback, arbiter, lca, reused, fence}`, then `collision.resolved{kind: "semantic", goal_id, resolution}`, `msg.sent fact.resolve{key, contract, by}` to the board, `msg.sent arbitration.ruling{key}` to the owners of the candidates' goals, and the board's `fact.resolved{key, contract, version, by}`: the winner's value is now the verified, global fact.
+5. Below 0.6 confidence, also `escalation.opened{id: "arbitration:<key>", kind, key, goal_id, question, options: [labels], confidence, timeout_ms: 60000, default: <the ruled label>, fence}`.
+6. Effect on the work: `_dispatch` asks `arbitration.gate` for each contract it is about to send. A `place` whose speakers include a disputed key waits (a `SetTimer` tagged `arb.hold|<goal>`, one per wait) until the ruling or until **30 s after the dispute opened**; with a ruling in the log it goes out with the ruled value laid over its own, with no ruling by then it goes out with its own values. The timer is cancelled when the wait ends early.
+
+Two unusable answers (not JSON, a winner that is no label, an error, a refusal) end in a ruling without the model: the oldest value by Lamport clock, `by: "fallback"`, confidence 0, plus an escalation. No evidence in the LCA goal's data does the same. One unusable answer is asked again with the problem as feedback.
+
+### Where it lives
+- `actors/arbitration.py` (new): the events, `DisputesView` (reducer name `disputes`: contract → work, the disputes and their candidates, the rulings, the arbitration calls by tag), `lca_of`, `join`, `read_ruling`, `step` (the owner's turn), `gate`, the prompt.
+- `bench/tasks/t2_conference/arbitration.py` (new): T2's side — `fact_keys`, `overlay`, `evidence`, the fake arbiter (registered in `fake.HANDLERS`, reads the email the way the fake extractor does) and `with_dispute(script, speaker, session)`, the fake script variant that makes one session misread one speaker.
+- `actors/board.py`: `_contest` (detection), `_resolve` (applies the order), `promote` skips disputed keys.
+- Light edits, listed for the merge: `actors/orchestrator.py` (+88 −9): init flag, `_opt_ins`, `_handle` (arbitrate / arb.hold tags, request / ruling topics), `_dispatch` (the gate, the timer, the cancel), `_arb_woken`, `_arb_ruled`, `_arbitrate`, `_parent_of`, one call each in `_reconcile` and the central tick, and **in W1's durable code** `_crash` (cancels the arbitration call in flight) and `_crash_durable(state, view)` (the same, `durable` only; the signature gained `view`). `actors/swarm.py` (+13 −2): `DisputesView` in the reducers, the flag to the board and the root, a `ValueError` for a task with no hooks. `planning/taskspec.py` (+7 −1, the coordinator's OK): `arbitration: bool = Field(default=False, exclude=True)` and `params["arbitration"] = True` in `_with_economy`. `api/lens.py`: sentences for the new events, and `ref: {kind: "arbitrate", key, attempt}` on the arbitration call (the lens already labelled the `arbiter` role as `purpose: "arbitration"`).
+
+### What happens when the arbiter dies mid-call (forced dispute S02 at track-ai/d1, an arbiter 8 s slow, o0 killed at 30 %, all checked in the log)
+| System | The call in flight | Who finishes it |
+|---|---|---|
+| swarm | cancelled by the kill (`effect.cancelled` by `chaos`) | the heir of the root, o1, after `member.dead` and `tree.adopted`: `arbitration.requested` attempt 2 under its own fence; one `ruled`, one `fact.resolved` |
+| central | cancelled with the process (`baseline.crashed`) | the restarted o0, attempt 2 |
+| durable-max | kept (a durable job); it ends during the outage | the restarted o0 reads the answer from the log: attempt 1, `reused: false`, no second call |
+| durable | lost with the process (listed in `baseline.crashed.lost`) | the restarted o0, attempt 2 |
+An answer a dead owner got is adopted by the heir without a new call (`reused: true`; unit-tested). Replay is MATCH in every case.
+
+### Tests
+- `tests/unit/test_arbitration.py` — 69: the events validate, the LCA, candidates, reading the arbiter's answer, the view, the gate, the board's side (detection, promote, resolve, settled keys), the owner's turn (ask, wait for a live caller, ask again for a dead one or a cancelled one, adopt an answer, fallback, agreement, escalation, the finished goal), spotlighting (an email cannot close its block), T2's hooks, the lens sentences.
+- `tests/integration/test_arbitration.py` — 37, on 13 fake T2 runs of 1–3 s: a dispute settled at the root (S02) and at the track (S04); the ruling keeps the reading the email supports; both sessions place with the ruled value; the hold, and the timer left behind; the hold timing out against a slow arbiter; a doubtful and an unusable arbiter; the four kills above; off-path identity (`quiet` vs `default`: with nothing in dispute, an arbitration-on run is event-for-event the run without it); replay MATCH of each recording.
+- 22 deliberate breakages of the mechanism (the gate, the hold, the ticks, the crash cancels, the board's rules and its check of the log, the fallback, adoption, the escalation, spotlighting, the flags) are each caught by at least one test.
+
+### Deviations
+1. **`escalation.opened` has the timeout path only.** The ruling is applied at once and the escalation says a person may still answer within `timeout_ms` (60 s), `default` being the ruled label. Nothing waits on the person. There is no answer path: `control.injected` has no payload yet (W2 step 7 is not approved). When it exists it needs one more branch in `DisputesView` and a re-ruling; the coordinator asked to keep it behind a check for the event type, and there is nothing to check yet.
+2. **The board applies `fact.resolve` only if the log holds a matching `arbitration.ruled`** (same key, same winner contract). A stale owner that was fenced out may still send the order; the log has no ruling from it, so the board ignores it. Not in the brief; it keeps the board and the log from naming two winners.
+3. **Light edits outside the brief's list:** `api/lens.py` sentences (mine), `actors/swarm.py` and `planning/taskspec.py` (the coordinator's OK, on top of W2's), W1's `_crash` and `_crash_durable` (minimal, gated by the flag).
+4. **A finished goal reads an answer that comes in late but pays for no new call.** If the root completes first, the call is cancelled with the run and the dispute stays open in the log.
+5. **`DisputesView` is always installed**, whatever the flag, so replay of a log needs no knowledge of it; it adds no event.
+
+### Open questions
+1. **Answering an escalation.** Needs W2 step 7's `control.injected` payload. The ruling is already applied when the escalation opens, so a person's answer would be a second event (an overruling) and a board path that replaces a verified fact; neither exists. If step 7 is not approved, the escalation stays what it is: a visible flag with a default.
+2. **No closing event for `escalation.opened`.** After `timeout_ms` nothing in the log says the ruling stood; the UI can derive it from the event's time plus `timeout_ms`. Say if W5 wants an event for it.
+3. **A dispute still open when the run ends** (the root completes before the arbiter answers, or the call was cancelled with the run) stays open in the log, with no ruling. The result is unaffected, since the contracts went out with their own values after the 30 s. Say if the root should hold its completion for open disputes.
+4. **The 30 s hold** is the brief's number on the virtual clock. A real Wonder call at effort high may take longer than that, and then the `place` goes out with its own values and the ruling only settles the fact. Change `HOLD_MS` if the real run shows that.
+
+### Limits to know
+- **Only T2 has the hooks** (`TASK_HOOKS`): a run with `arbitration` on another task fails at boot with a `ValueError`. Only a `place` reads availability, so only a `place` waits.
+- **A disputed fact is invisible** to every squad but the first publisher's (the search filter is "verified or my squad"), until it is ruled.
+- **In `single` and `pipeline` no dispute arises**: the later session finds the first one's verified fact and does not publish its own. In the swarm and the central modes the sessions run together and both publish.
+- **Constants, not config:** hold 30 s, confidence 0.6, two unusable answers, escalation timeout 60 s (`actors/arbitration.py`).
+- **The dispute is forced only in the fake script variant** (`with_dispute`, tests and probes). Whether real Muse extractions of one speaker ever disagree is for the real run to show; with the fake, a default run has no dispute and costs nothing extra. One arbiter call costs $0.0195 at fake prices (Wonder high), a few cents with the real reasoning tokens.
+- **A late ruling does not redo work.** After the 30 s a `place` has gone out with its own values; the ruling then only settles the fact. That includes a re-placed contract after a booking conflict.
+- Claims: "no supervisor needed" is the only thing these runs back (the heir and the restarted coordinator both finish the job). They do not say arbitration is cheaper or more reliable than anything.
+
+### $0 reference comparison
+- **Suite** at `e5061b8` (`pytest -m 'not promptguard'`, run in three chunks because of the 9-minute limit): unit 813 passed, integration 330 + 237 passed, 3 promptguard deselected, 0 failed. `ruff check` and `ruff format --check` clean.
+- **What the suite caught:** the board's `_tool` had gained a required `state` argument, and the LangGraph baseline calls it on a bare `Blackboard` (`baselines/langgraph_teams.py:521`); 11 baseline tests errored and 3 more failed downstream. `state` is optional again (without it there are no disputes) and a unit test pins the call shape. The baseline file is untouched.
+- **References:** 43 of 43 runs identical to `~/.fractalswarm/refs/arena-c2b5e08` by `compare_refs.py` (the 11 CLI runs and the 32-cell fake matrix; event counts and hash-chain heads equal). Arbitration is off unless `params.arbitration` is set, and `DisputesView` adds no event.
+- `fractalswarm demo --verify --no-serve --no-browser` (scratch dirs): MATCH, 8177 events.

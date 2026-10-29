@@ -3,7 +3,7 @@ import { memo, useMemo, useState, type CSSProperties } from "react";
 import { fadeLife, glowVars, RESOLVED_LIFE_MS } from "../lib/decay";
 import { SERIES, colorOf } from "../lib/layout";
 import type { ViewState } from "../lib/reducer";
-import { cellCollision, cellKey, openCollisions, type Cell, type Collision } from "../lib/schedule";
+import { cellCollision, cellKey, openCollisions, rulingsEnd, type Cell, type Collision } from "../lib/schedule";
 import { useRunStore } from "../store";
 import { ClockScope } from "./ClockScope";
 
@@ -85,6 +85,8 @@ export function ScheduleGrid({ view }: { view: ViewState }) {
   if (jump.epoch !== epoch) setJump({ epoch, seq: view.lastSeq });
 
   const squads = useMemo(() => [...new Set(Object.values(schedule.cells).map((c) => c.squad))].sort(), [schedule.cells]);
+  // Only a ruling mark fades here, and rarely: the clock writes --now into the grid only while one does.
+  const liveUntil = useMemo(() => rulingsEnd(schedule, fadeLife(RESOLVED_LIFE_MS)), [schedule]);
   if (schedule.rooms.length === 0 || schedule.slots.length === 0) {
     return (
       <div className="empty">
@@ -95,7 +97,7 @@ export function ScheduleGrid({ view }: { view: ViewState }) {
   }
   const days = schedule.days.length ? schedule.days : ["1"];
   return (
-    <ClockScope>
+    <ClockScope liveUntil={liveUntil}>
       <div className="grid">
         {days.map((day) => (
           <div key={day} className="grid__day">

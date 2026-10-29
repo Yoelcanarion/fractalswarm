@@ -26,17 +26,19 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from fractalswarm.api.catalog import Catalog, RunEntry
 from fractalswarm.config import CONFIG_DIR
 from fractalswarm.intake.pseudonym import Pseudonyms
 from fractalswarm.intake.store import PrivateDir, new_id, read_json, safe_id, utc_now, write_json
 from fractalswarm.planning.taskspec import TaskSpec, resolve_path, run_params
-from fractalswarm.runs import RunPaths
+from fractalswarm.runs import SCENARIOS, RunPaths
 
 REPO_ROOT = CONFIG_DIR.parent
 LAUNCH = [sys.executable, "-c", "from fractalswarm.cli import app; app()"]
@@ -319,6 +321,19 @@ class JobManager:
         job["runs"].append(run)
         return run
 
+    def write_spec(self, job: dict[str, Any], spec: dict[str, Any]) -> Path:
+        """The TaskSpec as the CLI reads it. Email addresses in an inline corpus are
+        replaced first (the mapping stays next to it), so no file of the job holds one."""
+        data = copy.deepcopy(spec)
+        inline = (data.get("inputs") or {}).get("inline")
+        directory = self.job_dir(job["id"])
+        if isinstance(inline, dict) and "corpus" in inline:
+            pseudonyms = Pseudonyms()
+            inline["corpus"] = pseudonyms.mask_value(inline["corpus"])
+            write_json(directory / "pseudonyms.json", pseudonyms.mapping())
+        write_json(directory / "spec.json", data)
+        return directory / "spec.json"
+
     def finish_launch(self, job: dict[str, Any], warnings: list[str]) -> dict[str, Any]:
         job["warnings"] = warnings
         self.jobs[job["id"]] = job
@@ -364,11 +379,25 @@ class JobManager:
         self._save(job)
         return self.view(job)
 
+    def fail(self, job: dict[str, Any], reason: str) -> None:
+        """End a job that cannot go on: stop what is still alive and say why."""
+        for run in job["runs"]:
+            if self.alive(job, run):
+                self._kill(job, run)
+        job["state"] = "failed"
+        job["finished_at"] = utc_now()
+        if reason not in job["warnings"]:
+            job["warnings"] = [*job["warnings"], reason]
+        self._save(job)
+
     def _kill(self, job: dict[str, Any], run: dict[str, Any]) -> None:
         """Kill a run's process tree, and clear its ``LIVE`` marker so the run reads as
         interrupted now instead of running for another few seconds."""
         kill_tree(self._pid_of(job, run))
         (Path(run["dir"]) / "LIVE").unlink(missing_ok=True)
+
+    def alive(self, job: dict[str, Any], run: dict[str, Any]) -> bool:
+        return self._alive_run(job, run)
 
     def _alive_run(self, job: dict[str, Any], run: dict[str, Any]) -> bool:
         proc = self.procs.get((job["id"], run["run_id"]))
@@ -389,6 +418,27 @@ class JobManager:
 
 # -- the launch API ------------------------------------------------------------------------
 
+RUN_SCENARIOS = ("swarm", "central", "single", "pipeline", "durable-max", "durable")
+
+
+def available_scenarios() -> list[str]:
+    """The scenarios a run may be started with in this build."""
+    return [name for name in RUN_SCENARIOS if name in SCENARIOS]
+
+
+@dataclass(frozen=True)
+class Approval:
+    """What a billed launch was cleared to do. ``api/spend.py`` decides; this module runs
+    it: the cap of each run, the environment of its processes (the ledger they bill to),
+    and how to give the preflight token back if the launch starts nothing."""
+
+    run_cap_usd: float
+    env: dict[str, str]
+    undo: Callable[[], None]
+
+
+Approve = Callable[[str, dict[str, Any], int], Approval]  # (kind, request, runs)
+
 
 class TaskRequest(BaseModel):
     """``POST /api/tasks``: a TaskSpec and how to run it."""
@@ -396,7 +446,7 @@ class TaskRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     spec: dict[str, Any]
-    scenario: Literal["swarm", "central", "single", "pipeline"] = "swarm"
+    scenario: str = "swarm"
     chaos: Literal["C0", "C1", "C2", "C3", "kill-half"] = "C0"
     clock: Literal["sim", "live"] = "sim"
     speed: float = Field(default=1.0, gt=0, le=1000)
@@ -405,17 +455,23 @@ class TaskRequest(BaseModel):
     budget_usd: float | None = Field(default=None, gt=0)
     cross_audit: bool = False
     feasibility_report: bool = False
+    preflight_token: str | None = None  # billed runs only (api/spend.py)
+    confirm: str | None = None
+
+    @field_validator("scenario")
+    @classmethod
+    def known_scenario(cls, value: str) -> str:
+        if value not in available_scenarios():
+            raise ValueError(f"must be one of {', '.join(available_scenarios())}")
+        return value
 
 
-def parse_request(body: dict[str, Any]) -> tuple[TaskRequest, TaskSpec]:
-    """The request and its TaskSpec, or ``JobError(422)`` saying what is wrong."""
+def check_spec(raw: dict[str, Any]) -> TaskSpec:
+    """The TaskSpec of a request, or ``JobError(422)`` saying what is wrong with it."""
     try:
-        request = TaskRequest.model_validate(body)
-        spec = TaskSpec.model_validate(request.spec)
+        spec = TaskSpec.model_validate(raw)
     except ValidationError as exc:
-        first = exc.errors()[0]
-        where = ".".join(str(part) for part in first["loc"])
-        raise JobError(422, f"{where}: {first['msg']}") from None
+        raise JobError(422, _first_error(exc, "spec")) from None
     inputs = spec.inputs
     if inputs.fixture is not None:
         found = resolve_path(inputs.fixture, REPO_ROOT).resolve()
@@ -424,91 +480,147 @@ def parse_request(body: dict[str, Any]) -> tuple[TaskRequest, TaskSpec]:
     given = [inputs.fixture, inputs.inline, inputs.intake]
     if spec.task in ("t1_extraction", "t2_conference") and all(g is None for g in given):
         raise JobError(422, "give the input: inputs.fixture, inputs.inline or inputs.intake")
-    return request, spec
+    return spec
 
 
-def check_inputs(manager: JobManager, spec: TaskSpec) -> None:
-    """Build the run's params once here, so a bad input is refused with its reason instead of
-    ending a process that has already started."""
+def _first_error(exc: ValidationError, prefix: str = "") -> str:
+    first = exc.errors()[0]
+    where = ".".join(str(part) for part in [*([prefix] if prefix else []), *first["loc"]])
+    return f"{where}: {first['msg']}"
+
+
+def parse_request(body: dict[str, Any]) -> tuple[TaskRequest, TaskSpec]:
+    """The request and its TaskSpec, or ``JobError(422)`` saying what is wrong."""
     try:
-        run_params(spec, manager.private.root)
+        request = TaskRequest.model_validate(body)
+    except ValidationError as exc:
+        raise JobError(422, _first_error(exc)) from None
+    return request, check_spec(request.spec)
+
+
+def check_inputs(manager: JobManager, spec: TaskSpec) -> dict[str, Any]:
+    """Build the run's params once here, so a bad input is refused with its reason instead of
+    ending a process that has already started. Returns them."""
+    try:
+        return run_params(spec, manager.private.root)
     except FileNotFoundError as exc:
         raise JobError(409 if spec.inputs.intake else 422, str(exc)) from None
     except ValueError as exc:
         raise JobError(422, str(exc)) from None
 
 
-def launch_run(manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
-    """Start a run on the fake backend as a job: ``fractalswarm run`` in its own process."""
+def launch_run(
+    manager: JobManager, body: dict[str, Any], approve: Approve | None = None
+) -> dict[str, Any]:
+    """Start a run as a job: ``fractalswarm run`` in its own process. A billed run
+    (``backend: real``) starts only if ``approve`` clears it (api/spend.py)."""
     request, spec = parse_request(body)
-    if request.backend != "fake":
+    real = request.backend == "real"
+    if real and approve is None:
         raise JobError(403, "real runs need the preflight flow (POST /api/tasks/preflight)")
     private = spec.inputs.intake is not None or spec.inputs.inline is not None
     check_inputs(manager, spec)
     run_id = request.run_id or new_id("ui")
-    with manager.lock:
-        manager.check_run_id(run_id)
-        warnings = manager.check_launch(request.clock)
-        label = f"{request.scenario} {request.chaos} seed {spec.seed}"
-        job = manager.new_job("run", label, request.clock, False, private)
-        try:
-            spec_path = write_spec(manager, job, request)
-            args = run_args(request, spec_path, run_id)
-            manager.spawn(
-                job,
-                run_id=run_id,
-                role="run",
-                scenario=request.scenario,
-                args=args,
-                private=private,
-            )
-        except BaseException:
-            manager.abort_launch(job)
-            raise
-        return manager.finish_launch(job, warnings)
+    approval = approve("task", request.model_dump(mode="json"), 1) if real and approve else None
+    try:
+        with manager.lock:
+            manager.check_run_id(run_id)
+            warnings = manager.check_launch(request.clock, real=real)
+            label = f"{request.scenario} {request.chaos} seed {spec.seed}"
+            job = manager.new_job("run", label, request.clock, real, private)
+            try:
+                args = run_args(
+                    manager.write_spec(job, request.spec),
+                    run_id,
+                    scenario=request.scenario,
+                    clock=request.clock,
+                    speed=request.speed,
+                    backend=request.backend,
+                    budget_usd=approval.run_cap_usd if approval else request.budget_usd,
+                    chaos=request.chaos,
+                    cross_audit=request.cross_audit,
+                    feasibility_report=request.feasibility_report,
+                    billed=real,
+                )
+                manager.spawn(
+                    job,
+                    run_id=run_id,
+                    role="run",
+                    scenario=request.scenario,
+                    args=args,
+                    private=private,
+                    extra_env=approval.env if approval else None,
+                )
+            except BaseException:
+                manager.abort_launch(job)
+                raise
+            return manager.finish_launch(job, warnings)
+    except BaseException:
+        if approval is not None:
+            approval.undo()  # nothing started: the preflight token is given back
+        raise
 
 
-def write_spec(manager: JobManager, job: dict[str, Any], request: TaskRequest) -> Path:
-    """The TaskSpec as the CLI reads it. Email addresses in an inline corpus are replaced
-    first (the mapping stays next to it), so no file of the job holds one."""
-    data = copy.deepcopy(request.spec)
-    inline = (data.get("inputs") or {}).get("inline")
-    directory = manager.job_dir(job["id"])
-    if isinstance(inline, dict) and "corpus" in inline:
-        pseudonyms = Pseudonyms()
-        inline["corpus"] = pseudonyms.mask_value(inline["corpus"])
-        write_json(directory / "pseudonyms.json", pseudonyms.mapping())
-    write_json(directory / "spec.json", data)
-    return directory / "spec.json"
-
-
-def run_args(request: TaskRequest, spec_path: Path, run_id: str) -> list[str]:
-    args = ["run", str(spec_path), "--run-id", run_id, "--scenario", request.scenario]
-    args += ["--chaos", request.chaos, "--clock", request.clock, "--speed", str(request.speed)]
-    args += ["--backend", request.backend]
-    if request.budget_usd is not None:
-        args += ["--budget-usd", str(request.budget_usd)]
-    if request.cross_audit:
+def run_args(
+    spec_path: Path,
+    run_id: str,
+    *,
+    scenario: str,
+    clock: str,
+    speed: float,
+    backend: str = "fake",
+    budget_usd: float | None = None,
+    chaos: str = "C0",
+    plan: Path | None = None,
+    barrier: Path | None = None,
+    cross_audit: bool = False,
+    feasibility_report: bool = False,
+    billed: bool = False,
+) -> list[str]:
+    """The ``fractalswarm run`` command line. ``plan`` (a ChaosPlan file) replaces ``chaos``;
+    ``barrier`` parks the process after it warms up until the launcher says go; ``billed``
+    says the run spends real money: it confirms that, and never repeats a paid request."""
+    args = ["run", str(spec_path), "--run-id", run_id, "--scenario", scenario]
+    args += ["--chaos-plan", str(plan)] if plan is not None else ["--chaos", chaos]
+    args += ["--clock", clock, "--speed", str(speed), "--backend", backend]
+    if barrier is not None:
+        args += ["--start-barrier", str(barrier)]
+    if billed:
+        args += ["--confirm-real-spend", "--no-paid-retries"]
+    if budget_usd is not None:
+        args += ["--budget-usd", str(budget_usd)]
+    if cross_audit:
         args.append("--cross-audit")
-    if request.feasibility_report:
+    if feasibility_report:
         args.append("--feasibility-report")
     return args
 
 
-def launch_intake(manager: JobManager, intake_id: str, backend: str = "fake") -> dict[str, Any]:
-    """Start the ``intake`` scenario on an intake whose ``input.json`` is written."""
+def launch_intake(
+    manager: JobManager, intake_id: str, backend: str = "fake", approval: Approval | None = None
+) -> dict[str, Any]:
+    """Start the ``intake`` scenario on an intake whose ``input.json`` is written. A reading with
+    the real model (``backend="real"``) is billed: it starts only with the ``approval`` that
+    api/spend.py gives, and runs with the CLI's cap on the ledger the approval names."""
+    billed = backend == "real"
+    if billed and approval is None:
+        raise JobError(403, "real runs need the preflight flow (POST /api/intake/preflight)")
+    args = ["intake", intake_id, "--backend", backend]
+    if billed:
+        args += ["--confirm-real-spend", "--no-paid-retries"]
     with manager.lock:
-        warnings = manager.check_launch("sim", real=backend == "real")
-        job = manager.new_job("intake", f"intake {intake_id}", "sim", backend == "real", True)
+        warnings = manager.check_launch("sim", real=billed)
+        job = manager.new_job("intake", f"intake {intake_id}", "sim", billed, True)
         try:
             manager.spawn(
                 job,
                 run_id=intake_id,
                 role="intake",
                 scenario="intake",
-                args=["intake", intake_id, "--backend", backend],
+                args=args,
                 private=True,
                 runs_dir=manager.private.intake,
+                extra_env=approval.env if approval else None,
             )
         except BaseException:
             manager.abort_launch(job)

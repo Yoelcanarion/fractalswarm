@@ -346,6 +346,21 @@ def summarize(
     }
 
 
+def summary_lines(done: dict[str, Any]) -> list[str]:
+    """What ``fractalswarm run --scenario ablation`` prints of the ``ablation.done`` payload: the
+    headline, how the notes split, what cut the run short, and the caveats that apply."""
+    split = done["agreement"]
+    lines = [
+        f"ablation: {done['headline']}",
+        f"  both {split['both']}, only Muse {split['only_muse']}, "
+        f"only the parser {split['only_parser']}, neither {split['neither']}",
+    ]
+    if not done["complete"]:
+        lines.append("  the deadline cut the run: the notes without an answer count as missed")
+    lines += [f"  caveat: {caveat['text']}" for caveat in done["caveats"] if caveat["applies"]]
+    return lines
+
+
 # -- the fake Muse of the $0 path ----------------------------------------------------------------
 
 

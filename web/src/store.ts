@@ -15,17 +15,27 @@ import { useStore, type StoreApi, type UseBoundStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { createStore } from "zustand/vanilla";
 
-import { fetchCapabilities, listRuns, loadAllEvents, tailEvents, verifyRun } from "./lib/api";
+import { fetchCapabilities, fetchTakeover, listRuns, loadAllEvents, tailEvents, verifyRun } from "./lib/api";
 import { createClock, type Clock } from "./lib/clock";
 import { asRunStatus, DEFAULT_CAPABILITIES, type Capabilities, type RunStatus } from "./lib/controls";
 import { countAtTime, Folder } from "./lib/playback";
 import { emptyView, type ViewState } from "./lib/reducer";
+import type { TakeoverSummary } from "./lib/takeover";
 import type { RunEvent, RunListing, VerifyReport } from "./lib/types";
 
 export type VerifyState =
   | { state: "idle" }
   | { state: "pending" }
   | { state: "done"; report: VerifyReport }
+  | { state: "error"; error: string };
+
+/** The takeover check of a finished run (`GET api/runs/{id}/takeover`). "absent": this server does
+ * not expose it, and the chip shows nothing. */
+export type TakeoverState =
+  | { state: "idle" }
+  | { state: "pending" }
+  | { state: "done"; report: TakeoverSummary }
+  | { state: "absent" }
   | { state: "error"; error: string };
 
 export interface RunStoreState {
@@ -51,6 +61,7 @@ export interface RunStoreState {
   speed: number; // mirrors the clock
   view: ViewState;
   verify: VerifyState;
+  takeover: TakeoverState;
   clock: Clock;
 }
 
@@ -65,6 +76,7 @@ export interface RunStoreActions {
   setPlaying(playing: boolean): void;
   setSpeed(speed: number): void;
   runVerify(): Promise<void>;
+  runTakeover(): Promise<void>;
   // Plumbing for the clock. App code does not call these.
   syncTo(t: number, cursor?: number): void;
   commitPlayhead(t: number): void;
@@ -82,6 +94,8 @@ export interface RunApi {
   verifyRun: typeof verifyRun;
   /** Optional, so a fake that predates it still fits: without it the defaults hold. */
   capabilities?: typeof fetchCapabilities;
+  /** Optional for the same reason: without it the run has no takeover check to show. */
+  takeover?: typeof fetchTakeover;
 }
 
 export interface RunStoreOptions {
@@ -90,7 +104,7 @@ export interface RunStoreOptions {
   clock?: Clock;
 }
 
-const serverApi: RunApi = { listRuns, loadAllEvents, tailEvents, verifyRun, capabilities: fetchCapabilities };
+const serverApi: RunApi = { listRuns, loadAllEvents, tailEvents, verifyRun, capabilities: fetchCapabilities, takeover: fetchTakeover };
 const messageOf = (error: unknown): string => String((error as Error).message ?? error);
 
 // While a run is recording, ask the catalog now and then whether it still is: a process that died
@@ -136,6 +150,7 @@ export function createRunStore(options: RunStoreOptions = {}): RunStoreApi {
     speed: clock.state.getState().speed,
     view: emptyView(),
     verify: { state: "idle" },
+    takeover: { state: "idle" },
     clock,
 
     async loadRuns() {
@@ -180,6 +195,7 @@ export function createRunStore(options: RunStoreOptions = {}): RunStoreApi {
         playhead: 0,
         view: emptyView(),
         verify: { state: "idle" },
+        takeover: { state: "idle" },
         live: false,
         following: false,
       });
@@ -282,6 +298,22 @@ export function createRunStore(options: RunStoreOptions = {}): RunStoreApi {
         if (get().runId === id) set({ verify: { state: "done", report } });
       } catch (error) {
         if (get().runId === id) set({ verify: { state: "error", error: messageOf(error) } });
+      }
+    },
+
+    async runTakeover() {
+      const id = get().runId;
+      if (!id || get().takeover.state === "pending") return;
+      if (!api.takeover) {
+        set({ takeover: { state: "absent" } });
+        return;
+      }
+      set({ takeover: { state: "pending" } });
+      try {
+        const report = await api.takeover(id);
+        if (get().runId === id) set({ takeover: report ? { state: "done", report } : { state: "absent" } });
+      } catch (error) {
+        if (get().runId === id) set({ takeover: { state: "error", error: messageOf(error) } });
       }
     },
   }));

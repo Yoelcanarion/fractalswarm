@@ -7,6 +7,7 @@ fixtures and bundles) and ``cassette.jsonl`` (every LLM call, redacted).
 import json
 import os
 import threading
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,11 +44,31 @@ SCENARIOS = {
 }
 
 LIVE_TOUCH_S = 1.0  # how often the recording process proves it is alive
+BARRIER_GO = "go"  # the file that releases the processes parked at a start barrier
+BARRIER_POLL_S = 0.05
+BARRIER_TIMEOUT_S = 180.0  # a barrier nobody releases must not park a process forever
 
 
 def default_run_cap_usd() -> float:
     defaults = yaml.safe_load((CONFIG_DIR / "defaults.yaml").read_text(encoding="utf-8"))
     return float(defaults["budget"]["run_cap_usd"])
+
+
+def wait_at_barrier(directory: Path, run_id: str, timeout_s: float = BARRIER_TIMEOUT_S) -> None:
+    """Park a warmed-up process until the launcher releases it.
+
+    The arena starts both runs of a pair together: each process loads what it needs, writes
+    ``<run_id>.ready`` in ``directory`` and waits for a file named ``go`` there, so the two
+    live clocks start within a poll of each other. Raises ``TimeoutError`` if ``go`` never
+    comes.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f"{run_id}.ready").write_text(str(os.getpid()), encoding="utf-8")
+    deadline = time.monotonic() + timeout_s
+    while not (directory / BARRIER_GO).exists():
+        if time.monotonic() > deadline:
+            raise TimeoutError(f"nobody released the start barrier in {timeout_s:.0f}s")
+        time.sleep(BARRIER_POLL_S)
 
 
 @dataclass(frozen=True)

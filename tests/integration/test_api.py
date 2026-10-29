@@ -21,8 +21,10 @@ from fractalswarm.kernel.store import COLUMNS, EventStore, _to_row
 from fractalswarm.llm.fake import FakeBackend
 from fractalswarm.runs import RunPaths, record_run
 
-GOLDEN = Path(__file__).resolve().parents[1] / "golden"
+REPO = Path(__file__).resolve().parents[2]
+GOLDEN = REPO / "tests" / "golden"
 TOY_HEAD = (GOLDEN / "toy" / "HEAD").read_text(encoding="utf-8").strip()
+AS_JSON = {"Content-Type": "application/json"}  # what the UI sends on every POST
 
 
 @pytest.fixture
@@ -79,14 +81,14 @@ def test_events_are_paged_by_seq(client: TestClient) -> None:
 
 
 def test_verify_replays_the_bundle(client: TestClient) -> None:
-    report = client.post("/api/runs/demo-toy/verify").json()
+    report = client.post("/api/runs/demo-toy/verify", json={}).json()
     assert report["ok"] and report["replayed_head"] == TOY_HEAD and report["bundle_head_ok"]
 
 
 def test_verify_reports_a_tampered_bundle(client: TestClient, dirs: dict[str, Path]) -> None:
     log = dirs["demo"] / "toy" / "events.jsonl"
     log.write_text(log.read_text(encoding="utf-8").replace("worker-a-r1", "worker-a-rX"))
-    report = client.post("/api/runs/demo-toy/verify").json()
+    report = client.post("/api/runs/demo-toy/verify", json={}).json()
     assert not report["ok"] and report["first_divergence"] is not None
 
 
@@ -110,6 +112,89 @@ def test_control_endpoints_answer_501_until_wired(client: TestClient, path: str)
     response = client.post(path, json={})
     assert response.status_code == 501
     assert "not wired yet" in response.json()["detail"]
+
+
+def test_capabilities_say_which_controls_are_real(
+    client: TestClient, dirs: dict[str, Path], tmp_path: Path
+) -> None:
+    caps = client.get("/api/capabilities").json()
+    # Without a private directory nothing can be launched; halt and budget act on live runs.
+    assert caps == {
+        "tasks": False,
+        "chaos": False,
+        "approve": False,
+        "budget": True,
+        "halt": True,
+        "real": False,  # a billed launch needs the server flag and a key (api/spend.py)
+    }
+    assert client.get("/api/jobs").status_code == 503  # what "tasks: false" means
+
+    # What it calls false is not wired, and what it calls true is.
+    assert client.post("/api/runs/demo-toy/approve", json={}).status_code == 501
+    assert client.post("/api/runs/demo-toy/chaos", json={"kind": "kill_half"}).status_code == 501
+    assert client.post("/api/runs/demo-toy/halt", json={}).status_code == 409  # a recording
+
+    launching = create_app(
+        dirs["runs"], dirs["demo"], dirs["bench"], dirs["static"], private_dir=tmp_path / "private"
+    )
+    with TestClient(launching) as launch_client:
+        assert launch_client.get("/api/capabilities").json()["tasks"] is True
+        assert launch_client.get("/api/jobs").status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("allow_real", "has_key", "real"),
+    [(True, True, True), (False, True, False), (True, False, False)],
+)
+def test_capabilities_say_whether_a_billed_launch_can_pass_the_gate(
+    dirs: dict[str, Path], tmp_path: Path, allow_real: bool, has_key: bool, real: bool
+) -> None:
+    from fractalswarm.api.spend import Spend, SpendGate
+
+    gate = SpendGate(tmp_path / "ledger.sqlite", 150.0, allow_real=allow_real, has_key=has_key)
+    app = create_app(
+        dirs["runs"],
+        dirs["demo"],
+        dirs["bench"],
+        dirs["static"],
+        private_dir=tmp_path / "private",
+        spend=Spend(gate),
+    )
+    caps = TestClient(app).get("/api/capabilities").json()
+    assert caps["real"] is real and caps["tasks"] is True
+    assert not gate.ledger_path.exists()  # asking never opens the ledger
+
+
+@pytest.fixture
+def recorded(dirs: dict[str, Path]) -> TestClient:
+    """The API over the repository's own recorded runs: ``demo/backup`` is a real C3 run."""
+    return TestClient(create_app(dirs["runs"], REPO / "demo", dirs["bench"], dirs["static"]))
+
+
+def test_takeover_reports_what_a_finished_runs_log_proves(recorded: TestClient) -> None:
+    answer = recorded.get("/api/runs/demo-backup/takeover")
+    assert answer.status_code == 200
+    report = answer.json()
+    assert report["ok"] is True and report["violations"] == []
+    assert report["run_id"] and report["events"] == 8177
+    assert len(report["kills"]) == 5 and report["kills"][0]["target"] == "o0"
+    assert recorded.get("/api/runs/demo-backup/takeover").json() == report  # the same, cached
+
+
+def test_takeover_lists_the_violations_that_make_it_false(client: TestClient) -> None:
+    report = client.get("/api/runs/demo-toy/takeover").json()  # a toy run: it wrote no task result
+    assert report["ok"] is False
+    kinds = {(v["check"], v["kind"]) for v in report["violations"]}
+    assert ("lost-work", "task-result") in kinds
+    assert all({"check", "kind", "seq", "detail"} <= set(v) for v in report["violations"])
+
+
+def test_takeover_waits_for_the_run_to_end_and_knows_the_runs(
+    client: TestClient, live: Path
+) -> None:
+    refused = client.get("/api/runs/live/takeover")
+    assert refused.status_code == 409 and "not completed" in refused.json()["error"]
+    assert client.get("/api/runs/nope/takeover").status_code == 404
 
 
 @pytest.fixture
@@ -180,12 +265,13 @@ def test_budget_shock_validates_its_body(client: TestClient, live: Path, body: d
 def test_budget_shock_refuses_numbers_that_are_not_finite(
     client: TestClient, live: Path, raw: bytes
 ) -> None:
-    assert client.post("/api/runs/live/budget", content=raw).status_code == 422
+    assert client.post("/api/runs/live/budget", content=raw, headers=AS_JSON).status_code == 422
     assert not (live / "control").exists()
 
 
 def test_halt_and_budget_need_a_json_object(client: TestClient, live: Path) -> None:
-    assert client.post("/api/runs/live/halt", content=b"{nope").status_code == 422
+    halted = client.post("/api/runs/live/halt", content=b"{nope", headers=AS_JSON)
+    assert halted.status_code == 422
     assert client.post("/api/runs/live/budget", json=[1]).status_code == 422
     assert not (live / "control").exists()
 

@@ -121,12 +121,27 @@ def run(
         str,
         typer.Option(
             help="swarm | central | single | pipeline | durable-max | durable "
-            "(all but the swarm: baselines)"
+            "(all but the swarm: baselines) | ablation (a T2 TaskSpec's notes through the "
+            "regex parser and through Muse; no orchestrators)"
         ),
     ] = "swarm",
     chaos: Annotated[
         str, typer.Option(help="C0-C3, or kill-half: the root, two track leads, two sessions")
     ] = "C0",
+    chaos_plan: Annotated[
+        Path | None,
+        typer.Option(
+            help="a ChaosPlan JSON file, used instead of --chaos: "
+            "the same plan for both runs of an arena pair"
+        ),
+    ] = None,
+    start_barrier: Annotated[
+        Path | None,
+        typer.Option(
+            help="a directory: warm up, write <run_id>.ready there, and wait "
+            "for a file named go before the clock starts"
+        ),
+    ] = None,
     firewall: Annotated[
         str | None,
         typer.Option(
@@ -163,9 +178,17 @@ def run(
     from fractalswarm.runs import record_run
     from fractalswarm.safety.firewall import Firewall, HeuristicBackend, default_backend
 
-    if scenario not in ("swarm", "central", "single", "pipeline", "durable-max", "durable"):
+    if scenario not in (
+        "swarm",
+        "central",
+        "single",
+        "pipeline",
+        "durable-max",
+        "durable",
+        "ablation",
+    ):
         raise typer.BadParameter(
-            "--scenario must be swarm, central, single, pipeline, durable-max or durable"
+            "--scenario must be swarm, central, single, pipeline, durable-max, durable or ablation"
         )
     firewall = firewall or ("auto" if backend == "real" else "heuristic")
     if firewall not in ("auto", "heuristic"):
@@ -174,6 +197,10 @@ def run(
         raise typer.BadParameter("--budget-usd must be above 0")
     settings = _settings()
     spec = TaskSpec.load(taskspec)
+    if scenario == "ablation" and spec.task != "t2_conference":
+        raise typer.BadParameter("--scenario ablation reads the emails and abstracts of a T2 task")
+    if scenario == "ablation" and chaos == "kill-half":
+        raise typer.BadParameter("--chaos kill-half has nothing to kill in an ablation")
     if budget_usd is not None:
         spec = spec.model_copy(update={"budget_usd": budget_usd})
     params = run_params(spec)
@@ -185,7 +212,9 @@ def run(
         params["cross_audit"] = True
     if feasibility_report:
         params["feasibility_report"] = True
-    if chaos == "kill-half":
+    if chaos_plan is not None:
+        params |= chaos_plan_params(chaos_plan)
+    elif chaos == "kill-half":
         params |= {"chaos": kill_half_plan(spec.seed), "membership": True}
     elif chaos in ("C0", "C1", "C2", "C3"):
         params |= {"chaos": {"profile": chaos, "seed": spec.seed}}
@@ -222,9 +251,22 @@ def run(
     scanner.warm()  # before the clock starts
 
     run_id = run_id or f"{taskspec.stem}-{datetime.now():%Y%m%d-%H%M%S}"
+    scenario_ref = scenario  # a name in runs.SCENARIOS, or the path of a scenario object
+    if scenario == "ablation":
+        from fractalswarm.bench.tasks.t2_conference.ablation import SCENARIO
+
+        scenario_ref = SCENARIO
+    if start_barrier is not None:
+        from fractalswarm.runs import wait_at_barrier
+
+        try:
+            wait_at_barrier(start_barrier, run_id)
+        except TimeoutError as exc:
+            typer.echo(f"start barrier: {exc}")
+            raise typer.Exit(1) from None
     result = asyncio.run(
         record_run(
-            scenario,
+            scenario_ref,
             run_id=run_id,
             run_dir=settings.runs_dir / run_id,
             backend=llm,
@@ -243,6 +285,18 @@ def run(
     spent = result.completed.payload["spent_usd"]
     typer.echo(f"run {result.run_id}: {result.events} events, head {result.head_hash}")
     typer.echo(f"run dir {result.paths.root}  spent ${spent:.6f} ({backend} LLM)")
+    if scenario == "ablation":
+        from fractalswarm.bench.tasks.t2_conference.ablation import summary_lines
+
+        done = ablation_outcome(result.paths)
+        if done is None:
+            typer.echo("no ablation.done: the run ended without a result")
+            raise typer.Exit(1)
+        for line in summary_lines(done):
+            typer.echo(line)
+        if not done["complete"]:
+            raise typer.Exit(1)
+        return
     outcome = task_outcome(result.paths)
     if outcome is None:
         typer.echo("no task.result: the run ended without a result")
@@ -359,10 +413,34 @@ def kill_half_plan(seed: str) -> dict:
     return ChaosPlan(profile="kill-half", seed=seed, actions=actions).model_dump(mode="json")
 
 
+def chaos_plan_params(path: Path) -> dict:
+    """The run params for a ChaosPlan JSON file. A plan that crashes coordinators turns the
+    failure detector on, as ``--chaos kill-half`` does: the takeover needs it."""
+    import json
+
+    from fractalswarm.api.arena import parse_plan
+
+    try:
+        plan = parse_plan(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError) as exc:
+        raise typer.BadParameter(f"--chaos-plan {path}: {exc}") from None
+    params: dict = {"chaos": plan.model_dump(mode="json")}
+    if any(action.kind == "kill_coordinator" for action in plan.actions):
+        params["membership"] = True
+    return params
+
+
 def task_outcome(paths) -> dict | None:
     """The payload of the run's ``task.result`` event, if any."""
     with paths.open_log() as log:
         results = [event.payload for event in log.read() if event.type == "task.result"]
+    return results[-1] if results else None
+
+
+def ablation_outcome(paths) -> dict | None:
+    """The payload of the run's ``ablation.done`` event, if any."""
+    with paths.open_log() as log:
+        results = [event.payload for event in log.read() if event.type == "ablation.done"]
     return results[-1] if results else None
 
 
@@ -943,12 +1021,26 @@ def _serve(runs_dir: Path, host: str, port: int, open_run: str | None, browser: 
     import uvicorn
 
     from fractalswarm.api.app import create_app
+    from fractalswarm.api.spend import Spend
 
+    settings = _settings()
+    spend = Spend.from_settings(settings)
+    try:
+        spend.gate.refuse_exposed(host)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--host") from None
     url = f"http://{host}:{port}/" + (f"#/run/{open_run}" if open_run else "")
     typer.echo(f"FractalSwarm UI on {url}  (Ctrl+C to stop)")
     if browser:
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
-    app_ = create_app(runs_dir, private_dir=_settings().private_dir)
+    if spend.gate.allow_real:
+        typer.echo(
+            "real runs from the UI are ON (FRACTALSWARM_ALLOW_UI_REAL): a billed run "
+            "needs a preflight token and the word SPEND"
+        )
+    app_ = create_app(
+        runs_dir, private_dir=settings.private_dir, spend=spend, allowed_hosts=(host,)
+    )
     uvicorn.run(app_, host=host, port=port, log_level="warning")
 
 

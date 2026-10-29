@@ -2,6 +2,7 @@ import { ChaosPanel } from "../components/ChaosPanel";
 import { Counters } from "../components/Counters";
 import { EventFeed } from "../components/EventFeed";
 import { ScheduleGrid, ViolationsBadge } from "../components/ScheduleGrid";
+import { LensDock } from "../components/lens/LensDock";
 import { Timeline } from "../components/Timeline";
 import { TreeGraph } from "../components/TreeGraph";
 import { Card, Skeleton, SkeletonGroup, SkeletonText } from "../components/ui";
@@ -78,6 +79,7 @@ export function RunPage() {
           <EventFeed events={events} cursor={cursor} />
         </aside>
       </div>
+      <LensDock />
       <Timeline />
     </div>
   );
