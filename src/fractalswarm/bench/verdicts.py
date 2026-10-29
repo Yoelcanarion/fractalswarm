@@ -242,6 +242,15 @@ class FalseDeaths(BaseModel):
     spent_usd_mean: float | None  # work paid twice because of them, per run
 
 
+class LocalityTally(BaseModel):
+    """Locality verdicts over a set of regime points (PREREG §6)."""
+
+    holds: int = 0
+    ties: int = 0
+    fails: int = 0
+    na: int = 0  # n/a
+
+
 class Honesty(BaseModel):
     schema_version: int = 1
     prereg: dict[str, str]
@@ -255,6 +264,10 @@ class Honesty(BaseModel):
     per_process: list[PerProcess]
     false_deaths: list[FalseDeaths] = []
     tally: Tally
+    # Per rival, for the "where it helps" panel: H1-H6 (their sum is ``tally``), and the locality
+    # of every regime point.
+    tally_by_rival: dict[str, Tally] = {}
+    locality_by_rival: dict[str, LocalityTally] = {}
 
 
 # -- reading the results ---------------------------------------------------------------------
@@ -692,10 +705,16 @@ def evaluate(
         )
     regimes = regimes_of(comparisons)
     total = Tally()
+    by_rival = {rival: Tally() for rival in RIVALS}
     for c in comparisons:
         if c.hypothesis != "S":
             column = "na" if c.verdict in ("n/a", "incomplete") else c.verdict
-            setattr(total, column, getattr(total, column) + 1)
+            for t in (total, by_rival[c.rival]):
+                setattr(t, column, getattr(t, column) + 1)
+    localities = {rival: LocalityTally() for rival in RIVALS}
+    for r in regimes:
+        column = "na" if r.locality == "n/a" else r.locality
+        setattr(localities[r.rival], column, getattr(localities[r.rival], column) + 1)
     path = prereg or PREREG_PATH
     return Honesty(
         prereg={"path": PREREG_NAME, "sha": prereg_sha(path) if path.exists() else ""},
@@ -728,6 +747,8 @@ def evaluate(
         per_process=per_process(sources),
         false_deaths=false_deaths_of(sources),
         tally=total,
+        tally_by_rival=by_rival,
+        locality_by_rival=localities,
     )
 
 
