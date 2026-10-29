@@ -421,10 +421,42 @@ describe("the readable output of each kind of call", () => {
     expect(crashed.cost_breakdown).toBeNull();
   });
 
+  it("shows a small flat answer as named text, without repeating what the model's own words carry", () => {
+    const base = detail(demo, "eff-6463.1");
+    const answer = (parsed: unknown, sentences: { field: string; text: string }[] = []) => ({
+      ...base,
+      facts: null,
+      output: { ...base.output, parsed, text: "{}" },
+      decision: { ...base.decision, sentences },
+    });
+    // A blurb call answers {"blurb": "..."}: text, so it is read as text and not as a JSON block.
+    expect(readOutput(answer({ blurb: "Spend day two in Room B.", words: 4, final: true }))).toEqual([
+      {
+        kind: "fields",
+        fields: [
+          { name: "blurb", text: "Spend day two in Room B." },
+          { name: "words", text: "4" },
+          { name: "final", text: "true" },
+        ],
+      },
+    ]);
+    // A field the sentence list already shows is left out; when all of them are, there is no piece.
+    expect(readOutput(answer({ blurb: "Spend day two in Room B.", note: "kept short" }, [{ field: "note", text: "kept short" }]))).toEqual([
+      { kind: "fields", fields: [{ name: "blurb", text: "Spend day two in Room B." }] },
+    ]);
+    expect(readOutput(answer({ note: "kept short" }, [{ field: "note", text: " kept short " }]))).toEqual([]);
+    // Anything nested, long or empty stays JSON: nothing the model said is hidden.
+    expect(readOutput(answer({ colour: { name: "green" } }))).toEqual([{ kind: "json", label: "answer", value: { colour: { name: "green" } } }]);
+    expect(readOutput(answer({ list: ["a", "b"] }))).toEqual([{ kind: "json", label: "answer", value: { list: ["a", "b"] } }]);
+    const wide = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`k${i}`, "v"]));
+    expect(readOutput(answer(wide))).toEqual([{ kind: "json", label: "answer", value: wide }]);
+    expect(readOutput(answer({}))).toEqual([{ kind: "json", label: "answer", value: {} }]);
+  });
+
   it("falls back to the JSON of an answer it has no reader for, and to plain text", () => {
     const base = detail(demo, "eff-6463.1");
-    const unknown = { ...base, facts: null, output: { ...base.output, parsed: { colour: "green" }, text: "{}" }, decision: { ...base.decision, sentences: [] } };
-    expect(readOutput(unknown)).toEqual([{ kind: "json", label: "answer", value: { colour: "green" } }]);
+    const unknown = { ...base, facts: null, output: { ...base.output, parsed: { colour: { name: "green" } }, text: "{}" }, decision: { ...base.decision, sentences: [] } };
+    expect(readOutput(unknown)).toEqual([{ kind: "json", label: "answer", value: { colour: { name: "green" } } }]);
     const said = { ...unknown, output: { ...unknown.output, parsed: null, text: "Looks fine to me." } };
     expect(readOutput(said)).toEqual([{ kind: "message", text: "Looks fine to me." }]);
     const ruling = { ...unknown, purpose: "arbitration" as const, output: { ...unknown.output, parsed: { winner: "S12:day2", reason: "the later email", confidence: 0.8, evidence: ["E12"] } } };

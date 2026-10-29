@@ -22,7 +22,10 @@ export const asRunStatus = (value: unknown): RunStatus | null =>
 
 export type ControlKey = "chaos" | "approve" | "tasks" | "budget" | "halt";
 
-export type Capabilities = Record<ControlKey, boolean>;
+export type Capabilities = Record<ControlKey, boolean> & {
+  /** True only when the server allows billed launches and has a key. Absent on a server that does not say. */
+  real?: boolean;
+};
 
 /** What a server without `GET api/capabilities` is taken to offer. */
 export const DEFAULT_CAPABILITIES: Capabilities = { chaos: false, approve: false, tasks: false, budget: true, halt: true };
@@ -61,6 +64,7 @@ export function parseCapabilities(body: unknown): Capabilities {
   const listed = source.controls && typeof source.controls === "object" ? (source.controls as Record<string, unknown>) : source;
   const result = { ...DEFAULT_CAPABILITIES };
   for (const key of Object.keys(result) as ControlKey[]) result[key] = listed[key] === true;
+  if ("real" in listed) result.real = listed.real === true;
   return result;
 }
 

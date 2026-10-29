@@ -759,9 +759,26 @@ export type Readable =
   | { kind: "write"; path: string; content: string }
   | { kind: "search"; query: string; scope: string }
   | { kind: "message"; text: string }
+  | { kind: "fields"; fields: { name: string; text: string }[] }
   | { kind: "json"; label: string; value: unknown };
 
 const BLURB_PATH = /blurb/i;
+
+const MAX_FLAT_FIELDS = 8;
+
+/** A small answer made only of text, numbers and flags, as name and text pairs; null for anything
+ * else (nested values, a long object, an array), which stays JSON. */
+function flatFields(value: unknown): { name: string; text: string }[] | null {
+  const entries = Object.entries(asRecord(value));
+  if (entries.length === 0 || entries.length > MAX_FLAT_FIELDS) return null;
+  const fields: { name: string; text: string }[] = [];
+  for (const [name, field] of entries) {
+    if (typeof field === "string") fields.push({ name, text: field });
+    else if (typeof field === "number" || typeof field === "boolean") fields.push({ name, text: String(field) });
+    else return null;
+  }
+  return fields;
+}
 
 /** The pieces of a call's answer the lens shows as more than text, in reading order: the facts it
  * published, the plan it made, the placements, the judge's verdict, a ruling, what it wrote. The
@@ -838,8 +855,16 @@ export function readOutput(detail: CallDetail): Readable[] {
   if (!answered) {
     const text = detail.output.text.trim();
     if (detail.output.parsed !== null && detail.output.parsed !== undefined) {
-      // A structured answer no reader above knew is shown as JSON, not as one long line.
-      out.unshift({ kind: "json", label: "answer", value: detail.output.parsed });
+      const fields = flatFields(detail.output.parsed);
+      if (fields) {
+        // A small flat answer (a blurb, say) reads as text; what the model's own words already carry is not repeated.
+        const spoken = new Set(detail.decision.sentences.map((s) => s.text.trim()));
+        const fresh = fields.filter((field) => !spoken.has(field.text.trim()));
+        if (fresh.length > 0) out.unshift({ kind: "fields", fields: fresh });
+      } else {
+        // Any other structured answer is shown as JSON, not as one long line.
+        out.unshift({ kind: "json", label: "answer", value: detail.output.parsed });
+      }
     } else if (text && detail.decision.sentences.length === 0) {
       // Plain text the sentence splitter left out; usually the sentences already carry it.
       out.unshift({ kind: "message", text });

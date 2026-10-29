@@ -55,17 +55,25 @@ function Figures({ row, detail }: { row: CallRow; detail: CallDetail | null }) {
     : row.estimated
       ? "The call was cut off before it completed, so it is billed the benchmark's estimate."
       : undefined;
+  // A call cut off before it completed has no measured usage: its tokens are the benchmark's estimate,
+  // and the cached and reasoning shares are not known, so they are not shown as zero.
+  const estimated = row.estimated;
   return (
     <div className="figures">
       <Figure
         label="Input tokens"
         value={formatNumber(u.input_tokens)}
-        sub={u.input_tokens > 0 ? `${formatNumber(u.cached_tokens)} cached · ${formatPercent(u.cached_tokens / u.input_tokens)}` : undefined}
+        sub={estimated ? "estimated" : u.input_tokens > 0 ? `${formatNumber(u.cached_tokens)} cached · ${formatPercent(u.cached_tokens / u.input_tokens)}` : undefined}
         hint="Tokens the model read. Cached tokens were served from the prompt cache at a lower price."
       />
-      <Figure label="Reasoning tokens" value={formatNumber(u.reasoning_tokens)} sub="part of the output" hint="Tokens the model spent thinking. They are billed as output; their content stays with the provider." />
-      <Figure label="Output tokens" value={formatNumber(u.output_tokens)} sub={u.searches > 0 ? `${u.searches} searches` : undefined} />
-      <Figure label="Cost" value={formatUsd(row.cost_usd)} sub={row.estimated ? "estimated" : undefined} hint={cost} />
+      <Figure
+        label="Reasoning tokens"
+        value={estimated ? "—" : formatNumber(u.reasoning_tokens)}
+        sub={estimated ? "not known" : "part of the output"}
+        hint="Tokens the model spent thinking. They are billed as output; their content stays with the provider."
+      />
+      <Figure label="Output tokens" value={formatNumber(u.output_tokens)} sub={estimated ? "estimated" : u.searches > 0 ? `${u.searches} searches` : undefined} />
+      <Figure label="Cost" value={formatUsd(row.cost_usd)} sub={estimated ? "estimated" : undefined} hint={cost} />
       <Figure
         label="Latency"
         value={formatDuration(row.latency_ms)}

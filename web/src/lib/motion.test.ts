@@ -3,10 +3,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { CHART_DRAW_MS, drawProps, useFirstDraw } from "./chartMotion";
-import { fadeLife, litMessages, MESSAGE_LIFE_MS, RESOLVED_LIFE_MS } from "./decay";
+import { fadeLife, litMessages, MESSAGE_LIFE_MS, needsNow, RESOLVED_LIFE_MS } from "./decay";
 import { boundsOf, NODE_HEIGHT, nodeWidth, structureKey, layoutTree } from "./layout";
 import { formatNumber, prefersReducedMotion, tween } from "./motion";
 import { summarizeFrames } from "./perf";
+import { emptySchedule, rulingsEnd, type Collision, type ScheduleState } from "./schedule";
 import { foldEvents } from "./reducer";
 import { depthTwoTree, Stream } from "./testing";
 
@@ -26,6 +27,51 @@ describe("reduced motion", () => {
     const flashes = [100, 900, 1200].map((ts, seq) => ({ seq, ts, from: "a", to: "b", topic: "t" }));
     expect(litMessages(flashes, 1300).map((m) => m.ts)).toEqual([900, 1200]);
     expect(litMessages(flashes, 1300, fadeLife(MESSAGE_LIFE_MS, true)).map((m) => m.ts)).toEqual([1200]);
+  });
+});
+
+describe("a clock scope that fades rarely", () => {
+  it("writes --now while something fades, and once after the last fade ends", () => {
+    const until = 5000;
+    expect(needsNow(0, until, null)).toBe(true); // the first write
+    expect(needsNow(4000, until, 3900)).toBe(true); // inside a fade
+    expect(needsNow(5000, until, 4900)).toBe(true); // the last instant of the fade
+    expect(needsNow(5100, until, 4900)).toBe(true); // once beyond it, so what has faded reads 0
+    expect(needsNow(5200, until, 5100)).toBe(false); // then it is quiet
+    expect(needsNow(9000, until, 5100)).toBe(false);
+  });
+
+  it("wakes up when the playhead goes back into a fade, and after a seek past its end", () => {
+    expect(needsNow(3000, 5000, 9000)).toBe(true);
+    expect(needsNow(60_000, 5000, 3000)).toBe(true);
+    expect(needsNow(60_001, 5000, 60_000)).toBe(false);
+  });
+
+  it("writes every frame for a scope that always fades, and only once for one with nothing to fade", () => {
+    expect(needsNow(10, Infinity, 9)).toBe(true);
+    expect(needsNow(10, -Infinity, null)).toBe(true);
+    expect(needsNow(11, -Infinity, 10)).toBe(false);
+  });
+});
+
+describe("when the last ruling mark stops fading", () => {
+  const collision = (resolvedTs?: number): Collision => ({
+    id: "c",
+    cells: [],
+    squads: [],
+    status: resolvedTs === undefined ? "open" : "resolved",
+    detectedSeq: 1,
+    resolvedTs,
+  });
+  const withCollisions = (all: Record<string, Collision>): ScheduleState => ({ ...emptySchedule(), collisions: all, collisionOrder: Object.keys(all) });
+
+  it("is the latest ruling plus its life", () => {
+    expect(rulingsEnd(withCollisions({ a: collision(1000), b: collision(9000), c: collision() }), RESOLVED_LIFE_MS)).toBe(9000 + RESOLVED_LIFE_MS);
+  });
+
+  it("is -Infinity when nothing was ruled, so the grid's clock stays quiet", () => {
+    expect(rulingsEnd(emptySchedule(), RESOLVED_LIFE_MS)).toBe(-Infinity);
+    expect(rulingsEnd(withCollisions({ c: collision() }), RESOLVED_LIFE_MS)).toBe(-Infinity);
   });
 });
 

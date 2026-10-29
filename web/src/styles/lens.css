@@ -142,7 +142,6 @@
   border-radius: var(--radius-3);
   background: var(--surface-1);
   box-shadow: var(--shadow-overlay);
-  container: lens / inline-size;
 }
 
 .lens__head {
@@ -174,11 +173,12 @@
   margin-left: auto;
 }
 
+/* No top padding: the filter bar sticks to the top edge, so a scrolled row cannot show above it. */
 .lens__list {
   flex: 0 1 auto;
   max-height: 34%;
   overflow: auto;
-  padding: 8px 8px 8px 12px;
+  padding: 0 8px 8px 12px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -218,7 +218,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding-bottom: 8px;
+  padding: 8px 0;
   background: var(--surface-1);
 }
 
@@ -251,6 +251,9 @@
   cursor: pointer;
   content-visibility: auto;
   contain-intrinsic-size: auto 44px;
+  /* scrollIntoView keeps the open row clear of the sticky filter bar (about 48px tall) */
+  scroll-margin-top: 52px;
+  scroll-margin-bottom: 8px;
 }
 
 .crow[aria-current="true"] {
@@ -483,8 +486,10 @@
   background: var(--surface-2);
 }
 
-/* Side by side when the drawer is wide enough: the fact on the left, its source on the right. */
-@container lens (min-width: 620px) {
+/* Side by side when the drawer is wide enough: the fact on the left, its source on the right. The
+   drawer is min(720px, 100% - 32px) wide, so a viewport breakpoint says the same. (A container query
+   here crashes the renderer of Playwright's Chromium 130, the browser the video is recorded with.) */
+@media (min-width: 660px) {
   .fact {
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   }

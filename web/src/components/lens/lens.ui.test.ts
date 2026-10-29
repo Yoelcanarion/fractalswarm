@@ -280,6 +280,26 @@ describe("one call", () => {
     const t = text(view(central, "eff-463.0", 1e9));
     expect(t).toContain("o0.a4 was killed by chaos (kill_agent). It never completed, so it is billed the benchmark's estimate ($0.0075).");
     expect(t).toContain("estimated");
+    // Tokens it never measured are not shown as zero: the cached and reasoning shares are not known.
+    expect(t).toContain("Reasoning tokens — not known");
+    expect(t).not.toContain("0 cached");
+  });
+
+  it("reads a small flat answer as text, with a blurb in a quotation", () => {
+    const base = detailOf(demo, "eff-6463.1");
+    const blurb = "Spend day two in Room B with AI Systems in practice.";
+    const answered: CallDetail = {
+      ...base,
+      facts: null,
+      output: { ...base.output, parsed: { blurb }, text: JSON.stringify({ blurb }) },
+      decision: { ...base.decision, sentences: [] },
+    };
+    const html = renderToStaticMarkup(createElement(CallView, { row: answered, entry: { state: "ready", detail: answered }, playhead: 1e9, onRetry: () => undefined }));
+    expect(html).toContain('aria-label="Answer"');
+    expect(html).toContain('<blockquote class="lens-quote">');
+    expect(text(html)).toContain(`blurb ${blurb}`);
+    // The raw JSON stays one fold away, as the model wrote it.
+    expect(text(html)).toContain("The answer, as the model wrote it");
   });
 
   it("shows an unfinished call as waiting, without its answer, and a future call as not started", () => {

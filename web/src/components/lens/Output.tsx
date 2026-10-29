@@ -10,6 +10,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import {
   highlight,
+  isBlurb,
   readOutput,
   sentenceLabel,
   type CallDetail,
@@ -251,6 +252,20 @@ function Piece({ piece, detail }: { piece: Readable; detail: CallDetail }) {
       );
     case "message":
       return <p className="lens-text">{piece.text}</p>;
+    case "fields":
+      return (
+        <section className="lens-block" aria-label="Answer">
+          <h4 className="lens-h">Answer</h4>
+          <dl className="words">
+            {piece.fields.map((field) => (
+              <div key={field.name} className="words__row">
+                <dt>{field.name}</dt>
+                <dd>{isBlurb(field.name) ? <blockquote className="lens-quote"><Quote size={16} aria-hidden /><p>{field.text.trim()}</p></blockquote> : field.text}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      );
     case "json":
       return (
         <details className="lens-fold">

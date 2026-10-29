@@ -37,14 +37,17 @@ export async function loadAllEvents(runId: string, fromSeq = 1): Promise<RunEven
   }
 }
 
-export const verifyRun = (runId: string) =>
-  fetch(`api/runs/${encodeURIComponent(runId)}/verify`, { method: "POST" }).then((r) => json<VerifyReport>(r));
+// The server refuses a POST that is not JSON (415), even one with no body, so every POST says so and sends {}.
+const JSON_POST = { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" } as const;
 
-/** The takeover check of a finished run. Null when the server does not expose it (404, 405 or 501),
- * which the chip takes to mean "show nothing". */
+export const verifyRun = (runId: string) =>
+  fetch(`api/runs/${encodeURIComponent(runId)}/verify`, JSON_POST).then((r) => json<VerifyReport>(r));
+
+/** The takeover check of a finished run. Null when the server does not expose it (404, 405 or 501) or
+ * the run has not completed (409), which the chip takes to mean "show nothing". */
 export async function fetchTakeover(runId: string): Promise<TakeoverSummary | null> {
   const response = await fetch(`api/runs/${encodeURIComponent(runId)}/takeover`);
-  if (response.status === 404 || response.status === 405 || response.status === 501) return null;
+  if ([404, 405, 409, 501].includes(response.status)) return null;
   const report = readTakeover(await json<unknown>(response));
   if (!report) throw new Error("the server sent a takeover report without a verdict");
   return report;
