@@ -728,7 +728,7 @@ def regime_chart(honesty: dict[str, Any], out_base: Path, *, title: str = "") ->
     )
     heading = f"{title} — " if title else ""
     fig.suptitle(
-        f"{heading}where the swarm's recovery stays local "
+        f"{heading}locality of the swarm's recovery against each rival, by regime "
         f"(outcome {payload['outcome'].upper()}, read against {payload['against']})",
         x=0.5,
         y=0.99,
@@ -738,8 +738,9 @@ def regime_chart(honesty: dict[str, Any], out_base: Path, *, title: str = "") ->
     fig.text(
         0.5,
         0.012,
-        "A ratio at or under 0.5 (dotted) is a win for the swarm under bench/PREREG.md; 1 "
-        "(solid) is equal. Shaded: the plausible region.\n"
+        "Lines: the ratio of the seed means, swarm / rival (descriptive; 1, solid, is equal). "
+        "Markers: the verdict of bench/PREREG.md, which needs every seed at or under 0.5 "
+        "(dotted). Shaded: the plausible region.\n"
         "Solid lines: T2; dashed: T1. The per-process view is in honesty.json, not here."
         + (f" Rules: {prereg['path']}, sha {prereg['sha']}." if prereg.get("sha") else ""),
         ha="center",
