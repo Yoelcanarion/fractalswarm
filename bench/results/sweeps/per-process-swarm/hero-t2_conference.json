@@ -1,0 +1,177 @@
+{
+  "panels": [
+    {
+      "label": "Stall time (s)",
+      "metric": "stall_s",
+      "note": "no agent work in flight anywhere"
+    },
+    {
+      "label": "Extra cost vs C0 (%)",
+      "metric": "extra_cost_pct",
+      "note": "same workflow, task and seed"
+    },
+    {
+      "label": "Completion (%)",
+      "metric": "completion_rate",
+      "note": ""
+    },
+    {
+      "label": "Validity (%)",
+      "metric": "validity_rate",
+      "note": ""
+    },
+    {
+      "label": "Coordination tokens / run",
+      "metric": "coordination_tokens",
+      "note": "LLM tokens spent on coordination"
+    }
+  ],
+  "series": {
+    "swarm": {
+      "color": "#2a78d6",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.32673518749999997,
+          "cost_usd_max": 0.388767,
+          "cost_usd_min": 0.29353,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/swarm__t2_conference__C0__s1",
+            "runs/swarm__t2_conference__C0__s2",
+            "runs/swarm__t2_conference__C0__s3",
+            "runs/swarm__t2_conference__C0__s4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "stall_s": 0.60225,
+          "stall_s_max": 1.903,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.32673970625,
+          "cost_usd_max": 0.388767,
+          "cost_usd_min": 0.29189075,
+          "extra_cost_pct": 0.0062040219630266746,
+          "extra_cost_pct_max": 1.2698872346949186,
+          "extra_cost_pct_min": -2.025892066894344,
+          "profile": "K-o0",
+          "runs": [
+            "runs/swarm__t2_conference__K-o0__s1",
+            "runs/swarm__t2_conference__K-o1__s1",
+            "runs/swarm__t2_conference__K-o1.1__s1",
+            "runs/swarm__t2_conference__K-o1.2__s1",
+            "runs/swarm__t2_conference__K-o2__s1",
+            "runs/swarm__t2_conference__K-o2.1__s1",
+            "runs/swarm__t2_conference__K-o2.2__s1",
+            "runs/swarm__t2_conference__K-o3__s1",
+            "runs/swarm__t2_conference__K-o3.1__s1",
+            "runs/swarm__t2_conference__K-o3.2__s1",
+            "runs/swarm__t2_conference__K-o0__s2",
+            "runs/swarm__t2_conference__K-o1__s2",
+            "runs/swarm__t2_conference__K-o1.1__s2",
+            "runs/swarm__t2_conference__K-o1.2__s2",
+            "runs/swarm__t2_conference__K-o2__s2",
+            "runs/swarm__t2_conference__K-o2.1__s2",
+            "runs/swarm__t2_conference__K-o2.2__s2",
+            "runs/swarm__t2_conference__K-o3__s2",
+            "runs/swarm__t2_conference__K-o3.1__s2",
+            "runs/swarm__t2_conference__K-o3.2__s2",
+            "runs/swarm__t2_conference__K-o0__s3",
+            "runs/swarm__t2_conference__K-o1__s3",
+            "runs/swarm__t2_conference__K-o1.1__s3",
+            "runs/swarm__t2_conference__K-o1.2__s3",
+            "runs/swarm__t2_conference__K-o2__s3",
+            "runs/swarm__t2_conference__K-o2.1__s3",
+            "runs/swarm__t2_conference__K-o2.2__s3",
+            "runs/swarm__t2_conference__K-o3__s3",
+            "runs/swarm__t2_conference__K-o3.1__s3",
+            "runs/swarm__t2_conference__K-o3.2__s3",
+            "runs/swarm__t2_conference__K-o0__s4",
+            "runs/swarm__t2_conference__K-o1__s4",
+            "runs/swarm__t2_conference__K-o1.1__s4",
+            "runs/swarm__t2_conference__K-o1.2__s4",
+            "runs/swarm__t2_conference__K-o2__s4",
+            "runs/swarm__t2_conference__K-o2.1__s4",
+            "runs/swarm__t2_conference__K-o2.2__s4",
+            "runs/swarm__t2_conference__K-o3__s4",
+            "runs/swarm__t2_conference__K-o3.1__s4",
+            "runs/swarm__t2_conference__K-o3.2__s4"
+          ],
+          "seeds": [
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+            "1",
+            "2",
+            "2",
+            "2",
+            "2",
+            "2",
+            "2",
+            "2",
+            "2",
+            "2",
+            "2",
+            "3",
+            "3",
+            "3",
+            "3",
+            "3",
+            "3",
+            "3",
+            "3",
+            "3",
+            "3",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4",
+            "4"
+          ],
+          "stall_s": 0.7333,
+          "stall_s_max": 3.691,
+          "stall_s_min": 0.0,
+          "validity_rate": 75.0,
+          "x": 1
+        }
+      ]
+    }
+  },
+  "task": "t2_conference",
+  "title": "per-process-swarm",
+  "x": [
+    0,
+    1,
+    3,
+    5
+  ],
+  "x_label": "Coordinators killed"
+}
