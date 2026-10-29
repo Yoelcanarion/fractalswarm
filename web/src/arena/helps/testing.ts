@@ -30,6 +30,7 @@ export const plainText = (html: string): string =>
     .replace(/&gt;/g, ">")
     .replace(/\s+/g, " ")
     .replace(/ ([,.:;)])/g, "$1") // a tag that ends a word leaves a space the reader never sees before punctuation
+    .replace(/\( /g, "(")
     .trim();
 
 /** How many times ``needle`` occurs in ``html``. */

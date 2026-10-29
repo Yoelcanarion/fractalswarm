@@ -13,10 +13,10 @@ export interface PerProcessProps {
 
 function lead(view: ProcessView | null, noun: string): string {
   if (!view) return `The bench has no per-process view against the ${noun}.`;
-  const total = view.coordinators.reduce((sum, n) => sum + n, 0);
+  const coordinators = view.coordinators.join(" + ");
   return (
-    `If every coordinator process fails at the same rate, the swarm (${view.coordinators.join(" + ")} = ${total} coordinators) ` +
-    `sees about ${total} times the crashes of one ${noun}. Expected impact for each unit of failure rate, ${taskName(view.task)}.`
+    `If every coordinator process fails at the same rate, the swarm, with ${coordinators} coordinators by level of its tree, ` +
+    `sees ${coordinators} times the crashes of one ${noun}. Expected impact for each unit of failure rate, ${taskName(view.task)}.`
   );
 }
 

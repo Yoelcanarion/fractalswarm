@@ -27,7 +27,7 @@ describe("the failure models", () => {
   it("are named by every row of the map: the gate runs 1, 3 and 5 crashes, each sweep runs at 5", () => {
     const rows = regimeRows(parsedSample(), "durable-max");
     expect(rows.every((r) => r.model.startsWith("Per crash"))).toBe(true);
-    expect(rows.filter((r) => r.title.startsWith("Failures")).map((r) => r.model)).toEqual(["Per crash", "Per crash"]);
-    expect(rows.filter((r) => !r.title.startsWith("Failures")).map((r) => r.model)).toEqual(Array(5).fill("Per crash · 5 crashes (C3)"));
+    expect(rows.filter((r) => r.title.startsWith("Gate")).map((r) => r.model)).toEqual(["Per crash", "Per crash"]);
+    expect(rows.filter((r) => !r.title.startsWith("Gate")).map((r) => r.model)).toEqual(Array(5).fill("Per crash · 5 crashes (C3)"));
   });
 });

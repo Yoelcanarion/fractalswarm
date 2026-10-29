@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { comparisonLines, EMPTY_TALLY, falseDeathSummary, ruleLines, tallyRows, tallyTotal, tallyTotals, type Which } from "./tally";
+import type { Tally } from "./honesty";
+import { comparisonLines, EMPTY_TALLY, falseDeathNote, ruleLines, tallyRows, type Which } from "./tally";
 import { parsedSample } from "./testing";
 
 const RIVALS = ["durable-max", "durable", "central"];
@@ -14,26 +15,39 @@ describe("the wins, ties and losses table", () => {
     for (const row of rows) expect(row.cells.map((c) => c.rival)).toEqual(RIVALS);
   });
 
-  it("adds H1 to H6 up to the totals the file prints, per rival and overall", () => {
-    const h = parsedSample();
-    const totals = tallyTotals(tallyRows(h, RIVALS), RIVALS);
-    expect(totals.map((t) => [t.rival, t.tally.win, t.tally.tie, t.tally.loss, t.tally.na])).toEqual([
-      ["durable-max", 42, 141, 33, 0],
-      ["durable", 91, 98, 27, 0],
-      ["central", 30, 10, 8, 0],
-    ]);
-    expect(totals.map((t) => t.total)).toEqual([216, 216, 48]);
-    const overall = totals.reduce((sum, t) => ({ win: sum.win + t.tally.win, tie: sum.tie + t.tally.tie, loss: sum.loss + t.tally.loss, na: sum.na + t.tally.na }), { ...EMPTY_TALLY });
-    expect(overall).toEqual(h.tally);
-    expect(overall).toEqual({ win: 163, tie: 249, loss: 68, na: 0 });
-  });
-
-  it("leaves stall time out of the totals", () => {
+  it("shows the counts of the file as they are, and adds nothing up", () => {
     const h = parsedSample();
     const rows = tallyRows(h, RIVALS);
-    const withStall = rows.reduce((n, row) => n + tallyTotal(row.cells[0].tally), 0);
-    expect(withStall).toBe(tallyTotals(rows, RIVALS)[0].total + tallyTotal(rows.find((r) => r.id === "S")!.cells[0].tally));
-    expect(tallyTotals(rows, RIVALS)[0].total).toBeLessThan(withStall);
+    expect(rows.find((r) => r.id === "H1")?.cells.map((c) => c.tally)).toEqual([
+      { win: 0, tie: 23, loss: 4, na: 0 },
+      { win: 11, tie: 16, loss: 0, na: 0 },
+      { win: 6, tie: 0, loss: 0, na: 0 },
+    ]);
+    expect(rows.find((r) => r.id === "S")?.cells[0].tally).toEqual({ win: 2, tie: 25, loss: 0, na: 0 });
+    // every cell is the very object the file gave: no sum, no copy with a changed number
+    for (const row of rows) for (const cell of row.cells) expect(cell.tally).toBe(h.hypotheses.find((x) => x.id === row.id)?.tally[cell.rival]);
+  });
+
+  it("reads a sample that is the bench's own: the hypotheses add up to the overall tally the file prints", () => {
+    // a check on the data, not on the panel: the panel shows no total
+    const h = parsedSample();
+    const sum = (rival?: string): Tally => {
+      const t = { ...EMPTY_TALLY };
+      for (const hypothesis of h.hypotheses.filter((x) => x.id.startsWith("H"))) {
+        for (const [name, tally] of Object.entries(hypothesis.tally)) {
+          if (rival !== undefined && name !== rival) continue;
+          t.win += tally.win;
+          t.tie += tally.tie;
+          t.loss += tally.loss;
+          t.na += tally.na;
+        }
+      }
+      return t;
+    };
+    expect(sum()).toEqual(h.tally);
+    expect(sum("durable-max")).toEqual({ win: 42, tie: 141, loss: 33, na: 0 });
+    expect(sum("durable")).toEqual({ win: 91, tie: 98, loss: 27, na: 0 });
+    expect(sum("central")).toEqual({ win: 30, tie: 10, loss: 8, na: 0 });
   });
 
   it("counts every comparison the file has: no result goes missing from a cell", () => {
@@ -41,14 +55,14 @@ describe("the wins, ties and losses table", () => {
     for (const row of tallyRows(h, RIVALS)) {
       for (const cell of row.cells) {
         const stored = h.comparisons.filter((c) => c.hypothesis === row.id && c.rival === cell.rival).length;
-        expect(cell.total, `${row.id} against ${cell.rival}`).toBe(stored);
+        expect(cell.tally.win + cell.tally.tie + cell.tally.loss + cell.tally.na, `${row.id} against ${cell.rival}`).toBe(stored);
       }
     }
   });
 
   it("gives a rival the bench did not compare an empty cell, not a missing one", () => {
     const [first] = tallyRows(parsedSample(), ["nobody"]);
-    expect(first.cells).toEqual([{ rival: "nobody", tally: EMPTY_TALLY, total: 0 }]);
+    expect(first.cells).toEqual([{ rival: "nobody", tally: EMPTY_TALLY }]);
   });
 });
 
@@ -68,7 +82,7 @@ describe("the list behind a count", () => {
     const lines = comparisonLines(parsedSample(), "H5", "durable-max", "loss");
     expect(lines).toHaveLength(20);
     expect(lines.every((l) => l.verdict === "loss")).toBe(true);
-    const titles = ["Failures", "Detection time", "Restart time", "Fast external restart", "Coordination density", "Team width"];
+    const titles = ["Gate", "Failure detection", "Restart or failover time", "Fast external restart", "Coordination density", "Width"];
     const ranks = lines.map((l) => titles.findIndex((title) => l.where.startsWith(title)));
     expect(ranks.every((r) => r >= 0)).toBe(true);
     expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
@@ -79,10 +93,10 @@ describe("the list behind a count", () => {
   it("writes a line in the words of the map: the setting, the task and profile, the two values", () => {
     const lines = comparisonLines(parsedSample(), "H5", "durable-max", "loss");
     expect(lines.find((l) => l.where === "Coordination density 0.25×")).toMatchObject({ context: "T2 conference · C3", swarm: "1.67", rival: "0", mixed: false });
-    const gate = lines.filter((l) => l.where.startsWith("Failures C"));
+    const gate = lines.filter((l) => l.where.startsWith("Gate C"));
     expect(gate.length).toBeGreaterThan(0);
     for (const line of gate) {
-      expect(line.where).toMatch(/^Failures C[123] \(\d crashes?\)$/);
+      expect(line.where).toMatch(/^Gate C[123] \(\d crashes?\)$/);
       expect(line.context).toMatch(/^T[12] (extraction|conference) · default assumptions$/);
     }
   });
@@ -105,16 +119,21 @@ describe("the list behind a count", () => {
 });
 
 describe("the note about H5", () => {
-  it("counts the swarm's false deaths and finds the worst setting", () => {
-    const summary = falseDeathSummary(parsedSample());
-    expect(summary).toMatchObject({ settingsWith: 25, settings: 27, worstWhere: "Detection time 0.5 s" });
-    expect(summary?.worstMean).toBeCloseTo(24.667, 3);
+  it("gives the file's false deaths at the last point of the gate, the swarm's and the rival's", () => {
+    expect(falseDeathNote(parsedSample())).toEqual({
+      task: "t2_conference",
+      profile: "C3",
+      swarm: { mean: 2.25, max: 4 },
+      rival: { id: "durable-max", mean: 0, max: 0 },
+    });
   });
 
-  it("is left out when the file has no swarm settings to count", () => {
+  it("leaves out the rival when the file has no row for it, and the note when it has none for the swarm", () => {
     const h = parsedSample();
-    expect(falseDeathSummary({ ...h, falseDeaths: [] })).toBeNull();
-    expect(falseDeathSummary({ ...h, falseDeaths: h.falseDeaths.filter((f) => f.workflow !== "swarm") })).toBeNull();
+    expect(falseDeathNote({ ...h, falseDeaths: h.falseDeaths.filter((f) => f.workflow !== "durable-max") })?.rival).toBeNull();
+    expect(falseDeathNote({ ...h, falseDeaths: h.falseDeaths.filter((f) => f.workflow !== "swarm") })).toBeNull();
+    expect(falseDeathNote({ ...h, falseDeaths: [] })).toBeNull();
+    expect(falseDeathNote({ ...h, outcome: { ...h.outcome, gate: [] } })).toBeNull();
   });
 });
 

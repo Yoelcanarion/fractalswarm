@@ -5,7 +5,6 @@ import "./helps.css";
 import { CLAIMS, headlineClaim } from "./claims";
 import { rivalOrder, type Honesty } from "./honesty";
 import { LOCALITY_WORD, rivalLabel, taskName } from "./labels";
-import type { HonestySource } from "./load";
 import { Model } from "./Model";
 import { PerProcess } from "./PerProcess";
 import { Mark, RegimeMap } from "./RegimeMap";
@@ -73,7 +72,7 @@ function Rules({ honesty }: { honesty: Honesty }) {
       </details>
       {conditions.length > 0 && (
         <details>
-          <summary>Conditions the decision rule names ({conditions.length})</summary>
+          <summary>Conditions the decision rule names</summary>
           <ul>
             {conditions.map((condition) => (
               <li key={condition}>{condition}</li>
@@ -87,8 +86,6 @@ function Rules({ honesty }: { honesty: Honesty }) {
 
 export interface WhereItHelpsProps {
   honesty: Honesty;
-  /** Where the file came from: a sample is marked as one. */
-  source: HonestySource;
   /** The rival the map and the per-process view start on: the one the outcome is read against by default. */
   rival?: string;
   /** A cell of the table to start with open, for a director's scene. */
@@ -96,7 +93,7 @@ export interface WhereItHelpsProps {
 }
 
 /** The "where it helps" panel: where the swarm's recovery is local, where it ties, where it loses, and under which failure model. */
-export function WhereItHelps({ honesty, source, rival: start, open: startOpen = null }: WhereItHelpsProps) {
+export function WhereItHelps({ honesty, rival: start, open: startOpen = null }: WhereItHelpsProps) {
   const rivals = useMemo(() => rivalOrder(honesty), [honesty]);
   const [rival, setRival] = useState(start !== undefined && rivals.includes(start) ? start : honesty.outcome.against);
   const [open, setOpen] = useState<OpenList | null>(startOpen);
@@ -108,11 +105,6 @@ export function WhereItHelps({ honesty, source, rival: start, open: startOpen = 
           <p className="helps__lead">The swarm against each rival, at every setting the bench ran. Wins, ties and losses, as the bench counted them.</p>
         </div>
         <div className="helps__controls">
-          {source === "sample" && (
-            <span className="badge badge--warn" title="The server has no bench/results/honesty.json, so this is the copy bundled with the app.">
-              Sample data
-            </span>
-          )}
           <label className="helps__field">
             <span className="helps__field-label">Map and per-process against</span>
             <select value={rival} onChange={(event) => setRival(event.target.value)}>

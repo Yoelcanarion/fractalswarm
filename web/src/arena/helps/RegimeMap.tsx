@@ -5,7 +5,7 @@ import { systemName } from "../assumptions";
 import type { Honesty, Locality } from "./honesty";
 import { fmt, LOCALITY_WORD } from "./labels";
 import { Model } from "./Model";
-import { localityCounts, RATIO_NAMES, regimeRows, type MapCell } from "./regime";
+import { RATIO_NAMES, regimeRows, type MapCell } from "./regime";
 
 /** A locality as a class suffix: "n/a" cannot be one. */
 const slug = (locality: Locality): string => (locality === "n/a" ? "na" : locality);
@@ -63,8 +63,7 @@ export interface RegimeMapProps {
 /** Where the swarm's recovery stays local against a rival. One assumption changes along each row. */
 export function RegimeMap({ honesty, rival }: RegimeMapProps) {
   const rows = useMemo(() => regimeRows(honesty, rival), [honesty, rival]);
-  const counts = useMemo(() => localityCounts(rows), [rows]);
-  const points = counts.holds + counts.ties + counts.fails + counts["n/a"];
+  const cut = honesty.rules.ratio.cdt_s?.ratio;
   return (
     <section className="map" data-helps="map" aria-label="Regime map">
       <header className="helps__section-head">
@@ -73,7 +72,7 @@ export function RegimeMap({ honesty, rival }: RegimeMapProps) {
           <Model kind="crash" />
         </div>
         <p className="helps__sub">
-          Against the {systemName(rival)}: locality holds at {counts.holds} of {points} settings, ties at {counts.ties} and fails at {counts.fails}.
+          Against the {systemName(rival)}: at each setting the swarm's recovery stays local (holds), ties or fails. One assumption changes along each row.
         </p>
       </header>
       {rows.length === 0 ? (
@@ -111,9 +110,12 @@ export function RegimeMap({ honesty, rival }: RegimeMapProps) {
         </li>
         <li>
           <span className="map__num" aria-hidden>
-            0.48×
+            N×
           </span>
-          <span>Coordinator-dependency time, swarm over supervisor, mean of the seeds. The verdict needs every seed, so a number under 0.5× can still tie.</span>
+          <span>
+            Coordinator-dependency time, swarm over supervisor, mean of the seeds.
+            {cut !== undefined && ` A win needs every seed to reach ${fmt(cut)}× or lower, so a mean under ${fmt(cut)}× can still tie.`}
+          </span>
         </li>
       </ul>
     </section>

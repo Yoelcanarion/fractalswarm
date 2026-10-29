@@ -2,9 +2,9 @@ import { useMemo } from "react";
 
 import { systemName } from "../assumptions";
 import type { Honesty, Tally } from "./honesty";
-import { countText, fmt, rivalLabel } from "./labels";
+import { countText, fmt, rivalLabel, taskName } from "./labels";
 import { Model } from "./Model";
-import { comparisonLines, falseDeathSummary, tallyRows, tallyTotals, type TallyCell, type Which } from "./tally";
+import { comparisonLines, falseDeathNote, tallyRows, type TallyCell, type Which } from "./tally";
 
 /** A cell of the table that is open: the results it counts, listed. */
 export interface OpenList {
@@ -89,8 +89,7 @@ export interface TallyTableProps {
 /** The swarm's wins, ties and losses against each rival, per hypothesis, with every list of results one click away. */
 export function TallyTable({ honesty, rivals, against, open, onOpen }: TallyTableProps) {
   const rows = useMemo(() => tallyRows(honesty, rivals), [honesty, rivals]);
-  const totals = useMemo(() => tallyTotals(rows, rivals), [rows, rivals]);
-  const deaths = useMemo(() => falseDeathSummary(honesty), [honesty]);
+  const deaths = useMemo(() => falseDeathNote(honesty), [honesty]);
   const heads = (
     <>
       <th scope="col" className="tally__row-head">
@@ -138,43 +137,19 @@ export function TallyTable({ honesty, rivals, against, open, onOpen }: TallyTabl
               ))}
             </tr>
           ))}
-          <tr className="tally__row tally__row--total">
-            <th scope="row" className="tally__row-head">
-              <span className="tally__name">
-                <b>All</b> H1 to H6
-              </span>
-              <span className="tally__expected">Stall time is reported above and not counted.</span>
-              <span className="tally__model">
-                <Model kind="crash" />
-              </span>
-            </th>
-            {totals.map((cell) => (
-              <td key={cell.rival} className={cell.rival === against ? "tally__col--against" : undefined}>
-                <div className="tcell">
-                  <div className="tcell__bar" aria-hidden>
-                    {SEGMENTS.map((which) => (
-                      <i key={which} className={`seg seg--${which}`} style={{ flexGrow: cell.tally[which] }} />
-                    ))}
-                  </div>
-                  <div className="tcell__counts tcell__counts--total">
-                    {SEGMENTS.map((which) => (
-                      <span key={which} className={`count count--${which}`} aria-label={countText(cell.tally[which], WORDS[which].one, WORDS[which].many)}>
-                        {cell.tally[which]}
-                      </span>
-                    ))}
-                    {cell.tally.na > 0 && <span className="count count--na">{cell.tally.na} n/a</span>}
-                  </div>
-                </div>
-              </td>
-            ))}
-          </tr>
         </tbody>
       </table>
       {open && <ComparisonList honesty={honesty} open={open} onClose={() => onOpen(null)} />}
       {deaths && (
         <p className="tally__note">
-          About H5: the swarm's detector can declare a live coordinator dead (a false death), so its work is re-owned and the duplicate paid for. It did so in{" "}
-          {deaths.settingsWith} of {deaths.settings} swarm settings, {fmt(deaths.worstMean)} times per run at worst ({deaths.worstWhere}). The supervisors have no detector and cannot.
+          About H5: the swarm's detector can declare a live coordinator dead (a false death), so its work is re-owned and the duplicate paid for. At the gate on {taskName(deaths.task)} ({deaths.profile}) it
+          did so {fmt(deaths.swarm.mean)} times per run on average, {deaths.swarm.max} at most
+          {deaths.rival && (
+            <>
+              ; the {systemName(deaths.rival.id)}, which has no detector, did so {fmt(deaths.rival.mean)} times
+            </>
+          )}
+          .
         </p>
       )}
     </section>
@@ -184,13 +159,15 @@ export function TallyTable({ honesty, rivals, against, open, onOpen }: TallyTabl
 function ComparisonList({ honesty, open, onClose }: { honesty: Honesty; open: OpenList; onClose: () => void }) {
   const lines = useMemo(() => comparisonLines(honesty, open.hypothesis, open.rival, open.which), [honesty, open]);
   const hypothesis = honesty.hypotheses.find((h) => h.id === open.hypothesis);
+  // the count is the file's own, the one on the button that opened the list
+  const count = hypothesis?.tally[open.rival]?.[open.which] ?? 0;
   const words = WORDS[open.which];
   return (
     <div className={`list list--${open.which}`} role="region" aria-live="polite" aria-label={`${words.title}: ${open.hypothesis} against the ${systemName(open.rival)}`}>
       <header className="list__head">
         <span className="list__title">
           {words.title}: <b>{open.hypothesis}</b> {hypothesis?.name} against the {systemName(open.rival)}
-          <span className="list__count"> ({lines.length})</span>
+          <span className="list__count"> ({count})</span>
         </span>
         <button type="button" className="list__close" onClick={onClose}>
           Close

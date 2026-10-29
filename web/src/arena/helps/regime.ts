@@ -4,7 +4,7 @@
 // a strip per sweep with one cell per setting, as bench/results/regime.png draws it: not a grid, because
 // two assumptions are never varied together.
 
-import type { Honesty, Locality, Ratios, RegimePoint } from "./honesty";
+import type { Honesty, Ratios, RegimePoint } from "./honesty";
 import { crashesText, settingLabel, taskName } from "./labels";
 import { crashModel } from "./models";
 
@@ -14,19 +14,19 @@ interface AxisInfo {
   detail: string;
 }
 
-/** The sweeps and the gate, in the order the map draws them. */
+/** The gate and the sweeps, in the order the map draws them, named as bench/PREREG.md §5 names the assumption each checks. */
 export const AXES: Record<string, AxisInfo> = {
-  gate: { title: "Failures", detail: "1, 3 and 5 coordinator crashes: C1, C2, C3." },
-  recovery_ms: { title: "Detection time", detail: "How long a crash takes to be noticed, for both." },
-  rival_restart_ms: { title: "Restart time", detail: "Supervisor restart, on top of its 5 s detection." },
-  rival_recovery_ms: { title: "Fast external restart", detail: "Supervisor back in 0.5 to 1 s; the swarm keeps 5 s." },
+  gate: { title: "Gate", detail: "The default assumptions, at each crash plan: C1, C2, C3." },
+  recovery_ms: { title: "Failure detection", detail: "How long a crash takes to be noticed: the swarm's detection and the supervisor's restart, the same for both." },
+  rival_restart_ms: { title: "Restart or failover time", detail: "The supervisor's restart, on top of its detection; the swarm unchanged." },
+  rival_recovery_ms: { title: "Fast external restart", detail: "The supervisor back faster than the swarm detects (asymmetric detection)." },
   agent_latency_scale: { title: "Coordination density", detail: "The agents' latency, scaled." },
-  agents: { title: "Team width", detail: "Agents in the team." },
+  agents: { title: "Width", detail: "Agents in the team." },
 };
 
 const ORDER = Object.keys(AXES);
 
-export const axisTitle = (axis: string | null): string => AXES[axis ?? "gate"]?.title ?? axis ?? "Failures";
+export const axisTitle = (axis: string | null): string => AXES[axis ?? "gate"]?.title ?? axis ?? "Gate";
 
 const axisRank = (axis: string | null): number => {
   const rank = ORDER.indexOf(axis ?? "gate");
@@ -87,13 +87,6 @@ export function regimeRows(honesty: Honesty, rival: string): MapRow[] {
   });
   rows.sort((a, b) => axisRank(a.axis) - axisRank(b.axis) || Number(b.task === decidingTask) - Number(a.task === decidingTask) || a.task.localeCompare(b.task));
   return rows.map(({ id, title, detail, model, cells }) => ({ id, title, detail, model, cells }));
-}
-
-/** How many points of the map there are per locality, over the rows given: "5 hold, 9 tie, 2 fail". */
-export function localityCounts(rows: readonly MapRow[]): Record<Locality, number> {
-  const counts: Record<Locality, number> = { holds: 0, ties: 0, fails: 0, "n/a": 0 };
-  for (const row of rows) for (const cell of row.cells) counts[cell.point.locality] += 1;
-  return counts;
 }
 
 export const RATIO_NAMES: { key: keyof Ratios; label: string }[] = [
