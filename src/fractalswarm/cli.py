@@ -392,6 +392,54 @@ def replay(
 
 
 @app.command()
+def bundle(
+    run: Annotated[str, typer.Argument(help="a finished run: id under runs/, or its directory")],
+    name: Annotated[str, typer.Option(help="the bundle's name: demo/<name>")],
+    out: Annotated[Path | None, typer.Option(help="where bundles go (default: demo/)")] = None,
+    force: Annotated[bool, typer.Option(help="replace a bundle of that name")] = False,
+) -> None:
+    """Copy a finished run into demo/<name>: events.jsonl, cassette.jsonl and HEAD. Refuses a
+    run on live input (an intake, or text a person typed): bundles are committed."""
+    import json
+    import shutil
+
+    from fractalswarm.api.app import DEMO_DIR
+    from fractalswarm.intake.guard import first_event, inside, private_reason
+    from fractalswarm.intake.store import safe_id
+
+    settings = _settings()
+    private_runs = [settings.private_dir / "runs" / run, settings.private_dir / "intake" / run]
+    run_dir = next((path for path in private_runs if path.is_dir()), None)
+    if run_dir is None:
+        run_dir = _resolve_run_dir(run)
+    if inside(run_dir, settings.private_dir):
+        typer.echo(f"refused: {run_dir} is in the private directory, which is never bundled")
+        raise typer.Exit(1)
+    exported = run_dir / "events.jsonl"
+    if not exported.is_file():
+        raise typer.BadParameter(f"{run_dir} has no events.jsonl: the run did not finish")
+    reason = private_reason(first_event(exported))
+    if reason:
+        typer.echo(f"refused: {reason}; bundles are committed, what a person typed is not")
+        raise typer.Exit(1)
+    try:
+        target = (out or DEMO_DIR) / safe_id(name, "bundle name")
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from None
+    if target.exists() and not force:
+        raise typer.BadParameter(f"{target} exists: add --force to replace it")
+    with exported.open(encoding="utf-8") as handle:
+        head = json.loads(handle.readlines()[-1])["hash"]
+    shutil.rmtree(target, ignore_errors=True)
+    target.mkdir(parents=True)
+    for file in ("events.jsonl", "cassette.jsonl"):
+        if (run_dir / file).is_file():
+            shutil.copyfile(run_dir / file, target / file)
+    (target / "HEAD").write_text(head + "\n", encoding="utf-8")
+    typer.echo(f"bundled {run_dir.name} -> {target}  head {head}")
+
+
+@app.command()
 def feasibility(
     run: Annotated[str, typer.Argument(help="run id under runs/, or a run directory")],
 ) -> None:
@@ -784,7 +832,8 @@ def _serve(runs_dir: Path, host: str, port: int, open_run: str | None, browser: 
     typer.echo(f"FractalSwarm UI on {url}  (Ctrl+C to stop)")
     if browser:
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
-    uvicorn.run(create_app(runs_dir), host=host, port=port, log_level="warning")
+    app_ = create_app(runs_dir, private_dir=_settings().private_dir)
+    uvicorn.run(app_, host=host, port=port, log_level="warning")
 
 
 @app.command()

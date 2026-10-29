@@ -73,11 +73,15 @@ def _rooms(rooms: Any) -> list[dict[str, Any]] | None:
 # -- reading an intake ---------------------------------------------------------------------
 
 
-def state_of(catalog: Catalog, entry: RunEntry, private: PrivateDir) -> dict[str, Any]:
+def state_of(
+    catalog: Catalog, entry: RunEntry, private: PrivateDir, job: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """The intake's state, derived from its log: ``reading`` (the model is working),
     ``proposed`` (waiting for a person), ``approved``, ``refused`` (the firewall blocked the
-    text), ``failed`` or ``interrupted``."""
-    events = catalog.read(entry)
+    text), ``failed`` or ``interrupted``. ``job`` is the job that runs it, if known: a process
+    that died before it wrote anything leaves a log that never starts, and the job says so."""
+    has_log = entry.sqlite.exists() or entry.jsonl.exists()
+    events = catalog.read(entry) if has_log else []
     proposed = next((e for e in events if e["type"] == "intake.proposed"), None)
     refused = next((e for e in events if e["type"] == "intake.refused"), None)
     failed = next((e for e in events if e["type"] == "intake.failed"), None)
@@ -89,9 +93,9 @@ def state_of(catalog: Catalog, entry: RunEntry, private: PrivateDir) -> dict[str
         state = "proposed"
     elif refused is not None:
         state = "refused"
-    elif failed is not None:
+    elif failed is not None or job is not None and job["state"] == "failed":
         state = "failed"
-    elif status == "running" or status == "empty":
+    elif status == "running" or (status == "empty" and job is None) or _working(job):
         state = "reading"
     else:
         state = "interrupted"
@@ -111,7 +115,12 @@ def state_of(catalog: Catalog, entry: RunEntry, private: PrivateDir) -> dict[str
         "refused": refused["payload"] if refused else None,
         "failed": failed["payload"] if failed else None,
         "approved": _approved_summary(approved),
+        "job": {"id": job["id"], "state": job["state"]} if job else None,
     }
+
+
+def _working(job: dict[str, Any] | None) -> bool:
+    return job is not None and job["state"] in ("starting", "running")
 
 
 def _approved_summary(approved: dict[str, Any] | None) -> dict[str, Any] | None:

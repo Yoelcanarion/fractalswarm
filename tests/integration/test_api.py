@@ -102,7 +102,6 @@ def test_bench_results_fall_back_to_the_fixture(client: TestClient, dirs) -> Non
 @pytest.mark.parametrize(
     "path",
     [
-        "/api/tasks",
         "/api/runs/demo-toy/approve",
         "/api/runs/demo-toy/escalations/e1",
     ],

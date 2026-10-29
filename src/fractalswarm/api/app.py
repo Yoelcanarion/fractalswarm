@@ -4,8 +4,15 @@ REST under ``/api``; the event stream is a WebSocket (``api/ws.py``); everything
 the web app from ``api/static/``. The UI is a pure projection of the event stream, so it
 needs only the read endpoints to show a live run or a replay. The kill switch (``halt``) and the
 budget shock (``budget``) drop a request into the live run's control inbox, the same file
-``fractalswarm halt`` and ``budget`` write; the other control endpoints (tasks, approval, chaos,
-escalations) answer 501 until the runtime behind them lands.
+``fractalswarm halt`` and ``budget`` write.
+
+Launching: ``POST /api/tasks`` starts a run as a job (``api/jobs.py``: one subprocess per run),
+``GET /api/jobs`` lists them and ``POST /api/jobs/{id}/cancel`` stops one. The live input flow is
+``POST /api/intake`` (Muse reads pasted text), ``GET /api/intake/{id}``, then
+``POST /api/intake/{id}/approve``; a task then runs on ``inputs.intake``. These need a private
+directory (``FRACTALSWARM_PRIVATE_DIR``), where what a person typed lives; without one they
+answer 503. The remaining control endpoints (plan approval, chaos, escalations) answer 501
+until the runtime behind them lands.
 """
 
 import asyncio
@@ -22,9 +29,13 @@ from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
+from fractalswarm.api import jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
+from fractalswarm.api.jobs import JobError, JobManager
 from fractalswarm.api.ws import stream_events
 from fractalswarm.config import CONFIG_DIR
+from fractalswarm.intake import service
+from fractalswarm.intake.store import PrivateDir, new_id, safe_id
 
 REPO_ROOT = CONFIG_DIR.parent
 DEMO_DIR = REPO_ROOT / "demo"
@@ -43,9 +54,17 @@ def create_app(
     demo_dir: Path | None = DEMO_DIR,
     bench_dir: Path = BENCH_RESULTS_DIR,
     static_dir: Path = STATIC_DIR,
+    private_dir: Path | None = None,
 ) -> Starlette:
-    catalog = Catalog(runs_dir, demo_dir)
+    catalog = Catalog(runs_dir, demo_dir, private_dir)
+    private = PrivateDir(private_dir) if private_dir is not None else None
+    manager = JobManager(private, runs_dir, catalog) if private is not None else None
     verified: dict[tuple[str, str], dict[str, Any]] = {}
+
+    def need_private() -> tuple[PrivateDir, JobManager]:
+        if private is None or manager is None:
+            raise HTTPException(503, "the API was started without a private directory")
+        return private, manager
 
     def entry(request: Request) -> RunEntry:
         try:
@@ -171,6 +190,149 @@ def create_app(
         inbox.request_control(request_ | {"reason": reason})
         return JSONResponse({"ok": True, "detail": f"cap requested: {level} ${usd:g}"})
 
+    # -- launching runs and reading live input ------------------------------------------------
+
+    def job_error(exc: JobError) -> HTTPException:
+        return HTTPException(exc.status, exc.message)
+
+    def launched(job: dict[str, Any]) -> dict[str, Any]:
+        runs = [run["run_id"] for run in job["runs"]]
+        return {
+            "job_id": job["id"],
+            "run_id": runs[0],
+            "run_ids": runs,
+            "state": job["state"],
+            "private": job["private"],
+            "warnings": job["warnings"],
+            "job": job,
+        }
+
+    async def launch_task(request: Request) -> JSONResponse:
+        _, jobs_ = need_private()
+        body = await _json_body(request)
+        try:
+            job = await anyio.to_thread.run_sync(jobs.launch_run, jobs_, body)
+        except JobError as exc:
+            raise job_error(exc) from None
+        return JSONResponse(launched(job), status_code=202)
+
+    async def list_jobs(request: Request) -> JSONResponse:
+        return JSONResponse(need_private()[1].listing())
+
+    async def get_job(request: Request) -> JSONResponse:
+        try:
+            return JSONResponse(need_private()[1].get(request.path_params["job_id"]))
+        except JobError as exc:
+            raise job_error(exc) from None
+
+    async def cancel_job(request: Request) -> JSONResponse:
+        try:
+            return JSONResponse(await need_private()[1].cancel(request.path_params["job_id"]))
+        except JobError as exc:
+            raise job_error(exc) from None
+
+    def intake_entry(intake_id: str) -> RunEntry:
+        private_, _ = need_private()
+        try:
+            path = private_.intake_dir(safe_id(intake_id, "intake id"))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+        if not private_.input_file(intake_id).exists():
+            raise HTTPException(404, f"no intake {intake_id!r}")
+        return RunEntry(intake_id, "private", path)
+
+    def intake_state(intake_id: str) -> dict[str, Any]:
+        private_, jobs_ = need_private()
+        run = intake_entry(intake_id)
+        mine = [
+            job
+            for job in jobs_.jobs.values()
+            if job["kind"] == "intake" and job["runs"] and job["runs"][0]["run_id"] == intake_id
+        ]
+        job = jobs_.view_state(max(mine, key=lambda j: j["created_at"])) if mine else None
+        return service.state_of(catalog, run, private_, job)
+
+    async def create_intake(request: Request) -> JSONResponse:
+        private_, jobs_ = need_private()
+        body = await _json_body(request)
+        backend = body.get("backend", "fake")
+        if backend != "fake":
+            raise HTTPException(403, "reading with the real model needs the preflight flow")
+        intake_id = new_id("intake")
+        try:
+            service.create_input(private_, intake_id, body)
+            job = await anyio.to_thread.run_sync(jobs.launch_intake, jobs_, intake_id, backend)
+        except service.IntakeError as exc:
+            raise HTTPException(422, str(exc)) from None
+        except JobError as exc:
+            raise job_error(exc) from None
+        answer = {"intake_id": intake_id, "job_id": job["id"], "state": "reading", "private": True}
+        return JSONResponse(answer | {"warnings": job["warnings"]}, status_code=202)
+
+    async def get_intake(request: Request) -> JSONResponse:
+        found = await anyio.to_thread.run_sync(intake_state, request.path_params["intake_id"])
+        return JSONResponse(found)
+
+    async def approve_intake(request: Request) -> JSONResponse:
+        private_, _ = need_private()
+        body = await _json_body(request)
+        edited = body.get("proposal")
+        if edited is not None and not isinstance(edited, dict):
+            raise HTTPException(422, "proposal must be the edited proposal object")
+        state = await anyio.to_thread.run_sync(intake_state, request.path_params["intake_id"])
+        try:
+            approved = service.approve(private_, state, edited)
+        except service.IntakeError as exc:
+            status = 409 if "already approved" in str(exc) else 422
+            raise HTTPException(status, str(exc)) from None
+        return JSONResponse(
+            {
+                "intake_id": state["intake_id"],
+                "sha256": approved["sha256"],
+                "edits": approved["edits"],
+                "warnings": approved["proposal"]["warnings"],
+                "task_inputs": {"intake": state["intake_id"]},
+            }
+        )
+
+    async def intake_sample(request: Request) -> JSONResponse:
+        """Synthetic text in the generator's wording, to try the intake with at $0."""
+        from fractalswarm.bench.tasks.t2_conference.generator import live_sample
+
+        seed = _int_param(request, "seed", 1, minimum=0, maximum=10_000)
+        sample = live_sample(seed)
+        return JSONResponse({key: sample[key] for key in ("conference", "talks", "notes", "rooms")})
+
+    async def run_metrics(request: Request) -> JSONResponse:
+        """The official numbers of a run (``bench/scoring.score_run``): stall, makespan, cost,
+        tokens, messages, chaos events, and the task's validity. ``recovery`` is reserved for
+        the recovery metrics of the durable-supervisor comparison."""
+        from fractalswarm.bench.scoring import default_checker, score_run
+        from fractalswarm.bench.workflows import t1_checker, t2_checker
+        from fractalswarm.kernel.events import Event
+        from fractalswarm.runs import SCENARIOS
+
+        run = entry(request)
+        events = [Event.model_validate(event) for event in catalog.read(run)]
+        started = events[0].payload if events and events[0].type == "run.started" else {}
+        task = ((started.get("params") or {}).get("spec") or {}).get("task")
+        names = {path: name for name, path in SCENARIOS.items()}
+        checker = {"t2_conference": t2_checker, "t1_extraction": t1_checker}.get(task)
+        metrics = await anyio.to_thread.run_sync(
+            lambda: score_run(events, checker or default_checker)
+        )
+        return JSONResponse(
+            {
+                "run_id": run.id,
+                "status": catalog.status(run, catalog.last(run)),
+                "scenario": names.get(started.get("scenario"), started.get("scenario")),
+                "task": task,
+                "input": (started.get("params") or {}).get("input"),
+                "metrics": metrics.model_dump(),
+                "recovery": None,
+            }
+        )
+
     async def ui(request: Request) -> HTMLResponse:
         return HTMLResponse(
             "<h1>FractalSwarm</h1><p>The web UI is not built. Run "
@@ -192,7 +354,15 @@ def create_app(
         Route("/api/runs/{run_id}/verify", verify_run, methods=["POST"]),
         Route("/api/runs/{run_id}/feasibility", feasibility),
         Route("/api/bench/results", bench_results),
-        Route("/api/tasks", not_wired("tasks", "the Day 4 T2 slice"), methods=["POST"]),
+        Route("/api/runs/{run_id}/metrics", run_metrics),
+        Route("/api/tasks", launch_task, methods=["POST"]),
+        Route("/api/jobs", list_jobs),
+        Route("/api/jobs/{job_id}", get_job),
+        Route("/api/jobs/{job_id}/cancel", cancel_job, methods=["POST"]),
+        Route("/api/intake", create_intake, methods=["POST"]),
+        Route("/api/intake/sample", intake_sample),
+        Route("/api/intake/{intake_id}", get_intake),
+        Route("/api/intake/{intake_id}/approve", approve_intake, methods=["POST"]),
         Route(
             "/api/runs/{run_id}/approve",
             not_wired("approve", "the Day 4 T2 slice (plan approval)"),
