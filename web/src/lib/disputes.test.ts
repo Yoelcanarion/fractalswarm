@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ControlResult } from "./api";
-import { READ_BACK_MS, readDisputes, sendAnswer, verdictAfter, type Answering, type DisputeEscalation, type Sent } from "./disputes";
+import { READ_BACK_MS, readDisputes, sendAnswer, verdictAfter, withLoggedVerdict, type Answering, type DisputeEscalation, type Judged, type Sent } from "./disputes";
 
 // The shape api/lens.py `disputes_view` answers with (one dispute whose escalation a person may answer).
 const dispute = (over: Record<string, unknown> = {}) => ({
@@ -189,5 +189,37 @@ describe("sending an answer", () => {
     await sendAnswer(u.how, "e1", "A", 0, u.report);
     expect(u.reports.map((r) => r.verdict)).toEqual(["pending"]);
     expect(u.looks()).toBe(0);
+  });
+});
+
+describe("what the box says once the page's own copy of the log has the verdict", () => {
+  const own = (answers: Judged[] = [reply()]) => ({ ruled: "B", answers });
+  const request: ControlResult = { ok: true, status: 200, detail: "answer to e1 requested for goal:g1" };
+  const waiting: Sent = { choice: "A", request, verdict: "pending" };
+  const overruled = { kind: "overruled", text: "accepted: A overrules B" };
+
+  it("takes the verdict the stream brought before the poll's next look, and one the poll gave up on", () => {
+    expect(withLoggedVerdict(waiting, own(), 0)).toEqual({ ...waiting, verdict: overruled });
+    expect(withLoggedVerdict({ ...waiting, verdict: null }, own(), 0)).toEqual({ ...waiting, verdict: overruled });
+  });
+
+  it("keeps the verdict the poll read", () => {
+    const read: Sent = { ...waiting, verdict: { kind: "confirmed", text: "accepted: B confirms B" } };
+    expect(withLoggedVerdict(read, own(), 0)).toBe(read);
+  });
+
+  it("keeps waiting while the page's log holds nothing newer than the last answer it had seen", () => {
+    expect(withLoggedVerdict(waiting, own([]), 0)).toBe(waiting);
+    expect(withLoggedVerdict(waiting, own([reply({ seq: 800 })]), 800)).toBe(waiting);
+  });
+
+  it("has no verdict to look for after a refusal", () => {
+    const refused: Sent = { choice: "A", request: { ok: false, status: 409, detail: "not launched to take controls" }, verdict: null };
+    expect(withLoggedVerdict(refused, own(), 0)).toBe(refused);
+  });
+
+  it("reads the fold's answers the way it reads the server's (no `by` there)", () => {
+    const fold = [{ seq: 900, ts: 26_000, choice: "B", accepted: true, overruled: false, reason: "" }];
+    expect(withLoggedVerdict(waiting, own(fold), 0).verdict).toEqual({ kind: "confirmed", text: "accepted: B confirms B" });
   });
 });

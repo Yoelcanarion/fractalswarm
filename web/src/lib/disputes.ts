@@ -57,9 +57,18 @@ export interface Verdict {
   text: string;
 }
 
+/** What the log says about an answer, whether the server's disputes view or the panel's own fold of the stream gives it. */
+export interface Judged {
+  seq: number;
+  choice: string;
+  accepted: boolean;
+  overruled: boolean;
+  reason: string;
+}
+
 /** The verdict on the newest answer to ``escalation`` after ``afterSeq`` (the last answer the panel had seen when the
- * person clicked), in the server's terms; null while the log shows none. */
-export function verdictAfter(escalation: DisputeEscalation | undefined, afterSeq: number): Verdict | null {
+ * person clicked), in the server's terms; null while the log shows none. ``ruled`` is the arbiter's ruling. */
+export function verdictAfter(escalation: { ruled: string | null; answers: Judged[] } | undefined, afterSeq: number): Verdict | null {
   const answer = escalation?.answers.filter((a) => a.seq > afterSeq).at(-1);
   if (!escalation || !answer) return null;
   if (!answer.accepted) return { kind: "ignored", text: `not accepted: ${answer.reason || "the owner did not take it"}` };
@@ -86,6 +95,15 @@ export interface Answering {
   wait(ms: number): Promise<void>;
   /** False once whoever asked is gone: nothing more is reported. */
   alive(): boolean;
+}
+
+/** What the box should say about ``sent``: the verdict the poll read, else the one the page's own copy of the log already
+ * holds (the live stream can bring it before the poll's next look, and the row above the box would say so), else what the
+ * poll has so far. A refusal has no verdict to look for. */
+export function withLoggedVerdict(sent: Sent, own: { ruled: string | null; answers: Judged[] }, seen: number): Sent {
+  if (!sent.request.ok || (sent.verdict !== null && sent.verdict !== "pending")) return sent;
+  const logged = verdictAfter(own, seen);
+  return logged ? { ...sent, verdict: logged } : sent;
 }
 
 export const failed = (error: unknown): ControlResult => ({

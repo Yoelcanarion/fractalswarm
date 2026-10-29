@@ -500,6 +500,8 @@ The server only *requests* the answer: the goal's owner takes it or ignores it o
 `GET api/runs/{id}/disputes` (`fetchDisputes` and `lib/disputes.ts`) at 0.4, 1.4, 3.4 and 7.4 s, and says "accepted: A overrules B",
 "accepted: B confirms B" or "not accepted: {the owner's reason, as it logged it}"; "no verdict in the log yet" if none arrives. Only an
 answer newer than the last one the panel had seen when the person clicked (`seq`) counts, and only the escalation that was answered.
+If the live stream brings the verdict before the poll does (or after it gave up), the box shows the one in the page's own copy of the
+log (`withLoggedVerdict`), so it never says "no verdict" under a row that already reads "overruled".
 A server that has no `disputes` view (404) or does not answer ends the reading without a verdict, not with an error. Buttons stay
 disabled while an answer is in flight, so a verdict is never read for the wrong click; once the escalation closes (an accepted
 answer, the window passed, the run ended) the buttons go and the line stays, to say how the last answer went.

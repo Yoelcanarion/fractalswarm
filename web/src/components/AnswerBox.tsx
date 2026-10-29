@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { answerEscalation, fetchDisputes } from "../lib/api";
-import { sendAnswer, type Sent } from "../lib/disputes";
+import { sendAnswer, withLoggedVerdict, type Sent } from "../lib/disputes";
 import type { HumanEscalation } from "../lib/escalations";
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -23,6 +23,7 @@ export function AnswerStatus({ sent }: { sent: Sent }) {
 export function AnswerBox({ runId, item, waiting }: { runId: string; item: HumanEscalation; waiting: boolean }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [sent, setSent] = useState<Sent | null>(null);
+  const seen = useRef(0); // the last answer in the log when the person clicked: only a newer one is theirs
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
@@ -32,11 +33,11 @@ export function AnswerBox({ runId, item, waiting }: { runId: string; item: Human
   }, []);
 
   async function answer(choice: string) {
-    const seen = item.answers.reduce((last, a) => Math.max(last, a.seq), 0); // the answers already in the log are not this one
+    seen.current = item.answers.reduce((last, a) => Math.max(last, a.seq), 0);
     setBusy(choice);
     setSent(null);
     const how = { post: (picked: string) => answerEscalation(runId, item.id, picked), read: () => fetchDisputes(runId), wait, alive: () => alive.current };
-    await sendAnswer(how, item.id, choice, seen, setSent);
+    await sendAnswer(how, item.id, choice, seen.current, setSent);
     if (alive.current) setBusy(null); // one answer at a time: the verdict on this one is read before another can be sent
   }
 
@@ -57,7 +58,7 @@ export function AnswerBox({ runId, item, waiting }: { runId: string; item: Human
             ))}
           </div>
         ))}
-      {sent && <AnswerStatus sent={sent} />}
+      {sent && <AnswerStatus sent={withLoggedVerdict(sent, { ruled: item.fallback ?? null, answers: item.answers }, seen.current)} />}
     </div>
   );
 }
