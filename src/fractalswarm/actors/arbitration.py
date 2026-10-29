@@ -365,15 +365,16 @@ def arbiter_request(
         schema_name=SCHEMA,
         model=ArbiterRuling,
         instructions=f"{INSTRUCTIONS}\n\n{note}",
-        header=f"ARBITRATION of {dispute.key} (subject {dispute.subject})\n"
-        "Contracts published different values for this fact. Decide which one the evidence "
-        "supports.",
-        data={
-            "context": context,
-            "dispute": {"key": dispute.key, "subject": dispute.subject, "candidates": works},
-        },
-        # The values are agents' output and the evidence is from outside: both are spotlighted.
-        untrusted={"candidates": {c["label"]: c["value"] for c in dispute.candidates}} | evidence,
+        header="ARBITRATION\nContracts published different values for the same fact. Decide "
+        "which one the evidence supports.",
+        data={"context": context, "works": works},
+        # What agents published (the key, the subject, the values) and the evidence come from
+        # outside the system: all of it is spotlighted, none of it is in the header.
+        untrusted={
+            "fact": {"key": dispute.key, "subject": dispute.subject},
+            "candidates": {c["label"]: c["value"] for c in dispute.candidates},
+        }
+        | evidence,
         feedback=feedback,
     )
 

@@ -36,7 +36,12 @@ SCHEMA = "arbitration_ruling"
 ROOT_KEY, ROOT_SPEAKER, ROOT_SESSION = "speaker:S02:availability", "S02", "track-ai/d1"
 # S04 has talks on both days of track-data; day 2 misreads the email.
 TRACK_KEY, TRACK_SPEAKER, TRACK_SESSION = "speaker:S04:availability", "S04", "track-data/d2"
-SLOW_MS = 12_000  # the arbiter's call outlasts a kill at 30% of the contracts
+# The arbiter answers this much later than the fake model would. A kill at 30% of the contracts
+# (33 s) lands in the call that began at 24.7 s; the heir's call (from 39 s) is done well before
+# the hold ends (54.7 s). The hold test uses a slower arbiter; the late test one slower still.
+SLOW_MS = 8_000
+HOLD_TEST_MS = 12_000
+LATE_MS = 35_000
 
 
 class SlowArbiter:
@@ -147,12 +152,12 @@ def default_run(out: Path) -> Path:
 
 @pytest.fixture(scope="module")
 def slow_run(out: Path) -> Path:
-    return record(out, "swarm-slow", params_for(), root_script(), slow=SLOW_MS)
+    return record(out, "swarm-slow", params_for(), root_script(), slow=HOLD_TEST_MS)
 
 
 @pytest.fixture(scope="module")
 def late_run(out: Path) -> Path:
-    return record(out, "swarm-late", params_for(), root_script(), slow=45_000)
+    return record(out, "swarm-late", params_for(), root_script(), slow=LATE_MS)
 
 
 @pytest.fixture(scope="module")

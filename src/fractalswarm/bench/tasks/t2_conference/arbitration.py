@@ -89,11 +89,9 @@ def arbiter(body: dict[str, Any]) -> str:
     """The fake arbiter: it reads the speaker's email the way the fake extractor does and picks
     the candidate that says the same, confidently; with none, the first, doubtfully."""
     blocks = read_blocks(fake._prompt(body))
-    context, dispute = blocks["context"], blocks["dispute"]
+    context, fact = blocks["context"], blocks["fact"]
     candidates: dict[str, Any] = blocks["candidates"]
-    email = next(
-        (e for e in blocks.get("emails", []) if e["speaker_id"] == dispute["subject"]), None
-    )
+    email = next((e for e in blocks.get("emails", []) if e["speaker_id"] == fact["subject"]), None)
     if email is not None:
         days, slots = context["days"], context["slots"]
         available, preference = fake.parse_email(email["body"], days, slots)
