@@ -9,6 +9,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from fractalswarm.bench.harness import write_results
 from fractalswarm.bench.tables import missing, report_tables
 from fractalswarm.cli import app as cli
 
@@ -49,3 +50,84 @@ def test_the_cli_checks_a_report_and_prints_one_table(tmp_path: Path) -> None:
     one = runner.invoke(cli, [*base[:2], "stall", *base[2:]])
     assert one.exit_code == 0 and one.output.strip() == report_tables(RESULTS)["stall"]
     assert runner.invoke(cli, [*base[:2], "no-such-table", *base[2:]]).exit_code != 0
+
+
+# -- the exploratory crash-time jitter tables ------------------------------------------------
+
+
+def jitter_row(workflow: str, setting: int, seed: str, profile: str = "C3", **values) -> dict:
+    base = {
+        "workflow": workflow,
+        "task": "t2_conference",
+        "profile": profile,
+        "seed": seed,
+        "completed": True,
+        "valid": True,
+        "agents": None,
+        "knobs": f"crash_jitter_pct={setting}",
+        "crashes": 0 if profile == "C0" else 5,
+        "stall_s": 0.0,
+        "cost_usd": 0.3,
+        "extra_cost_pct": 0.0,
+        "ttr_own_mean_s": 5.0,
+        "cdt_s": 0.0,
+        "blast_sessions_mean_pct": 0.0,
+        "blast_agents_mean_pct": 0.0,
+        "idle_agent_s": 0.0,
+        "unnecessary_reassignments": 0,
+        "dup_crash_usd": 0.0,
+        "dup_false_death_usd": 0.0,
+        "preserved_pct": 100.0,
+    }
+    return base | values
+
+
+def jitter_sweep() -> list[dict]:
+    """Swarm, durable-max and durable at settings 0, 5 and 15, two seeds. The swarm waits a
+    fifth as long as the supervisors, but at 15 on seed 2 as long as durable-max does."""
+    rows = []
+    for setting in (0, 5, 15):
+        for seed in ("1", "2"):
+            for w in ("swarm", "durable-max", "durable"):
+                rows.append(jitter_row(w, setting, seed, "C0"))
+                slow = w == "swarm" and setting == 15 and seed == "2"
+                supervisor = w != "swarm"
+                rows.append(
+                    jitter_row(
+                        w,
+                        setting,
+                        seed,
+                        cdt_s=10.0 if supervisor or slow else 2.0,
+                        blast_sessions_mean_pct=100.0 if supervisor else 20.0,
+                        idle_agent_s=40.0 if supervisor else 8.0,
+                        extra_cost_pct=10.0,
+                    )
+                )
+    return rows
+
+
+def test_the_jitter_tables_are_laid_out_from_the_sweeps_own_rows(tmp_path: Path) -> None:
+    for name in ("honesty.json", "rivals-gate/results.json"):
+        (tmp_path / name).parent.mkdir(exist_ok=True)
+        (tmp_path / name).write_bytes((RESULTS / name).read_bytes())
+    assert not [n for n in report_tables(tmp_path) if n.startswith("jitter")]  # not run: no table
+    out = tmp_path / "exploratory" / "crash_jitter_pct"
+    out.mkdir(parents=True)
+    write_results(jitter_sweep(), out)
+    made = {n: t.splitlines() for n, t in report_tables(tmp_path).items() if n.startswith("jitter")}
+    assert list(made) == ["jitter_plans", "jitter_locality", "jitter_means", "jitter_seeds"]
+    assert made["jitter_plans"][2:] == [  # the crash points of the plan, by seed and setting
+        "| 1 | 20 / 35 / 50 / 65 / 80 | 21 / 34 / 54 / 64 / 80 | 22 / 33 / 62 / 63 / 80 |",
+        "| 2 | 20 / 35 / 50 / 65 / 80 | 25 / 37 / 54 / 69 / 77 | 34 / 42 / 62 / 72 / 78 |",
+    ]
+    assert made["jitter_locality"][2:] == [
+        "| 0 | holds | 0.20 | 0.20 | 0.20 | holds | 0.20 | 0.20 | 0.20 |",
+        "| ±5 | holds | 0.20 | 0.20 | 0.20 | holds | 0.20 | 0.20 | 0.20 |",
+        "| ±15 | ties | 0.60 | 0.20 | 0.20 | ties | 0.60 | 0.20 | 0.20 |",  # (2 + 10) / 2 / 10
+    ]
+    assert len(made["jitter_means"]) == 2 + 3 * 3
+    assert "| 0 | swarm | 2.0 | 20.0 | 8.0 | 10.0 | 0.0 |" in made["jitter_means"]
+    assert "| ±15 | swarm | 6.0 | 20.0 | 8.0 | 10.0 | 0.0 |" in made["jitter_means"]
+    assert made["jitter_seeds"][3] == (
+        "| cdt | 2 | 2.0 / 10.0 = 0.20 | 2.0 / 10.0 = 0.20 | 10.0 / 10.0 = 1.00 (no win) |"
+    )

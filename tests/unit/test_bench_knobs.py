@@ -15,20 +15,30 @@ from fractalswarm.bench.harness import (
     Matrix,
     aggregate,
     read_results,
+    resolve_out_dir,
     result_columns,
     run_matrix,
     write_results,
 )
-from fractalswarm.bench.profiles import profile, single_crash_plan
+from fractalswarm.bench.profiles import (
+    CRASH_POINTS,
+    JITTER_MAX_PCT,
+    crash_jitter,
+    jittered_plan,
+    profile,
+    single_crash_plan,
+)
 from fractalswarm.bench.recovery import RecoveryMetrics
 from fractalswarm.bench.registry import KNOBS, Cell, knobs_text
 from fractalswarm.bench.scoring import RunMetrics
 from fractalswarm.bench.workflows import cell_backend, t2_params
-from fractalswarm.comms.chaos import ChaosPlan, plan_from
+from fractalswarm.comms.chaos import ChaosPlan, build_plan, plan_from
 from fractalswarm.llm.calibrate import RoleLatencyScale
 from fractalswarm.llm.cassette import Attempt
 from fractalswarm.llm.fake import FakeBackend
 from fractalswarm.llm.roles import RoleTable
+
+REPO = Path(__file__).resolve().parents[2]
 
 
 def matrix(**changes) -> Matrix:
@@ -143,6 +153,7 @@ def test_the_known_knobs() -> None:
         "rival_recovery_ms",
         "rival_restart_ms",
         "agent_latency_scale",
+        "crash_jitter_pct",
     }
 
 
@@ -261,6 +272,127 @@ def test_a_matrix_that_sweeps_a_backend_knob_needs_a_cell_backend(tmp_path: Path
     with pytest.raises(ValueError, match="needs a cell_backend"):
         asyncio.run(run_matrix(swept, tmp_path, HarnessOptions(backend_factory=FakeBackend)))
     assert not (tmp_path / "cells").exists()
+
+
+# -- crash-time jitter -----------------------------------------------------------------------
+
+
+def crash_times(plan: ChaosPlan) -> list[float]:
+    return [a.at for a in plan.actions if a.kind == "kill_coordinator"]
+
+
+def test_the_displacements_depend_on_the_seed_alone_and_stretch_with_the_jitter() -> None:
+    assert crash_jitter("1", 0) == (0,) * len(CRASH_POINTS)
+    assert crash_jitter("2", 10) == crash_jitter("2", 10) != crash_jitter("3", 10)
+    narrow, wide = crash_jitter("3", 5), crash_jitter("3", 15)
+    assert all(abs(a) <= abs(b) for a, b in zip(narrow, wide, strict=True))
+    for seed in "1234":
+        assert all(abs(d) <= JITTER_MAX_PCT for d in crash_jitter(seed, JITTER_MAX_PCT))
+    assert any(any(crash_jitter(seed, JITTER_MAX_PCT)) for seed in "1234")
+
+
+@pytest.mark.parametrize("jitter", [-1, JITTER_MAX_PCT + 1, 2.5, "5", True])
+def test_a_jitter_that_is_not_whole_points_up_to_the_cap_is_refused(jitter) -> None:
+    with pytest.raises(ValueError, match="crash jitter"):
+        crash_jitter("1", jitter)
+
+
+def test_a_jitter_of_zero_is_the_plan_spelled_out() -> None:
+    for name in ("C0", "C1", "C2", "C3"):
+        built = build_plan(name, "2")
+        assert (
+            ChaosPlan.model_validate(jittered_plan(built.model_dump(mode="json"), "2", 0)) == built
+        )
+
+
+def test_only_the_coordinator_crashes_move() -> None:
+    built = build_plan("C3", "1")
+    moved = ChaosPlan.model_validate(jittered_plan(built.model_dump(mode="json"), "1", 15))
+    displaced = [
+        round(at + d / 100, 2) for at, d in zip(CRASH_POINTS, crash_jitter("1", 15), strict=True)
+    ]
+    assert crash_times(moved) == sorted(displaced) != list(CRASH_POINTS)
+    assert all(0 <= at <= 1 for at in crash_times(moved))
+    others = [a for a in built.actions if a.kind != "kill_coordinator"]
+    assert [a for a in moved.actions if a.kind != "kill_coordinator"] == others
+    assert (moved.profile, moved.seed, moved.net, moved.api_fault_rate) == (
+        built.profile,
+        built.seed,
+        built.net,
+        built.api_fault_rate,
+    )
+    keys = [(a.at, a.kind) for a in moved.actions]  # the order the monkey walks them in
+    assert keys == sorted(keys)
+
+
+def test_a_profile_with_fewer_crashes_takes_the_first_displacements_of_the_seed() -> None:
+    plan = ChaosPlan.model_validate(
+        jittered_plan(build_plan("C2", "4").model_dump(mode="json"), "4", 10)
+    )
+    first = crash_jitter("4", 10)[:3]
+    expected = sorted(round(at + d / 100, 2) for at, d in zip(CRASH_POINTS, first, strict=False))
+    assert crash_times(plan) == expected
+    assert (
+        crash_times(
+            ChaosPlan.model_validate(jittered_plan(build_plan("C0", "4").model_dump(), "4", 10))
+        )
+        == []
+    )
+
+
+def test_a_plan_with_more_crashes_than_points_cannot_be_jittered() -> None:
+    plan = {"actions": [{"at": 0.1 * k, "kind": "kill_coordinator"} for k in range(1, 7)]}
+    with pytest.raises(ValueError, match="at most 5"):
+        jittered_plan(plan, "1", 5)
+
+
+def test_a_jitter_cell_carries_its_plan_and_no_param_of_its_own() -> None:
+    swept = Cell(
+        "durable-max", "t2_conference", profile("C3"), "1", None, (("crash_jitter_pct", 10),)
+    )
+    plain = Cell("durable-max", "t2_conference", profile("C3"), "1")
+    params, base = t2_params(swept, False), t2_params(plain, False)
+    assert "crash_jitter_pct" not in params
+    assert {k: v for k, v in params.items() if k != "chaos"} == {
+        k: v for k, v in base.items() if k != "chaos"
+    }
+    displaced = sorted(
+        round(at + d / 100, 2) for at, d in zip(CRASH_POINTS, crash_jitter("1", 10), strict=True)
+    )
+    assert crash_times(plan_from(params)) == displaced
+    assert plan_from(base) == build_plan("C3", "1")
+    assert swept.id == "durable-max__t2_conference__C3__s1__crash_jitter_pct-10"
+
+
+def test_the_jitter_is_in_whole_points_up_to_the_cap() -> None:
+    assert "crash_jitter_pct" in KNOBS
+    assert matrix(knobs=[{"crash_jitter_pct": 0}, {"crash_jitter_pct": JITTER_MAX_PCT}]).knobs
+    for setting in (JITTER_MAX_PCT + 1, 2.5):
+        with pytest.raises(ValidationError, match="whole points of progress"):
+            matrix(knobs=[{"crash_jitter_pct": setting}])
+
+
+def test_the_jitter_is_refused_with_a_per_process_probe(tmp_path: Path) -> None:
+    path = tmp_path / "m.yaml"
+    path.write_text(
+        "name: t\nworkflows: [swarm]\ntasks: [t2_conference]\nprofiles: [C0, K-o1]\n"
+        "seeds: [1]\nknobs:\n  - {crash_jitter_pct: 5}\nout_dir: out\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="K-o1 sets its own time"):
+        Matrix.load(path)
+
+
+def test_the_jitter_sweep_is_a_matrix_of_its_own_outside_the_preregistered_sweeps() -> None:
+    swept = Matrix.load(REPO / "bench" / "matrix-sweep-jitter.yaml")
+    assert len(swept.cells()) == 3 * 2 * 4 * 4  # workflows x profiles x seeds x settings
+    assert {k for point in swept.knobs or [] for k in point} == {"crash_jitter_pct"}
+    assert [dict(point)["crash_jitter_pct"] for point in swept.knobs or []] == [0, 5, 10, 15]
+    assert resolve_out_dir(swept, REPO / "bench" / "matrix-sweep-jitter.yaml").parts[-3:] == (
+        "results",
+        "exploratory",
+        "crash_jitter_pct",
+    )
 
 
 # -- the recovery columns --------------------------------------------------------------------
