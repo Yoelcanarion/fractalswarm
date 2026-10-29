@@ -97,7 +97,7 @@ HYPOTHESIS = {h.id: h for h in HYPOTHESES}
 PLAUSIBLE: dict[str, tuple[float, ...]] = {
     "recovery_ms": (1000, 2000, 2500, 5000, 10000),
     "rival_restart_ms": (0, 1000, 3000),
-    "rival_recovery_ms": (1000,),
+    "rival_recovery_ms": (500, 1000),
 }
 # PREREG §6: the swarm's coordinators per level of its tree (the demo's fanout [3, 2]).
 TREE_COUNTS = {0: 1, 1: 3, 2: 6}

@@ -249,6 +249,14 @@ def regime(locality_: str, axis: str | None = None, setting: float | None = None
     return Regime(**(base | kw))
 
 
+def test_the_plausible_region_is_the_one_prereg_fixes() -> None:
+    assert PLAUSIBLE == {
+        "recovery_ms": (1000, 2000, 2500, 5000, 10000),
+        "rival_restart_ms": (0, 1000, 3000),
+        "rival_recovery_ms": (500, 1000),  # a hot standby restarted at once is plausible
+    }
+
+
 def full_region(locality_: str = "holds") -> list[Regime]:
     gate = [regime(locality_, profile=p) for p in ("C2", "C3")]
     swept = [regime(locality_, axis, v) for axis, vs in PLAUSIBLE.items() for v in vs]
@@ -296,6 +304,15 @@ def test_points_outside_the_plausible_region_scope_the_claim_but_do_not_decide_i
         "locality fails at agent_latency_scale=0.25 (t2_conference, C3), "
         "outside the plausible region",
     ]
+
+
+def test_the_half_second_hot_standby_is_a_point_the_outcome_needs() -> None:
+    outcome = decide([r for r in full_region() if (r.axis, r.value) != ("rival_recovery_ms", 500)])
+    assert outcome.label == "pending"
+    assert any("rival_recovery_ms=500" in c for c in outcome.conditions)
+    tied = [r for r in full_region() if (r.axis, r.value) != ("rival_recovery_ms", 500)]
+    tied.append(regime("ties", "rival_recovery_ms", 500))
+    assert decide(tied).label == "B"
 
 
 def test_the_outcome_is_pending_while_a_point_it_needs_has_no_data() -> None:

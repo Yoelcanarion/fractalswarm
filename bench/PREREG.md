@@ -112,8 +112,23 @@ sweeps of §5 and the per-process view of §6, not tested as a single number.
 
 ## 5. The sweeps and the plausible region
 
-All sweeps run at $0 with the calibrated fake LLM on the sim clock, at C3, swarm against
-`durable-max` and `durable` (the `central` row is in the gate).
+All sweeps run at $0 with the calibrated fake LLM on the sim clock, at C3 (each cell has its C0
+twin), swarm against `durable-max` and `durable` (the `central` row is in the gate).
+
+**The fault profile.** C3 is one plan for every workflow: five coordinator crashes at 20, 35, 50,
+65 and 80% of the contracts dispatched; half of the agents killed; 20% API faults; and one 8 s
+partition. On the swarm's bus, which only the swarm has, 20% of the frames are dropped, 10%
+duplicated, 20% delayed by 200–1500 ms and 10% reordered by 20–200 ms.
+
+**An asymmetry that favours the rival, and stays.** The swarm learns that a coordinator is dead
+from heartbeats that cross that bus, and declares it dead after five missed beats: `recovery_ms`
+is that time, so the beat comes every `recovery_ms / 5`. Under C3 a live member's beats are
+dropped, delayed or cut off by the partition, so at the short settings the swarm's detector can
+declare a live coordinator dead (a false death: its work is re-owned and the duplicate is paid
+for). That is counted in `unnecessary_reassignments` and `dup_false_death_usd`, and the swarm
+bears it. The simulated supervisors have no detector and no bus: they are told when their process
+died and are back `recovery_ms` (plus `rival_restart_ms`) later, so they never see a false death.
+It is an advantage granted to the rival; it is not removed to improve the swarm's numbers.
 
 | Sweep | Settings | Rival assumption it checks |
 |---|---|---|
@@ -126,9 +141,11 @@ All sweeps run at $0 with the calibrated fake LLM on the sim clock, at C3, swarm
 
 **The plausible region** is the part of the rival's assumptions a real deployment could have. It is
 fixed here, before any result: `recovery_ms` ∈ {1, 2, 2.5, 5, 10} s; `rival_restart_ms` ∈ {0, 1, 3} s;
-and `rival_recovery_ms` = 1 s. The extremes (`recovery_ms` 0.5 s and 20 s, `rival_recovery_ms`
-0.5 s) and the workload sweeps (`agent_latency_scale`, `agents`, the task) are reported in the
-regime map as conditions; they do not decide the outcome.
+and `rival_recovery_ms` ∈ {0.5, 1} s (arena spec §A: a process manager that sees an exit at once
+can bring a hot standby up in half a second, and leaving that case out would tilt the outcome
+toward A). The symmetric extremes (`recovery_ms` 0.5 s and 20 s) and the workload sweeps
+(`agent_latency_scale`, `agents`, the task) are reported in the regime map as conditions; they do
+not decide the outcome.
 
 ## 6. The failure models
 
@@ -184,3 +201,9 @@ Every comparison of §4, for every rival and every regime point, including the l
 in `honesty.json` and in the printed tables. The regime map shows every sweep point, plausible or
 not. Nothing is tuned to make the swarm win, no test asserts that it does, and a result that
 contradicts the design's expectation is printed as plainly as one that confirms it.
+
+## 9. Amendments
+
+2026-10-29, before the first gate run, so in place: the plausible region of §5 gained
+`rival_recovery_ms` 0.5 s, and §5 now states the fault profile of the sweeps and the asymmetry in
+the failure detector. Both came from the coordinator's review.
