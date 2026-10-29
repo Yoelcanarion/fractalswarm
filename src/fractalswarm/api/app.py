@@ -12,7 +12,9 @@ Launching: ``POST /api/tasks`` starts a run as a job (``api/jobs.py``: one subpr
 ``POST /api/intake/{id}/approve``; a task then runs on ``inputs.intake``. These need a private
 directory (``FRACTALSWARM_PRIVATE_DIR``), where what a person typed lives; without one they
 answer 503. The remaining control endpoints (plan approval, chaos, escalations) answer 501
-until the runtime behind them lands.
+until the runtime behind them lands; ``GET /api/capabilities`` says which controls are real.
+A finished run also has ``/metrics`` (the official numbers) and ``/takeover`` (what its log
+proves about the coordinator kills).
 """
 
 import asyncio
@@ -62,6 +64,7 @@ def create_app(
     private = PrivateDir(private_dir) if private_dir is not None else None
     manager = JobManager(private, runs_dir, catalog) if private is not None else None
     verified: dict[tuple[str, str], dict[str, Any]] = {}
+    takeovers: dict[tuple[str, str], dict[str, Any]] = {}
 
     def need_private() -> tuple[PrivateDir, JobManager]:
         if private is None or manager is None:
@@ -113,6 +116,36 @@ def create_app(
                 "bundle_head_ok": bundle_head is None or bundle_head == report.replayed_head,
             }
         return JSONResponse(verified[key])
+
+    async def takeover(request: Request) -> JSONResponse:
+        """What the log proves about the run's coordinator kills (``verify/takeover.py``): ``ok``,
+        the ``violations`` that made it false, and the kills, successions, adoptions, duplicate
+        calls and costs behind them. Recomputed from the finished log, never from what an actor
+        said about itself."""
+        from fractalswarm.verify.takeover import check_run
+
+        run = entry(request)
+        last = catalog.last(run)
+        if last is None or last["type"] != "run.completed":
+            raise HTTPException(409, "the run has not completed yet; check it when it ends")
+        key = (str(run.path), last["hash"])
+        if key not in takeovers:
+            report = await anyio.to_thread.run_sync(check_run, run.path)
+            takeovers[key] = report.model_dump(mode="json")
+        return JSONResponse(takeovers[key])
+
+    async def capabilities(request: Request) -> JSONResponse:
+        """Which controls this server really does. A control that is ``false`` answers 501
+        (``not_wired``), or 503 without a private directory."""
+        return JSONResponse(
+            {
+                "tasks": private is not None,  # POST /api/tasks, /api/intake and /api/arena
+                "chaos": False,
+                "approve": False,
+                "budget": True,
+                "halt": True,
+            }
+        )
 
     async def feasibility(request: Request) -> JSONResponse:
         """The feasibility report written at plan approval, which is early in the log."""
@@ -356,6 +389,8 @@ def create_app(
         WebSocketRoute("/api/runs/{run_id}/events", websocket),
         Route("/api/runs/{run_id}/verify", verify_run, methods=["POST"]),
         Route("/api/runs/{run_id}/feasibility", feasibility),
+        Route("/api/runs/{run_id}/takeover", takeover),
+        Route("/api/capabilities", capabilities),
         *lens_routes(catalog),
         Route("/api/bench/results", bench_results),
         Route("/api/runs/{run_id}/metrics", run_metrics),

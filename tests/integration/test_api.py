@@ -21,7 +21,8 @@ from fractalswarm.kernel.store import COLUMNS, EventStore, _to_row
 from fractalswarm.llm.fake import FakeBackend
 from fractalswarm.runs import RunPaths, record_run
 
-GOLDEN = Path(__file__).resolve().parents[1] / "golden"
+REPO = Path(__file__).resolve().parents[2]
+GOLDEN = REPO / "tests" / "golden"
 TOY_HEAD = (GOLDEN / "toy" / "HEAD").read_text(encoding="utf-8").strip()
 
 
@@ -110,6 +111,59 @@ def test_control_endpoints_answer_501_until_wired(client: TestClient, path: str)
     response = client.post(path, json={})
     assert response.status_code == 501
     assert "not wired yet" in response.json()["detail"]
+
+
+def test_capabilities_say_which_controls_are_real(
+    client: TestClient, dirs: dict[str, Path], tmp_path: Path
+) -> None:
+    caps = client.get("/api/capabilities").json()
+    # Without a private directory nothing can be launched; halt and budget act on live runs.
+    assert caps == {"tasks": False, "chaos": False, "approve": False, "budget": True, "halt": True}
+    assert client.get("/api/jobs").status_code == 503  # what "tasks: false" means
+
+    # What it calls false is not wired, and what it calls true is.
+    assert client.post("/api/runs/demo-toy/approve", json={}).status_code == 501
+    assert client.post("/api/runs/demo-toy/chaos", json={"kind": "kill_half"}).status_code == 501
+    assert client.post("/api/runs/demo-toy/halt", json={}).status_code == 409  # a recording
+
+    launching = create_app(
+        dirs["runs"], dirs["demo"], dirs["bench"], dirs["static"], private_dir=tmp_path / "private"
+    )
+    with TestClient(launching) as launch_client:
+        assert launch_client.get("/api/capabilities").json()["tasks"] is True
+        assert launch_client.get("/api/jobs").status_code == 200
+
+
+@pytest.fixture
+def recorded(dirs: dict[str, Path]) -> TestClient:
+    """The API over the repository's own recorded runs: ``demo/backup`` is a real C3 run."""
+    return TestClient(create_app(dirs["runs"], REPO / "demo", dirs["bench"], dirs["static"]))
+
+
+def test_takeover_reports_what_a_finished_runs_log_proves(recorded: TestClient) -> None:
+    answer = recorded.get("/api/runs/demo-backup/takeover")
+    assert answer.status_code == 200
+    report = answer.json()
+    assert report["ok"] is True and report["violations"] == []
+    assert report["run_id"] and report["events"] == 8177
+    assert len(report["kills"]) == 5 and report["kills"][0]["target"] == "o0"
+    assert recorded.get("/api/runs/demo-backup/takeover").json() == report  # the same, cached
+
+
+def test_takeover_lists_the_violations_that_make_it_false(client: TestClient) -> None:
+    report = client.get("/api/runs/demo-toy/takeover").json()  # a toy run: it wrote no task result
+    assert report["ok"] is False
+    kinds = {(v["check"], v["kind"]) for v in report["violations"]}
+    assert ("lost-work", "task-result") in kinds
+    assert all({"check", "kind", "seq", "detail"} <= set(v) for v in report["violations"])
+
+
+def test_takeover_waits_for_the_run_to_end_and_knows_the_runs(
+    client: TestClient, live: Path
+) -> None:
+    refused = client.get("/api/runs/live/takeover")
+    assert refused.status_code == 409 and "not completed" in refused.json()["error"]
+    assert client.get("/api/runs/nope/takeover").status_code == 404
 
 
 @pytest.fixture
