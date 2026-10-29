@@ -164,8 +164,9 @@ except `s2-intake`, which is recorded live). `#/director` lists them with what e
 logical 1920×1080 box with no app chrome, scaled to the window (scale 1 at exactly 1920×1080).
 
 - **Steps:** `seek`, `play`, `pause`, `speed`, `wait` (a time, or `until` an anchor), `camera` (fit a region, an actor
-  or a subtree, with padding and easing), `highlight`, `caption` (lower third or overlay statement), `lens` (open or
-  close a call), `panel` (show or hide). Moments are anchors read from the log (`crash:N`, `recovered:N`,
+  or a subtree, with padding and easing), `highlight`, `tooltip` (the hover text an element carries, drawn next to
+  it: it has no words of its own, so a scene never retypes the UI), `caption` (lower third or overlay statement),
+  `lens` (open or close a call), `panel` (show or hide). Moments are anchors read from the log (`crash:N`, `recovered:N`,
   `call:NAME`, `end`, with an offset like `crash:2-3s`); actors are ids, `$root`, `$crashed:N`, `$heir:N`.
 - **A take is a count of frames of 1/60 s**, not a wall clock: the take's clock is W4's fixed-step clock, so the same
   scene shows the same moment of the run on the same frame, on any machine. A pre-roll of 45 frames lets what animates
@@ -187,14 +188,24 @@ their whole script and stop on their last frame; the title card, the helps and a
 look right. Found on that look, fixed the same day: the replay note sat over the arena's assumptions caption (it now
 takes the empty left of the arena's top bar: `.dir[data-stage="arena"] .dir__note`), and a highlight right after a
 `lens open` raised a false "target not on the page" because React had not drawn the drawer yet (a ring now gets
-`RING_GRACE_MS` = 500 ms, and still warns if its target is missing after that or when its time is up). Seen and **not
-yet fixed** (the director's next merge point, MP2):
+`RING_GRACE_MS` = 500 ms, and still warns if its target is missing after that or when its time is up).
 
-1. the arena at 1080 is about 60 px taller than the frame, so its timeline is cut at the bottom: the stage needs a
-   definite height (a `grid-template-rows: minmax(0, 1fr)` on the sides in director mode) or a camera that fits all of it;
-2. a camera fit near the edge of the stage shows black beyond it: the camera needs clamping to the stage;
-3. `s5`'s `tree` region is the whole panel; it should hug the nodes (the tree is small inside a large panel);
-4. on the run page the note still sits over the end of the "Takeover OK" chip by a few pixels.
+MP2 (commit e5a7fed; written while the machine was held for the paid blocks, so **not yet looked at in a browser**: the
+slot for that is queued behind the second paid block):
+
+1. the arena had the frame's height but its content ran about 60 px past it, so its timeline was cut: in a take the
+   arena now has the frame's height and its boards shrink to fit (`.dir__stage--fit .arena`, a one-row grid, `min-height: 0`);
+2. the camera is kept inside the stage (`within`, camera.ts; the stage's size is the camera element's layout size), so a
+   fit near an edge shows no black; a view larger than the stage is centred;
+3. the `tree` region is the nodes, not the panel, so a camera on it fills the frame with the tree (s5's pad of 0.02 may
+   need to grow if the tree re-lays out after an adoption: look at it on the final pair);
+4. on the run page the note covered the **verify badge** at the right end of the strip, not only a few pixels of the
+   takeover chip as first thought: the run stage now starts under a 36 px band that holds the note;
+5. the `tooltip` step, used by s8 on both proof chips (`swarm-proof`, `rival-proof`); the coordinator's answer to the
+   question about the hover was yes, with exactly the title words, which is why the words are read off the page.
+
+Rule from the coordinator (Oct 29): `real` is flipped to `true` in `sources.json` in the same commit that points
+it at the final real pair, when the run ids are handed over; never before, and never by hand in a take.
 
 Every scene's timings, `crash:N` indexes and call picks are first drafts, to be tuned on the final pair.
 
@@ -270,26 +281,36 @@ W4's `.mark`, `.btn`, `.speeds`, `.badge`, `.empty` and `.stat` on purpose. `ass
 7. The status note under each claim in the panel ("Status in docs/claims.md: …") is my addition; it can come out.
 8. The static `GET /api/ablation` caveat labels (Generated notes / The reference / Practice backend) are mine; the
    text next to them is the server's.
-9. **ffmpeg is not on this machine** and the coordinator said not to install it without Yoel's OK. The recorder keeps the
+9. **ffmpeg is not on this machine** and installing it waits for Yoel's OK (coordinator, Oct 29). The recorder keeps the
    PNG sequences (`video/clips/<scene>/f00001.png`, 60 fps) and prints the exact mp4 command; Playwright's bundled
    ffmpeg is VP8-only, so it does not help.
 10. `docs/video-script.md` s8 mentions hovering a takeover chip ("the heir of each, recomputed from the log, is the one
-    the run used"). That text is a native `title` tooltip, which a headless screenshot does not draw. If the scene needs
-    it, a `tooltip` step that draws the same text as a popover is a small addition; say if you want it.
-11. The recorder is a browser: it needs a SLOT (the MP1 GO covered one browser, and I used it for the screenshots and
-    for a sparse sample of every scene). A full recording of all eight scenes is about 5 minutes of one browser.
+    the run used"). That text is a native `title`, which a headless screenshot does not draw: the director's `tooltip`
+    step draws it (answered yes by the coordinator).
+11. The recorder is a browser: every run of it needs a SLOT (the MP1 GO covered one browser, and I used it for the
+    screenshots and for a sparse sample of every scene). A full recording of all eight scenes is about 5 minutes of
+    one browser. The final pair comes after the handler freeze, which may be the night of Oct 29, not Nov 2.
 12. The server refuses `backend: real` without an approval gate, and I additionally ran my scratch server with a dummy
     `MODEL_API_KEY` and an empty `HF_TOKEN`; no real call was possible from any of my runs.
+13. W4 told me (Oct 29) that the live "Coordinator-dependency time" is the outage length and not the scored `cdt_s`, and the
+    live "Duplicated work" undercounts `dup_calls`; it is porting W1's definitions into the fold (parity test on four real
+    logs, `web/src/lib/arena.parity.test.ts`). The coordinator's answer: no liveNotes for those two rows; after W4's merge,
+    check my rows (`arena/rows.ts`) against the port, so the live rows equal the scored ones. Also: the live idle
+    agent-seconds no longer counts an agent a crash stopped (a worker `killed` with reason `crash`).
 
 ## Tests
 
 `npm --prefix web test` runs vitest in node: the pure modules, and the components drawn on the server
 (`renderToStaticMarkup`). The panel's tests run over the bench's own `honesty.json`; the recovery tests over real
-`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At the MP1 commit the
-whole web suite is 62 files, 956 tests, green (the director's are 180 of them); `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
+`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At MP2 the director's tests are 188 in 9 files, green on one worker (the rest of the web suite is untouched since MP1:
+776); the whole suite is rerun at the MP2 slot. `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
 claim's placeholder, hiding the loss counts, dropping the row model, toning down the per-process loss); the intake
 page (20 mutants: a billed launch without the gate, a wrong or lower-case word, a stale or expired token, the approval
 not blocked, frozen inputs editable, a wrong provenance, browser storage, a sentence marked that is not in the text,
 …); the ablation view (17 mutants: a swapped headline, caveats hidden or not filtered, a flipped mark, the split read
 wrong, a lacking part not said, the real backend sent, a note as markup, …). Every one was caught.
-The director's rules are not mutation-checked yet (MP2).
+The director (54 mutants, vitest only: the waits and their timeouts, the moments and their offsets, which actor a scene
+means, the camera's maths and its clamp, the overlay's fades, the take's frames and warnings, the driver's phases, the
+note and the sources, the targets, the drawn tooltip): a first, interrupted pass found a padding test that only
+covered the limiting side (the width of a wide rectangle and the height of a tall one are pinned now); the full pass
+caught 53 of the 54, and the survivor, a seek past the end of the run, is now a test. Every mutant is caught.

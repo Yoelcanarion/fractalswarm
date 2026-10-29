@@ -551,6 +551,13 @@ describe("a take", () => {
     expect(replay.playhead()).toBeLessThan(10_000 + 2 * (1000 / 60) + 1);
   });
 
+  it("does not seek past the end of the run", () => {
+    const { take, replay } = takeOf({ steps: [{ do: "seek", to: "end+5s" }] });
+    take.tick();
+    expect(replay.log).toContain("seek 60000");
+    expect(replay.log).not.toContain("seek 65000");
+  });
+
   it("ramps the speed rather than jumping it", () => {
     const { take, replay } = takeOf({ steps: [{ do: "speed", x: 10 }, { do: "speed", x: 1, ramp_ms: 500 }] });
     const seen: number[] = [];
