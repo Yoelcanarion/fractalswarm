@@ -395,11 +395,12 @@ def draw_charts(matrix: Matrix, rows: list[dict[str, Any]], out_dir: Path) -> li
     """The hero chart (the scaling chart for an agents axis; neither for a knobs axis, which the
     hero chart would average over), and the recovery chart of every task when any run logged a
     crash: against the coordinators killed, or against each sweep axis at the matrix's most
-    chaotic profile. The single-crash probes get no chart: it would average over their targets."""
+    chaotic profile. A matrix with a single-crash probe (``K-<target>``), even beside its C0 twin,
+    gets no chart: it would average over the probes' targets."""
     from fractalswarm.bench.charts import CHAOS_AXIS, hero_chart, recovery_chart, scaling_chart
 
     profiles = [cell.profile for cell in matrix.cells()]
-    if all(p.target is not None for p in profiles):
+    if any(p.target is not None for p in profiles):
         return []
     task = matrix.chart_task or matrix.tasks[0]
     knobs = sorted({name for point in matrix.knobs or [] for name in point})

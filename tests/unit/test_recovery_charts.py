@@ -284,6 +284,15 @@ def test_single_crash_probes_get_no_chart(tmp_path: Path) -> None:
     assert not list(tmp_path.iterdir())
 
 
+def test_probes_beside_their_c0_twin_get_no_chart_either(tmp_path: Path) -> None:
+    """A per-process matrix keeps C0 as the extra-cost base; a chart would still average probes."""
+    names = ["C0", "K-o0", "K-o1"]
+    probes = matrix(profiles=names)
+    rows = [row(w, "1", int(p != "C0"), profile=p) for w in ("swarm", "durable-max") for p in names]
+    assert draw_charts(probes, rows, tmp_path) == []
+    assert not list(tmp_path.iterdir())
+
+
 def test_a_matrix_whose_runs_logged_no_crash_draws_the_hero_chart_alone(tmp_path: Path) -> None:
     rows = [row("swarm", "1", killed, crashes=0) for killed in (0, 3)]
     drawn = draw_charts(matrix(), rows, tmp_path)
