@@ -765,35 +765,86 @@ textarea {
   flex: 1;
 }
 
+/* The playhead is the slider's thumb: a tall bar with a ring of the surface colour, so it reads
+   against the marks from across a room at 1080p. */
 .timeline__track input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  accent-color: var(--accent);
+  height: 24px;
+  margin: 0;
   padding: 0;
   border: none;
   background: transparent;
+  cursor: pointer;
+}
+
+.timeline__track input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.timeline__track input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.timeline__track input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 6px;
+  height: 24px;
+  margin-top: -9px; /* centred on the 6px track */
+  border: none;
+  border-radius: var(--radius-1);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface-1);
+}
+
+.timeline__track input[type="range"]::-moz-range-thumb {
+  width: 6px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-1);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface-1);
 }
 
 .timeline__marks {
   position: relative;
-  height: 8px;
+  height: 18px;
 }
 
+/* A mark is a button that jumps to the moment. Its colour says what kind of moment it is (the
+   tone in lib/timeline.ts); its height says how much it matters. */
 .mark {
   position: absolute;
   top: 0;
   width: 3px;
-  height: 8px;
+  height: 10px;
+  padding: 0;
+  border: none;
   border-radius: var(--radius-1);
+  background: var(--text-secondary);
+  cursor: pointer;
   transform: translateX(-1px);
 }
 
-.mark--chaos,
-.mark--dead,
-.mark--collision {
+.mark::after {
+  content: "";
+  position: absolute;
+  inset: -4px -6px; /* a bigger target than the mark */
+}
+
+.mark--kill {
   background: var(--danger);
 }
 
-.mark--adopt {
+.mark--recovery {
   background: var(--ok-text);
 }
 
@@ -801,9 +852,40 @@ textarea {
   background: var(--warn-text);
 }
 
+.mark--minor {
+  height: 6px;
+  opacity: 0.6;
+}
+
+/* The kill the run must survive, and the kill switch, are the tallest marks; an agent's is routine. */
+.mark--coordinator-kill,
+.mark--halt {
+  width: 5px;
+  height: 18px;
+  transform: translateX(-2px);
+}
+
+.mark--agent-kill {
+  height: 12px;
+}
+
+.mark:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mark:hover {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
 .timeline__readout {
-  min-width: 180px;
+  min-width: 220px;
   color: var(--text-secondary);
+  font-size: var(--fs-base);
+  font-variant-numeric: tabular-nums;
 }
 
 .speeds {

@@ -1,27 +1,9 @@
 import { useMemo, useRef } from "react";
 
 import { useClockFrame } from "../lib/clockHooks";
-import { eventGroup } from "../lib/eventlog";
 import { SPEEDS } from "../lib/playback";
-import type { RunEvent } from "../lib/types";
+import { fraction, MARK_TONE, marksOf } from "../lib/timeline";
 import { useRunStoreApi, useRunStoreShallow } from "../store";
-
-const MARK_TYPES: Record<string, string> = {
-  "chaos.injected": "mark--chaos",
-  "member.dead": "mark--dead",
-  "baseline.crashed": "mark--dead",
-  "baseline.restarted": "mark--adopt",
-  "tree.adopted": "mark--adopt",
-  "collision.detected": "mark--collision",
-  "run.halted": "mark--dead",
-  "breaker.opened": "mark--dead",
-  "escalation.raised": "mark--dead",
-  "budget.shock": "mark--warn",
-};
-
-// The chaos network's faults come by the thousand; they would paint the whole track.
-const markOf = (event: RunEvent): string | undefined =>
-  eventGroup(event) === "net-fault" ? undefined : MARK_TYPES[event.type];
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
 
@@ -46,14 +28,7 @@ export function Timeline() {
     if (readout.current) readout.current.textContent = `t = ${seconds(Math.min(t, end))} / ${seconds(end)}`;
   });
 
-  const marks = useMemo(
-    () =>
-      events.flatMap((e) => {
-        const cls = markOf(e);
-        return cls ? [{ seq: e.seq, ts: e.ts_virtual, cls, type: e.type }] : [];
-      }),
-    [events],
-  );
+  const marks = useMemo(() => marksOf(events), [events]);
 
   return (
     <div className="timeline">
@@ -76,7 +51,18 @@ export function Timeline() {
         />
         <div className="timeline__marks">
           {marks.map((m) => (
-            <i key={m.seq} className={`mark ${m.cls}`} style={{ left: `${end ? (m.ts / end) * 100 : 0}%` }} title={`${m.type} @ seq ${m.seq}`} />
+            <button
+              key={m.seq}
+              type="button"
+              className={`mark mark--${m.kind} mark--${MARK_TONE[m.kind]}`}
+              style={{ left: `${fraction(m.ts, end) * 100}%` }}
+              title={m.label}
+              aria-label={`${m.label}: jump here`}
+              onClick={() => {
+                setPlaying(false);
+                seekTime(m.ts);
+              }}
+            />
           ))}
         </div>
       </div>
