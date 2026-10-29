@@ -52,6 +52,22 @@ class TreeAdopted(Payload):
     fence: dict[str, Any] | None = None
 
 
+@register("goal.opened")
+class GoalOpened(Payload):
+    """A single-process coordinator (the durable rivals) opened goal ``goal_id`` for itself.
+
+    It is the log's counterpart of an ``assign`` message, which only a swarm sends: it lets
+    ``TreeView`` know the goals of a central run, so a restarted supervisor can find the
+    results, verdicts and bookings that reached the log while it was down.
+    """
+
+    goal_id: str
+    owner: str
+    parent: str | None
+    level: int
+    goal: dict[str, Any]
+
+
 @dataclass
 class ContractRecord:
     contract: dict[str, Any]
@@ -110,6 +126,10 @@ class TreeView:
             self._spawned(payload)
         elif kind == "msg.sent":
             self._message(event.actor, payload["to"], payload["topic"], payload["body"])
+        elif kind == "goal.opened":
+            self._register(
+                payload["goal"], payload["owner"], payload["parent"], int(payload["level"])
+            )
         elif kind == "ownership.remapped":
             record = self.goals.get(payload["key"])
             if record is not None:
@@ -152,11 +172,7 @@ class TreeView:
 
     def _message(self, sender: str, to: str, topic: str, body: dict[str, Any]) -> None:
         if topic == "assign":
-            goal = body["goal"]
-            if goal["id"] not in self.goals:
-                self.goals[goal["id"]] = GoalRecord(
-                    goal=goal, owner=to, parent=body.get("parent"), level=int(body.get("level", 0))
-                )
+            self._register(body["goal"], to, body.get("parent"), int(body.get("level", 0)))
         elif topic == "contract":
             contract = body["contract"]
             found = self._contract(contract["goal_id"], contract["id"])
@@ -175,6 +191,11 @@ class TreeView:
             record = self.goals.get(body["goal_id"])
             if record is not None and record.result is None:
                 record.result = body
+
+    def _register(self, goal: dict[str, Any], owner: str, parent: str | None, level: int) -> None:
+        """The first record of a goal wins (an assignment can be re-sent)."""
+        if goal["id"] not in self.goals:
+            self.goals[goal["id"]] = GoalRecord(goal=goal, owner=owner, parent=parent, level=level)
 
     def _contract(self, gid: str, cid: str) -> ContractRecord | None:
         record = self.goals.get(gid)
