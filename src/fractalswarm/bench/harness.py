@@ -393,10 +393,14 @@ async def run_matrix(
 
 def draw_charts(matrix: Matrix, rows: list[dict[str, Any]], out_dir: Path) -> list[str]:
     """The hero chart (the scaling chart for an agents axis; neither for a knobs axis, which the
-    hero chart would average over), and the recovery chart when any run logged a crash: against
-    the coordinators killed, or against each sweep axis at the matrix's most chaotic profile."""
+    hero chart would average over), and the recovery chart of every task when any run logged a
+    crash: against the coordinators killed, or against each sweep axis at the matrix's most
+    chaotic profile. The single-crash probes get no chart: it would average over their targets."""
     from fractalswarm.bench.charts import CHAOS_AXIS, hero_chart, recovery_chart, scaling_chart
 
+    profiles = [cell.profile for cell in matrix.cells()]
+    if all(p.target is not None for p in profiles):
+        return []
     task = matrix.chart_task or matrix.tasks[0]
     knobs = sorted({name for point in matrix.knobs or [] for name in point})
     drawn: list[Path] = []
@@ -409,17 +413,18 @@ def draw_charts(matrix: Matrix, rows: list[dict[str, Any]], out_dir: Path) -> li
     elif not knobs:
         drawn += hero_chart(rows, out_dir / f"hero-{task}", task=task, title=matrix.name)
     if any(row.get("crashes") for row in rows):
-        top = max((cell.profile for cell in matrix.cells()), key=lambda p: p.coordinator_crashes)
-        for axis in knobs or ["agents" if matrix.agents else CHAOS_AXIS]:
-            suffix = "" if axis == CHAOS_AXIS else f"-{axis}"
-            drawn += recovery_chart(
-                rows,
-                out_dir / f"recovery-{task}{suffix}",
-                task=task,
-                title=matrix.name,
-                axis=axis,
-                profile=top.name,
-            )
+        top = max(profiles, key=lambda p: p.coordinator_crashes)
+        for name in matrix.tasks:
+            for axis in knobs or ["agents" if matrix.agents else CHAOS_AXIS]:
+                suffix = "" if axis == CHAOS_AXIS else f"-{axis}"
+                drawn += recovery_chart(
+                    rows,
+                    out_dir / f"recovery-{name}{suffix}",
+                    task=name,
+                    title=matrix.name,
+                    axis=axis,
+                    profile=top.name,
+                )
     return [str(path) for path in drawn]
 
 

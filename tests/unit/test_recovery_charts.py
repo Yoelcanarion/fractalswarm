@@ -269,6 +269,21 @@ def test_a_sweep_draws_the_recovery_chart_along_its_axis_and_no_hero_chart(tmp_p
     assert data["profile"] == "C3" and data["x_labels"] == ["0.5", "1"]
 
 
+def test_the_recovery_chart_is_drawn_for_every_task_of_the_matrix(tmp_path: Path) -> None:
+    rows = gate_rows() + gate_rows(task="t1_extraction")
+    two = matrix(tasks=[T2, "t1_extraction"])
+    drawn = draw_charts(two, rows, tmp_path)
+    stems = sorted(Path(p).stem for p in drawn if p.endswith(".png"))
+    assert stems == ["hero-t2_conference", "recovery-t1_extraction", "recovery-t2_conference"]
+
+
+def test_single_crash_probes_get_no_chart(tmp_path: Path) -> None:
+    probes = matrix(profiles=["K-o0", "K-o1"])
+    rows = [row(w, "1", 1, profile=p) for w in ("swarm", "durable-max") for p in ("K-o0", "K-o1")]
+    assert draw_charts(probes, rows, tmp_path) == []
+    assert not list(tmp_path.iterdir())
+
+
 def test_a_matrix_whose_runs_logged_no_crash_draws_the_hero_chart_alone(tmp_path: Path) -> None:
     rows = [row("swarm", "1", killed, crashes=0) for killed in (0, 3)]
     drawn = draw_charts(matrix(), rows, tmp_path)

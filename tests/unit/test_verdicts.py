@@ -3,6 +3,8 @@ rows with hand-computed answers. Nothing here asserts that the swarm beats a riv
 what they say, and the tests check that the rules read them as written."""
 
 import json
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -17,10 +19,12 @@ from fractalswarm.bench.verdicts import (
     RULES,
     Honesty,
     Regime,
+    code_version,
     combine,
     compare,
     decide,
     evaluate,
+    false_deaths_of,
     judge,
     level_of,
     locality,
@@ -618,6 +622,92 @@ def test_the_tool_reads_results_directories_and_writes_honesty_json(tmp_path: Pa
     text = render_text(honesty)
     assert "Outcome PENDING" in text and "H4a" in text and "rivals-gate" in text
     assert verdicts([tmp_path], prereg=None).sources == ["rivals-gate"]  # a directory of them
+
+
+# -- false deaths, the gate tables, the commit -----------------------------------------------
+
+
+def false_death_rows() -> list[dict[str, Any]]:
+    rows = []
+    sweep = {"knobs": "recovery_ms=1000"}
+    for seed, remaps, spent in (("1", 2, 0.01), ("2", 0, 0.0), ("3", 1, 0.005)):
+        both = {"seed": seed, "false_death_remaps": remaps, "dup_false_death_usd": spent}
+        rows.append(row("swarm", **both, **sweep))
+        rows.append(
+            row("durable-max", seed=seed, false_death_remaps=0, dup_false_death_usd=0.0, **sweep)
+        )
+    rows.append(row("swarm", "C0", false_death_remaps=5, **sweep))  # no faults at C0: not counted
+    rows.append(row("swarm", "K-o1", false_death_remaps=5, **sweep))  # nor a probe
+    return rows
+
+
+def test_false_deaths_are_counted_per_point_and_workflow() -> None:
+    found = {f.workflow: f for f in false_deaths_of([("sweep", false_death_rows())])}
+    assert sorted(found) == ["durable-max", "swarm"]
+    swarm = found["swarm"]
+    assert (swarm.profile, swarm.runs, swarm.remaps_max) == ("C3", 3, 2)
+    assert swarm.remaps_mean == pytest.approx(1.0)
+    assert swarm.spent_usd_mean == pytest.approx(0.005)
+    assert (found["durable-max"].remaps_mean, found["durable-max"].remaps_max) == (0.0, 0)
+
+
+def test_a_result_scored_before_the_arena_has_no_false_death_count() -> None:
+    (found,) = false_deaths_of([("old", [row("swarm", false_death_remaps=None)])])
+    assert (found.runs, found.remaps_mean, found.remaps_max) == (1, None, None)
+
+
+def test_the_text_gives_the_gate_by_task_and_rival_and_the_false_deaths() -> None:
+    sources = [("gate", gate_rows()), ("sweep", false_death_rows())]
+    honesty = evaluate(sources, code={"commit": "ab" * 20})
+    text = render_text(honesty)
+    assert "Code: " + "ab" * 6 + "\n" in text and "uncommitted" not in text
+    assert "gate, t2_conference: swarm against durable-max" in text
+    assert "H4a  cdt_s" in text and "C3 win   (2.00 / 10.00)" in text
+    assert "False deaths" in text and "supervisors most 0" in text
+    dirty = render_text(
+        evaluate([("gate", gate_rows())], code={"commit": "cd" * 20, "dirty": True})
+    )
+    assert "Code: " + "cd" * 6 + ", with uncommitted changes" in dirty
+
+
+def test_a_mixed_tie_is_marked_in_the_gate_table() -> None:
+    rows = [
+        row(w, "C3", seed, cdt_s=cdt)
+        for seed, swarm_cdt in (("1", 1.0), ("2", 9.0))
+        for w, cdt in (("swarm", swarm_cdt), ("durable-max", 10.0))
+    ]
+    text = render_text(evaluate([("gate", rows)]))
+    assert "C3 tie*" in text
+
+
+def git(root: Path, *args: str) -> str:
+    done = subprocess.run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-C", str(root), *args],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return done.stdout.strip()
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
+def test_the_code_version_is_the_head_commit_and_whether_tracked_files_changed(
+    tmp_path: Path,
+) -> None:
+    git(tmp_path, "init", "-q")
+    (tmp_path / "a.txt").write_text("one\n", encoding="utf-8")
+    git(tmp_path, "add", "a.txt")
+    git(tmp_path, "commit", "-q", "-m", "one")
+    clean = code_version(tmp_path)
+    assert clean == {"commit": git(tmp_path, "rev-parse", "HEAD"), "dirty": False}
+    (tmp_path / "new.txt").write_text("untracked\n", encoding="utf-8")
+    assert code_version(tmp_path)["dirty"] is False, "an untracked file is not a changed one"
+    (tmp_path / "a.txt").write_text("two\n", encoding="utf-8")
+    assert code_version(tmp_path) == {"commit": clean["commit"], "dirty": True}
+
+
+def test_without_git_the_code_version_is_unknown(tmp_path: Path) -> None:
+    assert code_version(tmp_path / "nowhere") == {"commit": None, "dirty": None}
 
 
 def test_a_directory_without_results_is_an_error(tmp_path: Path) -> None:

@@ -11,6 +11,7 @@ rendering of it.
 
 import hashlib
 import json
+import subprocess
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -225,9 +226,26 @@ class PerProcess(BaseModel):
     reading: dict[str, dict[str, Reading]]
 
 
+class FalseDeaths(BaseModel):
+    """What a system's failure detector got wrong at one point: live coordinators it gave away
+    (``false_death_remaps``). Only the swarm has a detector; the supervisors are told."""
+
+    source: str
+    axis: str | None
+    value: float | None
+    task: str
+    profile: str
+    workflow: str
+    runs: int
+    remaps_mean: float | None  # per run
+    remaps_max: int | None
+    spent_usd_mean: float | None  # work paid twice because of them, per run
+
+
 class Honesty(BaseModel):
     schema_version: int = 1
     prereg: dict[str, str]
+    code: dict[str, Any] = {}  # the commit the verdicts were computed at, and whether it is clean
     sources: list[str]
     rules: dict[str, Any]
     outcome: Outcome
@@ -235,6 +253,7 @@ class Honesty(BaseModel):
     comparisons: list[Comparison]
     regimes: list[Regime]
     per_process: list[PerProcess]
+    false_deaths: list[FalseDeaths] = []
     tally: Tally
 
 
@@ -558,6 +577,43 @@ def read_ratio(swarm: float | None, rival: float | None) -> Reading:
     return "comparable"
 
 
+# -- false deaths ----------------------------------------------------------------------------
+
+
+def false_deaths_of(sources: Iterable[tuple[str, list[dict[str, Any]]]]) -> list[FalseDeaths]:
+    """Per regime point and workflow, the live coordinators a detector gave away (PREREG §5). C0
+    and the single-crash probes run no faults that could cause one, and are left out."""
+    found = []
+    index = index_rows(sources)
+    for point in sorted(index, key=point_key):
+        source, task, profile, axis, setting, _, _ = point
+        if profile == "C0" or profile.startswith(PROBE_PREFIX):
+            continue
+        for workflow, by_seed in sorted(index[point].items()):
+            rows = list(by_seed.values())
+            counts = [
+                r["false_death_remaps"] for r in rows if r.get("false_death_remaps") is not None
+            ]
+            spent = [
+                r["dup_false_death_usd"] for r in rows if r.get("dup_false_death_usd") is not None
+            ]
+            found.append(
+                FalseDeaths(
+                    source=source,
+                    axis=axis,
+                    value=setting,
+                    task=task,
+                    profile=profile,
+                    workflow=workflow,
+                    runs=len(rows),
+                    remaps_mean=_mean(counts),
+                    remaps_max=max(counts) if counts else None,
+                    spent_usd_mean=_mean(spent),
+                )
+            )
+    return found
+
+
 # -- the whole thing -------------------------------------------------------------------------
 
 
@@ -567,8 +623,31 @@ def prereg_sha(path: Path) -> str:
     return hashlib.blake2b(text, digest_size=6).hexdigest()
 
 
+def code_version(root: Path = REPO_ROOT) -> dict[str, Any]:
+    """The commit the verdicts were computed at, and whether a tracked file differs from it: results
+    can be reproduced from a clean commit only. Both are None where there is no git to ask."""
+
+    def git(*args: str) -> str | None:
+        try:
+            done = subprocess.run(
+                ["git", "-C", str(root), *args],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=True,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return done.stdout.strip()
+
+    status = git("status", "--porcelain", "--untracked-files=no")
+    return {"commit": git("rev-parse", "HEAD"), "dirty": None if status is None else bool(status)}
+
+
 def evaluate(
-    sources: Sequence[tuple[str, list[dict[str, Any]]]], prereg: Path | None = None
+    sources: Sequence[tuple[str, list[dict[str, Any]]]],
+    prereg: Path | None = None,
+    code: dict[str, Any] | None = None,
 ) -> Honesty:
     comparisons: list[Comparison] = []
     for point, by_workflow in sorted(
@@ -602,6 +681,7 @@ def evaluate(
     path = prereg or PREREG_PATH
     return Honesty(
         prereg={"path": PREREG_NAME, "sha": prereg_sha(path) if path.exists() else ""},
+        code=code or {},
         sources=[name for name, _ in sources],
         rules={
             "difference": {k: r.minimum for k, r in RULES.items() if r.kind == "difference"},
@@ -628,6 +708,7 @@ def evaluate(
         ),
         regimes=regimes,
         per_process=per_process(sources),
+        false_deaths=false_deaths_of(sources),
         tally=total,
     )
 
@@ -638,7 +719,7 @@ def verdicts(paths: Sequence[Path], prereg: Path | None = None) -> Honesty:
         sources += read_rows(path)
     if not sources:
         raise ValueError(f"no results found under {', '.join(str(p) for p in paths)}")
-    return evaluate(sources, prereg)
+    return evaluate(sources, prereg, code_version())
 
 
 def write_json(honesty: Honesty, path: Path) -> None:
@@ -653,10 +734,63 @@ def _num(x: float | None, digits: int = 2) -> str:
     return "-" if x is None else f"{x:.{digits}f}"
 
 
+def _gate_lines(comparisons: Sequence[Comparison]) -> list[str]:
+    """H1-H6 at the gate for each source, task and rival: the verdict, then the swarm's and the
+    rival's value (means over the seeds that count). ``*`` marks a tie in which the seeds
+    disagree."""
+    gate = [c for c in comparisons if c.axis is None]
+    out: list[str] = []
+    for source, task in sorted({(c.source, c.task) for c in gate}):
+        for rival in RIVALS:
+            found = {
+                (c.hypothesis, c.profile): c
+                for c in gate
+                if (c.source, c.task, c.rival) == (source, task, rival)
+            }
+            profiles = sorted({profile for _, profile in found})
+            if not profiles:
+                continue
+            out.append(f"  {source}, {task}: swarm against {rival}, verdict (swarm / {rival})")
+            for h in HYPOTHESES:
+                cells = []
+                for profile in profiles:
+                    c = found.get((h.id, profile))
+                    if c is None:
+                        cells.append(f"{profile} -")
+                        continue
+                    shown = f"{c.verdict}{'*' if c.mixed else ''}"
+                    cells.append(f"{profile} {shown:<6}({_num(c.swarm)} / {_num(c.rival_value)})")
+                out.append(f"    {h.id:<4} {h.metric:<26} " + "  ".join(cells))
+    return out
+
+
+def _false_death_lines(found: Sequence[FalseDeaths]) -> list[str]:
+    """The swarm's false deaths at each point, next to the supervisors' (none by construction)."""
+    points: dict[tuple, dict[str, FalseDeaths]] = defaultdict(dict)
+    for f in found:
+        points[(f.source, f.axis, f.value, f.task, f.profile)][f.workflow] = f
+    out = []
+    for (source, axis, setting, task, profile), by_workflow in points.items():
+        swarm = by_workflow.get(SWARM)
+        if swarm is None or swarm.remaps_mean is None:
+            continue
+        rivals = [f.remaps_max or 0 for name, f in by_workflow.items() if name != SWARM]
+        out.append(
+            f"  {source:<22} {where(axis, setting):<24} {task[:2]} {profile:<3} "
+            f"swarm {swarm.remaps_mean:.2f} per run (most {swarm.remaps_max}, {swarm.runs} runs), "
+            f"${swarm.spent_usd_mean or 0:.4f} paid twice; supervisors "
+            + (f"most {max(rivals)}" if rivals else "-")
+        )
+    return out
+
+
 def render_text(honesty: Honesty) -> str:
+    commit = honesty.code.get("commit")
     out = [
         f"Verdicts under {honesty.prereg['path']} (sha {honesty.prereg['sha'] or 'missing'}); "
         f"sources: {', '.join(honesty.sources)}",
+        f"Code: {commit[:12] if commit else 'unknown'}"
+        + (", with uncommitted changes" if honesty.code.get("dirty") else ""),
         "Every verdict is the swarm's: win = better by the minimum effect on every seed.",
         "",
     ]
@@ -675,6 +809,9 @@ def render_text(honesty: Honesty) -> str:
                 out.append(
                     f"       vs {rival:<12} {t.win:>3} / {t.tie:>3} / {t.loss:>3}   ({t.na} n/a)"
                 )
+    gate = _gate_lines(honesty.comparisons)
+    if gate:
+        out += ["", "The gate, default assumptions, by task and rival"] + gate
     out += ["", "Regime map: locality of the swarm against each rival (ratios swarm / rival)"]
     for r in honesty.regimes:
         flag = "*" if r.plausible else " "
@@ -682,6 +819,13 @@ def render_text(honesty: Honesty) -> str:
         ratios = f"cdt {_num(r.cdt_ratio)}  blast {_num(r.blast_ratio)}  idle {_num(r.idle_ratio)}"
         out.append(f"{head} vs {r.rival:<11} {r.locality:<6} {ratios}")
     out.append("  (* in the plausible region)")
+    lines = _false_death_lines(honesty.false_deaths)
+    if lines:
+        out += [
+            "",
+            "False deaths: live coordinators a detector gave away (the supervisors have none)",
+        ]
+        out += lines
     for view in honesty.per_process:
         out += ["", f"Per process, {view.task}: expected impact per hour = rate x sum over levels"]
         for lv in view.swarm_levels:
