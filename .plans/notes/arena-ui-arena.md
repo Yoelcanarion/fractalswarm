@@ -223,6 +223,25 @@ a sample; `--real` declares the runs real. A take with a page error, a scene war
 is flagged and, with `--strict`, fails. Measured on this machine: 1920 frames of an arena scene take about 20 s
 without screenshots.
 
+### Tuning the scenes on the final pair (what I do when the coordinator hands me its run ids)
+
+1. In one commit: `web/src/director/sources.json` gets `swarm`, `rival`, `run` (the swarm's unless another) and, only for a
+   real pair, `"real": true` (the coordinator's rule); `ablation` when W3's real ablation is on record.
+2. A SLOT, the scratch server on 8791 with the fake LLM and a dummy key (it only replays; it never calls a model), and
+   `node scripts/record_scenes.mjs all --every 60 --no-encode` (a frame a second of each scene, about 5 minutes).
+3. Read each sidecar's `flags` first: a scene warning names the step (`step 7: the run has no "crash:2"` means the pair
+   has one crash fewer than the scene assumes), a script shorter or longer than its scene says the waits no longer fit.
+   Then look at the frames: s1 (the first crash on both sides at the same second, nothing covering the assumptions
+   caption), s5 (`$crashed:N` and `$heir:N` are the coordinators of the real pair, the camera on the tree), s6 (the
+   rival's caption always on, the counters moving), s8 (the tooltip's words are the chip's, the badge is not covered).
+4. What is tuned lives in the scene JSON only: `crash:N` indexes, the `-Ns` offsets around them, the `wait` lengths, the
+   `calls` picks of s4 (`model`, `purpose`, `role`), the camera paddings. The code does not change for a pair; if it
+   has to, that is a bug in the director, and it gets a test.
+5. A real pair has its root dying first, a practice pair may not: the arena's `root` tag follows the heirs (W4's
+   `rootHolder` once merged; my `rootOf` meanwhile), so `$root` after a takeover is the heir, not o0.
+6. Every scene must last the seconds the video script gives it (a test pins them); a retime of the script is a change of
+   `duration_ms` and of the waits together.
+
 ## Shapes I rely on
 
 - `GET /api/pairs`, `GET /api/runs/{id}/metrics` (top-level `recovery`), `GET /api/runs/{id}/takeover`: W2/W1, as in
