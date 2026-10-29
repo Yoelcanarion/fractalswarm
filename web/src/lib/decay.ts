@@ -13,10 +13,17 @@
 
 import type { CSSProperties } from "react";
 
+import { prefersReducedMotion } from "./motion";
 import type { MessageFlash } from "./reducer";
 
 export const MESSAGE_LIFE_MS = 1200;
 export const ADOPTION_LIFE_MS = 4000;
+/** How long an arbiter's ruling stays marked on a schedule cell. */
+export const RESOLVED_LIFE_MS = 4000;
+
+/** Under reduced motion the fades stay (they carry information) but run a third as long. */
+const REDUCED_FADE = 1 / 3;
+export const fadeLife = (lifeMs: number, reduced = prefersReducedMotion()): number => (reduced ? Math.round(lifeMs * REDUCED_FADE) : lifeMs);
 
 const clamp01 = (x: number): number => Math.min(1, Math.max(0, x));
 
@@ -35,8 +42,8 @@ export const messageGlow = (nowMs: number, ts: number): number => glow(nowMs, ts
 export const adoptionGlow = (nowMs: number, ts: number): number => glow(nowMs, ts, ADOPTION_LIFE_MS);
 
 /** The messages still visible at ``nowMs``. */
-export const litMessages = (messages: MessageFlash[], nowMs: number): MessageFlash[] =>
-  messages.filter((m) => nowMs - m.ts < MESSAGE_LIFE_MS);
+export const litMessages = (messages: MessageFlash[], nowMs: number, lifeMs = MESSAGE_LIFE_MS): MessageFlash[] =>
+  messages.filter((m) => nowMs - m.ts < lifeMs);
 
 /** How far a restarting coordinator is through its outage: 0 at the crash, 1 at ``restartInMs``. */
 export function restartProgress(nowMs: number, outage: { sinceTs: number; restartInMs: number }): number {

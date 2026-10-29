@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { ThemeToggle } from "./components/ui";
+import { StatusBadge, ThemeToggle } from "./components/ui";
 import { VerifyBadge } from "./components/VerifyBadge";
 import { SPEEDS } from "./lib/playback";
 import { ChartsPage } from "./pages/ChartsPage";
@@ -68,18 +68,20 @@ export function App() {
   const store = useRunStoreApi();
   const runs = useRunStore((s) => s.runs);
   const runId = useRunStore((s) => s.runId);
-  const live = useRunStore((s) => s.live);
+  const runStatus = useRunStore((s) => s.runStatus);
   const scenario = useRunStore((s) => s.view.scenario);
   const blocked = useRunStore((s) => s.view.panels.security.quarantines.length + s.view.panels.security.violations.length);
   const loadRuns = useRunStore((s) => s.loadRuns);
+  const loadCapabilities = useRunStore((s) => s.loadCapabilities);
   const openRun = useRunStore((s) => s.openRun);
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash(window.location.hash));
     window.addEventListener("hashchange", onHash);
     void loadRuns();
+    void loadCapabilities();
     return () => window.removeEventListener("hashchange", onHash);
-  }, [loadRuns]);
+  }, [loadRuns, loadCapabilities]);
 
   // Open the run named in the URL, or else the first listed one (the demo bundle first).
   useEffect(() => {
@@ -143,7 +145,7 @@ export function App() {
                 ))}
               </select>
               <span className="mono muted">{scenario?.split(":").at(-1) ?? ""}</span>
-              {live ? <span className="badge badge--live">● LIVE</span> : <span className="badge badge--muted">REPLAY</span>}
+              <StatusBadge status={runStatus} />
               <VerifyBadge />
             </div>
           )}

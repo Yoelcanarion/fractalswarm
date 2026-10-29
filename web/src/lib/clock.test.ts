@@ -2,11 +2,12 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { createRunStore, RunStoreProvider, useRunStore, type RunApi } from "../store";
+import { createRunStore, RunStoreProvider, STATUS_POLL_MS, useRunStore, type RunApi } from "../store";
 import { createClock, MAX_FRAME_MS, type FrameScheduler } from "./clock";
+import { DEFAULT_CAPABILITIES, type RunStatus } from "./controls";
 import { FIXED_FRAME_MS, MAX_IDLE_GAP_MS } from "./playback";
 import { Stream } from "./testing";
-import type { RunEvent } from "./types";
+import type { RunEvent, RunListing } from "./types";
 
 /** A run whose events land at the given virtual times (ms). The first starts the run. */
 function logAt(times: number[], completed = true): RunEvent[] {
@@ -194,6 +195,40 @@ describe("clock, fixed-step", () => {
   });
 });
 
+describe("clock, animation time", () => {
+  it("is the real clock normally, and only goes forward", async () => {
+    const clock = createClock({ scheduler: manualScheduler() });
+    const a = clock.motion();
+    const b = clock.motion();
+    expect(b).toBeGreaterThanOrEqual(a);
+    expect(Math.abs(a - performance.now())).toBeLessThan(1000);
+  });
+
+  it("counts frames in fixed-step mode, so a take repeats whatever the real time was", async () => {
+    const measure = async (frameTimes: number[]) => {
+      const scheduler = manualScheduler();
+      const clock = createClock({ scheduler, mode: "fixed-step", speed: 3 });
+      const { store } = await opened({ r: logAt(everySecond(30)) }, "r", clock);
+      expect(clock.motion()).toBe(0);
+      store.getState().setPlaying(true);
+      frameTimes.forEach((ms) => scheduler.frame(ms));
+      return clock.motion();
+    };
+    const smooth = await measure([0, 16, 33, 50, 66]);
+    const stuttery = await measure([7, 900, 901, 5000, 5001]);
+    expect(smooth).toBeCloseTo(5 * FIXED_FRAME_MS, 9);
+    expect(stuttery).toBe(smooth);
+  });
+
+  it("moves with step() and stands still while paused", async () => {
+    const clock = createClock({ scheduler: manualScheduler(), mode: "fixed-step" });
+    await opened({ r: logAt(everySecond(30)) }, "r", clock);
+    clock.step(6);
+    expect(clock.motion()).toBeCloseTo(6 * FIXED_FRAME_MS, 9);
+    expect(clock.motion()).toBe(clock.motion());
+  });
+});
+
 describe("clock, shared by several stores", () => {
   it("plays two runs at the same virtual time and speed", async () => {
     const scheduler = manualScheduler();
@@ -295,6 +330,48 @@ describe("run store", () => {
     expect(b.getState().view.counters.events).toBe(1);
   });
 
+  it("counts jumps of the view, and not playback", async () => {
+    const scheduler = manualScheduler();
+    const clock = createClock({ scheduler, mode: "fixed-step" });
+    const { store } = await opened({ r: logAt(everySecond(30)) }, "r", clock);
+    const opened1 = store.getState().epoch;
+    expect(opened1).toBeGreaterThan(0); // opening a run is a jump
+
+    store.getState().setPlaying(true);
+    scheduler.frame(0);
+    scheduler.frame(16);
+    clock.step(5);
+    expect(store.getState().epoch).toBe(opened1); // frames and steps advance the view
+
+    store.getState().seek(10);
+    expect(store.getState().epoch).toBe(opened1 + 1);
+    store.getState().seekTime(5000);
+    expect(store.getState().epoch).toBe(opened1 + 2);
+    store.getState().seek(0);
+    expect(store.getState().epoch).toBe(opened1 + 3);
+  });
+
+  it("does not count a live run's new events as a jump", async () => {
+    const live = logAt([100, 200], false);
+    const { store, tails } = await opened({ live }, "live");
+    const before = store.getState().epoch;
+    tails.get("live")!(logAt([100, 200, 300], false).slice(live.length));
+    expect(store.getState().view.counters.events).toBeGreaterThan(live.length - 1);
+    expect(store.getState().epoch).toBe(before);
+  });
+
+  it("jumps every store on a shared clock when one of them is scrubbed", async () => {
+    const clock = createClock({ scheduler: manualScheduler() });
+    const { api } = fakeApi({ a: logAt(everySecond(10)), b: logAt(everySecond(10)) });
+    const a = createRunStore({ api, clock });
+    const b = createRunStore({ api, clock });
+    await a.getState().openRun("a");
+    await b.getState().openRun("b");
+    const before = b.getState().epoch;
+    a.getState().seek(4);
+    expect(b.getState().epoch).toBe(before + 1);
+  });
+
   it("seeks to an exact event count and reports whether it is following", async () => {
     const { store } = await opened({ r: logAt([100, 100, 100, 200]) }, "r");
     store.getState().seek(2);
@@ -336,6 +413,146 @@ describe("run store", () => {
     await first;
     expect(store.getState().runId).toBe("b");
     expect(store.getState().events).toBe(slow.b);
+  });
+});
+
+const listing = (id: string, status: RunStatus): RunListing => ({
+  id,
+  source: "runs",
+  run_id: id,
+  scenario: "t",
+  seed: "0",
+  clock: "sim",
+  events: 0,
+  duration_ms: 0,
+  status,
+  head: null,
+});
+
+/** A store whose catalog answers with ``listings``, which a test may change between calls. */
+function catalogStore(logs: Record<string, RunEvent[]>, listings: { current: RunListing[] }, capabilities?: RunApi["capabilities"]) {
+  const { api, tails } = fakeApi(logs);
+  const store = createRunStore({ api: { ...api, listRuns: async () => listings.current, capabilities }, clock: createClock({ scheduler: manualScheduler() }) });
+  return { store, tails };
+}
+
+describe("run store, the catalog's word on a run", () => {
+  it("opens a run the catalog calls interrupted as a recording, even though its log never completed", async () => {
+    const log = logAt([100, 200, 300], false);
+    const { store, tails } = catalogStore({ r: log }, { current: [listing("r", "interrupted")] });
+    await store.getState().openRun("r");
+    const s = store.getState();
+    expect(s.runStatus).toBe("interrupted");
+    expect(s.live).toBe(false);
+    expect(s.following).toBe(false);
+    expect(s.cursor).toBe(0); // ready to replay from the start
+    expect(tails.size).toBe(0); // and no tail on a process that is gone
+  });
+
+  it("tails a run the catalog calls running, from its head", async () => {
+    const log = logAt([100, 200, 300], false);
+    const { store, tails } = catalogStore({ r: log }, { current: [listing("r", "running")] });
+    await store.getState().openRun("r");
+    const s = store.getState();
+    expect(s.runStatus).toBe("running");
+    expect(s.live).toBe(true);
+    expect(s.cursor).toBe(log.length);
+    expect(tails.has("r")).toBe(true);
+  });
+
+  it("reads a halted run as a recording", async () => {
+    const { store } = catalogStore({ r: logAt([100, 200]) }, { current: [listing("r", "halted")] });
+    await store.getState().openRun("r");
+    expect(store.getState().runStatus).toBe("halted");
+    expect(store.getState().live).toBe(false);
+  });
+
+  it("goes by the log where the catalog does not list the run", async () => {
+    const done = catalogStore({ r: logAt([100, 200]) }, { current: [] });
+    await done.store.getState().openRun("r");
+    expect(done.store.getState()).toMatchObject({ live: false, runStatus: "completed" });
+
+    const open = catalogStore({ r: logAt([100, 200], false) }, { current: [] });
+    await open.store.getState().openRun("r");
+    expect(open.store.getState()).toMatchObject({ live: true, runStatus: "running" });
+  });
+
+  it("never calls a completed log live, whatever a stale catalog says", async () => {
+    const { store } = catalogStore({ r: logAt([100, 200]) }, { current: [listing("r", "running")] });
+    await store.getState().openRun("r");
+    expect(store.getState().live).toBe(false);
+  });
+
+  it("stops tailing when the catalog later says the process died", async () => {
+    const listings = { current: [listing("r", "running")] };
+    const { store, tails } = catalogStore({ r: logAt([100, 200], false) }, listings);
+    await store.getState().openRun("r");
+    expect(store.getState().live).toBe(true);
+
+    listings.current = [listing("r", "interrupted")];
+    await store.getState().loadRuns();
+    expect(store.getState()).toMatchObject({ live: false, following: false, runStatus: "interrupted" });
+    expect(tails.size).toBe(0);
+  });
+
+  it("asks the catalog again on a timer while the run is live, and not otherwise", async () => {
+    const listings = { current: [listing("r", "running")] };
+    let calls = 0;
+    const { api } = fakeApi({ r: logAt([100, 200], false), done: logAt([100, 200]) });
+    const store = createRunStore({
+      api: {
+        ...api,
+        listRuns: async () => {
+          calls += 1;
+          return listings.current;
+        },
+      },
+      clock: createClock({ scheduler: manualScheduler() }),
+    });
+    const timers: { fn: () => void; ms: number }[] = [];
+    const realSet = globalThis.setInterval;
+    const realClear = globalThis.clearInterval;
+    globalThis.setInterval = ((fn: () => void, ms: number) => {
+      timers.push({ fn, ms });
+      return timers.length as unknown as ReturnType<typeof setInterval>;
+    }) as typeof setInterval;
+    globalThis.clearInterval = ((handle: number) => void timers.splice(handle - 1, 1, { fn: () => {}, ms: -1 })) as typeof clearInterval;
+    try {
+      await store.getState().openRun("r");
+      const live = timers.filter((t) => t.ms === STATUS_POLL_MS);
+      expect(live).toHaveLength(1);
+      const before = calls;
+      live[0].fn();
+      await Promise.resolve();
+      expect(calls).toBeGreaterThan(before);
+
+      await store.getState().openRun("done");
+      expect(timers.filter((t) => t.ms === STATUS_POLL_MS)).toHaveLength(0); // the old one was cleared
+    } finally {
+      globalThis.setInterval = realSet;
+      globalThis.clearInterval = realClear;
+    }
+  });
+});
+
+describe("run store, what the server offers", () => {
+  it("starts with the controls that predate the capabilities list", () => {
+    const { store } = catalogStore({}, { current: [] });
+    expect(store.getState().capabilities).toEqual(DEFAULT_CAPABILITIES);
+  });
+
+  it("takes the capabilities the server reports", async () => {
+    const { store } = catalogStore({}, { current: [] }, async () => ({ chaos: true, approve: true, tasks: true, budget: true, halt: true }));
+    await store.getState().loadCapabilities();
+    expect(store.getState().capabilities.chaos).toBe(true);
+  });
+
+  it("keeps its defaults when asking fails", async () => {
+    const { store } = catalogStore({}, { current: [] }, async () => {
+      throw new Error("offline");
+    });
+    await store.getState().loadCapabilities();
+    expect(store.getState().capabilities).toEqual(DEFAULT_CAPABILITIES);
   });
 });
 

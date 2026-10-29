@@ -4,6 +4,7 @@ import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveCont
 import { conserved, headline } from "../lib/auction";
 import { burnRate, committed, ladderLevel, LADDER, runCap, type LadderLevel } from "../lib/economy";
 import { axis, GRID, TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from "../lib/chart";
+import { useFirstDraw } from "../lib/chartMotion";
 import { compact } from "../lib/generic";
 import type { ViewState } from "../lib/reducer";
 import { Card, GenericRows, money, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
@@ -24,6 +25,35 @@ const LADDER_MEANING: Record<LadderLevel, string> = {
   L2: "cheaper still: only the critical path continues",
   stop: "the run returns a partial result with explicit gaps and a resumable checkpoint",
 };
+
+type SpendPoint = { t: number; spent: number; committed: number; cap: number | null };
+
+// The chart is its own component so that it animates the first time it appears (when the first
+// call settles), not on every tick of the replay after that.
+function SpendChart({ data, shocks }: { data: SpendPoint[]; shocks: { seq: number; ts: number }[] }) {
+  const draw = useFirstDraw();
+  return (
+    <ResponsiveContainer width="100%" height={140}>
+      <ComposedChart data={data} margin={{ top: 6, right: 8, bottom: 0, left: 0 }}>
+        <CartesianGrid stroke={GRID} vertical={false} />
+        <XAxis dataKey="t" type="number" domain={[0, "dataMax"]} {...AXIS} tickFormatter={(t) => `${Math.round(t)}s`} />
+        <YAxis {...AXIS} width={52} tickFormatter={(v) => money(Number(v), 2)} domain={[0, "auto"]} />
+        <Tooltip
+          contentStyle={TOOLTIP_STYLE}
+          labelStyle={TOOLTIP_LABEL_STYLE}
+          labelFormatter={(t) => `t = ${Number(t).toFixed(1)} s`}
+          formatter={(value, name) => [typeof value === "number" ? money(value, 4) : String(value), String(name)]}
+        />
+        <Area dataKey="spent" name="spent" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.25} strokeWidth={2} {...draw} />
+        <Line dataKey="committed" name="spent + reserved" stroke="var(--warn)" strokeWidth={1.5} dot={false} {...draw} />
+        <Line dataKey="cap" name="cap" stroke="var(--danger)" strokeDasharray="5 4" strokeWidth={1.5} dot={false} type="stepAfter" {...draw} />
+        {shocks.map((shock) => (
+          <ReferenceLine key={shock.seq} x={shock.ts / 1000} stroke="var(--danger)" strokeOpacity={0.8} label={{ value: "shock", fill: "var(--danger-text)", fontSize: 12, position: "insideTopLeft" }} />
+        ))}
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
 
 export function MarketPanel({ view }: { view: ViewState }) {
   const { economy } = view.panels;
@@ -96,25 +126,7 @@ export function MarketPanel({ view }: { view: ViewState }) {
           {data.length < 2 ? (
             <Nothing>No call has been settled yet.</Nothing>
           ) : (
-            <ResponsiveContainer width="100%" height={140}>
-              <ComposedChart data={data} margin={{ top: 6, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid stroke={GRID} vertical={false} />
-                <XAxis dataKey="t" type="number" domain={[0, "dataMax"]} {...AXIS} tickFormatter={(t) => `${Math.round(t)}s`} />
-                <YAxis {...AXIS} width={52} tickFormatter={(v) => money(Number(v), 2)} domain={[0, "auto"]} />
-                <Tooltip
-                  contentStyle={TOOLTIP_STYLE}
-                  labelStyle={TOOLTIP_LABEL_STYLE}
-                  labelFormatter={(t) => `t = ${Number(t).toFixed(1)} s`}
-                  formatter={(value, name) => [typeof value === "number" ? money(value, 4) : String(value), String(name)]}
-                />
-                <Area dataKey="spent" name="spent" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.25} strokeWidth={2} isAnimationActive={false} />
-                <Line dataKey="committed" name="spent + reserved" stroke="var(--warn)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
-                <Line dataKey="cap" name="cap" stroke="var(--danger)" strokeDasharray="5 4" strokeWidth={1.5} dot={false} type="stepAfter" isAnimationActive={false} />
-                {shocks.map((shock) => (
-                  <ReferenceLine key={shock.seq} x={shock.ts / 1000} stroke="var(--danger)" strokeOpacity={0.8} label={{ value: "shock", fill: "var(--danger-text)", fontSize: 12, position: "insideTopLeft" }} />
-                ))}
-              </ComposedChart>
-            </ResponsiveContainer>
+            <SpendChart data={data} shocks={shocks} />
           )}
           {hasEvents && (
             <div className="pevents">

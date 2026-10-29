@@ -71,6 +71,10 @@ export interface Clock {
   readonly state: StoreApi<ClockState>;
   /** The exact virtual time in ms. */
   now(): number;
+  /** The time base for tweens that run in real time (the tree gliding to a new layout). Normally
+   * the real clock; in fixed-step mode the frames advanced so far x 1/60 s, so a take repeats
+   * exactly whatever the real frame times were. It only goes forward. */
+  motion(): number;
   /** The virtual time of the last event of the longest attached run. */
   end(): number;
   attach(store: ClockedStore): () => void;
@@ -116,6 +120,7 @@ export function createClock(options: ClockOptions = {}): Clock {
   let lastFrameMs: number | null = null;
   let lastCommitMs = Number.NEGATIVE_INFINITY;
   let stepClockMs = 0;
+  let frames = 0;
 
   const endOf = (): number => Math.max(0, ...[...stores].map((s) => s.getState().events.at(-1)?.ts_virtual ?? 0));
   const hasEvents = (): boolean => [...stores].some((s) => s.getState().events.length > 0);
@@ -149,6 +154,7 @@ export function createClock(options: ClockOptions = {}): Clock {
   }
 
   function advance(dt: number, frameMs: number, force: boolean): void {
+    frames += 1;
     t = advanceVirtual(t, dt, state.getState().speed, nextTsOf(), endOf());
     let moved = false;
     for (const store of stores) {
@@ -188,6 +194,7 @@ export function createClock(options: ClockOptions = {}): Clock {
   const clock: Clock = {
     state,
     now: () => t,
+    motion: () => (state.getState().mode === "fixed-step" ? frames * FIXED_FRAME_MS : performance.now()),
     end: endOf,
 
     attach(store) {

@@ -9,9 +9,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
+import { startFrameLogger } from "./lib/perf";
 import { initTheme } from "./lib/theme";
 
 initTheme();
+startFrameLogger();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -23,6 +23,10 @@ const GAP = 22;
 
 export const nodeWidth = (kind: string): number => (isLeafKind(kind) ? LEAF_WIDTH : NODE_WIDTH);
 
+// Roughly the height of a card; the camera only needs the extent of the tree to within a few
+// pixels, and fits it with padding.
+export const NODE_HEIGHT = 64;
+
 // The blackboard, the chaos network and the chaos monkey are actors of the run, not of its
 // orchestrator tree. Laid out as roots they sit far to either side and shrink the tree to fit.
 export const INFRA_KINDS: ReadonlySet<string> = new Set(["board", "net", "chaos"]);
@@ -80,6 +84,37 @@ export function layoutTree(state: ViewState): Placed[] {
 }
 
 export const isLeafKind = (kind: string): boolean => kind === "agent" || kind === "worker";
+
+export interface Bounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** The box that holds every placed node, or null for an empty tree. */
+export function boundsOf(state: ViewState, placed: Placed[]): Bounds | null {
+  if (placed.length === 0) return null;
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  for (const { id, x, y } of placed) {
+    left = Math.min(left, x);
+    top = Math.min(top, y);
+    right = Math.max(right, x + nodeWidth(state.actors[id].kind));
+    bottom = Math.max(bottom, y + NODE_HEIGHT);
+  }
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+/** What the camera should re-fit on: which nodes exist and who each hangs from. Statuses, calls
+ * and messages are not part of it, and neither is where the layout puts a node, so a node dying
+ * or siblings re-centring does not move the camera, while a node arriving, leaving or being
+ * adopted does. */
+export function structureKey(state: ViewState, placed: Placed[]): string {
+  return placed.map(({ id }) => `${id}>${state.actors[id].parent ?? ""}`).join("|");
+}
 
 /** The colour key of an actor: its level-1 ancestor in the *current* tree. So when a subtree
  * is adopted, it takes its new owner's colour. Roots are neutral. */

@@ -3,11 +3,11 @@ import { useState } from "react";
 import { postControl, type ControlResult } from "../lib/api";
 import { isLeafKind } from "../lib/layout";
 import type { ViewState } from "../lib/reducer";
+import { ControlButton, useControlState } from "./ControlButton";
 
 interface Props {
   runId: string;
   view: ViewState;
-  live: boolean;
 }
 
 const NET_LABELS = [
@@ -18,7 +18,8 @@ const NET_LABELS = [
   ["partition_drop", "cut"],
 ] as const;
 
-export function ChaosPanel({ runId, view, live }: Props) {
+export function ChaosPanel({ runId, view }: Props) {
+  const chaos = useControlState("chaos");
   const [result, setResult] = useState<ControlResult | null>(null);
   const [busy, setBusy] = useState(false);
   const agents = view.order.filter((id) => isLeafKind(view.actors[id].kind) && view.actors[id].status === "alive");
@@ -39,13 +40,13 @@ export function ChaosPanel({ runId, view, live }: Props) {
     <section className="panel chaos">
       <header className="panel__title">
         Chaos
-        <span className="panel__hint">{live ? "live run" : "recorded run: controls act on live runs"}</span>
+        <span className="panel__hint">{chaos.enabled ? "live run" : chaos.reason}</span>
       </header>
-      <button className="btn btn--danger btn--big" disabled={busy} onClick={() => fire({ kind: "kill_half", profile: "C3" })}>
+      <ControlButton control="chaos" className="btn btn--danger btn--big" disabled={busy} onClick={() => fire({ kind: "kill_half", profile: "C3" })}>
         Kill half the brains
-      </button>
+      </ControlButton>
       <div className="chaos__row">
-        <select value={target} onChange={(e) => setTarget(e.target.value)} aria-label="agent to kill">
+        <select value={target} onChange={(e) => setTarget(e.target.value)} aria-label="agent to kill" disabled={!chaos.enabled}>
           <option value="">any agent</option>
           {agents.map((id) => (
             <option key={id} value={id}>
@@ -53,17 +54,17 @@ export function ChaosPanel({ runId, view, live }: Props) {
             </option>
           ))}
         </select>
-        <button className="btn" disabled={busy} onClick={() => fire({ kind: "kill_agent", target: target || null })}>
+        <ControlButton control="chaos" className="btn" disabled={busy} onClick={() => fire({ kind: "kill_agent", target: target || null })}>
           Kill agent
-        </button>
+        </ControlButton>
       </div>
       <div className="chaos__row">
-        <button className="btn" disabled={busy} onClick={() => fire({ kind: "api_storm" })}>
+        <ControlButton control="chaos" className="btn" disabled={busy} onClick={() => fire({ kind: "api_storm" })}>
           API storm (429s)
-        </button>
-        <button className="btn" disabled={busy} onClick={() => fire({ kind: "net_fault" })}>
+        </ControlButton>
+        <ControlButton control="chaos" className="btn" disabled={busy} onClick={() => fire({ kind: "net_fault" })}>
           Network faults
-        </button>
+        </ControlButton>
       </div>
       {result && (
         <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>

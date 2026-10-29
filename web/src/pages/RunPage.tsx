@@ -40,13 +40,12 @@ function RunSkeleton({ runId }: { runId: string }) {
 }
 
 export function RunPage() {
-  const { runId, events, cursor, loading, loadError, live } = useRunStoreShallow((s) => ({
+  const { runId, events, cursor, loading, loadError } = useRunStoreShallow((s) => ({
     runId: s.runId,
     events: s.events,
     cursor: s.cursor,
     loading: s.loading,
     loadError: s.loadError,
-    live: s.live,
   }));
   const view = useRunStore((s) => s.view);
   if (!runId) return <div className="empty">No run selected. Record one with <code>fractalswarm toy</code> or open the demo bundle.</div>;
@@ -75,7 +74,7 @@ export function RunPage() {
           <ScheduleGrid view={view} />
         </section>
         <aside className="run__side">
-          <ChaosPanel runId={runId} view={view} live={live} />
+          <ChaosPanel runId={runId} view={view} />
           <EventFeed events={events} cursor={cursor} />
         </aside>
       </div>

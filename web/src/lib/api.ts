@@ -1,5 +1,6 @@
 // The HTTP and WebSocket client for the FractalSwarm API (src/fractalswarm/api).
 
+import { DEFAULT_CAPABILITIES, parseCapabilities, type Capabilities } from "./controls";
 import type { RunEvent, RunListing, VerifyReport } from "./types";
 
 async function json<T>(response: Response): Promise<T> {
@@ -12,6 +13,14 @@ async function json<T>(response: Response): Promise<T> {
 }
 
 export const listRuns = () => fetch("api/runs").then((r) => json<RunListing[]>(r));
+
+/** What the server can do (`GET api/capabilities`). A server without the endpoint offers the
+ * controls that predate it and nothing else. */
+export async function fetchCapabilities(): Promise<Capabilities> {
+  const response = await fetch("api/capabilities");
+  if (!response.ok) return DEFAULT_CAPABILITIES;
+  return parseCapabilities(await response.json().catch(() => ({})));
+}
 
 export async function loadAllEvents(runId: string, fromSeq = 1): Promise<RunEvent[]> {
   const events: RunEvent[] = [];

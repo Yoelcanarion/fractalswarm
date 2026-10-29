@@ -343,23 +343,22 @@ textarea {
   background: var(--surface-1);
 }
 
-/* The tree's wrapper only carries --now, the virtual time in ms, which the clock writes on it every
-   frame. It makes no box of its own. */
-.tree {
+/* A clock scope only carries --now, the virtual time in ms, which the clock writes on it every
+   frame (components/ClockScope.tsx). It makes no box of its own. */
+.clock-scope {
   display: contents;
 }
 
 /* What fades with virtual time (lib/decay.ts): an element sets its own --born and --life, and
-   --glow is 1 at --born and 0 after --life. Without --born there is no glow. */
+   --glow is 1 at --born and 0 after --life. Without --born there is no glow.
+   Nodes move in JS, not by a CSS transition (components/useTreeMotion.ts): a transition would move
+   the box and leave React Flow's edge behind. */
 .actor,
+.cell,
 .react-flow__edge-path,
 .react-flow__edge-text,
 .react-flow__edge-textbg {
   --glow: clamp(0, calc(1 - (var(--now, 0) - var(--born, -1000000)) / var(--life, 1)), 1);
-}
-
-.react-flow__node {
-  transition: transform 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .react-flow__edge-path {
@@ -590,7 +589,12 @@ textarea {
 .cell--filled {
   border: 1px solid var(--squad);
   background: color-mix(in srgb, var(--squad) 34%, var(--surface-2));
-  animation: fill-in 500ms ease-out;
+}
+
+/* Only a placement that lands while the run plays animates; one that was already there when the
+   view jumped (a seek, opening a run) just shows. ScheduleGrid sets the class on a new element. */
+.cell--new {
+  animation: fill-in 320ms var(--ease-out);
 }
 
 .cell__talk {
@@ -606,8 +610,13 @@ textarea {
   animation: collide 0.5s ease-in-out infinite alternate;
 }
 
-.cell--resolved {
-  box-shadow: inset 0 0 0 2px var(--text-primary);
+/* The arbiter's ruling is marked on the cell and fades with virtual time (--glow, see decay.ts). */
+.cell--ruled {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text-primary) calc(var(--glow) * 100%), transparent);
+}
+
+.cell__tag--ruling {
+  opacity: var(--glow);
 }
 
 .cell__tag {
