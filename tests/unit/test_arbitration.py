@@ -1169,8 +1169,10 @@ def test_a_booking_collision_and_a_ruling_for_no_dispute_are_not_listed() -> Non
     assert listed([], [booking, stray]) == {
         "run_id": "a-run",
         "ended": True,
+        "now_ts": 9000,
         "count": 0,
         "open": 0,
+        "waiting": 0,
         "disputes": [],
     }
 
@@ -1195,7 +1197,12 @@ def test_an_escalation_is_listed_with_its_question() -> None:
         "default": "B",
         "confidence": 0.4,
         "timeout_ms": 60_000,
+        "goal_id": "root",
+        "question": "Which?",
         "ts_virtual": 410,
+        "deadline_ts": 60_410,
+        "state": "closed",  # the run ended (at 9000) before anyone answered
+        "answers": [],
     }
 
 
