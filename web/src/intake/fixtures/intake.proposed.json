@@ -1,0 +1,579 @@
+{
+  "intake_id": "intake-20261029-162445-63cc",
+  "state": "proposed",
+  "status": "completed",
+  "texts": {
+    "talks": "Submission 1\nTitle: Lessons from usability testing at scale in production\nSpeaker: Umar Mensah <person-01@example.invalid>\nTrack: HCC track\nAbstract: This talk walks through how our team approached usability testing at scale over the past year. No prior experience is needed, but familiarity with the basics helps. Expected audience: about 33 participants.\n\nSubmission 2\nTitle: Vector databases: what actually worked\nSpeaker: Pablo Fischer <person-02@example.invalid>\nTrack: DATA INFRA\nAbstract: A hands-on look at vector databases, with code and real measurements. The session ends with a checklist attendees can apply on Monday. Expected audience: about 26 participants.\n\nSubmission 3\nTitle: Rethinking cost-aware warehousing\nSpeaker: Dara Duarte <person-03@example.invalid>\nTrack: data infrastructure\nAbstract: We share the mistakes we made with cost-aware warehousing and how we fixed them. Expect concrete numbers, a few failure stories and an open-source companion repo. Organizers of past editions told us to plan for around 90 people.\n\nSubmission 4\nTitle: Long-context attention without the hype\nSpeaker: Dara Fischer <person-04@example.invalid>\nTrack: AI-Systems\nAbstract: Why long-context attention is harder than it looks, and a design that holds up. The session ends with a checklist attendees can apply on Monday. Organizers of past editions told us to plan for around 24 people.\n\nSubmission 5\nTitle: Lessons from event sourcing in production\nSpeaker: Quinn Tanaka <person-05@example.invalid>\nTrack: Data Infrastructure\nAbstract: A hands-on look at event sourcing, with code and real measurements. No prior experience is needed, but familiarity with the basics helps. Expected audience: about 43 participants.\n\nSubmission 6\nTitle: Notification fatigue: what actually worked\nSpeaker: Rosa Kowalski <person-06@example.invalid>\nTrack: human-centered computing\nAbstract: Why notification fatigue is harder than it looks, and a design that holds up. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 219 participants.\n\nSubmission 7\nTitle: Scaling GPU scheduling for small teams\nSpeaker: Hiro Iyer <person-07@example.invalid>\nTrack: AI systems track\nAbstract: Why GPU scheduling is harder than it looks, and a design that holds up. No prior experience is needed, but familiarity with the basics helps. Organizers of past editions told us to plan for around 43 people.\n\nSubmission 8\nTitle: A practical guide to accessible interfaces\nSpeaker: Lars Silva <person-08@example.invalid>\nTrack: Human-Centered Computing\nAbstract: Why accessible interfaces is harder than it looks, and a design that holds up. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 62 participants.\n\nSubmission 9\nTitle: Rethinking agent tool use\nSpeaker: Umar Mensah <person-01@example.invalid>\nTrack: ai systems\nAbstract: This talk walks through how our team approached agent tool use over the past year. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 35 participants.\n\nSubmission 10\nTitle: A practical guide to retrieval-augmented generation\nSpeaker: Farid Kowalski <person-09@example.invalid>\nTrack: AI Systems\nAbstract: We share the mistakes we made with retrieval-augmented generation and how we fixed them. We compare three approaches and explain the trade-offs we accepted. Organizers of past editions told us to plan for around 51 people.\n\nSubmission 11\nTitle: Scaling stream processing for small teams\nSpeaker: Rosa Kowalski <person-06@example.invalid>\nTrack: Data infra track\nAbstract: Why stream processing is harder than it looks, and a design that holds up. The session ends with a checklist attendees can apply on Monday. We expect around 67 attendees.\n\nSubmission 12\nTitle: Visualizing uncertainty: what actually worked\nSpeaker: Dara Duarte <person-03@example.invalid>\nTrack: HCC track\nAbstract: This talk walks through how our team approached visualizing uncertainty over the past year. Expect concrete numbers, a few failure stories and an open-source companion repo. Expected audience: about 211 participants.",
+    "notes": "From: Umar Mensah <person-01@example.invalid>\nSubject: My talks\nHi all,\nQuick note about \"Lessons from usability testing at scale in production\" and \"Rethinking agent tool use\".\nI'm flexible: both days are fine, any time.\nA morning slot would be ideal.\nKind regards,\nUmar Mensah\n\nFrom: Pablo Fischer <person-02@example.invalid>\nSubject: My talk\nHello!\nI'm excited to present \"Vector databases: what actually worked\".\nI can only do afternoons (sessions starting at 14:00 or later), on either day.\nNo preference on the time otherwise.\nThanks,\nPablo Fischer\n\nFrom: Dara Duarte <person-03@example.invalid>\nSubject: My talks\nHi program committee,\nI'm excited to present \"Rethinking cost-aware warehousing\" and \"Visualizing uncertainty: what actually worked\".\nI can only attend on day 1.\nA morning slot would be ideal.\nLet me know if you need a longer bio.\nBest,\nDara Duarte\n\nFrom: Dara Fischer <person-04@example.invalid>\nSubject: My talk\nHi all,\nI'm excited to present \"Long-context attention without the hype\".\nUnfortunately I'll only be around on Day 1.\nAn afternoon slot would suit me best.\nLet me know if you need a longer bio.\nCheers,\nDara Fischer\n\nFrom: Quinn Tanaka <person-05@example.invalid>\nSubject: My talk\nHi program committee,\nThanks for accepting \"Lessons from event sourcing in production\".\nI can only attend on day 2.\nOtherwise any time is fine.\nLet me know if you need a longer bio.\nThanks,\nQuinn Tanaka\n\nFrom: Rosa Kowalski <person-06@example.invalid>\nSubject: My talks\nHello!\nQuick note about \"Notification fatigue: what actually worked\" and \"Scaling stream processing for small teams\".\nAny slot on either day works for me.\nIf possible I'd prefer a morning slot.\nLet me know if you need a longer bio.\nCheers,\nRosa Kowalski\n\nFrom: Hiro Iyer <person-07@example.invalid>\nSubject: My talk\nDear organizers,\nQuick note about \"Scaling GPU scheduling for small teams\".\nAny slot on either day works for me.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nBest,\nHiro Iyer\n\nFrom: Lars Silva <person-08@example.invalid>\nSubject: My talk\nHi program committee,\nQuick note about \"A practical guide to accessible interfaces\".\nOn day 1 I can't make it before 09:45; the other day is fully open.\nNo preference on the time otherwise.\nLet me know if you need a longer bio.\nKind regards,\nLars Silva\n\nFrom: Farid Kowalski <person-09@example.invalid>\nSubject: My talk\nDear organizers,\nThanks for accepting \"A practical guide to retrieval-augmented generation\".\nI'm flexible: both days are fine, any time.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nKind regards,\nFarid Kowalski",
+    "conference": "DevConf Live (sample 1)"
+  },
+  "proposal": {
+    "conference": "DevConf Live (sample 1)",
+    "days": [
+      1,
+      2
+    ],
+    "errors": [],
+    "rooms": [
+      {
+        "capacity": 260,
+        "id": "main-hall",
+        "name": "Main Hall"
+      },
+      {
+        "capacity": 120,
+        "id": "room-b",
+        "name": "Room B"
+      },
+      {
+        "capacity": 100,
+        "id": "room-c",
+        "name": "Room C"
+      },
+      {
+        "capacity": 80,
+        "id": "room-d",
+        "name": "Room D"
+      }
+    ],
+    "slots": [
+      {
+        "end": "09:45",
+        "index": 0,
+        "start": "09:00"
+      },
+      {
+        "end": "10:30",
+        "index": 1,
+        "start": "09:45"
+      },
+      {
+        "end": "11:15",
+        "index": 2,
+        "start": "10:30"
+      },
+      {
+        "end": "12:00",
+        "index": 3,
+        "start": "11:15"
+      },
+      {
+        "end": "12:45",
+        "index": 4,
+        "start": "12:00"
+      },
+      {
+        "end": "14:45",
+        "index": 5,
+        "start": "14:00"
+      },
+      {
+        "end": "15:30",
+        "index": 6,
+        "start": "14:45"
+      },
+      {
+        "end": "16:15",
+        "index": 7,
+        "start": "15:30"
+      },
+      {
+        "end": "17:00",
+        "index": 8,
+        "start": "16:15"
+      }
+    ],
+    "speakers": [
+      {
+        "availability_source": "",
+        "available": null,
+        "email": "person-01@example.invalid",
+        "id": "S01",
+        "name": "Umar Mensah",
+        "note": "Hi all,\nQuick note about \"Lessons from usability testing at scale in production\" and \"Rethinking agent tool use\".\nI'm flexible: both days are fine, any time.\nA morning slot would be ideal.\nKind regards,\nUmar Mensah",
+        "preference": "morning",
+        "preference_source": "A morning slot would be ideal."
+      },
+      {
+        "availability_source": "I can only do afternoons (sessions starting at 14:00 or later), on either day.",
+        "available": [
+          [
+            1,
+            5
+          ],
+          [
+            1,
+            6
+          ],
+          [
+            1,
+            7
+          ],
+          [
+            1,
+            8
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            2,
+            7
+          ],
+          [
+            2,
+            8
+          ]
+        ],
+        "email": "person-02@example.invalid",
+        "id": "S02",
+        "name": "Pablo Fischer",
+        "note": "Hello!\nI'm excited to present \"Vector databases: what actually worked\".\nI can only do afternoons (sessions starting at 14:00 or later), on either day.\nNo preference on the time otherwise.\nThanks,\nPablo Fischer",
+        "preference": null,
+        "preference_source": "No preference on the time otherwise."
+      },
+      {
+        "availability_source": "I can only attend on day 1.",
+        "available": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            1,
+            6
+          ],
+          [
+            1,
+            7
+          ],
+          [
+            1,
+            8
+          ]
+        ],
+        "email": "person-03@example.invalid",
+        "id": "S03",
+        "name": "Dara Duarte",
+        "note": "Hi program committee,\nI'm excited to present \"Rethinking cost-aware warehousing\" and \"Visualizing uncertainty: what actually worked\".\nI can only attend on day 1.\nA morning slot would be ideal.\nLet me know if you need a longer bio.\nBest,\nDara Duarte",
+        "preference": "morning",
+        "preference_source": "A morning slot would be ideal."
+      },
+      {
+        "availability_source": "Unfortunately I'll only be around on Day 1.",
+        "available": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            1,
+            6
+          ],
+          [
+            1,
+            7
+          ],
+          [
+            1,
+            8
+          ]
+        ],
+        "email": "person-04@example.invalid",
+        "id": "S04",
+        "name": "Dara Fischer",
+        "note": "Hi all,\nI'm excited to present \"Long-context attention without the hype\".\nUnfortunately I'll only be around on Day 1.\nAn afternoon slot would suit me best.\nLet me know if you need a longer bio.\nCheers,\nDara Fischer",
+        "preference": "afternoon",
+        "preference_source": "An afternoon slot would suit me best."
+      },
+      {
+        "availability_source": "I can only attend on day 2.",
+        "available": [
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            2,
+            7
+          ],
+          [
+            2,
+            8
+          ]
+        ],
+        "email": "person-05@example.invalid",
+        "id": "S05",
+        "name": "Quinn Tanaka",
+        "note": "Hi program committee,\nThanks for accepting \"Lessons from event sourcing in production\".\nI can only attend on day 2.\nOtherwise any time is fine.\nLet me know if you need a longer bio.\nThanks,\nQuinn Tanaka",
+        "preference": null,
+        "preference_source": "Otherwise any time is fine."
+      },
+      {
+        "availability_source": "",
+        "available": null,
+        "email": "person-06@example.invalid",
+        "id": "S06",
+        "name": "Rosa Kowalski",
+        "note": "Hello!\nQuick note about \"Notification fatigue: what actually worked\" and \"Scaling stream processing for small teams\".\nAny slot on either day works for me.\nIf possible I'd prefer a morning slot.\nLet me know if you need a longer bio.\nCheers,\nRosa Kowalski",
+        "preference": "morning",
+        "preference_source": "If possible I'd prefer a morning slot."
+      },
+      {
+        "availability_source": "",
+        "available": null,
+        "email": "person-07@example.invalid",
+        "id": "S07",
+        "name": "Hiro Iyer",
+        "note": "Dear organizers,\nQuick note about \"Scaling GPU scheduling for small teams\".\nAny slot on either day works for me.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nBest,\nHiro Iyer",
+        "preference": "afternoon",
+        "preference_source": "An afternoon slot would suit me best."
+      },
+      {
+        "availability_source": "On day 1 I can't make it before 09:45; the other day is fully open.",
+        "available": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            1,
+            6
+          ],
+          [
+            1,
+            7
+          ],
+          [
+            1,
+            8
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            2,
+            5
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            2,
+            7
+          ],
+          [
+            2,
+            8
+          ]
+        ],
+        "email": "person-08@example.invalid",
+        "id": "S08",
+        "name": "Lars Silva",
+        "note": "Hi program committee,\nQuick note about \"A practical guide to accessible interfaces\".\nOn day 1 I can't make it before 09:45; the other day is fully open.\nNo preference on the time otherwise.\nLet me know if you need a longer bio.\nKind regards,\nLars Silva",
+        "preference": null,
+        "preference_source": "No preference on the time otherwise."
+      },
+      {
+        "availability_source": "",
+        "available": null,
+        "email": "person-09@example.invalid",
+        "id": "S09",
+        "name": "Farid Kowalski",
+        "note": "Dear organizers,\nThanks for accepting \"A practical guide to retrieval-augmented generation\".\nI'm flexible: both days are fine, any time.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nKind regards,\nFarid Kowalski",
+        "preference": "afternoon",
+        "preference_source": "An afternoon slot would suit me best."
+      }
+    ],
+    "talks": [
+      {
+        "abstract": "This talk walks through how our team approached usability testing at scale over the past year. No prior experience is needed, but familiarity with the basics helps. Expected audience: about 33 participants.",
+        "attendance": 33,
+        "attendance_source": "Expected audience: about 33 participants.",
+        "id": "T01",
+        "speaker_id": "S01",
+        "title": "Lessons from usability testing at scale in production",
+        "track_id": "track-human-centered-computing",
+        "track_label": "Human-Centered Computing",
+        "track_source": "Track: HCC track"
+      },
+      {
+        "abstract": "A hands-on look at vector databases, with code and real measurements. The session ends with a checklist attendees can apply on Monday. Expected audience: about 26 participants.",
+        "attendance": 26,
+        "attendance_source": "Expected audience: about 26 participants.",
+        "id": "T02",
+        "speaker_id": "S02",
+        "title": "Vector databases: what actually worked",
+        "track_id": "track-data-infrastructure",
+        "track_label": "Data Infrastructure",
+        "track_source": "Track: DATA INFRA"
+      },
+      {
+        "abstract": "We share the mistakes we made with cost-aware warehousing and how we fixed them. Expect concrete numbers, a few failure stories and an open-source companion repo. Organizers of past editions told us to plan for around 90 people.",
+        "attendance": 90,
+        "attendance_source": "Organizers of past editions told us to plan for around 90 people.",
+        "id": "T03",
+        "speaker_id": "S03",
+        "title": "Rethinking cost-aware warehousing",
+        "track_id": "track-data-infrastructure",
+        "track_label": "Data Infrastructure",
+        "track_source": "Track: data infrastructure"
+      },
+      {
+        "abstract": "Why long-context attention is harder than it looks, and a design that holds up. The session ends with a checklist attendees can apply on Monday. Organizers of past editions told us to plan for around 24 people.",
+        "attendance": 24,
+        "attendance_source": "Organizers of past editions told us to plan for around 24 people.",
+        "id": "T04",
+        "speaker_id": "S04",
+        "title": "Long-context attention without the hype",
+        "track_id": "track-ai-systems",
+        "track_label": "AI Systems",
+        "track_source": "Track: AI-Systems"
+      },
+      {
+        "abstract": "A hands-on look at event sourcing, with code and real measurements. No prior experience is needed, but familiarity with the basics helps. Expected audience: about 43 participants.",
+        "attendance": 43,
+        "attendance_source": "Expected audience: about 43 participants.",
+        "id": "T05",
+        "speaker_id": "S05",
+        "title": "Lessons from event sourcing in production",
+        "track_id": "track-data-infrastructure",
+        "track_label": "Data Infrastructure",
+        "track_source": "Track: Data Infrastructure"
+      },
+      {
+        "abstract": "Why notification fatigue is harder than it looks, and a design that holds up. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 219 participants.",
+        "attendance": 219,
+        "attendance_source": "Expected audience: about 219 participants.",
+        "id": "T06",
+        "speaker_id": "S06",
+        "title": "Notification fatigue: what actually worked",
+        "track_id": "track-human-centered-computing",
+        "track_label": "Human-Centered Computing",
+        "track_source": "Track: human-centered computing"
+      },
+      {
+        "abstract": "Why GPU scheduling is harder than it looks, and a design that holds up. No prior experience is needed, but familiarity with the basics helps. Organizers of past editions told us to plan for around 43 people.",
+        "attendance": 43,
+        "attendance_source": "Organizers of past editions told us to plan for around 43 people.",
+        "id": "T07",
+        "speaker_id": "S07",
+        "title": "Scaling GPU scheduling for small teams",
+        "track_id": "track-ai-systems",
+        "track_label": "AI Systems",
+        "track_source": "Track: AI systems track"
+      },
+      {
+        "abstract": "Why accessible interfaces is harder than it looks, and a design that holds up. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 62 participants.",
+        "attendance": 62,
+        "attendance_source": "Expected audience: about 62 participants.",
+        "id": "T08",
+        "speaker_id": "S08",
+        "title": "A practical guide to accessible interfaces",
+        "track_id": "track-human-centered-computing",
+        "track_label": "Human-Centered Computing",
+        "track_source": "Track: Human-Centered Computing"
+      },
+      {
+        "abstract": "This talk walks through how our team approached agent tool use over the past year. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 35 participants.",
+        "attendance": 35,
+        "attendance_source": "Expected audience: about 35 participants.",
+        "id": "T09",
+        "speaker_id": "S01",
+        "title": "Rethinking agent tool use",
+        "track_id": "track-ai-systems",
+        "track_label": "AI Systems",
+        "track_source": "Track: ai systems"
+      },
+      {
+        "abstract": "We share the mistakes we made with retrieval-augmented generation and how we fixed them. We compare three approaches and explain the trade-offs we accepted. Organizers of past editions told us to plan for around 51 people.",
+        "attendance": 51,
+        "attendance_source": "Organizers of past editions told us to plan for around 51 people.",
+        "id": "T10",
+        "speaker_id": "S09",
+        "title": "A practical guide to retrieval-augmented generation",
+        "track_id": "track-ai-systems",
+        "track_label": "AI Systems",
+        "track_source": "Track: AI Systems"
+      },
+      {
+        "abstract": "Why stream processing is harder than it looks, and a design that holds up. The session ends with a checklist attendees can apply on Monday. We expect around 67 attendees.",
+        "attendance": 67,
+        "attendance_source": "We expect around 67 attendees.",
+        "id": "T11",
+        "speaker_id": "S06",
+        "title": "Scaling stream processing for small teams",
+        "track_id": "track-data-infrastructure",
+        "track_label": "Data Infrastructure",
+        "track_source": "Track: Data infra track"
+      },
+      {
+        "abstract": "This talk walks through how our team approached visualizing uncertainty over the past year. Expect concrete numbers, a few failure stories and an open-source companion repo. Expected audience: about 211 participants.",
+        "attendance": 211,
+        "attendance_source": "Expected audience: about 211 participants.",
+        "id": "T12",
+        "speaker_id": "S03",
+        "title": "Visualizing uncertainty: what actually worked",
+        "track_id": "track-human-centered-computing",
+        "track_label": "Human-Centered Computing",
+        "track_source": "Track: HCC track"
+      }
+    ],
+    "tracks": [
+      {
+        "description": "",
+        "id": "track-human-centered-computing",
+        "name": "Human-Centered Computing"
+      },
+      {
+        "description": "",
+        "id": "track-data-infrastructure",
+        "name": "Data Infrastructure"
+      },
+      {
+        "description": "",
+        "id": "track-ai-systems",
+        "name": "AI Systems"
+      }
+    ],
+    "warnings": []
+  },
+  "input_sha256": "7bba8b8f9222eb6c157f6627136e47b2562dcd5e83c5fcaa3683220d05d6cf6d",
+  "scans": [
+    {
+      "source_id": "conference",
+      "decision": "allow",
+      "score": 0.0,
+      "reasons": [],
+      "findings": []
+    },
+    {
+      "source_id": "talks",
+      "decision": "allow",
+      "score": 0.0,
+      "reasons": [],
+      "findings": [
+        "email"
+      ]
+    },
+    {
+      "source_id": "notes",
+      "decision": "allow",
+      "score": 0.0,
+      "reasons": [],
+      "findings": [
+        "email"
+      ]
+    }
+  ],
+  "refused": null,
+  "failed": null,
+  "approved": null,
+  "job": {
+    "id": "job-20261029-162445-4af5",
+    "state": "completed"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "intake_id": "intake-20261029-162446-fab7",
+  "sha256": "3f28f8e8205a645ef9282ea37c1d4fd0616f71b9702e51410b8893c3a3fffd21",
+  "edits": [
+    "conference",
+    "tracks[track-human-centered-computing].name",
+    "speakers[S01].available",
+    "speakers[S03].name",
+    "talks[T13] added",
+    "talks[T05] removed"
+  ],
+  "warnings": [
+    "Quinn Tanaka has no talk in the program: left out"
+  ],
+  "task_inputs": {
+    "intake": "intake-20261029-162446-fab7"
+  }
+}

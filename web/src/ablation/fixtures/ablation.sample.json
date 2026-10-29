@@ -1,0 +1,503 @@
+{
+  "error": null,
+  "notes": [
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.1",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: 14:00-17:00; day 2: all day; prefers afternoon"
+      },
+      "note_id": "E90",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "none"
+        },
+        "score": {
+          "cells_exact": false,
+          "jaccard": 0.7222222222222222,
+          "preference": false,
+          "understood": false
+        },
+        "text": "day 1: all day; day 2: all day; no time preference"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "afternoon"
+      },
+      "reference_text": "day 1: 14:00-17:00; day 2: all day; prefers afternoon",
+      "subject": "S90",
+      "text": "Hi! I'm flying in on the red-eye, so on day 1 nothing before 2pm please. Day 2 is completely open. I'd rather speak late in the day."
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.3",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: not free; day 2: all day; prefers afternoon"
+      },
+      "note_id": "E91",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: not free; day 2: all day; prefers afternoon"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "afternoon"
+      },
+      "reference_text": "day 1: not free; day 2: all day; prefers afternoon",
+      "subject": "S91",
+      "text": "I can only attend on day 2. If you can, put me in the afternoon."
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.5",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": false,
+          "understood": false
+        },
+        "text": "day 1: 09:00-12:45; day 2: 09:00-12:45; prefers morning"
+      },
+      "note_id": "E92",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "none"
+        },
+        "score": {
+          "cells_exact": false,
+          "jaccard": 0.5555555555555556,
+          "preference": true,
+          "understood": false
+        },
+        "text": "day 1: all day; day 2: all day; no time preference"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        ],
+        "preference": "none"
+      },
+      "reference_text": "day 1: 09:00-12:45; day 2: 09:00-12:45; no time preference",
+      "subject": "S92",
+      "text": "Mornings only for me, please, on both days: the school run eats my afternoons!"
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-3.7",
+        "error": null,
+        "reading": {
+          "expected_attendance": 80
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 80 attendees"
+      },
+      "note_id": "T90",
+      "parser": {
+        "reading": {
+          "expected_attendance": 80
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 80 attendees"
+      },
+      "reference": {
+        "expected_attendance": 80
+      },
+      "reference_text": "about 80 attendees",
+      "subject": "T90",
+      "text": "A full room is expected: organizers say about 80 attendees."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-3.9",
+        "error": null,
+        "reading": {
+          "expected_attendance": 120
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 120 attendees"
+      },
+      "note_id": "T91",
+      "parser": {
+        "reading": {
+          "expected_attendance": 50
+        },
+        "score": {
+          "error": -70,
+          "error_pct": 58.333333333333336,
+          "understood": false,
+          "within": false
+        },
+        "text": "about 50 attendees"
+      },
+      "reference": {
+        "expected_attendance": 120
+      },
+      "reference_text": "about 120 attendees",
+      "subject": "T91",
+      "text": "Last year this drew roughly a hundred and twenty people."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-3.11",
+        "error": null,
+        "reading": {
+          "expected_attendance": 100
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 100 attendees"
+      },
+      "note_id": "T92",
+      "parser": {
+        "reading": {
+          "expected_attendance": 95
+        },
+        "score": {
+          "error": -5,
+          "error_pct": 5.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 95 attendees"
+      },
+      "reference": {
+        "expected_attendance": 100
+      },
+      "reference_text": "about 100 attendees",
+      "subject": "T92",
+      "text": "We are planning for about 95 people."
+    }
+  ],
+  "progress": {
+    "done": 6,
+    "of": 6
+  },
+  "result": {
+    "agreement": {
+      "both": 3,
+      "neither": 1,
+      "only_muse": 2,
+      "only_parser": 0
+    },
+    "backend": "fake",
+    "caveats": [
+      {
+        "applies": false,
+        "id": "generator",
+        "text": "On the generator's emails the regex parser wins by construction: its patterns are the phrasings the generator writes. Read the comparison on notes a person wrote."
+      },
+      {
+        "applies": true,
+        "id": "reference",
+        "text": "Muse seeds the approved reference and a person approves it, so where Muse agrees with the reference, part of that agreement is the person accepting its reading."
+      },
+      {
+        "applies": true,
+        "id": "fake",
+        "text": "This run used the fake backend: its Muse is the same regex parser, so the two agree by construction. It checks the plumbing and the scoring, not the models."
+      }
+    ],
+    "complete": true,
+    "definitions": {
+      "agreement": "how the two readers split the notes: both, only Muse, only the parser, neither",
+      "differences": "the notes on which the parser's reading and Muse's reading are not the same",
+      "jaccard": "shared cells over all cells named by either the reading or the reference",
+      "understood": "an email: the available cells match the reference exactly and so does the time preference; an abstract: the attendance is within 10 % of the reference"
+    },
+    "differences": [
+      "E90",
+      "E92",
+      "T91",
+      "T92"
+    ],
+    "headline": "the parser understood 3 of 6 notes, Muse 5 of 6",
+    "muse": {
+      "abstracts": {
+        "mean_error_pct": 0.0,
+        "of": 3,
+        "understood": 3
+      },
+      "emails": {
+        "cells_exact": 3,
+        "mean_jaccard": 1.0,
+        "of": 3,
+        "preference": 2,
+        "understood": 2
+      },
+      "of": 6,
+      "understood": 5
+    },
+    "notes": 6,
+    "parser": {
+      "abstracts": {
+        "mean_error_pct": 21.11111111111111,
+        "of": 3,
+        "understood": 2
+      },
+      "emails": {
+        "cells_exact": 1,
+        "mean_jaccard": 0.7592592592592592,
+        "of": 3,
+        "preference": 2,
+        "understood": 1
+      },
+      "of": 6,
+      "understood": 3
+    },
+    "source": "inline"
+  },
+  "run_id": "ablation-sample",
+  "status": "completed"
+}

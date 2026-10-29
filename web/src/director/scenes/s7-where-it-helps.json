@@ -1,0 +1,15 @@
+{
+  "id": "s7-where-it-helps",
+  "title": "Where it helps, where it ties, where it loses",
+  "stage": "helps",
+  "duration_ms": 12000,
+  "steps": [
+    { "do": "wait", "ms": 1200 },
+    { "do": "highlight", "target": { "region": "map" }, "ms": 3000 },
+    { "do": "wait", "ms": 3200 },
+    { "do": "camera", "fit": { "region": "table" }, "pad": 0.04, "ms": 1200 },
+    { "do": "wait", "ms": 2400 },
+    { "do": "camera", "fit": { "region": "process" }, "pad": 0.04, "ms": 1200 },
+    { "do": "wait", "ms": 2400 }
+  ]
+}

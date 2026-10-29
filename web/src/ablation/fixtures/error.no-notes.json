@@ -1,0 +1,6 @@
+{
+  "body": {
+    "error": "body: Value error, emails and abstracts cannot both be 0"
+  },
+  "status": 422
+}

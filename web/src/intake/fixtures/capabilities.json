@@ -1,0 +1,8 @@
+{
+  "tasks": true,
+  "chaos": true,
+  "approve": true,
+  "budget": true,
+  "halt": true,
+  "real": false
+}

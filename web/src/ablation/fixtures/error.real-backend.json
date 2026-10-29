@@ -1,0 +1,6 @@
+{
+  "body": {
+    "error": "a real ablation is launched by the coordinator through the CLI or the job manager (preflight and SPEND), not by this route; use backend fake here"
+  },
+  "status": 501
+}

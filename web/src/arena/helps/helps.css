@@ -1,0 +1,781 @@
+/* The "where it helps" panel. Colours are tokens only (lib/tokens.test.ts), and there are no container
+   queries: the Chromium that records the video crashes on them. A verdict is never colour alone: a locality
+   is a shape (filled, hollow, cross), a count is a number in a fixed place. */
+
+.helps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.helps__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.helps__title {
+  margin: 0;
+  font-size: var(--fs-hero);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.helps__lead {
+  margin: var(--space-1) 0 0;
+  max-width: 64ch;
+  font-size: var(--fs-lead);
+  color: var(--text-secondary);
+}
+
+.helps__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.helps__field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.helps__field-label {
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.helps__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.map,
+.tally,
+.proc {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+}
+
+.helps__section-head {
+  margin-bottom: var(--space-3);
+}
+
+.helps__h {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 700;
+}
+
+.helps__sub {
+  margin: 2px 0 0;
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+}
+
+.helps__none {
+  color: var(--text-muted);
+}
+
+.helps__h-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+/* ---- the failure model a result holds under ---- */
+.model {
+  display: inline-block;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* inside a row it is small print, not a chip */
+.map__model,
+.tally__model {
+  display: block;
+}
+
+.map__model .model,
+.tally__model .model {
+  padding: 0;
+  border: none;
+  color: var(--text-muted);
+}
+
+/* ---- the outcome the decision rule read at the gate ---- */
+.outcome {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+}
+
+.outcome__badge {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-3);
+  background: var(--surface-3);
+  font-size: var(--fs-display);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.outcome__read {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  font-size: var(--fs-lead);
+}
+
+.outcome__at {
+  color: var(--text-secondary);
+}
+
+.outcome__gate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 12px 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-base);
+  font-weight: 600;
+}
+
+.outcome__gate--holds {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+  color: var(--ok-ink);
+}
+
+.outcome__gate--fails {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+}
+
+.outcome__claim {
+  max-width: 120ch;
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-base);
+  color: var(--text-primary);
+}
+
+.outcome__claim--next {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+}
+
+.outcome__claim--none {
+  color: var(--text-secondary);
+}
+
+/* what docs/claims.md adds to "allowed": small print under the claim, on its own line */
+.claim__status {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--fs-label);
+}
+
+.claim__tag {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 1px 8px;
+  border: 1px dashed var(--warn-border);
+  border-radius: var(--radius-pill);
+  color: var(--warn-text);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---- the locality shape ---- */
+.locality {
+  display: block;
+  flex: none;
+}
+
+.locality--holds circle {
+  fill: var(--ok);
+}
+
+.locality--ties circle {
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 2.2;
+}
+
+.locality--fails path,
+.locality--na path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.locality--fails path {
+  stroke: var(--danger);
+  stroke-width: 2.8;
+}
+
+.locality--na path {
+  stroke: var(--text-muted);
+  stroke-width: 2.2;
+}
+
+/* ---- the regime map ---- */
+.map__rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.map__row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--border);
+}
+
+.map__row:first-child {
+  border-top: none;
+}
+
+.map__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.map__title {
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+
+.map__detail {
+  font-size: var(--fs-body);
+  color: var(--text-muted);
+}
+
+.map__cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rcell {
+  width: 86px;
+}
+
+.rcell .tip {
+  display: block;
+}
+
+.rcell__box {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 4px 5px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+}
+
+.rcell--holds .rcell__box {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+}
+
+.rcell--fails .rcell__box {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+/* A cell that decides the outcome has a heavy solid outline; the rest are conditions, dashed. */
+.rcell--decides .rcell__box {
+  border-style: solid;
+  box-shadow: 0 0 0 1px var(--text-muted);
+}
+
+.rcell__setting {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rcell__num {
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.rcell__sub {
+  font-size: var(--fs-label);
+  color: var(--text-muted);
+}
+
+.map__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+}
+
+.map__legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map__swatch {
+  width: 18px;
+  height: 14px;
+  flex: none;
+  border: 1px solid var(--text-muted);
+  border-radius: var(--radius-1);
+  box-shadow: 0 0 0 1px var(--text-muted);
+}
+
+.map__num {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ---- the wins / ties / losses table ---- */
+.tally__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-body);
+}
+
+.tally__table th,
+.tally__table td {
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: middle;
+  border-top: 1px solid var(--border);
+}
+
+.tally__table thead th {
+  border-top: none;
+  vertical-align: bottom;
+}
+
+.tally__rival {
+  display: block;
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+
+.tally__order {
+  display: block;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tally__col--against {
+  background: var(--surface-2);
+}
+
+.tally__name {
+  display: block;
+  font-size: var(--fs-base);
+  font-weight: 600;
+}
+
+.tally__expected {
+  display: block;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.tally__row--reported .tally__name {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.tally__row--total th,
+.tally__row--total td {
+  border-top: 2px solid var(--border-strong);
+}
+
+.tcell {
+  display: grid;
+  gap: 5px;
+  min-width: 150px;
+}
+
+.tcell__bar {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface-3);
+}
+
+.seg {
+  display: block;
+  flex-basis: 0;
+  min-width: 0;
+}
+
+.seg--win {
+  background: var(--ok);
+}
+
+.seg--tie {
+  background: var(--text-muted);
+}
+
+.seg--loss {
+  background: var(--danger);
+}
+
+.tcell__counts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.count {
+  min-width: 38px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-base);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: pointer;
+}
+
+.count:disabled {
+  border-color: transparent;
+  color: var(--text-muted);
+  font-weight: 500;
+  cursor: default;
+}
+
+.count--win:not(:disabled) {
+  border-color: var(--ok-border);
+  color: var(--ok-text);
+}
+
+.count--loss:not(:disabled) {
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+
+.count--tie:not(:disabled) {
+  color: var(--text-secondary);
+}
+
+.count[aria-pressed="true"] {
+  background: var(--surface-3);
+  border-color: var(--text-secondary);
+}
+
+.count:focus-visible,
+.list__close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The totals are not buttons: no outline, a little larger. */
+.tcell__counts--total .count {
+  border-color: transparent;
+  font-size: var(--fs-lead);
+  cursor: default;
+}
+
+.tcell__counts--total .count--win {
+  color: var(--ok-text);
+}
+
+.tcell__counts--total .count--loss {
+  color: var(--danger-text);
+}
+
+.tcell__counts--total .count--tie {
+  color: var(--text-secondary);
+}
+
+.tally__note {
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+}
+
+/* ---- the list a count opens ---- */
+.list {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+}
+
+.list--loss {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.list--win {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+}
+
+.list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.list__title {
+  font-size: var(--fs-base);
+}
+
+.list__count {
+  color: var(--text-secondary);
+}
+
+.list__close {
+  padding: 2px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+
+.list__scroll {
+  max-height: 300px;
+  overflow: auto;
+}
+
+.list__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-body);
+}
+
+.list__table th,
+.list__table td {
+  padding: 4px 8px;
+  text-align: left;
+  border-top: 1px solid var(--border);
+}
+
+.list__table thead th {
+  border-top: none;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.list__table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.list__mixed {
+  color: var(--text-muted);
+}
+
+/* ---- the per-process view ---- */
+.proc__lines {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proc__line {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+}
+
+.proc__line--ok {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+}
+
+.proc__line--danger {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.proc__label {
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+
+.proc__pair {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.proc__value {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-stat);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.proc__value small {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.proc__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.proc__ratio {
+  font-size: var(--fs-lead);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.proc__reading {
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+
+.proc__line--ok .proc__reading {
+  color: var(--ok-text);
+}
+
+.proc__line--danger .proc__reading {
+  color: var(--danger-text);
+}
+
+/* ---- the foot: the rules, and where the numbers come from ---- */
+.helps__foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+}
+
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rules details {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+}
+
+.rules summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rules p,
+.rules ul {
+  margin: var(--space-2) 0 0;
+}
+
+.rules ul {
+  padding-left: var(--space-5);
+}
+
+.helps__prov {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.helps__prov code {
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 1280px) {
+  .helps__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1100px) {
+  .proc__lines {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .map__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
