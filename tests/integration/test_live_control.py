@@ -244,6 +244,29 @@ async def test_a_control_nobody_understands_changes_nothing(
     await replays(result)
 
 
+async def test_an_answer_to_an_escalation_is_recorded_for_the_arbiter_and_replays(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``answer`` is the arbiter's (W3: an escalation's choice, for the goal it names). This layer
+    records it as the person sent it and puts it in front of every live actor; the handlers that
+    have no escalation to answer leave it alone."""
+    answer = {
+        "op": "answer",
+        "body": {"escalation_id": "arbitration:talk.room", "choice": "B"},
+        "to": "goal:root",
+    }
+    baseline = await t2_run(tmp_path, "unasked", chaos=CALM)
+    person(monkeypatch, ({}, inject(answer)))
+    result = await t2_run(tmp_path, "answered", chaos=CALM)
+    events = events_of(result)
+    (control,) = of_type(events, "control.injected")
+    assert control.actor == ENV and control.payload == answer
+    assert [e.type for e in events if e.type != "control.injected"] == [
+        e.type for e in events_of(baseline)
+    ]
+    await replays(result)
+
+
 async def test_a_halted_run_only_records_the_halt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
