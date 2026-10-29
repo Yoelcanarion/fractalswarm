@@ -74,7 +74,7 @@ The machine has 15 GB of RAM and 16 logical CPUs. On Oct 28 it ran out of memory
 ### Determinism
 - `uv run fractalswarm replay RUN --verify` must stay green for every recorded bundle at HEAD, including `demo/` and `tests/golden/`.
 - Handler changes are gated by mode or by an opt-in field. The default path stays event-identical. Check that with the $0 reference comparison before merging any branch that touches `kernel/`, `coord/`, `actors/`, `market/`, `planning/` or a task.
-- **Handler freeze: Sun Nov 1, 20:00 CET.** After it, only UI, docs and bench reporting change. The final recordings must replay at HEAD.
+- **Handler freeze: as soon as the last handler change has merged and the real rival rows have run; Sun Nov 1, 20:00 CET at the latest.** After it, only UI, docs and bench reporting change. The final recordings must replay at HEAD.
 
 ## Phase 0 (spec §K): do it yourself, before any worker starts
 
@@ -177,46 +177,16 @@ Ask in Spanish, short and concrete, with your recommendation first. Use an orche
    - the per-process view;
    - the conditions under which each holds;
    - your proposed outcome (A or B), and the exact headline sentence it allows.
-3. **Merges into `master`:** `Yoelcanarion/arena` once Phase 0 is green (it holds day-09 and the integration merge), and again on Nov 2 with everything else.
+3. **Merges into `master`:** `Yoelcanarion/arena` once Phase 0 is green (it holds day-09 and the integration merge), and again when everything else is in.
 4. **Live input:** Yoel writes the text. Confirm with him that it stays out of git.
-5. **Making the repo public:** Nov 3, after the recording and the final secret and PII scan.
+5. **Making the repo public:** after the recording and the final secret and PII scan.
 6. **Any paid run outside the rules in "Money".**
 
-## Schedule (CET)
-Follow spec §I. Checkpoints:
-- **Thu Oct 29:**
-  - Phase 0 done;
-  - W1, W2, W3 (lens backend) and W4 running.
-- **Fri Oct 30:**
-  - W1's durable modes and metrics merged;
-  - the $0 gate v2 and the sensitivity sweep run (by you or W1, at $0, in a quiet window if they run live-clock);
-  - the decision gate with Yoel;
-  - W4's first merge, and W5 started.
-- **Sat Oct 31:**
-  - the real rival rows;
-  - the real-input path end to end, with the ablation;
-  - Wonder arbitration merged;
-  - the live pair launch in the arena.
-- **Sun Nov 1:**
-  - the final matrix (T1 rows), LangGraph rows, scaling sweep and T3 real;
-  - **handler freeze at 20:00**;
-  - script v1 with real numbers.
-- **Mon Nov 2:**
-  - the headline Standard runs;
-  - the final demo bundle;
-  - a live-input arena rehearsal with Yoel;
-  - form drafts, README draft and a secret-scan dry run;
-  - merge into `master` with Yoel's OK.
-- **Tue Nov 3:**
-  - the director scenes recorded (`scripts/record_scenes.py`) and Yoel's voice-over;
-  - final scan, repo public with Yoel's OK, logged-out check.
-- **Wed Nov 4:**
-  - feature freeze at 12:00;
-  - final README;
-  - fresh-clone `demo --verify` with no API key;
-  - Yoel submits by 20:00 (`cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit`).
-
-If a checkpoint slips by more than half a day, tell Yoel what moves, and keep the crown jewels and the three answers first.
+## Order of work
+2026-10-29, Yoel: no plan by days. Do everything as soon as its inputs exist, in the order of spec §I; when the list is done, Yoel adds more. Give workers no day targets: each takes its next item at once.
+- Only the submission has a date: Yoel submits by Wed Nov 4, 20:00 (`cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit`), after the final README and a fresh-clone `demo --verify` with no API key.
+- The handler freeze comes as soon as the last handler change has merged and the real rival rows have run, Sun Nov 1, 20:00 at the latest.
+- If something blocks, tell Yoel what moves, and keep the crown jewels and the three answers first.
 
 ## The story you own
 - **`docs/claims.md`:** one row per public claim, with the claim text, the failure model, the run ids, the metric values and the date. Start it on the day of the decision gate. The video script, the README and the form quote only rows from it.

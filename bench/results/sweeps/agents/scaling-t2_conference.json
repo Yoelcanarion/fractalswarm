@@ -1,0 +1,408 @@
+{
+  "limit": 6,
+  "panels": [
+    {
+      "label": "Makespan (s)",
+      "metric": "makespan_s",
+      "note": "run start to run end"
+    },
+    {
+      "label": "Cost per run ($)",
+      "metric": "cost_usd",
+      "note": "all LLM calls of the run"
+    },
+    {
+      "label": "Stall time (s)",
+      "metric": "stall_s",
+      "note": "no agent work in flight anywhere"
+    }
+  ],
+  "profile": "C0",
+  "series": {
+    "durable": {
+      "color": "#6250d6",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.28700983333333335,
+          "cost_usd_max": 0.291345,
+          "cost_usd_min": 0.28305025,
+          "makespan_s": 68.406,
+          "makespan_s_max": 75.149,
+          "makespan_s_min": 58.188,
+          "runs": [
+            "runs/durable__t2_conference__C0__s1__n4",
+            "runs/durable__t2_conference__C0__s2__n4",
+            "runs/durable__t2_conference__C0__s3__n4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.0,
+          "stall_s_max": 0.0,
+          "stall_s_min": 0.0,
+          "validity_rate": 100.0,
+          "x": 4
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.300914,
+          "cost_usd_max": 0.31604375,
+          "cost_usd_min": 0.290863,
+          "makespan_s": 65.44800000000001,
+          "makespan_s_max": 80.337,
+          "makespan_s_min": 50.185,
+          "runs": [
+            "runs/durable__t2_conference__C0__s1__n8",
+            "runs/durable__t2_conference__C0__s2__n8",
+            "runs/durable__t2_conference__C0__s3__n8"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.0,
+          "stall_s_max": 0.0,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 8
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.2965319166666667,
+          "cost_usd_max": 0.3150205,
+          "cost_usd_min": 0.28371225,
+          "makespan_s": 63.123666666666665,
+          "makespan_s_max": 73.521,
+          "makespan_s_min": 50.028,
+          "runs": [
+            "runs/durable__t2_conference__C0__s1__n12",
+            "runs/durable__t2_conference__C0__s2__n12",
+            "runs/durable__t2_conference__C0__s3__n12"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.24366666666666667,
+          "stall_s_max": 0.731,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 12
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.2965319166666667,
+          "cost_usd_max": 0.3150205,
+          "cost_usd_min": 0.28371225,
+          "makespan_s": 63.123666666666665,
+          "makespan_s_max": 73.521,
+          "makespan_s_min": 50.028,
+          "runs": [
+            "runs/durable__t2_conference__C0__s1__n24",
+            "runs/durable__t2_conference__C0__s2__n24",
+            "runs/durable__t2_conference__C0__s3__n24"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.24366666666666667,
+          "stall_s_max": 0.731,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 24
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.2965319166666667,
+          "cost_usd_max": 0.3150205,
+          "cost_usd_min": 0.28371225,
+          "makespan_s": 63.123666666666665,
+          "makespan_s_max": 73.521,
+          "makespan_s_min": 50.028,
+          "runs": [
+            "runs/durable__t2_conference__C0__s1__n48",
+            "runs/durable__t2_conference__C0__s2__n48",
+            "runs/durable__t2_conference__C0__s3__n48"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.24366666666666667,
+          "stall_s_max": 0.731,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 48
+        }
+      ]
+    },
+    "durable-max": {
+      "color": "#008300",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.28700983333333335,
+          "cost_usd_max": 0.291345,
+          "cost_usd_min": 0.28305025,
+          "makespan_s": 68.406,
+          "makespan_s_max": 75.149,
+          "makespan_s_min": 58.188,
+          "runs": [
+            "runs/durable-max__t2_conference__C0__s1__n4",
+            "runs/durable-max__t2_conference__C0__s2__n4",
+            "runs/durable-max__t2_conference__C0__s3__n4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.0,
+          "stall_s_max": 0.0,
+          "stall_s_min": 0.0,
+          "validity_rate": 100.0,
+          "x": 4
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.300914,
+          "cost_usd_max": 0.31604375,
+          "cost_usd_min": 0.290863,
+          "makespan_s": 65.44800000000001,
+          "makespan_s_max": 80.337,
+          "makespan_s_min": 50.185,
+          "runs": [
+            "runs/durable-max__t2_conference__C0__s1__n8",
+            "runs/durable-max__t2_conference__C0__s2__n8",
+            "runs/durable-max__t2_conference__C0__s3__n8"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.0,
+          "stall_s_max": 0.0,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 8
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.2965319166666667,
+          "cost_usd_max": 0.3150205,
+          "cost_usd_min": 0.28371225,
+          "makespan_s": 63.123666666666665,
+          "makespan_s_max": 73.521,
+          "makespan_s_min": 50.028,
+          "runs": [
+            "runs/durable-max__t2_conference__C0__s1__n12",
+            "runs/durable-max__t2_conference__C0__s2__n12",
+            "runs/durable-max__t2_conference__C0__s3__n12"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.24366666666666667,
+          "stall_s_max": 0.731,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 12
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.2965319166666667,
+          "cost_usd_max": 0.3150205,
+          "cost_usd_min": 0.28371225,
+          "makespan_s": 63.123666666666665,
+          "makespan_s_max": 73.521,
+          "makespan_s_min": 50.028,
+          "runs": [
+            "runs/durable-max__t2_conference__C0__s1__n24",
+            "runs/durable-max__t2_conference__C0__s2__n24",
+            "runs/durable-max__t2_conference__C0__s3__n24"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.24366666666666667,
+          "stall_s_max": 0.731,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 24
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.2965319166666667,
+          "cost_usd_max": 0.3150205,
+          "cost_usd_min": 0.28371225,
+          "makespan_s": 63.123666666666665,
+          "makespan_s_max": 73.521,
+          "makespan_s_min": 50.028,
+          "runs": [
+            "runs/durable-max__t2_conference__C0__s1__n48",
+            "runs/durable-max__t2_conference__C0__s2__n48",
+            "runs/durable-max__t2_conference__C0__s3__n48"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.24366666666666667,
+          "stall_s_max": 0.731,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 48
+        }
+      ]
+    },
+    "swarm": {
+      "color": "#2a78d6",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.29359025,
+          "cost_usd_max": 0.30190375,
+          "cost_usd_min": 0.2842015,
+          "makespan_s": 83.53033333333333,
+          "makespan_s_max": 89.614,
+          "makespan_s_min": 71.9,
+          "runs": [
+            "runs/swarm__t2_conference__C0__s1__n4",
+            "runs/swarm__t2_conference__C0__s2__n4",
+            "runs/swarm__t2_conference__C0__s3__n4"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 1.1733333333333333,
+          "stall_s_max": 2.242,
+          "stall_s_min": 0.0,
+          "validity_rate": 100.0,
+          "x": 4
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.29643075,
+          "cost_usd_max": 0.3147615,
+          "cost_usd_min": 0.2803555,
+          "makespan_s": 70.64766666666667,
+          "makespan_s_max": 81.928,
+          "makespan_s_min": 53.801,
+          "runs": [
+            "runs/swarm__t2_conference__C0__s1__n8",
+            "runs/swarm__t2_conference__C0__s2__n8",
+            "runs/swarm__t2_conference__C0__s3__n8"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.3283333333333333,
+          "stall_s_max": 0.985,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 8
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.30605791666666665,
+          "cost_usd_max": 0.323258,
+          "cost_usd_min": 0.29353,
+          "makespan_s": 67.70366666666666,
+          "makespan_s_max": 78.382,
+          "makespan_s_min": 53.905,
+          "runs": [
+            "runs/swarm__t2_conference__C0__s1__n12",
+            "runs/swarm__t2_conference__C0__s2__n12",
+            "runs/swarm__t2_conference__C0__s3__n12"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.16866666666666666,
+          "stall_s_max": 0.506,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 12
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.30514558333333336,
+          "cost_usd_max": 0.32017675,
+          "cost_usd_min": 0.29353,
+          "makespan_s": 70.17266666666667,
+          "makespan_s_max": 78.382,
+          "makespan_s_min": 61.312,
+          "runs": [
+            "runs/swarm__t2_conference__C0__s1__n24",
+            "runs/swarm__t2_conference__C0__s2__n24",
+            "runs/swarm__t2_conference__C0__s3__n24"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 0.16866666666666666,
+          "stall_s_max": 0.506,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 24
+        },
+        {
+          "completion_rate": 100.0,
+          "cost_usd": 0.30722783333333337,
+          "cost_usd_max": 0.32438175,
+          "cost_usd_min": 0.2956765,
+          "makespan_s": 73.86133333333333,
+          "makespan_s_max": 85.54,
+          "makespan_s_min": 56.235,
+          "runs": [
+            "runs/swarm__t2_conference__C0__s1__n48",
+            "runs/swarm__t2_conference__C0__s2__n48",
+            "runs/swarm__t2_conference__C0__s3__n48"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 1.8166666666666667,
+          "stall_s_max": 3.691,
+          "stall_s_min": 0.0,
+          "validity_rate": 66.66666666666667,
+          "x": 48
+        }
+      ]
+    }
+  },
+  "task": "t2_conference",
+  "title": "sweep-agents",
+  "x": [
+    4,
+    8,
+    12,
+    24,
+    48
+  ],
+  "x_label": "Total agents"
+}

@@ -20,7 +20,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from fractalswarm.kernel.clock import Clock, LiveClock, ManualClock
-from fractalswarm.kernel.events import Event
+from fractalswarm.kernel.events import ControlInjected, Event
 from fractalswarm.kernel.scheduler import Runtime
 
 
@@ -43,15 +43,19 @@ class EffectContext:
 
 EffectFn = Callable[[Event, EffectContext], Awaitable[EffectOutcome]]
 
-# Outside control requests (the kill switch, budget shocks) polled by the drivers between
-# steps: ``{"op": "halt", "reason": ...}`` or ``{"op": "budget", "level", "key", "usd",
-# "reason"}``. Each becomes an outside event in the log, so replay puts it in the same place.
+# Outside control requests (the kill switch, budget shocks, a person's controls) polled by the
+# drivers between steps: ``{"op": "halt", "reason": ...}``, ``{"op": "budget", "level", "key",
+# "usd", "reason"}`` or ``{"op": "inject", "control": {"op", "body", "to"}}``. Each becomes an
+# outside event in the log, so replay puts it in the same place.
 ControlFn = Callable[[], list[dict[str, Any]]]
 CONTROL_POLL_WALL_S = 0.2
 
 
 def apply_control(runtime: Runtime, requests: list[dict[str, Any]], now: int) -> None:
-    for request in requests:
+    for index, request in enumerate(requests):
+        if index:  # several requests in one poll: each enters on an empty queue, as replay has it
+            while runtime.step():
+                pass
         if request.get("op") == "halt":
             runtime.halt(
                 str(request.get("reason") or "kill switch"), now, request.get("by", "human")
@@ -64,6 +68,12 @@ def apply_control(runtime: Runtime, requests: list[dict[str, Any]], now: int) ->
                 now,
                 str(request.get("reason", "")),
             )
+        elif request.get("op") == "inject" and runtime.halted is None:
+            try:
+                control = ControlInjected.model_validate(request.get("control"))
+            except ValueError:
+                continue  # a request that is not a control is dropped, as an unreadable file is
+            runtime.inject(control.op, control.body, control.to, now)
 
 
 async def timer_effect(started: Event, ctx: EffectContext) -> EffectOutcome:

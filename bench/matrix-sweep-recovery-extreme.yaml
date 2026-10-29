@@ -1,0 +1,19 @@
+# The 0.5 s end of sensitivity sweep 1 (PREREG §5): a detection time of half a second, the same for
+# both systems. The swarm's heartbeat comes every 100 ms, so each of its runs logs 60-150K events
+# (23 s and 300 MB at C0, 60 s and 600 MB at C3, one seed) and about 150 MB on disk; the supervisors
+# are as cheap as ever. It is outside the plausible region: it is reported in the regime map as a
+# condition and decides no outcome. 3 workflows x 2 profiles x 3 seeds = 18 runs, about 5 minutes.
+#   uv run fractalswarm bench bench/matrix-sweep-recovery-extreme.yaml --fake
+name: sweep-recovery-ms-extreme
+workflows: [swarm, durable-max, durable]
+tasks: [t2_conference]
+profiles: [C0, C3]
+seeds: [1, 2, 3]
+knobs:
+  - {recovery_ms: 500}
+contributor: false
+out_dir: results/sweeps/recovery_ms_extreme
+chart_task: t2_conference
+notes: >
+  Run it last, in a quiet window. It is the same axis as matrix-sweep-recovery.yaml, so
+  `bench verdicts` draws both in one column of the regime map.

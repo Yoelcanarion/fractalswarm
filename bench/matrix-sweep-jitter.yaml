@@ -1,0 +1,27 @@
+# Exploratory sensitivity sweep (arena spec §C.2, "crash-time jitter"): does the comparison hinge
+# on the crashes landing at 20/35/50/65/80% of the contracts dispatched? Each coordinator crash is
+# moved by a seeded displacement of up to +-5, 10 or 15 points of progress (T2 has 18 contracts,
+# so a point is 0.18 of one; the crash points are 15 apart). The displacements depend on the seed
+# alone: every workflow of a seed gets the same crash times, and 0 is the gate's plan spelled out.
+# Agent kills, the partition and the network and API faults do not move.
+# T2 at C3, seeds 1-4, $0, sim clock. 3 workflows x 2 profiles x 4 seeds x 4 settings = 96 runs.
+#   uv run fractalswarm bench bench/matrix-sweep-jitter.yaml --fake
+# NOT pre-registered: bench/PREREG.md does not list it, it is kept out of results/sweeps (which
+# `bench verdicts ... --prereg` reads for the decision) and the REPORT says so wherever it
+# is quoted.
+name: sweep-crash-jitter
+workflows: [swarm, durable-max, durable]
+tasks: [t2_conference]
+profiles: [C0, C3]
+seeds: [1, 2, 3, 4]
+knobs:
+  - {crash_jitter_pct: 0}
+  - {crash_jitter_pct: 5}
+  - {crash_jitter_pct: 10}
+  - {crash_jitter_pct: 15}
+contributor: false
+out_dir: results/exploratory/crash_jitter_pct
+chart_task: t2_conference
+notes: >
+  Exploratory. The C0 rows are in the matrix so that each setting has its own baseline; the knob
+  does not change them (no crash to move).

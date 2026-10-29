@@ -1,0 +1,267 @@
+{
+  "seed": "3",
+  "fields": [
+    "ceo",
+    "headquarters",
+    "founded_year",
+    "employees",
+    "revenue_musd",
+    "ticker",
+    "industry",
+    "product"
+  ],
+  "companies": [
+    "Arbor Robotics",
+    "Arbor Works",
+    "Brightline Systems",
+    "Cobalt Dynamics",
+    "Fjord Labs",
+    "Kestrel Labs",
+    "Meridian Works",
+    "Orchard Analytics",
+    "Orchard Works",
+    "Pinnacle Energy"
+  ],
+  "docs": [
+    {
+      "id": "doc-01",
+      "date": "2023-01-24",
+      "title": "Arbor Robotics: update of 2023-01-24",
+      "text": "CEO Jonas Okafor said Arbor Robotics expects a busy year. Analysts expect the market to grow by 86% next year. Shares of Arbor Robotics (ARBX) rose this week. Competitor Orchard Analytics is based in Austin. Since its founding in 2004, Arbor Robotics has grown. The company's headcount stands at 7,937 employees. Arbor Robotics is headquartered in Valencia."
+    },
+    {
+      "id": "doc-02",
+      "date": "2024-11-21",
+      "title": "Fjord Labs: update of 2024-11-21",
+      "text": "From its head office in Seville, Fjord Labs serves customers in many countries. Since its founding in 2019, Fjord Labs has grown. Shares of Fjord Labs (FJOZ) rose this week. The company opened 52 new offices in the region. Fjord Labs now employs 20,945 people. Its flagship product is Mosaic 3. Cobalt Dynamics competes with its own product, Mosaic 3."
+    },
+    {
+      "id": "doc-03",
+      "date": "2023-08-29",
+      "title": "Arbor Robotics: update of 2023-08-29",
+      "text": "About 59 customers attended the annual conference. Arbor Robotics now employs 7,937 people. Its rival Brightline Systems, by contrast, is run by Luis Costa. Since its founding in 2004, Arbor Robotics has grown. Arbor Robotics is a precision agriculture company. Arbor Robotics is headquartered in Valencia. Arbor Robotics is led by chief executive Ines Moreau."
+    },
+    {
+      "id": "doc-04",
+      "date": "2024-02-29",
+      "title": "Fjord Labs: update of 2024-02-29",
+      "text": "Cobalt Dynamics competes with its own product, Flux 2. Its flagship product is Ion 8. Fjord Labs reported revenue of $1646 million for the year. Fjord Labs trades under the ticker FJOZ. Since its founding in 2019, Fjord Labs has grown. The report covers the last 55 months of activity. CEO Chiara Okafor said Fjord Labs expects a busy year."
+    },
+    {
+      "id": "doc-05",
+      "date": "2024-11-16",
+      "title": "Orchard Works: update of 2024-11-16",
+      "text": "Orchard Works was founded in 1993. Shares of Orchard Works (ORCQ) rose this week. Orchard Works sells Prism 6, its best-known product. Its rival Pinnacle Energy, by contrast, is run by Elena Ivanova. Annual revenue reached $3848 million. CEO Elena Alvarez said Orchard Works expects a busy year. The report covers the last 28 months of activity."
+    },
+    {
+      "id": "doc-06",
+      "date": "2024-01-27",
+      "title": "Orchard Analytics: update of 2024-01-27",
+      "text": "From its head office in Austin, Orchard Analytics serves customers in many countries. The company's headcount stands at 20,106 employees. Its flagship product is Quill 7. CEO Jonas Dubois said Orchard Analytics expects a busy year. Since its founding in 2001, Orchard Analytics has grown. Analysts expect the market to grow by 46% next year. Orchard Works competes with its own product, Harbor 2."
+    },
+    {
+      "id": "doc-07",
+      "date": "2023-12-20",
+      "title": "Orchard Analytics: update of 2023-12-20",
+      "text": "Orchard Analytics is headquartered in Austin. Competitor Arbor Robotics is based in Turin. Orchard Analytics is a satellite data company. Analysts expect the market to grow by 51% next year. Its flagship product is Glide 5. Shares of Orchard Analytics (ORCX) rose this week. Since its founding in 2001, Orchard Analytics has grown."
+    },
+    {
+      "id": "doc-08",
+      "date": "2025-02-23",
+      "title": "Arbor Works: update of 2025-02-23",
+      "text": "Arbor Works now employs 2,935 people. From its head office in Utrecht, Arbor Works serves customers in many countries. Its flagship product is Beacon 8. The report covers the last 79 months of activity. Arbor Works reported revenue of $2377 million for the year. Arbor Robotics competes with its own product, Relay 2. Shares of Arbor Works (ARBY) rose this week."
+    },
+    {
+      "id": "doc-09",
+      "date": "2024-09-05",
+      "title": "Brightline Systems: update of 2024-09-05",
+      "text": "Its flagship product is Echo 6. CEO Tomas Alvarez said Brightline Systems expects a busy year. Shares of Brightline Systems (BRIX) rose this week. About 20 customers attended the annual conference. Brightline Systems now employs 1,446 people. Its rival Kestrel Labs, by contrast, is run by Priya Ferreira. Brightline Systems reported revenue of $1806 million for the year."
+    },
+    {
+      "id": "doc-10",
+      "date": "2023-04-14",
+      "title": "Cobalt Dynamics: update of 2023-04-14",
+      "text": "Cobalt Dynamics trades under the ticker COBQ. Cobalt Dynamics sells Glide 8, its best-known product. About 33 customers attended the annual conference. Cobalt Dynamics reported revenue of $609 million for the year. Cobalt Dynamics is a precision agriculture company. From its head office in Seville, Cobalt Dynamics serves customers in many countries. Meridian Works posted $1459 million in revenue."
+    },
+    {
+      "id": "doc-11",
+      "date": "2023-01-23",
+      "title": "Meridian Works: update of 2023-01-23",
+      "text": "Orchard Analytics competes with its own product, Harbor 4. Its flagship product is Lattice 6. The company's headcount stands at 14,127 employees. Meridian Works works in plant-based foods. Analysts expect the market to grow by 25% next year. CEO Quentin Moreau said Meridian Works expects a busy year. Meridian Works is headquartered in Lisbon."
+    },
+    {
+      "id": "doc-12",
+      "date": "2025-05-21",
+      "title": "Kestrel Labs: update of 2025-05-21",
+      "text": "Kestrel Labs was founded in 2015. Kestrel Labs is a medical imaging company. Competitor Orchard Analytics is based in Utrecht. Kestrel Labs reported revenue of $1440 million for the year. The report covers the last 59 months of activity. Kestrel Labs now employs 1,953 people. From its head office in Nantes, Kestrel Labs serves customers in many countries."
+    },
+    {
+      "id": "doc-13",
+      "date": "2025-05-29",
+      "title": "Arbor Works: update of 2025-05-29",
+      "text": "Arbor Works trades under the ticker ARBY. Rival Brightline Systems has 15,878 staff. Arbor Works now employs 2,935 people. Arbor Works sells Beacon 8, its best-known product. Arbor Works reported revenue of $2266 million for the year. The company opened 52 new offices in the region. Arbor Works was founded in 2008."
+    },
+    {
+      "id": "doc-14",
+      "date": "2025-05-11",
+      "title": "Kestrel Labs: update of 2025-05-11",
+      "text": "Analysts expect the market to grow by 42% next year. Its flagship product is Prism 5. Kestrel Labs works in medical imaging. Kestrel Labs is headquartered in Valencia. Kestrel Labs is led by chief executive Ada Kowalski. Orchard Analytics competes with its own product, Glide 6. Kestrel Labs trades under the ticker KESX."
+    },
+    {
+      "id": "doc-15",
+      "date": "2023-04-20",
+      "title": "Cobalt Dynamics: update of 2023-04-20",
+      "text": "Shares of Cobalt Dynamics (COBQ) rose this week. From its head office in Denver, Cobalt Dynamics serves customers in many countries. CEO Ines Ferreira said Cobalt Dynamics expects a busy year. Its rival Arbor Works, by contrast, is run by Tomas Goldberg. Analysts expect the market to grow by 26% next year. Cobalt Dynamics is a precision agriculture company. Since its founding in 1992, Cobalt Dynamics has grown."
+    },
+    {
+      "id": "doc-16",
+      "date": "2023-02-07",
+      "title": "Pinnacle Energy: update of 2023-02-07",
+      "text": "Analysts expect the market to grow by 34% next year. CEO Greta Lindqvist said Pinnacle Energy expects a busy year. Annual revenue reached $2496 million. Pinnacle Energy sells Relay 3, its best-known product. Pinnacle Energy was founded in 2017. Orchard Analytics competes with its own product, Keystone 2. Pinnacle Energy works in battery storage."
+    },
+    {
+      "id": "doc-17",
+      "date": "2024-05-04",
+      "title": "Orchard Analytics: update of 2024-05-04",
+      "text": "Orchard Analytics is led by chief executive Omar Moreau. The company's headcount stands at 20,106 employees. Rival Fjord Labs has 6,171 staff. Orchard Analytics works in satellite data. Analysts expect the market to grow by 38% next year. Orchard Analytics trades under the ticker ORCX. Orchard Analytics is headquartered in Austin."
+    },
+    {
+      "id": "doc-18",
+      "date": "2023-04-13",
+      "title": "Orchard Works: update of 2023-04-13",
+      "text": "Orchard Works is led by chief executive Ines Okafor. The report covers the last 50 months of activity. The company's headcount stands at 18,313 employees. Competitor Brightline Systems is based in Lyon. Since its founding in 1993, Orchard Works has grown. Orchard Works is headquartered in Nantes. Orchard Works reported revenue of $2357 million for the year."
+    },
+    {
+      "id": "doc-19",
+      "date": "2024-11-04",
+      "title": "Arbor Robotics: update of 2024-11-04",
+      "text": "Analysts expect the market to grow by 17% next year. Arbor Robotics is led by chief executive Chiara Alvarez. Arbor Works posted $2819 million in revenue. Annual revenue reached $972 million. Arbor Robotics works in precision agriculture. Arbor Robotics trades under the ticker ARBX. Arbor Robotics sells Ion 2, its best-known product."
+    },
+    {
+      "id": "doc-20",
+      "date": "2023-07-27",
+      "title": "Cobalt Dynamics: update of 2023-07-27",
+      "text": "Cobalt Dynamics trades under the ticker COBQ. Analysts expect the market to grow by 19% next year. Rival Arbor Works has 15,192 staff. Cobalt Dynamics was founded in 1992. Annual revenue reached $1928 million. Cobalt Dynamics now employs 10,554 people. CEO Ines Ferreira said Cobalt Dynamics expects a busy year."
+    },
+    {
+      "id": "doc-21",
+      "date": "2024-07-07",
+      "title": "Orchard Analytics: update of 2024-07-07",
+      "text": "Its flagship product is Glide 4. Shares of Orchard Analytics (ORCX) rose this week. Annual revenue reached $331 million. The company's headcount stands at 20,106 employees. Brightline Systems competes with its own product, Glide 8. Since its founding in 2001, Orchard Analytics has grown. CEO Bruno Ferreira said Orchard Analytics expects a busy year. The report covers the last 52 months of activity."
+    },
+    {
+      "id": "doc-22",
+      "date": "2023-09-25",
+      "title": "Arbor Works: update of 2023-09-25",
+      "text": "The report covers the last 17 months of activity. Pinnacle Energy competes with its own product, Mosaic 8. CEO Jonas Jensen said Arbor Works expects a busy year. Arbor Works works in payments. Its flagship product is Jade 2. Arbor Works reported revenue of $121 million for the year. Shares of Arbor Works (ARBY) rose this week."
+    },
+    {
+      "id": "doc-23",
+      "date": "2024-06-19",
+      "title": "Brightline Systems: update of 2024-06-19",
+      "text": "Brightline Systems is led by chief executive Tomas Alvarez. Shares of Brightline Systems (BRIX) rose this week. Since its founding in 2003, Brightline Systems has grown. Brightline Systems reported revenue of $1806 million for the year. Brightline Systems now employs 11,137 people. The company opened 81 new offices in the region. Rival Kestrel Labs has 6,094 staff."
+    },
+    {
+      "id": "doc-24",
+      "date": "2024-05-14",
+      "title": "Arbor Works: update of 2024-05-14",
+      "text": "CEO Sven Dubois said Arbor Works expects a busy year. Since its founding in 2008, Arbor Works has grown. Arbor Works sells Beacon 8, its best-known product. Arbor Works is a payments company. Its rival Fjord Labs, by contrast, is run by Quentin Lindqvist. About 46 customers attended the annual conference. From its head office in Utrecht, Arbor Works serves customers in many countries."
+    },
+    {
+      "id": "doc-25",
+      "date": "2023-11-17",
+      "title": "Kestrel Labs: update of 2023-11-17",
+      "text": "Kestrel Labs is a medical imaging company. The company's headcount stands at 1,953 employees. Its flagship product is Prism 5. About 61 customers attended the annual conference. Shares of Kestrel Labs (KESX) rose this week. Kestrel Labs is led by chief executive Ada Kowalski. Rival Cobalt Dynamics has 5,200 staff."
+    },
+    {
+      "id": "doc-26",
+      "date": "2025-04-11",
+      "title": "Fjord Labs: update of 2025-04-11",
+      "text": "Its flagship product is Mosaic 3. Orchard Works competes with its own product, Echo 8. Fjord Labs works in battery storage. The company opened 58 new offices in the region. Fjord Labs reported revenue of $3366 million for the year. Fjord Labs trades under the ticker FJOZ. CEO Chiara Okafor said Fjord Labs expects a busy year."
+    },
+    {
+      "id": "doc-27",
+      "date": "2024-10-29",
+      "title": "Pinnacle Energy: update of 2024-10-29",
+      "text": "Shares of Pinnacle Energy (PINY) rose this week. Pinnacle Energy now employs 8,098 people. Annual revenue reached $2496 million. Arbor Robotics competes with its own product, Keystone 7. About 6 customers attended the annual conference. Its flagship product is Delta 8. Pinnacle Energy works in battery storage."
+    },
+    {
+      "id": "doc-28",
+      "date": "2024-02-29",
+      "title": "Arbor Robotics: update of 2024-02-29",
+      "text": "Arbor Robotics sells Ion 2, its best-known product. The company's headcount stands at 7,937 employees. The company opened 59 new offices in the region. CEO Ines Moreau said Arbor Robotics expects a busy year. Shares of Arbor Robotics (ARBX) rose this week. Arbor Robotics is headquartered in Valencia. Fjord Labs competes with its own product, Quill 3."
+    },
+    {
+      "id": "doc-29",
+      "date": "2023-06-11",
+      "title": "Orchard Works: update of 2023-06-11",
+      "text": "Orchard Works works in logistics software. Its flagship product is Prism 6. Annual revenue reached $3848 million. The report covers the last 66 months of activity. Shares of Orchard Works (ORCQ) rose this week. From its head office in Nantes, Orchard Works serves customers in many countries. Arbor Robotics competes with its own product, Jade 6."
+    },
+    {
+      "id": "doc-30",
+      "date": "2023-10-03",
+      "title": "Meridian Works: update of 2023-10-03",
+      "text": "Meridian Works works in plant-based foods. Arbor Robotics posted $1173 million in revenue. CEO Quentin Moreau said Meridian Works expects a busy year. Since its founding in 2016, Meridian Works has grown. Annual revenue reached $2420 million. Meridian Works sells Lattice 6, its best-known product. The company opened 45 new offices in the region."
+    },
+    {
+      "id": "doc-31",
+      "date": "2023-02-05",
+      "title": "Pinnacle Energy: update of 2023-02-05",
+      "text": "Analysts expect the market to grow by 18% next year. Pinnacle Energy is headquartered in Tallinn. Pinnacle Energy sells Relay 3, its best-known product. Pinnacle Energy now employs 13,648 people. Shares of Pinnacle Energy (PINY) rose this week. Pinnacle Energy is led by chief executive Greta Jensen. Rival Arbor Robotics has 13,059 staff."
+    },
+    {
+      "id": "doc-32",
+      "date": "2024-08-14",
+      "title": "Pinnacle Energy: update of 2024-08-14",
+      "text": "The report covers the last 48 months of activity. Rival Orchard Analytics has 21,430 staff. Pinnacle Energy now employs 8,098 people. Since its founding in 2017, Pinnacle Energy has grown. From its head office in Turin, Pinnacle Energy serves customers in many countries. Pinnacle Energy works in battery storage. Annual revenue reached $2496 million."
+    },
+    {
+      "id": "doc-33",
+      "date": "2023-03-17",
+      "title": "Brightline Systems: update of 2023-03-17",
+      "text": "Brightline Systems sells Echo 6, its best-known product. Brightline Systems now employs 11,137 people. Analysts expect the market to grow by 19% next year. Rival Kestrel Labs has 673 staff. Brightline Systems is headquartered in Austin. Brightline Systems works in industrial robotics. Brightline Systems was founded in 2003."
+    },
+    {
+      "id": "doc-34",
+      "date": "2023-01-05",
+      "title": "Orchard Works: update of 2023-01-05",
+      "text": "About 20 customers attended the annual conference. Rival Pinnacle Energy has 22,275 staff. Shares of Orchard Works (ORCQ) rose this week. Annual revenue reached $2792 million. Its flagship product is Prism 6. The company's headcount stands at 20,362 employees. Orchard Works is a logistics software company."
+    },
+    {
+      "id": "doc-35",
+      "date": "2025-05-06",
+      "title": "Meridian Works: update of 2025-05-06",
+      "text": "Meridian Works is headquartered in Austin. Shares of Meridian Works (MERX) rose this week. The company opened 38 new offices in the region. Meridian Works was founded in 2016. Meridian Works is led by chief executive Farid Jensen. Competitor Brightline Systems is based in Turin. The company's headcount stands at 5,167 employees."
+    },
+    {
+      "id": "doc-36",
+      "date": "2024-08-28",
+      "title": "Fjord Labs: update of 2024-08-28",
+      "text": "Fjord Labs is a battery storage company. From its head office in Seville, Fjord Labs serves customers in many countries. Pinnacle Energy posted $2123 million in revenue. Its flagship product is Ion 8. Fjord Labs reported revenue of $3366 million for the year. Since its founding in 2019, Fjord Labs has grown. Analysts expect the market to grow by 63% next year."
+    },
+    {
+      "id": "doc-37",
+      "date": "2023-12-07",
+      "title": "Kestrel Labs: update of 2023-12-07",
+      "text": "From its head office in Valencia, Kestrel Labs serves customers in many countries. Its flagship product is Prism 5. About 60 customers attended the annual conference. Kestrel Labs was founded in 2015. Competitor Orchard Works is based in Valencia. Kestrel Labs now employs 1,953 people. Kestrel Labs trades under the ticker KESX."
+    },
+    {
+      "id": "doc-38",
+      "date": "2024-09-13",
+      "title": "Brightline Systems: update of 2024-09-13",
+      "text": "The company opened 25 new offices in the region. Competitor Meridian Works is based in Seville. Its flagship product is Harbor 4. Since its founding in 2003, Brightline Systems has grown. Brightline Systems is headquartered in Austin. Annual revenue reached $1806 million. Brightline Systems trades under the ticker BRIX."
+    },
+    {
+      "id": "doc-39",
+      "date": "2024-04-08",
+      "title": "Meridian Works: update of 2024-04-08",
+      "text": "Meridian Works is headquartered in Austin. Analysts expect the market to grow by 2% next year. Since its founding in 2016, Meridian Works has grown. Shares of Meridian Works (MERX) rose this week. Orchard Works posted $925 million in revenue. Annual revenue reached $2304 million. Meridian Works now employs 5,167 people."
+    },
+    {
+      "id": "doc-40",
+      "date": "2024-07-13",
+      "title": "Cobalt Dynamics: update of 2024-07-13",
+      "text": "Cobalt Dynamics is a precision agriculture company. Rival Fjord Labs has 17,553 staff. About 10 customers attended the annual conference. Cobalt Dynamics was founded in 1992. Annual revenue reached $1928 million. Cobalt Dynamics now employs 15,620 people. CEO Ines Ferreira said Cobalt Dynamics expects a busy year."
+    }
+  ]
+}

@@ -36,6 +36,7 @@ bundle. The definitions:
   (each task supplies its own; the default only checks that the run completed).
 - **Extra cost vs C0** = ``(cost(Ck) - cost(C0)) / cost(C0)`` in percent, and **time lost
   vs C0** = ``makespan(Ck) - makespan(C0)``, both for the same workflow, task and seed.
+- **Recovery** (``bench/recovery.py``): what each coordinator outage cost, from the same log.
 """
 
 from collections.abc import Callable, Iterable, Sequence
@@ -44,6 +45,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from fractalswarm.bench.recovery import RecoveryMetrics, analyze
 from fractalswarm.kernel.events import Event
 from fractalswarm.kernel.ids import canonical_json
 from fractalswarm.kernel.store import EventStore
@@ -107,6 +109,9 @@ class RunMetrics(BaseModel):
     messages: int
     breaker_trips: int
     chaos_events: int
+    # What the coordinators' outages cost (``bench/recovery.py``); None in a result scored
+    # before the arena, which ``bench rescore`` fills in.
+    recovery: RecoveryMetrics | None = None
 
 
 def default_checker(events: Sequence[Event]) -> Outcome:
@@ -309,6 +314,7 @@ def score_run(
         messages=sum(1 for e in events if e.type == "msg.sent"),
         breaker_trips=sum(1 for e in events if e.type == BREAKER_TRIPPED),
         chaos_events=sum(1 for e in events if e.type.startswith("chaos.")),
+        recovery=analyze(events, calls),
     )
 
 

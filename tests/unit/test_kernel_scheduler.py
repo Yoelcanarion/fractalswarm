@@ -141,6 +141,51 @@ def test_deliveries_to_a_stopped_actor_are_dropped() -> None:
     assert "b" not in runtime.actors
 
 
+def test_a_control_goes_to_the_actor_it_names_or_to_every_live_one() -> None:
+    script = Script(
+        reactions={("a", "actor.spawned"): [Stop(actor_id="c")]},
+        boot_commands=[Spawn(actor_id=name, kind="scripted") for name in ("a", "b", "c", "d")],
+    )
+    runtime = runtime_for(script, "test:inject")
+    drain(runtime)
+    script.seen.clear()
+
+    def delivered(to: str, op: str = "approve") -> list[str]:
+        script.seen.clear()
+        event = runtime.inject(op, {"plan_hash": "x"}, to, 7)
+        while runtime.step():
+            pass
+        assert event.type == "control.injected" and event.payload["to"] == to
+        return [actor for actor, key, _ in script.seen if key == "control.injected"]
+
+    assert delivered("b") == ["b"]
+    assert delivered("*") == ["a", "b", "d"]  # in actor order; the stopped one gets nothing
+    assert delivered("goal:root") == [
+        "a",
+        "b",
+        "d",
+    ]  # a goal is the owner's to answer, not the kernel's
+    assert (
+        delivered("c") == []
+    )  # a control for an actor that is gone is in the log and does nothing
+    assert delivered("ghost") == []
+    kinds = [event.type for event in runtime.store.read()]
+    assert kinds.count("control.injected") == 5 and runtime.vtime == 7
+
+
+def test_a_halted_run_records_a_control_and_delivers_nothing() -> None:
+    script = Script(reactions={}, boot_commands=[Spawn(actor_id="a", kind="scripted")])
+    runtime = runtime_for(script, "test:inject-halted")
+    drain(runtime)
+    runtime.halt("stop", 3)
+    script.seen.clear()
+    event = runtime.inject("approve", {}, "goal:root", 4)
+    while runtime.step():
+        pass
+    assert event.type == "control.injected" and not runtime.queue
+    assert [key for _, key, _ in script.seen] == []
+
+
 def test_spawning_an_existing_actor_fails() -> None:
     script = Script(
         reactions={},

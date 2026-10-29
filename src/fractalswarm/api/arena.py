@@ -200,6 +200,7 @@ def start_pair(
                     plan=plan_path,
                     barrier=barrier,
                     billed=billed,
+                    live_control=True,
                 )
                 runs[side] = manager.spawn(
                     job,

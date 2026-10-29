@@ -102,36 +102,39 @@ def test_bench_results_fall_back_to_the_fixture(client: TestClient, dirs) -> Non
 
 
 @pytest.mark.parametrize(
-    "path",
+    ("path", "body"),
     [
-        "/api/runs/demo-toy/approve",
-        "/api/runs/demo-toy/escalations/e1",
+        ("/api/runs/demo-toy/approve", {"approve": True}),
+        ("/api/runs/demo-toy/chaos", {"kind": "kill_coordinator"}),
+        ("/api/runs/demo-toy/escalations/e1", {"choice": "yes", "goal_id": "root"}),
     ],
 )
-def test_control_endpoints_answer_501_until_wired(client: TestClient, path: str) -> None:
-    response = client.post(path, json={})
-    assert response.status_code == 501
-    assert "not wired yet" in response.json()["detail"]
+def test_control_endpoints_refuse_a_recording(client: TestClient, path: str, body: dict) -> None:
+    """The bundled demo is history: there is nothing live to control (test_live_control_api.py
+    has the controls themselves)."""
+    response = client.post(path, json=body)
+    assert response.status_code == 409
+    assert "recording" in response.json()["error"]
 
 
 def test_capabilities_say_which_controls_are_real(
     client: TestClient, dirs: dict[str, Path], tmp_path: Path
 ) -> None:
     caps = client.get("/api/capabilities").json()
-    # Without a private directory nothing can be launched; halt and budget act on live runs.
+    # Without a private directory nothing can be launched; the controls act on live runs.
     assert caps == {
         "tasks": False,
-        "chaos": False,
-        "approve": False,
+        "chaos": True,
+        "approve": True,
         "budget": True,
         "halt": True,
         "real": False,  # a billed launch needs the server flag and a key (api/spend.py)
     }
     assert client.get("/api/jobs").status_code == 503  # what "tasks: false" means
 
-    # What it calls false is not wired, and what it calls true is.
-    assert client.post("/api/runs/demo-toy/approve", json={}).status_code == 501
-    assert client.post("/api/runs/demo-toy/chaos", json={"kind": "kill_half"}).status_code == 501
+    # What it calls true is wired: a recording is refused for what it is, not for a stub.
+    assert client.post("/api/runs/demo-toy/approve", json={}).status_code == 409
+    assert client.post("/api/runs/demo-toy/chaos", json={"kind": "kill_half"}).status_code == 409
     assert client.post("/api/runs/demo-toy/halt", json={}).status_code == 409  # a recording
 
     launching = create_app(
@@ -320,7 +323,7 @@ async def test_the_endpoints_reach_a_run_that_is_recording(
 
 def test_chaos_validates_its_kind(client: TestClient) -> None:
     response = client.post("/api/runs/demo-toy/chaos", json={"kind": "kill_half"})
-    assert response.status_code == 501 and response.json()["request"] == {"kind": "kill_half"}
+    assert response.status_code == 409  # a recording: the kind is fine
     assert client.post("/api/runs/demo-toy/chaos", json={"kind": "boom"}).status_code == 422
 
 

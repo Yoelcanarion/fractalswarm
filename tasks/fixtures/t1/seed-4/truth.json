@@ -1,0 +1,102 @@
+{
+  "Arbor Analytics": {
+    "ceo": "Omar Costa",
+    "employees": "23174",
+    "founded_year": "1988",
+    "headquarters": "Toronto",
+    "industry": "plant-based foods",
+    "product": "Nova 6",
+    "revenue_musd": "2308",
+    "ticker": "ARBX"
+  },
+  "Arbor Energy": {
+    "ceo": "Quentin Haddad",
+    "employees": "12597",
+    "founded_year": "2017",
+    "headquarters": "Valencia",
+    "industry": "plant-based foods",
+    "product": "Atlas 8",
+    "revenue_musd": "2366",
+    "ticker": "ARBZ"
+  },
+  "Brightline Systems": {
+    "ceo": "Bruno Costa",
+    "employees": "16239",
+    "founded_year": "2006",
+    "headquarters": "Toronto",
+    "industry": "industrial robotics",
+    "product": "Delta 8",
+    "revenue_musd": "2410",
+    "ticker": "BRIY"
+  },
+  "Cobalt Robotics": {
+    "ceo": "Nadia Ferreira",
+    "employees": "19390",
+    "founded_year": "1984",
+    "headquarters": "Osaka",
+    "industry": "plant-based foods",
+    "product": "Ion 2",
+    "revenue_musd": "3166",
+    "ticker": "COBQ"
+  },
+  "Fjord Foods": {
+    "ceo": "Nadia Jensen",
+    "employees": "10317",
+    "founded_year": "1990",
+    "headquarters": "Turin",
+    "industry": "payments",
+    "product": "Jade 2",
+    "revenue_musd": "3069",
+    "ticker": "FJOX"
+  },
+  "Fjord Robotics": {
+    "ceo": "Bruno Ivanova",
+    "employees": "5264",
+    "founded_year": "1978",
+    "headquarters": "Leipzig",
+    "industry": "industrial robotics",
+    "product": "Nova 7",
+    "revenue_musd": "3387",
+    "ticker": "FJOZ"
+  },
+  "Juniper Foods": {
+    "ceo": "Tomas Eriksen",
+    "employees": "5046",
+    "founded_year": "2016",
+    "headquarters": "Nantes",
+    "industry": "payments",
+    "product": "Mosaic 5",
+    "revenue_musd": "235",
+    "ticker": "JUNQ"
+  },
+  "Juniper Systems": {
+    "ceo": "Bruno Lindqvist",
+    "employees": "14279",
+    "founded_year": "1982",
+    "headquarters": "Osaka",
+    "industry": "logistics software",
+    "product": "Quill 8",
+    "revenue_musd": "2955",
+    "ticker": "JUNX"
+  },
+  "Nimbus Works": {
+    "ceo": "Ines Jensen",
+    "employees": "24866",
+    "founded_year": "1983",
+    "headquarters": "Tallinn",
+    "industry": "logistics software",
+    "product": "Relay 3",
+    "revenue_musd": "2403",
+    "ticker": "NIMX"
+  },
+  "Orchard Analytics": {
+    "ceo": "Jonas Brandt",
+    "employees": "23364",
+    "founded_year": "1982",
+    "headquarters": "Denver",
+    "industry": "satellite data",
+    "product": "Prism 7",
+    "revenue_musd": "2840",
+    "ticker": "ORCX"
+  }
+}

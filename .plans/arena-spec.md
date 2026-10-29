@@ -359,21 +359,21 @@ The drafts are ready by Nov 2 and final on Nov 4.
 - **The backend design** for W1–W3 (file-level, checked against the code) is in `.plans/arena/backend-design.md`.
 - **One rule from it binds every backend change: never add a field to an existing event payload model.** `validate_payload` writes defaults into the log, so old runs would stop replaying. Use new event types, and gate new behaviour by new modes or params.
 
-**Handler freeze:** Sun Nov 1, 20:00, tagged `handler-freeze`. From then on, only UI, docs and bench reporting change, because the final recordings must replay at HEAD.
+**Handler freeze:** as soon as the last handler change has merged and the real rival rows have run (§I), and Sun Nov 1, 20:00 at the latest; tagged `handler-freeze`. From then on, only UI, docs and bench reporting change, because the final recordings must replay at HEAD.
 
 ---
 
-## I. Schedule (CET)
+## I. Order of work
 
-| Day | Work |
-|---|---|
-| Thu Oct 29 | Phase 0 (§K). Workspace and evidence in place. W1, W2 and W4 start; W3 starts its lens backend. |
-| Fri Oct 30 | Durable modes and metrics, then the **$0 gate v2 with the sensitivity sweep**, then the **decision gate with Yoel** (outcome A or B). Intake and launch API; design system and motion; W5 starts the arena on recorded pairs. |
-| Sat Oct 31 | Real rival rows (Contributor). End-to-end real input with ablation. Wonder arbitration. Live pair launch in the arena. |
-| Sun Nov 1 | Final matrix (T1 rows), LangGraph rows, scaling sweep, T3 real. **Handler freeze at 20:00.** Director mode. Script v1 with real numbers. |
-| Mon Nov 2 | Standard headline runs. Final demo bundle (kill-half plus poisoned email). Live real-input arena rehearsal. Form drafts, README draft, secret-scan dry run. Merge into `master` with Yoel's OK. |
-| Tue Nov 3 | Attack clip. Recording of the director blocks plus Yoel's voice-over; editing. Final scan, **repo public**, logged-out check. |
-| Wed Nov 4 | Feature freeze 12:00. Final README. Fresh-clone `demo --verify`. **Submit by 20:00 CET.** |
+2026-10-29, Yoel: **no plan by days.** Everything is done as soon as its inputs exist, in this order of dependencies, and when the list is done Yoel adds more. Only the submission has a date.
+
+1. **Decision gate with Yoel.** The $0 gate v2 and the sensitivity sweep are done (outcome B, `bench/results/verdicts.txt`). No real rival run before it.
+2. **Real rival rows** (Contributor) and the T1 rows of the final matrix, in a quiet window right after the gate. What they reveal in the handlers is fixed before the freeze.
+3. **The last handler changes** (Wonder arbitration's answer path), then the **handler freeze**.
+4. **After the freeze:** the standard headline runs; the final demo bundle (kill-half plus poisoned email); the LangGraph rows, the scaling sweep and T3 real; end-to-end real input with ablation; the live real-input arena rehearsal.
+5. **All along, in parallel:** the UI (arena, where it helps, intake review, director mode, recorder); claims, REPORT and script with the real numbers; form and README drafts; a secret-scan dry run.
+6. **With Yoel:** merge into `master` (his OK); attack clip; recording of the director blocks plus his voice-over, and editing; final scan; **repo public** (his OK); logged-out check; final README; fresh-clone `demo --verify`.
+7. **Submit by Wed Nov 4, 20:00 CET** (the hard deadline is Thu Nov 5, 03:00 CET), with a feature freeze before the final README and the fresh-clone check.
 
 ---
 
