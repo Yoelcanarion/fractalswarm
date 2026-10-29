@@ -7,6 +7,11 @@
 // chip must not call that "Takeover OK": it would claim a proof the run never exercised (a supervisor's
 // run, or a swarm run without chaos). When the report counts what it checked, a count of zero says
 // "No takeover to check"; when it does not, the log decides, by the two events the check starts from.
+//
+// The count on the chip is of hand-overs: goals that changed owner, each with its own recomputed heir. It is
+// not a count of kills or of distinct heirs (a coordinator can hold two goals, so 5 coordinator kills can be
+// 7 hand-overs). A reclaim, where a member back from a false death took its own goal back, is a succession
+// too, but no heir is compared for it: it is not a hand-over, and the hover text names it apart.
 
 import { asNumber, asRecord, asString } from "./generic";
 import type { RunEvent } from "./types";
@@ -21,8 +26,11 @@ export interface TakeoverViolation {
 export interface TakeoverSummary {
   ok: boolean;
   violations: TakeoverViolation[];
-  /** Successions the check recomputed: goals that changed hands. Null if the report does not say. */
+  /** Takeovers the check recomputed an heir for: goals that changed hands. Null if the report does not say. */
   heirs: number | null;
+  /** Reclaims: a member back from a false death took its own goal back. The check does not compare an
+   * heir for those, so they are not counted in `heirs`. Null if the report does not say. */
+  reclaims: number | null;
   /** Tree adoptions it checked. Null if the report does not say. */
   adoptions: number | null;
   /** Kills the run had. Null if the report does not say. */
@@ -35,13 +43,17 @@ const count = (value: unknown): number | null => (Array.isArray(value) ? value.l
 export function readTakeover(body: unknown): TakeoverSummary | null {
   const b = asRecord(body);
   if (typeof b.ok !== "boolean") return null;
+  // A succession is a takeover unless the owner is the member that already held the goal (`kind`).
+  const kinds = Array.isArray(b.successions) ? b.successions.map((s) => asString(asRecord(s).kind)) : null;
+  const reclaims = kinds ? kinds.filter((kind) => kind === "reclaim").length : null;
   return {
     ok: b.ok,
     violations: (Array.isArray(b.violations) ? b.violations : []).map((raw) => {
       const v = asRecord(raw);
       return { check: asString(v.check), kind: asString(v.kind), seq: asNumber(v.seq), detail: asString(v.detail) };
     }),
-    heirs: count(b.successions),
+    heirs: kinds && reclaims !== null ? kinds.length - reclaims : null,
+    reclaims,
     adoptions: count(b.adoptions),
     kills: count(b.kills),
   };
@@ -82,21 +94,24 @@ export function describeTakeover(report: TakeoverSummary, inLog: boolean): Chip 
   const counted = report.heirs !== null || report.adoptions !== null;
   const heirs = report.heirs ?? 0;
   const adoptions = report.adoptions ?? 0;
+  const reclaims = report.reclaims ?? 0;
   if (counted ? heirs + adoptions === 0 : !inLog) {
+    const seen = [report.kills ? plural(report.kills, "kill") : "", reclaims > 0 ? plural(reclaims, "reclaim") : ""].filter(Boolean);
     return {
       tone: "muted",
       text: "No takeover to check",
-      detail: `No goal changed hands in this run${report.kills ? ` (${plural(report.kills, "kill")})` : ""}, so there was no heir to recompute from the log.`,
+      detail: `${reclaims > 0 ? "No goal was taken over" : "No goal changed hands"} in this run${seen.length > 0 ? ` (${seen.join(", ")})` : ""}, so there was no heir to recompute from the log.`,
     };
   }
 
   const checked = [
-    heirs > 0 ? `${plural(heirs, "heir")} recomputed from the log, none different from the one the run used.` : "",
+    heirs > 0 ? `${plural(heirs, "hand-over")}: ${heirs === 1 ? "its heir" : "the heir of each"}, recomputed from the log, is the one the run used.` : "",
+    reclaims > 0 ? `${plural(reclaims, "reclaim")}: a member back from a false death took its own goal back (no heir is compared).` : "",
     adoptions > 0 ? `${plural(adoptions, "tree adoption")} checked against the log.` : "",
   ].filter(Boolean);
   return {
     tone: "good",
-    text: heirs > 0 ? `Takeover OK ✓ ${plural(heirs, "heir")}` : "Takeover OK ✓",
+    text: heirs > 0 ? `Takeover OK ✓ ${plural(heirs, "hand-over")}` : "Takeover OK ✓",
     detail: checked.length > 0 ? checked.join(" ") : "Every heir recomputed from the log is the one the run used.",
   };
 }
