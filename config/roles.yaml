@@ -59,6 +59,13 @@ roles:
     L1: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
     L2: {model: muse-spark-1.3, effort: low, max_output_tokens: 1024}
 
+  # Reads the text a person pasted into a conference program (intake/). Never degraded, and
+  # never on the Contributor variant: the text is theirs.
+  intake:
+    L0: {model: muse-spark-1.3, effort: high, max_output_tokens: 16384}
+    L1: {model: muse-spark-1.3, effort: high, max_output_tokens: 16384}
+    L2: {model: muse-spark-1.3, effort: high, max_output_tokens: 16384}
+
   # LLM routing of a team supervisor in the LangGraph baseline (spec §15.1); the swarm has no
   # such call. Its tokens are coordination tokens (bench/scoring.py).
   supervisor:
