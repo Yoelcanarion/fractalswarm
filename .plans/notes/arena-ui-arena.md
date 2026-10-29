@@ -33,10 +33,11 @@ from the code:
   playhead with W4's `Stat`; a ✓ marks a number that `GET /api/runs/{id}/metrics` has scored, which is where the
   count ends up. The caption under the strip says so.
 - **The assumptions caption is always visible** (`assumptions.ts`, from the run params of both logs).
-- **The root tag** is on whoever holds the `root` key (`rootOf` in board.ts). The reducer's `rootHolder` also
-  counts the `board` and `net` actors (spawned without a parent, like the root), and a real root takeover is an
-  `ownership.remapped` of the key `root` with no `duties`, so it picked the wrong chip. `rootOf` reads the key and
-  ignores the infrastructure actors. W4's lens and tree may have the same gap (open item below).
+- **The root tag** is on whoever holds the `root` key: the reducer's `rootHolder` (W4's, lib/reducer.ts). Until W4's
+  merge on Oct 29 (ea40fa0) it counted the `board` and `net` actors (spawned without a parent, like the root) and
+  ignored a real root takeover, which is an `ownership.remapped` of the key `root` with no `duties`, so the arena had
+  its own `rootOf`; W4 fixed the reducer, my function and its callers (the board, the director's `$root`) are gone and
+  my tests of the tag now run on `rootHolder`.
 
 ## The panel `#/helps`
 
@@ -252,7 +253,7 @@ without screenshots.
    `calls` picks of s4 (`model`, `purpose`, `role`), the camera paddings. The code does not change for a pair; if it
    has to, that is a bug in the director, and it gets a test.
 5. A real pair has its root dying first, a practice pair may not: the arena's `root` tag follows the heirs (W4's
-   `rootHolder` once merged; my `rootOf` meanwhile), so `$root` after a takeover is the heir, not o0.
+   `rootHolder`), so `$root` after a takeover is the heir, not o0.
 6. Every scene must last the seconds the video script gives it (a test pins them); a retime of the script is a change of
    `duration_ms` and of the waits together.
 
@@ -289,8 +290,7 @@ W4's `.mark`, `.btn`, `.speeds`, `.badge`, `.empty` and `.stat` on purpose. `ass
 
 ## Open items
 
-1. W4's `rootHolder` (lib/reducer.ts) counts `board` and `net` as root holders and ignores the `root` key of an
-   `ownership.remapped`; the lens and tree may show the wrong root after a takeover. Not touched (not my file).
+1. (Closed Oct 29: W4's merge fixed `rootHolder`; the arena uses it.)
 2. The "Talks placed" meter on a board stays at 0 until the final integration, so it only moves at the very end.
    It could count contracts completed instead; I left it until the video needs it.
 3. **W4's `components/NewTaskForm.tsx` posts the bare TaskSpec to `/api/tasks`**, but W2's `TaskRequest` needs
@@ -325,18 +325,24 @@ W4's `.mark`, `.btn`, `.speeds`, `.badge`, `.empty` and `.stat` on purpose. `ass
     one browser. The final pair comes after the handler freeze, which may be the night of Oct 29, not Nov 2.
 12. The server refuses `backend: real` without an approval gate, and I additionally ran my scratch server with a dummy
     `MODEL_API_KEY` and an empty `HF_TOKEN`; no real call was possible from any of my runs.
-13. W4 told me (Oct 29) that the live "Coordinator-dependency time" is the outage length and not the scored `cdt_s`, and the
-    live "Duplicated work" undercounts `dup_calls`; it is porting W1's definitions into the fold (parity test on four real
-    logs, `web/src/lib/arena.parity.test.ts`). The coordinator's answer: no liveNotes for those two rows; after W4's merge,
-    check my rows (`arena/rows.ts`) against the port, so the live rows equal the scored ones. Also: the live idle
-    agent-seconds no longer counts an agent a crash stopped (a worker `killed` with reason `crash`).
+13. (Done Oct 29, after W4's merge ea40fa0 was merged into this branch.) W4 had told me that the live "Coordinator-dependency
+    time" was the outage length and not the scored `cdt_s`, and the live "Duplicated work" undercounted `dup_calls`; it
+    ported W1's definitions into the fold (`lib/recovery.ts`, parity test on four real logs and 413 prefixes). The
+    coordinator's answer was: no liveNotes for those two rows. Now: the "dependency" row reads `counters.dependencyMs`
+    (it was `coordinatorDownMs`), the "duplicated" row already read `duplicatedCalls`, which is the scored count now; the
+    two definitions read like W1's ("contract-seconds, added up over the contracts that waited"; the three ways a call is
+    duplicated). The live figure moves when a wait ends, not while it goes on, as the scored one is defined; so the three
+    tests that expected the down time to grow got a fixture with a contract that waits (`ready`, `sent` in
+    `arena/testing.ts`), and the open-outage test now reads the "time to recover" row, which does grow. The live idle
+    agent-seconds no longer counts an agent a crash stopped (a worker `killed` with reason `crash`): the "idle" row is as
+    before. A change of the dependency figure on a real pair (not only on logs of W4's four) is for the headline runs to show.
 
 ## Tests
 
 `npm --prefix web test` runs vitest in node: the pure modules, and the components drawn on the server
 (`renderToStaticMarkup`). The panel's tests run over the bench's own `honesty.json`; the recovery tests over real
-`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At MP2 the director's tests are 188 in 9 files, green on one worker (the rest of the web suite is untouched since MP1:
-776); the whole suite is rerun at the MP2 slot. `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
+`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At MP2 (the branch with arena merged in, W4's ea40fa0) the whole web suite is 72 files and 1136 tests, green on one
+worker in 21 s (the arena's are 203 in 17 files, the director's 189 in 9). `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
 claim's placeholder, hiding the loss counts, dropping the row model, toning down the per-process loss); the intake
 page (20 mutants: a billed launch without the gate, a wrong or lower-case word, a stale or expired token, the approval
 not blocked, frozen inputs editable, a wrong provenance, browser storage, a sentence marked that is not in the text,
