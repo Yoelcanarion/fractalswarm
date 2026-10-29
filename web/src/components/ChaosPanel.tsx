@@ -42,7 +42,7 @@ export function ChaosPanel({ runId, view }: Props) {
         Chaos
         <span className="panel__hint">{chaos.enabled ? "live run" : chaos.reason}</span>
       </header>
-      <ControlButton control="chaos" className="btn btn--danger btn--big" disabled={busy} onClick={() => fire({ kind: "kill_half", profile: "C3" })}>
+      <ControlButton control="chaos" className="btn btn--danger btn--big" disabled={busy} onClick={() => fire({ kind: "kill_half" })}>
         Kill half the brains
       </ControlButton>
       <div className="chaos__row">
@@ -66,12 +66,7 @@ export function ChaosPanel({ runId, view }: Props) {
           Network faults
         </ControlButton>
       </div>
-      {result && (
-        <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>
-          {result.status === 501 ? "Not wired yet — " : ""}
-          {result.detail}
-        </div>
-      )}
+      {result && <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>{result.detail}</div>}
       {Object.keys(view.netFaults).length > 0 && (
         <div className="chaos__net mono" title="the chaos network's faults are counted, not listed; the Events tab has each one">
           network: {NET_LABELS.filter(([key]) => view.netFaults[key]).map(([key, label]) => `${view.netFaults[key].toLocaleString("en")} ${label}`).join(" · ")}

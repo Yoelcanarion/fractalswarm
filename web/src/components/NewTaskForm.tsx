@@ -5,8 +5,8 @@ import { buildTaskSpec, defaultForm, KNOWN_TASKS, toYaml, type TaskForm } from "
 import { ControlButton } from "./ControlButton";
 
 /** The New task form (spec §16 item 6, MVI). It builds a TaskSpec; "Submit for planning" posts it to
- * /api/tasks, which answers 501 until the runtime starts runs from the API. Until then the YAML below
- * is what ``fractalswarm run`` takes. */
+ * /api/tasks, which starts a run on a server that has a private directory (503 on one that has not).
+ * The YAML below is what ``fractalswarm run`` takes. */
 export function NewTaskForm() {
   const [form, setForm] = useState<TaskForm>(defaultForm);
   const [result, setResult] = useState<ControlResult | null>(null);
@@ -127,12 +127,7 @@ export function NewTaskForm() {
           Download task.yaml
         </button>
       </div>
-      {result && (
-        <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>
-          {result.status === 501 ? "Not wired yet — " : ""}
-          {result.detail}
-        </div>
-      )}
+      {result && <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>{result.detail}</div>}
 
       {built.spec && (
         <>

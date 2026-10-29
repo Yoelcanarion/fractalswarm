@@ -10,8 +10,9 @@
 //                   stages, the duration, bottlenecks, tools not allowed, policy flags, limitations.
 //                   Its fields are shown as they come (KeyValues), so the report can grow.
 //
-// Today the runtime approves every plan at once (TaskSpec ``auto_approve``, bench mode), so a plan
-// is "awaiting approval" only in a run that waits for a human, which the runtime does not do yet.
+// A plan is "awaiting approval" only in a run that waits for a person: one launched by the API with
+// the TaskSpec's ``auto_approve`` off holds the root's plan until an ``approve`` or a ``replan``
+// control reaches it (api/controls.py). Every other run approves at once (bench mode).
 // Other ``feasibility.*`` and ``risk.*`` types show as generic rows.
 
 import { claimedBy } from "./families";
@@ -140,6 +141,17 @@ export function planStatus(state: PlanState): PlanStatus {
 /** The root's proposal (the first goal proposed when no goal is called ``root``). */
 export const rootProposal = (state: PlanState): Proposal | null =>
   state.proposals.root ?? (state.proposalOrder[0] ? state.proposals[state.proposalOrder[0]] : null);
+
+/** The body of ``POST api/runs/{id}/approve`` for the plan on screen. It carries that plan's hash, so the
+ * run applies the answer only to that plan: when the plan's owner dies while it holds it and the heir
+ * proposes another, an answer to the old one must not approve the new one. A rejection (``approve``
+ * false) sends the plan back to its planner, with ``reason`` as the feedback. */
+export function approveBody(proposal: Pick<Proposal, "goalId" | "hash">, approve: boolean, reason: string): Record<string, unknown> {
+  const body: Record<string, unknown> = { goal_id: proposal.goalId, approve };
+  if (proposal.hash) body.plan_hash = proposal.hash;
+  if (!approve && reason.trim()) body.reason = reason.trim();
+  return body;
+}
 
 export interface TrackPlan {
   id: string;

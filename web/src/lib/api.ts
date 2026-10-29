@@ -90,7 +90,9 @@ export interface ControlResult {
   detail: string;
 }
 
-/** POST a control action (chaos, halt, ...). The server answers 501 until the runtime is wired. */
+/** POST a control action (chaos, approve, halt, ...). A refusal comes back as `{ok: false}` with the
+ * server's own reason in `detail`: 422 for a body it cannot take (an `api_storm` on a live run, say), 409
+ * for a run that cannot take controls (a recording, or one the API did not launch). */
 export async function postControl(path: string, body: unknown): Promise<ControlResult> {
   const response = await fetch(path, {
     method: "POST",

@@ -96,12 +96,7 @@ export function RunControls({ runId, view }: Props) {
           </ControlButton>
         )}
       </div>
-      {result && !halted && (
-        <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>
-          {result.status === 501 ? "Not wired yet — " : ""}
-          {result.detail}
-        </div>
-      )}
+      {result && !halted && <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>{result.detail}</div>}
     </section>
   );
 }

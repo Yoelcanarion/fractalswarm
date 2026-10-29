@@ -3,7 +3,7 @@ import { useState } from "react";
 import { postControl, type ControlResult } from "../lib/api";
 import { runCap } from "../lib/economy";
 import { digest } from "../lib/generic";
-import { planStatus, rootProposal, tracksOf, type PlanStatus } from "../lib/plan";
+import { approveBody, planStatus, rootProposal, tracksOf, type PlanStatus } from "../lib/plan";
 import type { ViewState } from "../lib/reducer";
 import { ControlButton, useControlState } from "./ControlButton";
 import { KeyValues } from "./KeyValues";
@@ -24,8 +24,9 @@ const STATUS: Record<PlanStatus, { label: string; tone: "muted" | "warn" | "good
 
 const clip = (text: string, max: number): string => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
-/** The root's plan and its approval (spec §16 item 6, MVI). Approve and Reject post to the run's
- * approve endpoint, which answers 501 until the runtime waits for a human. */
+/** The root's plan and its approval (spec §16 item 6, MVI). A run launched by the API with `auto_approve`
+ * off holds its plan for a person: Approve lets it go on, Reject sends it back to its planner with the
+ * reason as feedback. Both post to the run's approve endpoint with the hash of the plan shown. */
 export function PlanView({ runId, view, live }: Props) {
   const { plan, security, economy } = view.panels;
   const status = planStatus(plan);
@@ -46,7 +47,7 @@ export function PlanView({ runId, view, live }: Props) {
     if (!proposal) return;
     setBusy(true);
     try {
-      setResult(await postControl(`api/runs/${encodeURIComponent(runId)}/approve`, { goal_id: proposal.goalId, approve, reason }));
+      setResult(await postControl(`api/runs/${encodeURIComponent(runId)}/approve`, approveBody(proposal, approve, reason)));
     } catch (error) {
       setResult({ ok: false, status: 0, detail: String(error) });
     } finally {
@@ -95,7 +96,7 @@ export function PlanView({ runId, view, live }: Props) {
           </div>
         )}
         {status === "none" && !live && <div className="pevent">This run has no plan.proposed event.</div>}
-        {result && <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>{result.status === 501 ? "Not wired yet — " : ""}{result.detail}</div>}
+        {result && <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>{result.detail}</div>}
       </section>
 
       <div className="plan__cols">
