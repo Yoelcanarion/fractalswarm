@@ -26,6 +26,7 @@ GATE_ROWS = "rivals-gate/results.json"
 # is not preregistered), so its tables are laid out from its own rows, and only when it was run.
 JITTER_AXIS = "crash_jitter_pct"
 JITTER_ROWS = "exploratory/crash_jitter_pct/results.json"
+JITTER_RIVALS = ("durable-max", "durable")  # `central` is not in the sweep
 TASKS = {"t1_extraction": "T1", "t2_conference": "T2"}
 T2_FIRST = ("t2_conference", "t1_extraction")  # the task the gate decides on comes first
 FLOWS = ("swarm", *RIVALS)
@@ -562,12 +563,16 @@ def _jitter(rows: list[Row]) -> dict[str, str]:
         plans.append(row)
     out = {"jitter_plans": _table(["Seed", *(f"Jitter {_points(s)}" for s in settings)], plans)}
 
-    regimes = evaluate([(JITTER_AXIS, [r for _, r in mine])]).regimes
-    found = {(r.rival, r.value): r for r in regimes if r.axis == JITTER_AXIS and r.profile == "C3"}
+    honesty = evaluate([(JITTER_AXIS, [r for _, r in mine])])
+    found = {
+        (r.rival, r.value): r
+        for r in honesty.regimes
+        if r.axis == JITTER_AXIS and r.profile == "C3"
+    }
     body = []
     for setting in settings:
         row = [_points(setting)]
-        for rival in ("durable-max", "durable"):
+        for rival in JITTER_RIVALS:
             point = found.get((rival, setting))
             row += ["-"] * 4 if point is None else [point.locality, *_ratios(point.model_dump())]
         body.append(row)
@@ -585,6 +590,16 @@ def _jitter(rows: list[Row]) -> dict[str, str]:
         ],
         body,
     )
+
+    counts = {h.id: h.tally for h in honesty.hypotheses}
+    body = [
+        [
+            f"{hid} {label}",
+            *(f"{c.win} / {c.tie} / {c.loss}" for c in (counts[hid][r] for r in JITTER_RIVALS)),
+        ]
+        for hid, label in HYPOTHESIS_ROWS
+    ]
+    out["jitter_tally"] = _table(["Hypothesis", *(f"vs {r}" for r in JITTER_RIVALS)], body)
 
     body = []
     for setting in settings:
