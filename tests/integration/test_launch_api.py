@@ -267,12 +267,15 @@ def test_a_cancel_that_is_not_answered_kills_the_process_tree(
     api: Api, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(jobs, "CANCEL_GRACE_S", 0.0)  # the halt gets no time: straight to the kill
+    # The kill takes a while (taskkill is slow on a busy machine) and a live run answers a halt
+    # within a poll, so the request must never reach its inbox for the run to be unanswered.
+    monkeypatch.setattr(jobs.RunPaths, "request_control", lambda self, request: None)
     job_id = start_live_job(api, "ui-kill")
     cancelled = api.post(f"/api/jobs/{job_id}/cancel").json()
     assert cancelled["state"] == "cancelled"
     run = cancelled["runs"][0]
     assert run["exit_code"] is not None  # the process is gone
-    assert run["status"] == "interrupted"  # its log stops mid-run, and nothing touches LIVE
+    assert run["status"] == "interrupted"  # its log stops mid-run, and the kill cleared LIVE
 
 
 def test_a_restarted_api_still_lists_and_cancels_a_running_job(api: Api, tmp_path: Path) -> None:
