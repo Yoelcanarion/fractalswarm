@@ -203,6 +203,10 @@ slot for that is queued behind the second paid block):
    takeover chip as first thought: the run stage now starts under a 36 px band that holds the note;
 5. the `tooltip` step, used by s8 on both proof chips (`swarm-proof`, `rival-proof`); the coordinator's answer to the
    question about the hover was yes, with exactly the title words, which is why the words are read off the page.
+6. a verdict chip has no hover text until its check has come back, and on a long log that is not at once: the page does
+   not start a take whose tooltips point at a chip that says nothing yet. It waits for the text, up to 30 s after
+   everything else is ready (`TIP_WAIT_POLLS`), and then starts anyway: the take warns "has no hover text" and the
+   recorder flags it in the sidecar.
 
 Rule from the coordinator (Oct 29): `real` is flipped to `true` in `sources.json` in the same commit that points
 it at the final real pair, when the run ids are handed over; never before, and never by hand in a take.

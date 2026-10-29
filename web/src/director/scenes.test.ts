@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { REPO_ROOT } from "../lib/testing";
 import { missingSources } from "./sources";
 import { SCENE_FILES, SOURCES } from "./scenes";
-import { createTake } from "./take";
+import { createTake, tooltipTargets } from "./take";
 import { fakeReplay, fakeSurface } from "./testing";
 import type { Scene } from "./script";
 import type { TimeContext } from "./time";
@@ -116,6 +116,16 @@ describe("the tooltip steps of the scenes", () => {
       { kind: "region", region: "rival-proof" },
     ]);
     for (const step of tips) expect(Object.keys(step).sort()).toEqual(["do", "ms", "target"]);
+  });
+
+  it("are the ones the page waits for the hover text of before it starts the take, and only those", () => {
+    expect(tooltipTargets(scenes.find((s) => s.id === "s8-proof")!)).toEqual([
+      { kind: "region", region: "swarm-proof" },
+      { kind: "region", region: "rival-proof" },
+    ]);
+    // a highlight points at things too; it needs no words from them
+    expect(scenes.some((s) => s.steps.some((step) => step.do === "highlight"))).toBe(true);
+    for (const scene of scenes.filter((s) => s.id !== "s8-proof")) expect(tooltipTargets(scene)).toEqual([]);
   });
 });
 

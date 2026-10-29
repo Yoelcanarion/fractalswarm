@@ -25,6 +25,13 @@ import { resolveTime, type TimeContext, type TimeExpr } from "./time";
  * two later): a highlight warns only when its target is still missing once this has passed, or its time is up. */
 export const RING_GRACE_MS = 500;
 
+/** How many polls (a tenth of a second each) the page gives the hover text of a tooltip's target to appear before it starts
+ * the take without it: a verdict chip has none until its check has come back, which on a long log takes a while. */
+export const TIP_WAIT_POLLS = 300;
+
+/** The targets of the scene's tooltips: a take cannot draw one before its target has something to say. */
+export const tooltipTargets = (scene: Scene): Target[] => scene.steps.flatMap((step) => (step.do === "tooltip" ? [step.target] : []));
+
 /** The replay the scene plays; absent on stages that have none (the title card, the panels). */
 export interface ReplayClock {
   playing(): boolean;
