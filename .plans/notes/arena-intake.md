@@ -13,11 +13,12 @@ reference for everything W2 built. It is updated at each merge point.
 | 4. Intake (scenario, schema, shape, fake, approval, endpoints) | done |
 | Converter `corpus_and_truth` (approved input → corpus, truth), for W3's ablation | done, in arena since `92b8337` |
 | `GET /api/runs/{id}/takeover`, `GET /api/capabilities` | done |
-| 5. Arena launch (`--chaos-plan`, `--start-barrier`, `POST /api/arena`, `GET /api/pairs`) | done; the live-clock tests wait for a slot |
+| 5. Arena launch (`--chaos-plan`, `--start-barrier`, `POST /api/arena`, `GET /api/pairs`) | done; the 5 live-clock tests pass (17.9 s) |
 | 6. Real spend from the UI (preflight, token, "SPEND") | done |
 | Real intake from the UI (`POST /api/intake/preflight`, the same gate; coordinator's Q1) | done |
 | `LIVE` marker for `resume.py` and `baselines/langgraph_teams.py` (coordinator's Q2) | done |
-| 7. Live control (kernel) | only with the coordinator's OK (asked at the second merge point) |
+| API hardening (`api/guard.py`: Host allowlist, JSON-only POST, WebSocket origin; `serve` loopback-only with real spend on) | done |
+| 7. Live control (kernel) | approved with conditions (see the open questions); starts after the steps 5-6 merge |
 
 ## Deviations and decisions
 
@@ -110,15 +111,25 @@ differing in exactly one event**: `run.started` (seq 1), and there only by `+con
 the new role of deviation 1. Every other event body of every run is identical (the hash chain cascades from
 seq 1, so heads differ). `demo --verify --no-serve --no-browser` gives MATCH.
 
+## $0 references (second merge point, steps 5-6)
+
+Recorded at `cf5b8ce` (arena `c2b5e08` merged) with `scripts/refs/record_refs.ps1`, compared with
+`C:\Users\yogar\.fractalswarm\refs\arena-c2b5e08`: **43 of 43 runs identical** (same event count, same event
+bodies, and the same heads). `demo --verify --no-serve --no-browser` gives MATCH. The steps add no event type
+and change no event payload; a run launched without a chaos-plan file or a barrier is the run it was.
+
 ## Open questions for the coordinator
 
-1. **Step 7, live control: do you want it?** It adds the ENV event `control.injected{op, body, to}` to the
-   kernel (`Runtime.inject`, `apply_control`, a branch in replay's `_advance`), chaos at a progress point (so
-   the arena's kill button hits both runs at the same point) and approval when `auto_approve` is false.
-   It is the one change that touches `kernel/` and `comms/chaos.py`, so it needs its own reference diff, and
-   it is dropped if it is not merged by Sat Oct 31, 20:00 (scheduled plans chosen before the launch are the
-   fallback, and they work today: `POST /api/arena` takes a full ChaosPlan). Until then
-   `GET /api/capabilities` says `chaos` and `approve` are `false` and those routes answer 501.
+1. **Step 7, live control: approved by the coordinator (Oct 29) on these conditions.** (a) It starts after the
+   steps 5-6 `merge_ready`. (b) `control.injected{op, body, to}` is a new ENV event type; no field is added to an
+   existing payload model. (c) Nothing changes unless a control is injected: the default runs stay 43 of 43
+   identical to `arena-c2b5e08` and every recorded run still replays MATCH. (d) Tests show a run with injected
+   controls (a kill at a progress point, a human approve, a re-plan with feedback) replaying MATCH, in a fresh
+   process too. (e) W3 answers its `escalation.opened` through `control.injected`; the op and body shape are
+   agreed with the coordinator first. (f) `merge_ready` by Sat Oct 31, 16:00 CET or it is dropped (scheduled
+   plans chosen before the launch are the fallback, and they work today: `POST /api/arena` takes a full
+   ChaosPlan). Until it lands `GET /api/capabilities` says `chaos` and `approve` are `false` and those routes
+   answer 501.
 2. **`LIVE` for the other runners is done** (deviation 11, your Q2). Closed.
 
 ## Private directory layout
@@ -514,5 +525,16 @@ given back, the flags the processes get; every process is a stand-in and the led
 with the gate bypassed 16 of the reading's tests fail); `test_intake_real.py` (the CLI's real path against a
 stub of the Meta API: the worst case is reserved before the request and settled after, the $0.25 cap, a 500 is
 not resent with `--no-paid-retries` and a 429 is, no spend flag or no key is refused).
+
+Hardening: `test_guard.py` (50 tests: a Host that is not ours is refused on every route, found by walking
+`app.routes`; a POST that is not JSON is refused and a cross-site form cannot start a run, a pair, an intake,
+a halt or a cancel; a WebSocket from another origin is closed before it opens; `serve` and `demo` hand their
+`--host` to the guard; each of the three checks, switched off alone, fails 7 to 17 of them) and in
+`test_spend.py` the loopback-only rule for a server that can spend.
+
+Results at `cf5b8ce` (machine shared with W1's gate, one process): the 5 live-clock arena tests 5 passed in
+17.9 s (slowest 10.7 s); the whole suite `pytest -m "not promptguard"` 1451 passed (1158 in 6m49s for `unit`
+and the integration files a-l, 293 in 7m33s for m-z), 3 deselected; `ruff check` and `ruff format --check`
+clean (238 files).
 
 None of these calls the API. Live-clock tests and anything that starts several runs run only in a slot.
