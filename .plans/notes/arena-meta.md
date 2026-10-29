@@ -225,8 +225,8 @@ The same notes through the hand-written regex parser and through Muse, scored ag
 
 ### Where the notes come from
 - **Generator / CLI TaskSpec:** `params.corpus` + `params.truth` (what `run_params(spec)` records). The reference is the generator's truth; `source` is `generator` because the truth carries `patterns`. Options in `params.ablation`: `emails`, `abstracts` (first N by id; default all: 32 + 48 = 80 on seed 1).
-- **Approved intake (W2), assumption:** if the approved intake can be given as the same two objects (`corpus.emails[{id, speaker_id, body}]`, `corpus.talks[{id, abstract}]`, `corpus.days`, `corpus.slots`, and `truth.availability[speaker] = [[day, slot], …]`, `truth.preferences[speaker]`, `truth.attendance[talk]`) it works with no change; `source` is then `approved`. Otherwise build `params.ablation.cases` directly (below). **W2: tell me if your format differs.**
-- **Inline:** `params.ablation = {cases: [Case], frame: {days, slots}, source: "inline"}`, what `POST /api/ablation {source: "inline"}` records.
+- **Approved intake (W2):** confirmed by the coordinator (backend-design §4): the approved reference uses the checker's truth schema (`track_of`, `speaker_of`, `attendance`, `availability`, `preferences`) and `run_params` builds the corpus in the generator shape (`emails[{id, speaker_id, body}]`, `talks[{id, abstract}]`, `days`, `slots`). A run launched from a TaskSpec with an intake input therefore works with no change: its params carry `corpus` and `truth`, and `source` is `approved` (no `patterns` in the truth). **The one seam is `cases_from_corpus(corpus, truth)`.** I do not parse `approved.json` myself: W2 exposes one pure converter approved intake → `(corpus, truth)`, and a later `source: "approved"` on `POST /api/ablation` will call it. Until it merges the ablation is built and tested on `generate(seed)`; `generator.live_sample` does not exist on this branch yet.
+- **Inline:** `params.ablation = {cases: [Case], frame: {days, slots}, source: "inline"}`, what `POST /api/ablation {source: "inline"}` records. For notes with a reference written by hand (the tests' approved sample).
 
 ### Endpoint shapes (for W5)
 Errors are `{"error": "<text>"}`: 404 (unknown run, or not an ablation), 422 (the body does not fit), 429 (two ablations are already recording), 501 (`backend: "real"`).
@@ -307,7 +307,7 @@ Real bodies (fake backend, two posted notes): `POST` → `{"run_id":"ablation-b7
 
 ### Limits to know
 - The run id is a digest of the request, so the same request is the same run (`started: false`). A run whose server was killed mid-way stays `interrupted` for that request; change `seed` for a fresh one.
-- Runs are written to the catalog's runs dir (`~/.fractalswarm/runs` under `serve`). Inline notes can hold text a person typed: that dir is outside git, like `~/.fractalswarm/private`; if W2 wants them in the private dir, make it the catalog's runs dir.
+- **Privacy of live input.** Runs are written to the catalog's runs dir (`~/.fractalswarm/runs` under `serve`), which is outside git. W2's plan keeps live-input runs in `FRACTALSWARM_PRIVATE_DIR`, pseudonymizes emails before a corpus enters a run log, and has the bundler refuse runs whose `input.source` is `intake`. An ablation recorded by `POST /api/ablation` carries no such `input` marker, so **notes a person typed must not be posted to a server whose runs dir is bundled**; the fake route is for generator notes and the hand-written sample. For real live input the run goes through W2's job manager (private dir, marker). To settle once W2's converter is in.
 - `normalize` makes each day appear once with its slots sorted and unique, and leaves out days with no slot, on both readers and the reference, so equivalent answers are not scored apart.
 - The regex's preference defaults to `none` and its availability to "all available", exactly as the fake T2 model does; a note it cannot read counts against it.
 

@@ -1397,10 +1397,8 @@ def lens_routes(catalog: Catalog) -> list[Route]:
                 return JSONResponse(answer | {"started": False})
             if jobs.running() >= MAX_RUNNING_ABLATIONS:
                 raise HTTPException(429, f"{MAX_RUNNING_ABLATIONS} ablations are running; retry")
-            run_dir = catalog.runs_dir / run_id
-            run_dir.mkdir(parents=True, exist_ok=True)
             seed = str(plan.seed) if plan.source == "generator" else "0"
-            jobs.start(run_id, run_dir, params, seed)
+            jobs.start(run_id, catalog.runs_dir / run_id, params, seed)
         return JSONResponse(answer | {"started": True}, status_code=202)
 
     async def ablation_status(request: Request) -> JSONResponse:

@@ -575,7 +575,7 @@ def test_a_busy_server_says_so_instead_of_queueing(
 
 
 def test_a_job_that_raises_is_reported_as_failed(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient, runs_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     async def boom(*args, **kwargs):
         raise RuntimeError("boom")
@@ -583,9 +583,11 @@ def test_a_job_that_raises_is_reported_as_failed(
     monkeypatch.setattr("fractalswarm.runs.record_run", boom)
     started = client.post("/api/ablation", json={"seed": 42})
     assert started.status_code == 202
-    failed = wait_for(client, started.json()["run_id"], "failed")
+    run_id = started.json()["run_id"]
+    failed = wait_for(client, run_id, "failed")
     assert failed["error"] == "RuntimeError: boom" and failed["result"] is None
     assert failed["progress"] == {"done": 0, "of": 16} and failed["notes"] == []
+    assert not (runs_dir / run_id).exists()  # no empty run directory is left behind
 
 
 def test_two_ablations_can_be_recorded_at_once(client: TestClient, runs_dir: Path) -> None:
