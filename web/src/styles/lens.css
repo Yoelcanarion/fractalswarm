@@ -235,7 +235,7 @@
   color: var(--text-muted);
 }
 
-.crow {
+.lcrow {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto 72px;
   align-items: center;
@@ -256,23 +256,23 @@
   scroll-margin-bottom: 8px;
 }
 
-.crow[aria-current="true"] {
+.lcrow[aria-current="true"] {
   border-color: var(--accent);
   background: var(--accent-bg);
 }
 
-.crow__what {
+.lcrow__what {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.crow__title {
+.lcrow__title {
   color: var(--text-primary);
   font-weight: 600;
 }
 
-.crow__where {
+.lcrow__where {
   overflow: hidden;
   color: var(--text-muted);
   font-size: var(--fs-body);
@@ -280,7 +280,7 @@
   white-space: nowrap;
 }
 
-.crow__state {
+.lcrow__state {
   font-size: var(--fs-label);
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -288,29 +288,29 @@
   color: var(--text-muted);
 }
 
-.crow[data-tone="ok"] .crow__state {
+.lcrow[data-tone="ok"] .lcrow__state {
   color: var(--ok-text);
 }
 
-.crow[data-tone="bad"] .crow__state {
+.lcrow[data-tone="bad"] .lcrow__state {
   color: var(--danger-text);
 }
 
-.crow[data-tone="warn"] .crow__state {
+.lcrow[data-tone="warn"] .lcrow__state {
   color: var(--warn-text);
 }
 
-.crow[data-tone="run"] .crow__state {
+.lcrow[data-tone="run"] .lcrow__state {
   color: var(--accent-text);
 }
 
-.crow__cost {
+.lcrow__cost {
   text-align: right;
   color: var(--text-secondary);
 }
 
 @media (hover: hover) {
-  .crow:hover:not([aria-current="true"]) {
+  .lcrow:hover:not([aria-current="true"]) {
     background: var(--hover-wash);
   }
 }
