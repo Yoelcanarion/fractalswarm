@@ -1,0 +1,676 @@
+/* The arena: the swarm and its rival face to face. Colours are tokens only (lib/tokens.test.ts), and
+   there are no container queries: the Chromium that records the video crashes on them. Everything that
+   moves with the clock reads --now (written per frame by the clock scope) in CSS, so a playing replay
+   re-renders nothing between events. */
+
+.arena {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 100%;
+  padding: var(--space-3) var(--space-4);
+  outline: none;
+}
+
+/* ---- the bar: the picker, and what the rival is granted ---- */
+.arena__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.picker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.picker__field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.picker__label {
+  font-size: var(--fs-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.picker select {
+  max-width: 260px;
+}
+
+/* Always on screen: the arena never shows a number without what the rival was granted. */
+.arena__assumptions {
+  margin: 0 0 0 auto;
+  padding: 6px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+/* ---- the stage: one panel per side ---- */
+.arena__stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.side {
+  --side: var(--accent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 420px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+}
+
+.side--rival {
+  --side: var(--text-secondary);
+}
+
+.side__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.side__top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.side__verify {
+  margin-left: auto;
+  flex: none;
+}
+
+.side__proof {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.side__name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 700;
+  /* the title stays on one line whatever the run id is; the id gives way (below), so both sides' heads are the same height */
+  flex: none;
+  white-space: nowrap;
+}
+
+.side__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--side);
+}
+
+.side__run {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--fs-body);
+}
+
+/* ---- the status line: who is down, and what it costs ---- */
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 38px;
+  padding: 6px var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-base);
+  font-weight: 600;
+}
+
+.status--ok {
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+
+.status--warn {
+  border-color: var(--warn-border);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+}
+
+.status--danger {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.status__text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The restart fills over the crash-to-restart virtual time: --since and --dur are set on it (lib/decay.ts ringVars). */
+.status__bar {
+  flex: 0 0 140px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--warn-border);
+}
+
+.status__bar i {
+  display: block;
+  height: 100%;
+  background: var(--warn);
+  transform-origin: left;
+  transform: scaleX(clamp(0, calc((var(--now, 0) - var(--since, 0)) / max(var(--dur, 1), 1)), 1));
+}
+
+/* ---- the board ---- */
+.side__board {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.board {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.board__team rect {
+  fill: color-mix(in srgb, var(--owner) 8%, transparent);
+  stroke: color-mix(in srgb, var(--owner) 38%, transparent);
+  stroke-width: 1.2;
+}
+
+.board__team line {
+  stroke: color-mix(in srgb, var(--owner) 50%, transparent);
+  stroke-width: 1.5;
+}
+
+/* The coordinator of the team is out: its agents wait, so the outline is broken. */
+.board__team--out rect {
+  stroke-dasharray: 4 4;
+}
+
+.board__edge,
+.coord,
+.dot {
+  --glow: clamp(0, calc(1 - (var(--now, 0) - var(--born, -1000000)) / var(--life, 1)), 1);
+}
+
+.board__edge {
+  fill: none;
+  stroke: var(--owner);
+  stroke-width: 2.4;
+  opacity: 0.65;
+}
+
+.board__edge--adopted {
+  stroke-width: calc(2.4px + 2px * var(--glow));
+  stroke-dasharray: 7 5;
+  opacity: calc(0.65 + 0.35 * var(--glow));
+}
+
+.board__edge--down {
+  stroke: var(--border-strong);
+  stroke-dasharray: 3 5;
+  opacity: 1;
+}
+
+.coord__box {
+  fill: var(--surface-2);
+  stroke: var(--owner);
+  stroke-width: 2.4;
+}
+
+.coord__id {
+  fill: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.coord--suspected .coord__box {
+  stroke-dasharray: 5 3;
+}
+
+.coord--restarting .coord__box {
+  fill: var(--warn-bg);
+  stroke: var(--warn);
+}
+
+.coord--restarting .coord__id {
+  fill: var(--warn-text);
+}
+
+.coord--down .coord__box {
+  fill: var(--danger-bg);
+  stroke: var(--danger);
+}
+
+.coord--down .coord__id {
+  fill: var(--text-muted);
+}
+
+.coord--finished {
+  opacity: 0.5;
+}
+
+.coord__cross {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+
+.coord__restart {
+  fill: var(--warn);
+  transform-box: fill-box;
+  transform-origin: left;
+  transform: scaleX(clamp(0, calc((var(--now, 0) - var(--since, 0)) / max(var(--dur, 1), 1)), 1));
+}
+
+.coord--adopted .coord__box {
+  stroke-width: calc(2.4px + 3px * var(--glow));
+  filter: drop-shadow(0 0 calc(7px * var(--glow)) var(--owner));
+}
+
+.coord__tag rect {
+  fill: var(--text-primary);
+}
+
+.coord__tag text {
+  fill: var(--text-inverse);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* A dot is an agent. Filled: a model call is in flight. Hollow: idle. Dashed and grey: idle, and the
+   coordinator it answers to is out, so there is nothing for it to do. A red cross: it is gone. */
+.dot__body {
+  fill: var(--owner);
+  stroke: var(--owner);
+  stroke-width: 1.8;
+}
+
+.dot--idle .dot__body {
+  fill: transparent;
+}
+
+.dot--waiting .dot__body {
+  fill: transparent;
+  stroke: var(--text-muted);
+  stroke-dasharray: 2.6 2.6;
+}
+
+.dot--down .dot__body {
+  fill: var(--danger-bg);
+  stroke: var(--danger);
+}
+
+.dot--finished .dot__body {
+  opacity: 0.4;
+}
+
+.dot--adopted .dot__body {
+  stroke-width: calc(1.8px + 3px * var(--glow));
+  filter: drop-shadow(0 0 calc(6px * var(--glow)) var(--owner));
+}
+
+.dot__cross {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* ---- the work done so far ---- */
+.work {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-body);
+}
+
+.work__label {
+  font-size: var(--fs-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.work__bar {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+}
+
+.work__bar i {
+  position: absolute;
+  inset: 0;
+  background: var(--side);
+  transform-origin: left;
+}
+
+.work__count {
+  min-width: 72px;
+  text-align: right;
+  color: var(--text-secondary);
+}
+
+/* ---- the face-to-face counters ---- */
+.score {
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+}
+
+.score__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+}
+
+.metric__head {
+  min-height: 2.6em;
+  display: flex;
+  align-items: flex-start;
+}
+
+.metric__label {
+  font-size: var(--fs-label);
+  line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.metric__faces {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.arena .metric .stat {
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.arena .metric .stat__value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: var(--fs-stat);
+}
+
+/* Drawn to scale against the larger number of the row, from the middle out. Neither side is coloured as a winner. */
+.metric__bars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  height: 8px;
+}
+
+.metric__half {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+}
+
+.metric__half i {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform-origin: right;
+}
+
+.metric__half--right i {
+  background: var(--text-secondary);
+  transform-origin: left;
+}
+
+.score__note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-body);
+  color: var(--text-muted);
+}
+
+/* ---- the shared timeline ---- */
+.tl {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+}
+
+.tl__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+.tl__readout {
+  min-width: 210px;
+  font-size: var(--fs-base);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tl__legend {
+  margin-left: auto;
+  font-size: var(--fs-body);
+  color: var(--text-muted);
+}
+
+.tl__key {
+  display: inline-block;
+  width: 14px;
+  height: 9px;
+  margin: 0 2px 0 4px;
+  vertical-align: middle;
+  border-radius: 3px;
+}
+
+.tl__key--down {
+  background: var(--danger-bg-strong);
+  border: 1px solid var(--danger);
+}
+
+.tl__key--restart {
+  background: var(--warn-bg-strong);
+  border: 1px solid var(--warn);
+}
+
+.tl__key--kill {
+  width: 4px;
+  height: 14px;
+  background: var(--danger);
+}
+
+.tl__key--recovery {
+  width: 4px;
+  height: 14px;
+  background: var(--ok-text);
+}
+
+.tl__grid {
+  --label: 64px;
+  --gap: 12px;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--label) minmax(0, 1fr);
+  column-gap: var(--gap);
+  row-gap: var(--space-1);
+  align-items: start;
+}
+
+.tl__slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.tl__slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.tl__slider::-moz-range-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.tl__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 6px;
+  height: 24px;
+  margin-top: -9px;
+  border: none;
+  border-radius: var(--radius-1);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface-1);
+}
+
+.tl__slider::-moz-range-thumb {
+  width: 6px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-1);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface-1);
+}
+
+.lane__name {
+  padding-top: 2px;
+  font-size: var(--fs-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.lane__track {
+  position: relative;
+  border-top: 1px solid var(--divider);
+}
+
+.lane__bands {
+  position: relative;
+  margin-top: 4px;
+}
+
+.band {
+  position: absolute;
+  height: 9px;
+  min-width: 4px;
+  padding: 0;
+  border: 1px solid;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.band--chaos {
+  background: var(--danger-bg-strong);
+  border-color: var(--danger);
+}
+
+.band--supervisor {
+  background: var(--warn-bg-strong);
+  border-color: var(--warn);
+}
+
+.band--open {
+  border-style: dashed;
+}
+
+.lane__marks {
+  position: relative;
+  height: 18px;
+}
+
+/* One line through both lanes at the playhead. */
+.tl__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--label) + var(--gap) + (100% - var(--label) - var(--gap)) * clamp(0, calc(var(--now, 0) / var(--end, 1)), 1));
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text-primary);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+@media (max-width: 1400px) {
+  .score__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .arena__stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

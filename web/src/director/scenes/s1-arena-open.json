@@ -1,0 +1,22 @@
+{
+  "id": "s1-arena-open",
+  "title": "The arena opens: same input, then the first crash",
+  "stage": "arena",
+  "duration_ms": 32000,
+  "steps": [
+    { "do": "seek", "to": "start" },
+    { "do": "caption", "text": "Same input · same models · same failures", "ms": 7000 },
+    { "do": "highlight", "target": { "region": "heads" }, "ms": 3500 },
+    { "do": "wait", "ms": 6000 },
+    { "do": "seek", "to": "crash:1-14s" },
+    { "do": "play" },
+    { "do": "wait", "until": "crash:1", "timeout_ms": 24000 },
+    { "do": "speed", "x": 0.5, "ramp_ms": 600 },
+    { "do": "highlight", "target": { "actor": "$crashed:1", "side": "left" }, "ms": 4000 },
+    { "do": "highlight", "target": { "region": "rival-board" }, "ms": 4000 },
+    { "do": "wait", "ms": 7000 },
+    { "do": "speed", "x": 1, "ramp_ms": 800 },
+    { "do": "wait", "ms": 4000 },
+    { "do": "pause" }
+  ]
+}

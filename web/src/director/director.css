@@ -1,0 +1,257 @@
+/* Director mode: a 1920 x 1080 frame with none of the app around it. Colours come from tokens.css only.
+   Safe margins are 5%: 96px at the sides and 54px at the top and bottom. */
+
+html.dir-on,
+html.dir-on body {
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.dir {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.dir__frame {
+  position: absolute;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  transform-origin: 0 0;
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
+/* The camera is one transform on the whole stage (camera.ts): its corner is the frame's. */
+.dir__camera {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  transform-origin: 0 0;
+}
+
+/* The app's own layout without its top bar. A stage that fits has the frame's height, as the pages have the window's at
+   1080p; one that flows is as long as it is, and the camera pans down it. Nothing scrolls. */
+.dir__stage.app {
+  width: 1920px;
+  height: auto;
+  min-height: 1080px;
+  background: var(--bg);
+}
+
+.dir__stage.dir__stage--fit {
+  height: 1080px;
+}
+
+.dir__stage .content {
+  overflow: visible;
+}
+
+.dir__stage--flow .content {
+  flex: 1 0 auto;
+}
+
+/* Parts a scene may hide (script.ts PANELS). The arena's assumptions line is not one of them. */
+.dir__stage[data-hide~="scoreboard"] .score,
+.dir__stage[data-hide~="timeline"] .tl,
+.dir__stage[data-hide~="timeline"] .timeline,
+.dir__stage[data-hide~="counters"] .counters,
+.dir__stage[data-hide~="schedule"] .run__grid,
+.dir__stage[data-hide~="feed"] .run__side {
+  display: none;
+}
+
+/* ---- the title card ---- */
+.dir__title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dir__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  max-width: 1500px;
+  text-align: center;
+}
+
+.dir__card-title {
+  margin: 0;
+  font-size: 96px;
+  line-height: var(--lh-tight);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.dir__card-line {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-display);
+  line-height: var(--lh-body);
+}
+
+/* ---- over the stage: captions, rings, the replay note ---- */
+.dir__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-toast);
+}
+
+.dir__ring {
+  position: absolute;
+  box-sizing: border-box;
+  border: 3px solid var(--accent-text);
+  border-radius: var(--radius-3);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 28px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.dir__note {
+  position: absolute;
+  top: 12px;
+  right: 24px;
+  margin: 0;
+  padding: 4px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+/* The arena's assumptions caption is right-aligned in the top bar and must never be covered: the note takes the empty left of it. */
+.dir[data-stage="arena"] .dir__note {
+  left: 24px;
+  right: auto;
+}
+
+.dir__lower {
+  position: absolute;
+  left: 96px;
+  bottom: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 1280px;
+  padding: var(--space-4) var(--space-5);
+  border-left: 6px solid var(--accent);
+  border-radius: var(--radius-3);
+  background: color-mix(in srgb, var(--surface-1) 94%, transparent);
+  box-shadow: var(--shadow-overlay);
+}
+
+.dir__statement {
+  position: absolute;
+  top: 54px;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 1400px;
+  padding: var(--space-3) var(--space-6);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-4);
+  background: color-mix(in srgb, var(--surface-1) 94%, transparent);
+  box-shadow: var(--shadow-overlay);
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.dir__kicker {
+  color: var(--accent-text);
+  font-size: var(--fs-lead);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dir__text {
+  margin: 0;
+  font-size: var(--fs-hero);
+  font-weight: 600;
+  line-height: var(--lh-tight);
+}
+
+.dir__statement .dir__text {
+  font-size: var(--fs-display);
+}
+
+.dir__problem {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-7);
+  background: var(--scrim);
+  color: var(--danger-text);
+  font-size: var(--fs-title);
+  text-align: center;
+}
+
+/* ---- the author's readout ---- */
+.dir__hud {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: var(--z-tooltip);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  pointer-events: none;
+}
+
+.dir__warn {
+  color: var(--warn-text);
+}
+
+/* ---- the list, and the pages that say a scene cannot be shown ---- */
+.dir-page {
+  min-height: 100vh;
+  padding: var(--space-7) var(--space-5);
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
+.dir-page__card {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+}
+
+.dir-page__card--wide {
+  max-width: 960px;
+}
+
+.dir-page__card h1 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-title);
+}
+
+.dir-page__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dir-page__bad {
+  color: var(--danger-text);
+}

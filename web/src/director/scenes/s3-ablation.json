@@ -1,0 +1,14 @@
+{
+  "id": "s3-ablation",
+  "title": "The ablation: the parser against Muse, note by note",
+  "stage": "ablation",
+  "duration_ms": 12000,
+  "steps": [
+    { "do": "wait", "ms": 1200 },
+    { "do": "highlight", "target": { "region": "headline" }, "ms": 3800 },
+    { "do": "wait", "ms": 3600 },
+    { "do": "camera", "fit": { "region": "breakdown" }, "pad": 0.04, "ms": 1400 },
+    { "do": "wait", "ms": 4200 },
+    { "do": "camera", "home": true, "ms": 1200 }
+  ]
+}

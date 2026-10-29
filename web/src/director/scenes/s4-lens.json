@@ -1,0 +1,24 @@
+{
+  "id": "s4-lens",
+  "title": "The Muse lens: any call, with the sentence behind it",
+  "stage": "run",
+  "duration_ms": 18000,
+  "calls": {
+    "spark": { "model": "spark", "purpose": "work" },
+    "wonder": { "model": "wonder", "role": "root_planner" }
+  },
+  "steps": [
+    { "do": "speed", "x": 10 },
+    { "do": "play" },
+    { "do": "wait", "ms": 3500 },
+    { "do": "pause" },
+    { "do": "lens", "open": "spark" },
+    { "do": "highlight", "target": { "region": "lens" }, "ms": 3000 },
+    { "do": "wait", "ms": 5500 },
+    { "do": "lens", "open": "wonder" },
+    { "do": "wait", "ms": 4000 },
+    { "do": "lens", "close": true },
+    { "do": "highlight", "target": { "region": "meter" }, "ms": 3500 },
+    { "do": "wait", "ms": 3500 }
+  ]
+}
