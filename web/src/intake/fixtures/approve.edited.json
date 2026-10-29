@@ -1,0 +1,12 @@
+{
+  "intake_id": "intake-20261029-162445-63cc",
+  "sha256": "08e68651a110e4ad78d99e5e6bf2ead21c70d890657041ca3390a3d7cc9e9d10",
+  "edits": [
+    "speakers[S02].preference",
+    "talks[T01].attendance"
+  ],
+  "warnings": [],
+  "task_inputs": {
+    "intake": "intake-20261029-162445-63cc"
+  }
+}
