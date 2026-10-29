@@ -4,6 +4,8 @@ import { ArenaPage } from "./arena/ArenaPage";
 import { HelpsPage } from "./arena/helps/HelpsPage";
 import { parseArenaRoute, type ArenaRoute } from "./arena/route";
 import { RunStrip } from "./components/RunStrip";
+import { IntakePage } from "./intake/IntakePage";
+import { parseIntakeRoute, type IntakeRoute } from "./intake/route";
 import { StatusBadge, ThemeToggle } from "./components/ui";
 import { SPEEDS } from "./lib/playback";
 import { ChartsPage } from "./pages/ChartsPage";
@@ -38,6 +40,7 @@ const VIEW_TITLES: Record<RunView, string> = {
 type Route =
   | { page: "run"; runId: string | null; view: RunView; playback: Playback }
   | { page: "arena"; arena: ArenaRoute }
+  | { page: "intake"; intake: IntakeRoute }
   | { page: "helps" }
   | { page: "charts" }
   | { page: "runs" };
@@ -45,6 +48,8 @@ type Route =
 function parseHash(hash: string): Route {
   const arena = parseArenaRoute(hash);
   if (arena) return { page: "arena", arena };
+  const intake = parseIntakeRoute(hash);
+  if (intake) return { page: "intake", intake };
   const [path, query = ""] = hash.replace(/^#\/?/, "").split("?");
   const parts = path.split("/");
   if (parts[0] === "helps") return { page: "helps" };
@@ -132,6 +137,9 @@ export function App() {
           <a className={route.page === "arena" ? "tab tab--on" : "tab"} href="#/arena">
             Arena
           </a>
+          <a className={route.page === "intake" ? "tab tab--on" : "tab"} href="#/new">
+            New task (live)
+          </a>
           <a className={route.page === "helps" ? "tab tab--on" : "tab"} href="#/helps">
             Where it helps
           </a>
@@ -174,6 +182,7 @@ export function App() {
         {route.page === "run" && route.view === "results" && <ResultsPage />}
         {route.page === "run" && route.view === "events" && <EventsPage />}
         {route.page === "arena" && <ArenaPage route={route.arena} />}
+        {route.page === "intake" && <IntakePage route={route.intake} />}
         {route.page === "helps" && <HelpsPage />}
         {route.page === "charts" && <ChartsPage />}
         {route.page === "runs" && <RunsPage />}

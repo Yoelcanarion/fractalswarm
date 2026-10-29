@@ -3,6 +3,7 @@
 
 import { crashesText, rivalLabel } from "../arena/helps/labels";
 import type { Room } from "./proposal";
+import type { Gate } from "./spend";
 
 // ---- the reading ----
 
@@ -113,6 +114,17 @@ export function launchBody(intakeId: string, choice: Choice): Record<string, unk
   const clock = { clock: choice.clock, ...(choice.clock === "live" ? { speed: choice.speed } : {}) };
   if (choice.mode === "pair") return { spec: specOf(intakeId), rival: choice.rival, chaos: choice.pairChaos, ...clock, backend: choice.backend };
   return { spec: specOf(intakeId), scenario: choice.scenario, chaos: choice.runChaos, ...clock, backend: choice.backend };
+}
+
+/** The same body with the check's token and the word typed: what a billed launch sends. The token is bound to everything else in it. */
+export const confirmed = (body: Record<string, unknown>, token: string, word: string): Record<string, unknown> => ({ ...body, preflight_token: token, confirm: word });
+
+/** What a launch sends, decided by the body itself: one that says it is free goes as it is, anything else is billed and goes
+ * only through an open gate (a check that still fits, and the word typed), with its token and word. Whatever the page's other
+ * state says, a body that is not plainly free never leaves without the word. */
+export function requestFor(body: Record<string, unknown>, gate: Gate, typed: string): { send: Record<string, unknown> } | { refused: string } {
+  if (body.backend === "fake") return { send: body };
+  return gate.launch ? { send: confirmed(body, gate.token, typed) } : { refused: gate.reason };
 }
 
 /** Where the person goes to watch it: the arena for a pair, the run page for one run. */

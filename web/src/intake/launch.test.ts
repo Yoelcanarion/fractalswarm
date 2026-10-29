@@ -2,7 +2,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { BOX_LIMIT, chaosLabel, DEFAULT_CHOICE, emptyForm, formProblems, launchBody, readingBody, roomsOf, scenarioLabel, specOf, watchHash } from "./launch";
+import { canonicalBody } from "./spend";
+import { BOX_LIMIT, chaosLabel, confirmed, DEFAULT_CHOICE, emptyForm, formProblems, launchBody, readingBody, requestFor, roomsOf, scenarioLabel, specOf, watchHash } from "./launch";
 
 describe("the form", () => {
   const filled = { ...emptyForm(), talks: "Submission 1 ..." };
@@ -83,6 +84,18 @@ describe("running the approved reading", () => {
     expect(launchBody("i", { ...DEFAULT_CHOICE, backend: "real" }).backend).toBe("real");
   });
 
+  it("sends the token and the word with the same launch it priced, and the token is still bound to that launch", () => {
+    const body = launchBody("intake-1", { ...DEFAULT_CHOICE, backend: "real" });
+    const sent = confirmed(body, "tok-1", "SPEND");
+    expect(sent).toEqual({ ...body, preflight_token: "tok-1", confirm: "SPEND" });
+    // what the server binds the token to: nothing the token and the word add changes it
+    expect(canonicalBody(sent)).toBe(canonicalBody(body));
+    // and a changed setting does
+    expect(canonicalBody(confirmed({ ...body, chaos: "C1" }, "tok-1", "SPEND"))).not.toBe(canonicalBody(body));
+    // the launch it was built from is left as it was
+    expect(body).not.toHaveProperty("preflight_token");
+  });
+
   it("says where to watch: the arena for a pair, the run page for one run", () => {
     expect(watchHash({ left: "p-swarm", right: "p-durable-max" })).toBe("#/arena/p-swarm/p-durable-max");
     expect(watchHash({ run_id: "ui 1" })).toBe("#/run/ui%201");
@@ -94,5 +107,41 @@ describe("running the approved reading", () => {
     expect(chaosLabel("C0")).toBe("No failures (C0)");
     expect(chaosLabel("C2")).toBe("C2: 3 crashes");
     expect(chaosLabel("half-the-brains")).toContain("Half the brains");
+  });
+});
+
+describe("what leaves the page", () => {
+  const closed = { launch: false, reason: "Type SPEND to confirm." } as const;
+  const open = { launch: true, token: "tok-1" } as const;
+
+  it("sends a free launch as it is, with no token, whatever the gate says", () => {
+    for (const body of [launchBody("i", DEFAULT_CHOICE), readingBody({ ...emptyForm(), talks: "x" }, "fake")]) {
+      expect(requestFor(body, closed, "")).toEqual({ send: body });
+      expect(requestFor(body, open, "SPEND")).toEqual({ send: body });
+    }
+  });
+
+  it("sends a billed launch only through an open gate, with its token and word", () => {
+    const body = launchBody("i", { ...DEFAULT_CHOICE, backend: "real" });
+    expect(requestFor(body, closed, "")).toEqual({ refused: "Type SPEND to confirm." });
+    expect(requestFor(body, open, "SPEND")).toEqual({ send: { ...body, preflight_token: "tok-1", confirm: "SPEND" } });
+    const reading = readingBody({ ...emptyForm(), talks: "x" }, "real");
+    expect(requestFor(reading, closed, "")).toHaveProperty("refused");
+    expect(requestFor(reading, open, "SPEND")).toHaveProperty("send.confirm", "SPEND");
+  });
+
+  it("treats a body that does not say it is free as billed: the body decides, not the page's other state", () => {
+    const unsaid = { ...launchBody("i", DEFAULT_CHOICE) };
+    delete unsaid.backend;
+    expect(requestFor(unsaid, closed, "")).toHaveProperty("refused");
+    expect(requestFor({ ...unsaid, backend: "Fake" }, closed, "")).toHaveProperty("refused");
+    // every choice the panel can make: a billed one is refused with the gate closed, a free one never carries a token
+    for (const mode of ["pair", "run"] as const) {
+      for (const backend of ["fake", "real"] as const) {
+        const body = launchBody("i", { ...DEFAULT_CHOICE, mode, backend });
+        expect("refused" in requestFor(body, closed, "")).toBe(backend === "real");
+        expect(JSON.stringify(requestFor(body, closed, ""))).not.toContain("preflight_token");
+      }
+    }
   });
 });

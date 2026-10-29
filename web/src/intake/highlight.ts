@@ -125,3 +125,27 @@ export function marksFor(facts: Fact[], box: Box, active: { kind: "talks" | "spe
   }
   return marks;
 }
+
+/** What the person picked in the review table: a row, or one sentence of it. */
+export interface Selection {
+  kind: "talks" | "speakers";
+  id: string;
+  /** The sentence picked; null for the whole row. */
+  field: Field | null;
+}
+
+/** The marks that are "the one you picked": the sentence, or every sentence of the picked row. */
+export function activeKeysOf(facts: Fact[], selection: Selection | null): Set<string> {
+  if (selection === null) return new Set();
+  return new Set(facts.filter((fact) => fact.kind === selection.kind && fact.id === selection.id && (selection.field === null || fact.field === selection.field)).map((fact) => fact.key));
+}
+
+/** The selection a mark stands for (`talks:T01:attendance_source`), to pick its row by clicking the text. */
+export function selectionOfKey(key: string): Selection | null {
+  const [kind, id, field] = key.split(":");
+  return (kind === "talks" || kind === "speakers") && id !== undefined && field !== undefined ? { kind, id, field: field as Field } : null;
+}
+
+/** The box the picked sentence stands in, if it stands in one. */
+export const boxOf = (facts: Fact[], selection: Selection | null): Box | null =>
+  facts.find((fact) => selection !== null && fact.kind === selection.kind && fact.id === selection.id && (selection.field === null || fact.field === selection.field) && fact.span !== null)?.span?.box ?? null;
