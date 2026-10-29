@@ -159,6 +159,14 @@ Estimates for the matrices (sequential, one process each; interpolated between t
 4. **`bench/workflows.py` module docstring** said "at C0 they make the same LLM calls"; it now says that this holds on T1 and nearly on T2, and that API fault draws are keyed per effect id. Docstring only.
 5. **Text I did not write, in `bench/REPORT.md`**: the status banner, the `$0 gate` row of §3, the empty tables and intro paragraphs of §4 (replaced by the results), the last bullet of §6 ("TBD: anything the runs reveal"). §5 keeps the skeleton's two bullets under a `[PLACEHOLDER]` and a flag on the first one (its "only one doesn't stall or pay twice" is not what the gate shows against `durable-max`).
 
+### Merge checks (arena 24995b5 merged into this branch at 2b58d12, then these notes)
+- **Merge**: arena 24995b5 (W3 step 3), clean (`cli.py` auto-merged). The arena tip has since moved to 6ffa8fa (W3 follow-up, W4's takeover chip); that is not merged here.
+- **Tests**: unit 965 passed, 3 deselected (the PromptGuard ones: this venv has no safety extra); integration 764 passed in three chunks (251 + 271 + 242, 3m43 + 3m29 + 5m31); `ruff check` and `ruff format --check` clean (294 files). Before the merge, at 268fa3e: 894 unit + 539 integration.
+- **$0 references**: recorded on the merged tree with `scripts/refs/record_refs.ps1` and compared with the shared `arena-c2b5e08`: 43 of 43 runs identical.
+- **Demo**: `fractalswarm demo --verify --no-serve` reads `MATCH backup: 8177 events, head b052b4bc33cfe1b54c7b6ceb2872de26`, exit 0. Without `--no-serve` the command goes on to serve the UI, and port 8765 was in use.
+- **Verdicts**: `bench verdicts` over the committed results, re-run on the merged tree, prints the same text as `bench/results/verdicts.txt` apart from the `Code:` stamp.
+- **Next, after this merges**: the small API follow-up for W5 (the `recovery` key of `/api/runs/{id}/metrics` and `GET /api/runs/{id}/recovery`, next to `/takeover` in `api/app.py`), as the coordinator wrote.
+
 ## Open questions
 - None blocking.
 - Do you want the table generator (a scratch script that lays out `results.json` and `honesty.json`) committed under `bench/`? It is not in the brief's file list.
