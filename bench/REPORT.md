@@ -1,17 +1,23 @@
 # FractalSwarm benchmark report
 
-> Status: **the $0 sections are written; the headline, §5 and the real-model results are not.**
-> §3 (setup) and §4 (results) report the fake-LLM runs of the arena phase on the simulated clock:
-> the rivals gate, the sensitivity sweeps, the per-process view and the false deaths. Every number
-> in them is read from files committed under `bench/results/` (`results.csv`, `results.json`,
-> `honesty.json`, `verdicts.txt`). Blocks marked **[PLACEHOLDER]** are not written yet: the
-> headline, the reading in §5, the conclusions, and everything that needs the real model (the
-> `TBD` rows of §3, §4.10 and the results of §8).
+> Status: **the $0 sections, the headline and the reading in §5 are written; the real-model
+> results are not.** §3 (setup) and §4 (results) report the fake-LLM runs of the arena phase on the
+> simulated clock: the rivals gate, the sensitivity sweeps, the per-process view and the false
+> deaths. Every number in them is read from files committed under `bench/results/` (`results.csv`,
+> `results.json`, `honesty.json`, `verdicts.txt`). What needs the real model (the `TBD` rows of §3,
+> §4.10 and the results of §8) is not written yet.
 
-**Headline: [PLACEHOLDER].** The headline sentence is the coordinator's and Yoel's call at the
-decision gate, and it is not written here. What a headline may say is fixed in `bench/PREREG.md` §7,
-and the claims the project makes, each with its evidence, are in `docs/claims.md`. What the
-preregistered rules derive from the runs in §4 is outcome **B** (§4.9).
+**Headline (decision gate, Oct 29: outcome B). Resilience comparable to an ideal durable
+supervisor, without a central coordinator or a separate recovery mechanism.** Against
+`durable-max`, stall time and extra cost tie at all six gate points, and locality ties on T2 at C2
+and C3, so the stronger claim, that recovery stays local to the affected subtree, is not made
+(§4.5, §4.9). Locality would hold where the supervisor needs 1–3 s more to restart a coordinator,
+and it fails where an external supervisor detects and restarts within 0.5–1 s (§4.6). Per process
+the two are comparable, and the supervisor recovers sooner (§4.7); the swarm's failure detector
+produces false deaths, the supervisors' none (§4.8). Against the in-process supervisor
+(`central`), whose workers die with it, the swarm stalls 1.2 s against 34.3 s and pays −1.0%
+against +66.6% extra on T2 at C3 (§4.1, §4.2). What a headline may say is fixed in
+`bench/PREREG.md` §7; the claims, each with its evidence, are in `docs/claims.md`.
 
 ## 1. Rivals and fairness rules (read these first)
 
@@ -661,15 +667,28 @@ chart (`results/v1/hero-t2_conference.png`), once they exist. The coordinator ma
 
 ## 5. Reading the chart honestly
 
-**[PLACEHOLDER]** The reading of §4 and the conclusions are written by the coordinator with the
-headline. The two bullets below are the skeleton's and are kept as they were written. The first is
-flagged: its last sentence ("only one doesn't stall or pay twice") is not what the gate shows against
-`durable-max`, where stall time and duplicated spend are ties at all six points (§4.1, §4.5), and T2
-validity is 75–81% for every workflow because of seed 3 (§4.4).
+This reading covers the $0 runs of §4; the real-model rows are read in §4.10 when they exist.
 
-- With best-case supervisors every workflow may finish (completion and validity near
-  100%). That is the honest point: "everyone finishes; only one doesn't stall or pay twice".
-- TBD: observations, outliers, seed variance.
+- **Everyone finishes.** Every run of every workflow completed, at every profile (§4.4). Finishing
+  does not separate the systems; what a crash costs while they finish does.
+- **Against a supervisor whose workers die with it** (`central`), a crash is expensive: on T2 it
+  stalls 16–34 s and pays 14–67% extra, because the restarted coordinator dispatches the lost work
+  again (§4.1–4.3). The swarm stalls 1–5 s and its cost is no higher than its own C0. The hero
+  chart shows this comparison, which is with an in-process design, not with a durable one.
+- **Against an ideal durable supervisor** (`durable-max`: its workers and its own calls survive a
+  crash, and it restarts in 5 s), stall time and extra cost tie at all six gate points (§4.1,
+  §4.5). On T2 at C2 and C3 the swarm's blast radius is smaller on every seed, and its
+  coordinator-dependency time is 2.5–3 times lower on the seed means, but not below half on every
+  seed, which is what the preregistered rule asks; so locality ties (§4.9).
+- **Where the comparison turns** (§4.6): a slower supervisor restart (1–3 s more) lets locality
+  hold; a fast external restart (0.5–1 s detection while the swarm keeps 5 s) makes it fail, at
+  6–13 times the supervisor's dependency time. Per process, the two are comparable (§4.7).
+- **What having no supervisor costs:** false deaths. The swarm's detector declares live members
+  dead (1.25–2.25 per run at C2–C3 with the default 5 s detection; more, and not monotonically,
+  at shorter detection), and each costs a reassignment; the supervisors have none (§4.8).
+- **Seed variance:** T2 seed 3 is invalid for every workflow, C0 included, a property of that
+  instance under the fake LLM (§4.4); three T1 runs carry the swarm's stall (§4.1). With four
+  seeds one outlier moves a mean, which is why every verdict is taken per seed.
 
 ## 6. Limitations
 
