@@ -1,0 +1,137 @@
+{
+ "source": "bench/recovery.py analyze() at arena 268fa3e, on the log of each run (the same numbers GET /api/runs/{id}/metrics serves under `recovery`); times in seconds",
+ "runs": {
+  "demo-backup": {
+   "events": 8177,
+   "crashes": 5,
+   "crash_windows_s": [
+    [
+     44.5,
+     49.64
+    ],
+    [
+     55.375,
+     59.781
+    ],
+    [
+     56.672,
+     61.75
+    ],
+    [
+     65.906,
+     70.859
+    ],
+    [
+     76.859,
+     80.952
+    ]
+   ],
+   "lost_redispatches": 0,
+   "dup_calls": 11,
+   "idle_agent_s": 9.438,
+   "idle_agent_own_s": 4.719,
+   "idle_agent_wide_s": 9.438,
+   "cdt_s": 4.719,
+   "blocked_total_s": 5.532
+  },
+  "central": {
+   "events": 2595,
+   "crashes": 5,
+   "crash_windows_s": [
+    [
+     37.047,
+     42.062
+    ],
+    [
+     53.343,
+     58.375
+    ],
+    [
+     66.297,
+     71.312
+    ],
+    [
+     82.328,
+     87.359
+    ],
+    [
+     102.047,
+     107.062
+    ]
+   ],
+   "lost_redispatches": 22,
+   "dup_calls": 42,
+   "idle_agent_s": 0.0,
+   "idle_agent_own_s": 0.0,
+   "idle_agent_wide_s": 0.0,
+   "cdt_s": 135.587,
+   "blocked_total_s": 135.587
+  },
+  "swarm-c3": {
+   "events": 14047,
+   "crashes": 5,
+   "crash_windows_s": [
+    [
+     39.906,
+     45.437
+    ],
+    [
+     51.25,
+     57.812
+    ],
+    [
+     53.0,
+     57.75
+    ],
+    [
+     66.609,
+     72.875
+    ],
+    [
+     91.42,
+     99.156
+    ]
+   ],
+   "lost_redispatches": 2,
+   "dup_calls": 13,
+   "idle_agent_s": 26.564,
+   "idle_agent_own_s": 20.298,
+   "idle_agent_wide_s": 26.564,
+   "cdt_s": 26.564,
+   "blocked_total_s": 28.797
+  },
+  "pipeline-c3": {
+   "events": 3806,
+   "crashes": 5,
+   "crash_windows_s": [
+    [
+     144.25,
+     149.25
+    ],
+    [
+     173.25,
+     178.25
+    ],
+    [
+     198.5,
+     203.5
+    ],
+    [
+     235.5,
+     240.5
+    ],
+    [
+     264.5,
+     269.5
+    ]
+   ],
+   "lost_redispatches": 5,
+   "dup_calls": 5,
+   "idle_agent_s": 0.0,
+   "idle_agent_own_s": 0.0,
+   "idle_agent_wide_s": 0.0,
+   "cdt_s": 99.0,
+   "blocked_total_s": 985.582
+  }
+ }
+}
