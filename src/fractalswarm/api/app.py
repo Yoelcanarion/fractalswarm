@@ -11,29 +11,50 @@ Launching: ``POST /api/tasks`` starts a run as a job (``api/jobs.py``: one subpr
 ``POST /api/intake`` (Muse reads pasted text), ``GET /api/intake/{id}``, then
 ``POST /api/intake/{id}/approve``; a task then runs on ``inputs.intake``. These need a private
 directory (``FRACTALSWARM_PRIVATE_DIR``), where what a person typed lives; without one they
-answer 503. The remaining control endpoints (plan approval, chaos, escalations) answer 501
-until the runtime behind them lands.
+answer 503. ``POST /api/arena`` starts a pair of runs on one input under one chaos plan.
+A billed run (``backend: real``), pair or reading of pasted text is refused unless it carries the
+token of a preflight (``POST /api/tasks/preflight``, ``/api/arena/preflight``,
+``/api/intake/preflight``) and the word SPEND, and the server was started with
+``FRACTALSWARM_ALLOW_UI_REAL`` (``api/spend.py``). The remaining control endpoints
+(plan approval, chaos, escalations) answer 501 until the runtime behind them lands;
+``GET /api/capabilities`` says which controls are real.
+A finished run also has ``/metrics`` (the official numbers) and ``/takeover`` (what its log
+proves about the coordinator kills).
+
+Every request, the WebSocket included, passes ``api/guard.py`` first: a ``Host`` that is not
+loopback or the address ``serve`` was given gets 400, a POST that is not ``application/json``
+gets 415, and a WebSocket from another origin is refused.
 """
 
 import asyncio
 import json
 import math
 import shutil
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 import anyio
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
+from starlette.middleware import Middleware
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
-from fractalswarm.api import jobs
+from fractalswarm.api import arena, jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
+from fractalswarm.api.guard import ApiGuard
 from fractalswarm.api.jobs import JobError, JobManager
 from fractalswarm.api.lens import lens_routes
+from fractalswarm.api.spend import (
+    Spend,
+    intake_request_of,
+    preflight_arena,
+    preflight_intake,
+    preflight_task,
+)
 from fractalswarm.api.ws import stream_events
 from fractalswarm.config import CONFIG_DIR
 from fractalswarm.intake import service
@@ -57,16 +78,28 @@ def create_app(
     bench_dir: Path = BENCH_RESULTS_DIR,
     static_dir: Path = STATIC_DIR,
     private_dir: Path | None = None,
+    spend: Spend | None = None,
+    allowed_hosts: Iterable[str] = (),
 ) -> Starlette:
+    """``allowed_hosts`` are the names a request may use besides loopback: ``serve`` passes the
+    address it listens on."""
     catalog = Catalog(runs_dir, demo_dir, private_dir)
     private = PrivateDir(private_dir) if private_dir is not None else None
     manager = JobManager(private, runs_dir, catalog) if private is not None else None
     verified: dict[tuple[str, str], dict[str, Any]] = {}
+    # Without a gate no billed run can start and no ledger is read.
+    spending = spend or (Spend.locked(private_dir) if private_dir is not None else None)
+    takeovers: dict[tuple[str, str], dict[str, Any]] = {}
 
     def need_private() -> tuple[PrivateDir, JobManager]:
         if private is None or manager is None:
             raise HTTPException(503, "the API was started without a private directory")
         return private, manager
+
+    def need_spend() -> Spend:
+        need_private()
+        assert spending is not None
+        return spending
 
     def entry(request: Request) -> RunEntry:
         try:
@@ -113,6 +146,40 @@ def create_app(
                 "bundle_head_ok": bundle_head is None or bundle_head == report.replayed_head,
             }
         return JSONResponse(verified[key])
+
+    async def takeover(request: Request) -> JSONResponse:
+        """What the log proves about the run's coordinator kills (``verify/takeover.py``): ``ok``,
+        the ``violations`` that made it false, and the kills, successions, adoptions, duplicate
+        calls and costs behind them. Recomputed from the finished log, never from what an actor
+        said about itself."""
+        from fractalswarm.verify.takeover import check_run
+
+        run = entry(request)
+        last = catalog.last(run)
+        if last is None or last["type"] != "run.completed":
+            raise HTTPException(409, "the run has not completed yet; check it when it ends")
+        key = (str(run.path), last["hash"])
+        if key not in takeovers:
+            report = await anyio.to_thread.run_sync(check_run, run.path)
+            takeovers[key] = report.model_dump(mode="json")
+        return JSONResponse(takeovers[key])
+
+    async def capabilities(request: Request) -> JSONResponse:
+        """Which controls this server really does. A control that is ``false`` answers 501
+        (``not_wired``), or 503 without a private directory. ``real`` says a billed launch can
+        pass the gate (the server flag is on and there is a key): without it a preflight comes
+        back with no token."""
+        gate = spending.gate if spending is not None else None
+        return JSONResponse(
+            {
+                "tasks": private is not None,  # POST /api/tasks, /api/intake and /api/arena
+                "chaos": False,
+                "approve": False,
+                "budget": True,
+                "halt": True,
+                "real": gate is not None and gate.allow_real and gate.has_key,
+            }
+        )
 
     async def feasibility(request: Request) -> JSONResponse:
         """The feasibility report written at plan approval, which is early in the log."""
@@ -213,10 +280,48 @@ def create_app(
         _, jobs_ = need_private()
         body = await _json_body(request)
         try:
-            job = await anyio.to_thread.run_sync(jobs.launch_run, jobs_, body)
+            job = await anyio.to_thread.run_sync(jobs.launch_run, jobs_, body, need_spend().approve)
         except JobError as exc:
             raise job_error(exc) from None
         return JSONResponse(launched(job), status_code=202)
+
+    async def preflight_task_route(request: Request) -> JSONResponse:
+        _, jobs_ = need_private()
+        body = await _json_body(request)
+        try:
+            answer = await anyio.to_thread.run_sync(preflight_task, need_spend(), jobs_, body)
+        except JobError as exc:
+            raise job_error(exc) from None
+        return JSONResponse(answer)
+
+    async def preflight_arena_route(request: Request) -> JSONResponse:
+        _, jobs_ = need_private()
+        body = await _json_body(request)
+        try:
+            answer = await anyio.to_thread.run_sync(preflight_arena, need_spend(), jobs_, body)
+        except JobError as exc:
+            raise job_error(exc) from None
+        return JSONResponse(answer)
+
+    async def launch_pair(request: Request) -> JSONResponse:
+        _, jobs_ = need_private()
+        body = await _json_body(request)
+        try:
+            started = await anyio.to_thread.run_sync(
+                arena.launch_arena, jobs_, body, need_spend().approve
+            )
+        except JobError as exc:
+            raise job_error(exc) from None
+        return JSONResponse(started, status_code=202)
+
+    async def list_pairs(request: Request) -> JSONResponse:
+        return JSONResponse(arena.list_pairs(need_private()[1]))
+
+    async def get_pair(request: Request) -> JSONResponse:
+        try:
+            return JSONResponse(arena.get_pair(need_private()[1], request.path_params["pair_id"]))
+        except JobError as exc:
+            raise job_error(exc) from None
 
     async def list_jobs(request: Request) -> JSONResponse:
         return JSONResponse(need_private()[1].listing())
@@ -254,23 +359,50 @@ def create_app(
         job = jobs_.view_state(max(mine, key=lambda j: j["created_at"])) if mine else None
         return service.state_of(catalog, run, private_, job)
 
-    async def create_intake(request: Request) -> JSONResponse:
+    def start_intake(body: dict[str, Any], backend: str) -> tuple[str, dict[str, Any]]:
+        """Write the pasted text and start its reading. A billed reading (``backend: real``) is
+        cleared by the spend gate first; if nothing starts, its token is given back and the text
+        is not left behind."""
         private_, jobs_ = need_private()
-        body = await _json_body(request)
-        backend = body.get("backend", "fake")
-        if backend != "fake":
-            raise HTTPException(403, "reading with the real model needs the preflight flow")
+        approval = None
+        if backend == "real":
+            approval = need_spend().approve("intake", intake_request_of(body), 1)
         intake_id = new_id("intake")
         try:
             service.create_input(private_, intake_id, body)
-            job = await anyio.to_thread.run_sync(jobs.launch_intake, jobs_, intake_id, backend)
+            job = jobs.launch_intake(jobs_, intake_id, backend, approval)
+        except BaseException:
+            if approval is not None:
+                approval.undo()
+            shutil.rmtree(private_.intake_dir(intake_id), ignore_errors=True)
+            raise
+        return intake_id, job
+
+    async def preflight_intake_route(request: Request) -> JSONResponse:
+        """Price the reading of pasted text with the real model, at its worst case, and hand out
+        the token a billed ``POST /api/intake`` needs. Writes nothing."""
+        body = await _json_body(request)
+        try:
+            answer = await anyio.to_thread.run_sync(preflight_intake, need_spend(), body)
+        except JobError as exc:
+            raise job_error(exc) from None
+        return JSONResponse(answer)
+
+    async def create_intake(request: Request) -> JSONResponse:
+        need_private()
+        body = await _json_body(request)
+        backend = body.get("backend", "fake")
+        if backend not in ("fake", "real"):
+            raise HTTPException(422, "backend must be fake or real")
+        try:
+            intake_id, job = await anyio.to_thread.run_sync(start_intake, body, backend)
         except service.IntakeError as exc:
             raise HTTPException(422, str(exc)) from None
-        except JobError as exc:  # nothing started: do not leave the pasted text behind
-            shutil.rmtree(private_.intake_dir(intake_id), ignore_errors=True)
+        except JobError as exc:
             raise job_error(exc) from None
         answer = {"intake_id": intake_id, "job_id": job["id"], "state": "reading", "private": True}
-        return JSONResponse(answer | {"warnings": job["warnings"]}, status_code=202)
+        answer |= {"billed": job["real"], "warnings": job["warnings"]}
+        return JSONResponse(answer, status_code=202)
 
     async def get_intake(request: Request) -> JSONResponse:
         found = await anyio.to_thread.run_sync(intake_state, request.path_params["intake_id"])
@@ -356,14 +488,22 @@ def create_app(
         WebSocketRoute("/api/runs/{run_id}/events", websocket),
         Route("/api/runs/{run_id}/verify", verify_run, methods=["POST"]),
         Route("/api/runs/{run_id}/feasibility", feasibility),
+        Route("/api/runs/{run_id}/takeover", takeover),
+        Route("/api/capabilities", capabilities),
         *lens_routes(catalog),
         Route("/api/bench/results", bench_results),
         Route("/api/runs/{run_id}/metrics", run_metrics),
         Route("/api/tasks", launch_task, methods=["POST"]),
+        Route("/api/tasks/preflight", preflight_task_route, methods=["POST"]),
+        Route("/api/arena/preflight", preflight_arena_route, methods=["POST"]),
+        Route("/api/arena", launch_pair, methods=["POST"]),
+        Route("/api/pairs", list_pairs),
+        Route("/api/pairs/{pair_id}", get_pair),
         Route("/api/jobs", list_jobs),
         Route("/api/jobs/{job_id}", get_job),
         Route("/api/jobs/{job_id}/cancel", cancel_job, methods=["POST"]),
         Route("/api/intake", create_intake, methods=["POST"]),
+        Route("/api/intake/preflight", preflight_intake_route, methods=["POST"]),
         Route("/api/intake/sample", intake_sample),
         Route("/api/intake/{intake_id}", get_intake),
         Route("/api/intake/{intake_id}/approve", approve_intake, methods=["POST"]),
@@ -389,7 +529,11 @@ def create_app(
         routes.append(Mount("/", StaticFiles(directory=static_dir, html=True)))
     else:
         routes.append(Route("/", ui))
-    return Starlette(routes=routes, exception_handlers={HTTPException: http_error})
+    return Starlette(
+        routes=routes,
+        exception_handlers={HTTPException: http_error},
+        middleware=[Middleware(ApiGuard, hosts=tuple(allowed_hosts))],
+    )
 
 
 def _int_param(
