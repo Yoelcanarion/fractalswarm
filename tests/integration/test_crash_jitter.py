@@ -17,6 +17,7 @@ from fractalswarm.bench.registry import Cell, CellContext, get_workflow
 from fractalswarm.bench.scoring import load_events, score_run
 from fractalswarm.bench.workflows import cell_backend
 from fractalswarm.comms.chaos import plan_from
+from fractalswarm.runs import replay_run
 
 T2 = "t2_conference"
 
@@ -81,3 +82,9 @@ def test_the_swarm_of_the_same_seed_gets_the_same_crash_times(runs: dict[str, Pa
     moved = fired(runs["swarm"])
     assert moved and all(at <= p for at, p in zip(planned(runs["swarm"]), moved, strict=False))
     assert score_run(runs["swarm"]).completed
+
+
+@pytest.mark.parametrize("which", ["wide", "swarm"])
+async def test_a_jittered_run_replays_bit_for_bit(runs: dict[str, Path], which: str) -> None:
+    report = await replay_run(runs[which])
+    assert report.ok, report.detail
