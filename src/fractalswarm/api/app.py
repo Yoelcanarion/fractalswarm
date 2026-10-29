@@ -21,8 +21,9 @@ token of a preflight (``POST /api/tasks/preflight``, ``/api/arena/preflight``,
 ``/api/intake/preflight``) and the word SPEND, and the server was started with
 ``FRACTALSWARM_ALLOW_UI_REAL`` (``api/spend.py``). ``GET /api/capabilities`` says which
 controls are real.
-A finished run also has ``/metrics`` (the official numbers) and ``/takeover`` (what its log
-proves about the coordinator kills).
+A finished run also has ``/metrics`` (the official numbers, ``recovery`` among them), ``/takeover``
+(what its log proves about the coordinator kills) and ``/recovery`` (what each coordinator outage
+cost, and what a supervisor's restarts found and did).
 
 Every request, the WebSocket included, passes ``api/guard.py`` first: a ``Host`` that is not
 loopback or the address ``serve`` was given gets 400, a POST that is not ``application/json``
@@ -100,6 +101,7 @@ def create_app(
     # Without a gate no billed run can start and no ledger is read.
     spending = spend or (Spend.locked(private_dir) if private_dir is not None else None)
     takeovers: dict[tuple[str, str], dict[str, Any]] = {}
+    recoveries: dict[tuple[str, str], dict[str, Any]] = {}
 
     def need_private() -> tuple[PrivateDir, JobManager]:
         if private is None or manager is None:
@@ -177,6 +179,23 @@ def create_app(
             takeovers[key] = report.model_dump(mode="json")
         return JSONResponse(takeovers[key])
 
+    async def recovery(request: Request) -> JSONResponse:
+        """What the log shows each coordinator outage cost (``verify/recovery.py``): the recovery
+        ``metrics`` with one row per crash or partition, what each supervisor restart found and
+        did, and ``ok`` over the rules a supervisor that keeps its workers must hold to. Recomputed
+        from the finished log, like ``/takeover``, which checks the swarm's kills."""
+        from fractalswarm.verify.recovery import check_run
+
+        run = entry(request)
+        last = catalog.last(run)
+        if last is None or last["type"] != "run.completed":
+            raise HTTPException(409, "the run has not completed yet; check it when it ends")
+        key = (str(run.path), last["hash"])
+        if key not in recoveries:
+            report = await anyio.to_thread.run_sync(check_run, run.path)
+            recoveries[key] = report.model_dump(mode="json")
+        return JSONResponse(recoveries[key])
+
     async def capabilities(request: Request) -> JSONResponse:
         """Which controls this server really does. ``chaos`` and ``approve`` act on a live run
         that was launched by the API; any other run answers 409. ``tasks`` needs a private
@@ -210,6 +229,14 @@ def create_app(
         fixture = FIXTURES_DIR / "hero_chart.json"
         data = json.loads(fixture.read_text(encoding="utf-8"))
         return JSONResponse({"source": "fixture", "fixture": True, "data": data})
+
+    async def bench_honesty(request: Request) -> JSONResponse:
+        """``honesty.json`` as committed (``bench verdicts --prereg``): the swarm's wins, ties and
+        losses against each rival, the regime map and the derived outcome. 404 until it exists."""
+        path = bench_dir / "honesty.json"
+        if not path.is_file():
+            raise HTTPException(404, "no honesty.json yet; bench verdicts --prereg writes it")
+        return JSONResponse(json.loads(path.read_text(encoding="utf-8")))
 
     def inbox_of(run_id: str) -> Any:
         """The control inbox of a run that is still recording. A finished run (its log is
@@ -543,8 +570,9 @@ def create_app(
 
     async def run_metrics(request: Request) -> JSONResponse:
         """The official numbers of a run (``bench/scoring.score_run``): stall, makespan, cost,
-        tokens, messages, chaos events, and the task's validity. ``recovery`` is reserved for
-        the recovery metrics of the durable-supervisor comparison."""
+        tokens, messages, chaos events, and the task's validity. ``recovery`` is the same
+        ``metrics.recovery`` (``bench/recovery.py``): what the coordinators' outages cost, in
+        total and one row per outage. A mean over no crashes is null."""
         from fractalswarm.bench.scoring import default_checker, score_run
         from fractalswarm.bench.workflows import t1_checker, t2_checker
         from fractalswarm.kernel.events import Event
@@ -559,6 +587,7 @@ def create_app(
         metrics = await anyio.to_thread.run_sync(
             lambda: score_run(events, checker or default_checker)
         )
+        scored = metrics.model_dump()
         return JSONResponse(
             {
                 "run_id": run.id,
@@ -566,8 +595,8 @@ def create_app(
                 "scenario": names.get(started.get("scenario"), started.get("scenario")),
                 "task": task,
                 "input": (started.get("params") or {}).get("input"),
-                "metrics": metrics.model_dump(),
-                "recovery": None,
+                "metrics": scored,
+                "recovery": scored["recovery"],
             }
         )
 
@@ -592,9 +621,11 @@ def create_app(
         Route("/api/runs/{run_id}/verify", verify_run, methods=["POST"]),
         Route("/api/runs/{run_id}/feasibility", feasibility),
         Route("/api/runs/{run_id}/takeover", takeover),
+        Route("/api/runs/{run_id}/recovery", recovery),
         Route("/api/capabilities", capabilities),
         *lens_routes(catalog),
         Route("/api/bench/results", bench_results),
+        Route("/api/bench/honesty", bench_honesty),
         Route("/api/runs/{run_id}/metrics", run_metrics),
         Route("/api/tasks", launch_task, methods=["POST"]),
         Route("/api/tasks/preflight", preflight_task_route, methods=["POST"]),
