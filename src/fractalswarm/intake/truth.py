@@ -7,6 +7,7 @@ the speaker's own note, word for word. The truth never reaches a prompt. ``sha25
 of ``{corpus, truth}``; a run on this input records it in ``params.input``.
 """
 
+import copy
 import hashlib
 import json
 from typing import Any
@@ -20,6 +21,26 @@ TRUTH_KEYS = ("track_of", "speaker_of", "attendance", "availability", "preferenc
 def input_sha256(corpus: dict[str, Any], truth: dict[str, Any]) -> str:
     text = canonical_json({"corpus": corpus, "truth": truth})
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def corpus_and_truth(approved: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The ``(corpus, truth)`` of an approved input (an intake's ``approved.json``), in the
+    shapes a run records as ``params.corpus`` and ``params.truth``, and the ablation reads.
+
+    The corpus is what the agents read: ``emails[{id, speaker_id, from, subject, body}]``,
+    ``talks[{id, title, speaker_id, speaker, track_label, abstract}]``, ``days``, ``slots``,
+    ``rooms``, ``tracks`` and ``conference``. The truth is the checker's: ``track_of``,
+    ``speaker_of``, ``attendance``, ``availability`` and ``preferences``. Pure, and a copy: the
+    caller cannot change the approved input through it. ``ValueError`` when ``approved`` is not an
+    approved input, or was edited after it was approved (its hash no longer matches).
+    """
+    try:
+        corpus, truth, expected = approved["corpus"], approved["truth"], approved["sha256"]
+    except (KeyError, TypeError):
+        raise ValueError("not an approved input: it lacks corpus, truth or sha256") from None
+    if input_sha256(corpus, truth) != expected:
+        raise ValueError("it changed after it was approved")
+    return copy.deepcopy(corpus), copy.deepcopy(truth)
 
 
 def text_sha256(segments: dict[str, str]) -> str:

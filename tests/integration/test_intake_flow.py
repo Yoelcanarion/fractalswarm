@@ -17,11 +17,13 @@ import pytest
 
 from fractalswarm.api.catalog import Catalog, RunEntry
 from fractalswarm.bench.scoring import load_events
+from fractalswarm.bench.tasks.t2_conference.ablation import cases_from_corpus
 from fractalswarm.bench.tasks.t2_conference.generator import live_sample
 from fractalswarm.bench.workflows import fake_backend
 from fractalswarm.intake import service
 from fractalswarm.intake.fake import intake_backend
 from fractalswarm.intake.store import PrivateDir
+from fractalswarm.intake.truth import corpus_and_truth as approved_pair
 from fractalswarm.llm.fake import FakeBackend
 from fractalswarm.llm.roles import CONTRIBUTOR_SUFFIX, RoleTable
 from fractalswarm.planning.taskspec import TaskSpec, run_params
@@ -202,6 +204,37 @@ def test_a_swarm_and_its_rival_run_on_the_identical_input(flow: Flow) -> None:
         "truth_mode": "approved",
     }
     assert swarm["scenario"] != central["scenario"]
+
+
+def test_the_approved_input_converts_to_the_corpus_and_truth_a_run_records(flow: Flow) -> None:
+    approved = flow.private.approved(flow.intake_id)
+    corpus, truth = approved_pair(approved)
+    params = run_params(flow.spec, flow.private.root)
+    assert (corpus, truth) == (params["corpus"], params["truth"])  # what a run on it records
+
+    assert {"emails", "talks", "days", "slots"} <= set(corpus)  # what the ablation reads
+    assert all({"id", "speaker_id", "body"} <= set(email) for email in corpus["emails"])
+    assert all({"id", "abstract"} <= set(talk) for talk in corpus["talks"])
+    assert {"availability", "preferences", "attendance"} <= set(truth)
+    cases = cases_from_corpus(corpus, truth)  # the ablation takes the pair as it is
+    assert len(cases) == len(corpus["emails"]) + len(corpus["talks"]) > 0
+
+    corpus["talks"][0]["abstract"] = "changed by the caller"
+    truth["attendance"][corpus["talks"][0]["id"]] += 1
+    assert approved_pair(approved) == (params["corpus"], params["truth"])  # a copy: no side effect
+
+
+@pytest.mark.parametrize("bad", [None, {}, {"corpus": {}, "truth": {}}, {"sha256": "x"}])
+def test_the_converter_refuses_what_is_not_an_approved_input(bad: Any) -> None:
+    with pytest.raises(ValueError, match="not an approved input"):
+        approved_pair(bad)
+
+
+def test_the_converter_refuses_an_input_edited_after_it_was_approved(flow: Flow) -> None:
+    approved = flow.private.approved(flow.intake_id)
+    approved["truth"]["attendance"][next(iter(approved["truth"]["attendance"]))] += 1
+    with pytest.raises(ValueError, match="changed after it was approved"):
+        approved_pair(approved)
 
 
 def test_both_runs_place_every_talk_and_replay(flow: Flow) -> None:

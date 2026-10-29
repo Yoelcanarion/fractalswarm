@@ -192,7 +192,12 @@ def _live_params(spec: TaskSpec, private_dir: Path | None) -> dict[str, Any]:
     from fractalswarm.config import Settings
     from fractalswarm.intake.pseudonym import Pseudonyms
     from fractalswarm.intake.store import PrivateDir
-    from fractalswarm.intake.truth import input_sha256, validate_corpus, validate_truth
+    from fractalswarm.intake.truth import (
+        corpus_and_truth,
+        input_sha256,
+        validate_corpus,
+        validate_truth,
+    )
 
     inputs = spec.inputs
     if spec.task != "t2_conference":
@@ -204,9 +209,11 @@ def _live_params(spec: TaskSpec, private_dir: Path | None) -> dict[str, Any]:
         approved = private.approved(inputs.intake)
         if approved is None:
             raise FileNotFoundError(f"intake {inputs.intake!r} has no approved input")
-        corpus, truth, source, mode = approved["corpus"], approved["truth"], "intake", "approved"
-        if input_sha256(corpus, truth) != approved["sha256"]:
-            raise ValueError(f"approved input of {inputs.intake!r} changed after it was approved")
+        try:
+            corpus, truth = corpus_and_truth(approved)
+        except ValueError as exc:
+            raise ValueError(f"approved input of {inputs.intake!r}: {exc}") from None
+        source, mode = "intake", "approved"
     else:
         assert inputs.inline is not None
         corpus, truth = inputs.inline.get("corpus"), inputs.inline.get("truth") or {}
