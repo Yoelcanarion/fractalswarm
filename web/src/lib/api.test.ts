@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { answerEscalation, fetchCapabilities, fetchDisputes, fetchTakeover, launchTask, postControl, verifyRun } from "./api";
+import { answerEscalation, fetchCapabilities, fetchDisputes, fetchTakeover, launchTask, loadAllEvents, postControl, verifyRun } from "./api";
 import { buildTaskSpec, defaultForm, taskLaunchBody } from "./taskspec";
 
 const reply = (status: number, body: unknown = {}) =>
@@ -176,6 +176,71 @@ describe("a run started from the New task form", () => {
   it("is not fooled by a body that is not an object (a proxy's page)", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("null", { status: 502, statusText: "Bad Gateway", headers: { "Content-Type": "application/json" } })));
     await expect(launchTask(taskLaunchBody(built()))).resolves.toMatchObject({ ok: false, status: 502, detail: "Bad Gateway", runId: null });
+  });
+});
+
+// api/app.py `events_page` answers {events, next_seq, last_seq, done}. Since W3's fix (b702dc5) the page and `last_seq` come from one
+// snapshot, so `done` is true as soon as a page reaches the end of the log as it was when the page was read, however fast a live
+// run writes; what is committed after that comes over the WebSocket tail from next_seq.
+describe("reading a whole log", () => {
+  /** A server whose log grows by `growth` events after every page it serves (a live run), snapshot-firm like the API's. */
+  function growing(start: number, growth: number) {
+    const log = Array.from({ length: start }, (_, i) => ({ seq: i + 1 }));
+    const calls: { from: number; limit: number }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const query = new URL(url, "http://x/").searchParams;
+        const from = Number(query.get("from_seq"));
+        const limit = Number(query.get("limit"));
+        calls.push({ from, limit });
+        if (calls.length > 20) throw new Error("the reader is still chasing the log after 20 pages");
+        const last = log.length; // the snapshot
+        const events = log.slice(from - 1, from - 1 + limit);
+        const next = events.length ? events.at(-1)!.seq + 1 : from;
+        for (let i = 0; i < growth; i++) log.push({ seq: log.length + 1 });
+        return reply(200, { events, next_seq: next, last_seq: last, done: next > last });
+      }),
+    );
+    return calls;
+  }
+
+  it("pages from the first event to the end of the log it saw, in order, and stops there", async () => {
+    const calls = growing(12_000, 0);
+    const events = await loadAllEvents("run 1");
+    expect(events.map((e) => e.seq)).toEqual(Array.from({ length: 12_000 }, (_, i) => i + 1));
+    expect(calls).toEqual([
+      { from: 1, limit: 5000 },
+      { from: 5001, limit: 5000 },
+      { from: 10_001, limit: 5000 },
+    ]);
+  });
+
+  it("does not chase a run that writes while it reads: it ends once a page reaches the end of its own snapshot", async () => {
+    const calls = growing(12_000, 300);
+    const events = await loadAllEvents("r");
+    const seqs = events.map((e) => e.seq);
+    expect(calls).toHaveLength(3);
+    expect(seqs[0]).toBe(1);
+    expect(seqs.every((seq, i) => seq === i + 1)).toBe(true); // no gap, no repeat: the tail takes over from the next event
+    expect(seqs.length).toBeGreaterThanOrEqual(12_000);
+    expect(seqs.length).toBeLessThan(12_000 + 3 * 300 + 1);
+  });
+
+  it("starts where it is told to", async () => {
+    const calls = growing(300, 0);
+    expect((await loadAllEvents("r", 201)).map((e) => e.seq)).toEqual(Array.from({ length: 100 }, (_, i) => i + 201));
+    expect(calls).toEqual([{ from: 201, limit: 5000 }]);
+  });
+
+  it("stops on an empty page even if the server still says it is not done", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => reply(200, { events: [], next_seq: 1, last_seq: 5, done: false })));
+    await expect(loadAllEvents("r")).resolves.toEqual([]);
+  });
+
+  it("fails with the server's own reason", async () => {
+    server(500, { detail: "boom" });
+    await expect(loadAllEvents("r")).rejects.toThrow("boom");
   });
 });
 

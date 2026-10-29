@@ -591,6 +591,15 @@ itself: no class the lens's stylesheet starts a rule with may also start a rule 
 property the base rule sets). The six lens shots were taken again after the rename (`win-final2/`, 0 errors, publishable): the drawer
 is pixel-identical to the earlier one by eye. Shot of the card: `win-crow/collisions-card.png`.
 
+**`loadAllEvents` and W3's events fix (b702dc5, `.plans/notes/arena-meta.md` "Shape for W4").** `GET /api/runs/{id}/events` keeps
+`{events, next_seq, last_seq, done}`; the page and `last_seq` now come from one snapshot, so `done` is true as soon as a page reaches
+the end of the log as it was when the page was read, however fast a live run writes (before, a run committing thousands of events a
+second kept `done` false for as long as it ran, and the UI's pager followed it). `loadAllEvents` as written
+(`if (page.done || page.events.length === 0) return`) needs no change; what is committed after the snapshot comes over the WebSocket
+tail from `next_seq`, as today. Pinned in `api.test.ts` ("reading a whole log"): a log of 12,000 events read in 3 pages in order; a log
+that grows by 300 events after every page is read in 3 pages, with no gap and no repeat; the same test fails (the reader is "still
+chasing the log after 20 pages") against a server that reads `last_seq` at a second moment, which is the old behaviour.
+
 ### Plan for the quiet window (kept for the record; done above)
 1. `npm --prefix web run build` (about 4 s), restore `favicon.svg`.
 2. `lite_check.mjs` (scratch, not in git): opens the swarm run where edges are lit and reads the computed
