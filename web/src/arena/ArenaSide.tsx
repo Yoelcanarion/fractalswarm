@@ -15,15 +15,18 @@ function SideHead({ role, title }: { role: "swarm" | "rival"; title: string }) {
   const runId = useRunStore((s) => s.runId);
   return (
     <header className="side__head">
-      <h2 className="side__name">
-        <span className="side__swatch" aria-hidden />
-        {title}
-      </h2>
-      <span className="side__run mono">{runId ?? ""}</span>
-      <div className="side__badges">
-        <VerifyBadge />
-        {role === "swarm" ? <TakeoverChip /> : <RecoveryChip />}
+      <div className="side__top">
+        <h2 className="side__name">
+          <span className="side__swatch" aria-hidden />
+          {title}
+        </h2>
+        <span className="side__run mono">{runId ?? ""}</span>
+        <span className="side__verify">
+          <VerifyBadge />
+        </span>
       </div>
+      {/* The same row on both sides, so the two boards start at the same height. */}
+      <div className="side__proof">{role === "swarm" ? <TakeoverChip /> : <RecoveryChip />}</div>
     </header>
   );
 }

@@ -84,9 +84,24 @@
 
 .side__head {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.side__top {
+  display: flex;
   align-items: center;
   gap: var(--space-3);
-  flex-wrap: wrap;
+}
+
+.side__verify {
+  margin-left: auto;
+}
+
+.side__proof {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
 }
 
 .side__name {
@@ -108,14 +123,6 @@
 .side__run {
   color: var(--text-muted);
   font-size: var(--fs-body);
-}
-
-.side__badges {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
-  flex-wrap: wrap;
 }
 
 /* ---- the status line: who is down, and what it costs ---- */

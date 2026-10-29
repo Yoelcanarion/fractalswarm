@@ -260,3 +260,15 @@ export function headcount(view: ViewState): { coordinators: number; agents: numb
   }
   return { coordinators, agents };
 }
+
+/** The coordinator that holds the root duties, for the tag on its chip: whoever the log last gave the `root`
+ * key to (a takeover is an `ownership.remapped` of that key), else the root actor, which holds the duties
+ * from the start. The reducer's own `rootHolder` also counts the infrastructure actors (the board and the
+ * network are spawned without a parent too), which are not drawn. */
+export function rootOf(view: ViewState): string | null {
+  const drawn = (id: string): boolean => view.actors[id] !== undefined && !isInfraKind(view.actors[id].kind);
+  const owner = view.ownership.root;
+  if (owner !== undefined && drawn(owner)) return owner;
+  const holders = view.order.filter((id) => drawn(id) && view.actors[id].duties.includes("root"));
+  return holders.filter((id) => view.actors[id].status === "alive").at(-1) ?? holders.at(-1) ?? null;
+}

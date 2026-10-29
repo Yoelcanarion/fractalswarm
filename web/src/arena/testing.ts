@@ -57,3 +57,13 @@ export function restart(s: Stream, coordinator: string, at: number, respawn: str
 /** An agent of ``actor`` starts a model call at the stream's time. */
 export const call = (s: Stream, actor: string, id: string): Stream =>
   s.emit("effect.started", actor, { kind: "llm", effect_id: id, tag: id, request: { id } });
+
+/** The infrastructure actors of a real run: the board and the network are spawned without a parent, like the root. */
+export function withInfra(s: Stream): Stream {
+  return s.spawn("board", "board", null).spawn("net", "net", null);
+}
+
+/** The root key changes hands, as a takeover of the root is logged (`ownership.remapped`, no `duties`). */
+export function remapRoot(s: Stream, from: string, to: string, at: number): Stream {
+  return s.at(at).emit("ownership.remapped", "@kernel", { key: "root", owner: to, previous: from, works: [] });
+}

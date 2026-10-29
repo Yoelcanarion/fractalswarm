@@ -78,7 +78,7 @@ export const ROW_DEFS: readonly RowDef[] = [
   {
     id: "idle",
     label: "Idle agent-seconds",
-    unit: "agent·s",
+    unit: "", // the label says it; "16.0 agent·s" does not fit beside the other side in the strip
     decimals: 1,
     definition: "Agent time spent idle because the coordinator they answer to was down.",
     live: (s) => seconds(s.counters.idleAgentMs),
