@@ -657,8 +657,8 @@ in PREREG's order, with the ratios of the seed means (descriptive):
 
 B is already fixed by the gate: locality ties at T2 C2 and C3 against `durable-max` (§4.5). The ten points
 of the plausible region then read: 2 hold (`rival_restart_ms` 1 s and 3 s), 6 tie (`recovery_ms` 1–10 s
-and `rival_restart_ms` 0), and 2 fail (`rival_recovery_ms` 0.5 and 1 s). The wording of the headline that
-goes with the outcome is not written here (see the placeholder at the top).
+and `rival_restart_ms` 0), and 2 fail (`rival_recovery_ms` 0.5 and 1 s). The headline that goes with the
+outcome, settled at the decision gate on Oct 29, is at the top of this report.
 
 ### 4.10 The real-model matrix
 
