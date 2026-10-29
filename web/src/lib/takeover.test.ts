@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { describeTakeover, logHasTakeover, readTakeover, type TakeoverSummary } from "./takeover";
 import { loadJsonl, Stream } from "./testing";
 
-const report = (over: Partial<TakeoverSummary> = {}): TakeoverSummary => ({ ok: true, violations: [], heirs: null, adoptions: null, kills: null, ...over });
+const report = (over: Partial<TakeoverSummary> = {}): TakeoverSummary => ({ ok: true, violations: [], heirs: null, reclaims: null, adoptions: null, kills: null, ...over });
 
 describe("reading a takeover report", () => {
   it("needs a boolean ok, and nothing else", () => {
@@ -27,6 +27,7 @@ describe("reading a takeover report", () => {
         { check: "", kind: "", seq: null, detail: "no check named" },
       ],
       heirs: 3,
+      reclaims: 0,
       adoptions: 1,
       kills: 5,
     });
@@ -35,7 +36,21 @@ describe("reading a takeover report", () => {
   it("counts each list on its own, and nothing for one that is not a list", () => {
     expect(readTakeover({ ok: true, successions: [{}] })).toMatchObject({ heirs: 1, adoptions: null });
     expect(readTakeover({ ok: true, adoptions: [{}, {}] })).toMatchObject({ heirs: null, adoptions: 2 });
-    expect(readTakeover({ ok: true, successions: "many", adoptions: 4 })).toMatchObject({ heirs: null, adoptions: null });
+    expect(readTakeover({ ok: true, successions: "many", adoptions: 4 })).toMatchObject({ heirs: null, reclaims: null, adoptions: null });
+  });
+
+  it("keeps a reclaim out of the heirs: the check compares no heir for a member that took its own goal back", () => {
+    // The shape of the report of t2-real-c3-swarm-seed1b: 11 takeovers and 1 reclaim (verify/takeover.py `kind`).
+    const successions = [...Array.from({ length: 11 }, () => ({ kind: "takeover" })), { kind: "reclaim" }];
+    expect(readTakeover({ ok: true, successions, adoptions: new Array(12).fill({}), kills: new Array(11).fill({}) })).toMatchObject({
+      heirs: 11,
+      reclaims: 1,
+      adoptions: 12,
+      kills: 11,
+    });
+    expect(readTakeover({ ok: true, successions: [{ kind: "reclaim" }] })).toMatchObject({ heirs: 0, reclaims: 1 });
+    expect(readTakeover({ ok: true, successions: [{ kind: "takeover" }, {}] })).toMatchObject({ heirs: 2, reclaims: 0 });
+    expect(readTakeover({ ok: true })).toMatchObject({ heirs: null, reclaims: null });
   });
 });
 
@@ -46,6 +61,17 @@ describe("what the chip says", () => {
     expect(chip.text).toBe("Takeover OK ✓ 6 heirs");
     expect(chip.detail).toBe("6 heirs recomputed from the log, none different from the one the run used. 5 tree adoptions checked against the log.");
     expect(describeTakeover(report({ heirs: 1 }), true).text).toBe("Takeover OK ✓ 1 heir");
+  });
+
+  it("counts a reclaim apart from the heirs, and says what it is", () => {
+    const chip = describeTakeover(report({ heirs: 11, reclaims: 1, adoptions: 12, kills: 11 }), true);
+    expect(chip.tone).toBe("good");
+    expect(chip.text).toBe("Takeover OK ✓ 11 heirs");
+    expect(chip.detail).toBe(
+      "11 heirs recomputed from the log, none different from the one the run used. " +
+        "1 reclaim: a member back from a false death took its own goal back (no heir is compared). " +
+        "12 tree adoptions checked against the log.",
+    );
   });
 
   it("says Takeover OK without a count when only adoptions were checked", () => {
@@ -69,6 +95,13 @@ describe("what the chip says", () => {
       "No goal changed hands in this run (3 kills), so there was no heir to recompute from the log.",
     );
     expect(describeTakeover(report({ heirs: 0, adoptions: 0, kills: 1 }), false).detail).toContain("(1 kill)");
+  });
+
+  it("does not call a run with only a reclaim a takeover, and does not say no goal changed hands", () => {
+    const chip = describeTakeover(report({ heirs: 0, reclaims: 1, adoptions: 0, kills: 2 }), true);
+    expect(chip.tone).toBe("muted");
+    expect(chip.text).toBe("No takeover to check");
+    expect(chip.detail).toBe("No goal was taken over in this run (2 kills, 1 reclaim), so there was no heir to recompute from the log.");
   });
 
   it("asks the log when the report counts nothing", () => {

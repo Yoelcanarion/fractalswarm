@@ -348,8 +348,8 @@ describe("the takeover chip", () => {
     await run.getState().runTakeover();
     return text(render(run, TakeoverChip));
   };
-  const counted = { ok: true, violations: [], heirs: 0, adoptions: 0, kills: 0 };
-  const uncounted = { ok: true, violations: [], heirs: null, adoptions: null, kills: null };
+  const counted = { ok: true, violations: [], heirs: 0, reclaims: 0, adoptions: 0, kills: 0 };
+  const uncounted = { ok: true, violations: [], heirs: null, reclaims: null, adoptions: null, kills: null };
   /** A log in which a goal changed hands. */
   const handedOver = (): RunEvent[] => {
     const s = new Stream().at(0).emit("run.started", "@kernel", { seed: "0", scenario: "t", params: {}, clock: "sim" });
