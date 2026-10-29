@@ -6,8 +6,8 @@ Owner of: `api/lens.py`, the ablation, Wonder arbitration. Only the coordinator 
 | Step | State |
 |---|---|
 | 1. Muse lens API (merge point 1) | **done**, see below |
-| 2. Ablation (merge point 2, own commit) | **done** (own commit), see "Step 2" below |
-| 3. Wonder arbitration (merge point 2, own commit) | waits for W1's durable modes |
+| 2. Ablation (merge point 2, own commit) | **done and merged** into arena at 9140dce (my 73a33fe); see "Step 2" below |
+| 3. Wonder arbitration (merge point 2, own commit) | unblocked: arena has W1's durable modes (6ca97ee) |
 
 ---
 
@@ -312,7 +312,8 @@ Real bodies (fake backend, two posted notes): `POST` → `{"run_id":"ablation-b7
 - The regex's preference defaults to `none` and its availability to "all available", exactly as the fake T2 model does; a note it cannot read counts against it.
 
 ### $0 reference comparison
-(see the end of this file once recorded)
+- **Suite:** 1133 passed at 73a33fe, accepted by the coordinator.
+- **References:** 43 of 43 runs identical to the Phase 0 set (`~/.fractalswarm/refs/phase0-3b1fe9b`) by `compare_refs.py`: the 11 CLI runs and the 32-cell fake matrix. The ablation adds a scenario addressed by its `module:attr` path and two new event types, and touches no default path, so the default-path logs did not move.
 
 ## Step 3 — arbitration (not started)
 Waits for the coordinator's word that W1's durable modes have merged. Deadline: merged by Sun Nov 1, 14:00, or dropped before the 20:00 freeze.
