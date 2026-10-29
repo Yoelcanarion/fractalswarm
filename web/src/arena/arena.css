@@ -204,7 +204,7 @@
 }
 
 .board__edge,
-.chip,
+.coord,
 .dot {
   --glow: clamp(0, calc(1 - (var(--now, 0) - var(--born, -1000000)) / var(--life, 1)), 1);
 }
@@ -228,69 +228,69 @@
   opacity: 1;
 }
 
-.chip__box {
+.coord__box {
   fill: var(--surface-2);
   stroke: var(--owner);
   stroke-width: 2.4;
 }
 
-.chip__id {
+.coord__id {
   fill: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 700;
 }
 
-.chip--suspected .chip__box {
+.coord--suspected .coord__box {
   stroke-dasharray: 5 3;
 }
 
-.chip--restarting .chip__box {
+.coord--restarting .coord__box {
   fill: var(--warn-bg);
   stroke: var(--warn);
 }
 
-.chip--restarting .chip__id {
+.coord--restarting .coord__id {
   fill: var(--warn-text);
 }
 
-.chip--down .chip__box {
+.coord--down .coord__box {
   fill: var(--danger-bg);
   stroke: var(--danger);
 }
 
-.chip--down .chip__id {
+.coord--down .coord__id {
   fill: var(--text-muted);
 }
 
-.chip--finished {
+.coord--finished {
   opacity: 0.5;
 }
 
-.chip__cross {
+.coord__cross {
   fill: none;
   stroke: var(--danger);
   stroke-width: 2.6;
   stroke-linecap: round;
 }
 
-.chip__restart {
+.coord__restart {
   fill: var(--warn);
   transform-box: fill-box;
   transform-origin: left;
   transform: scaleX(clamp(0, calc((var(--now, 0) - var(--since, 0)) / max(var(--dur, 1), 1)), 1));
 }
 
-.chip--adopted .chip__box {
+.coord--adopted .coord__box {
   stroke-width: calc(2.4px + 3px * var(--glow));
   filter: drop-shadow(0 0 calc(7px * var(--glow)) var(--owner));
 }
 
-.chip__tag rect {
+.coord__tag rect {
   fill: var(--text-primary);
 }
 
-.chip__tag text {
+.coord__tag text {
   fill: var(--text-inverse);
   font-family: var(--font-sans);
   font-size: 11px;

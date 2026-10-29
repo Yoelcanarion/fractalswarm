@@ -102,21 +102,21 @@ export const ArenaBoard = memo(function ArenaBoard({ frame, label, rootLabel }: 
             ...(actor.outage ? ringVars(actor.outage) : {}),
           } as CSSProperties;
           return (
-            <g key={node.id} className={`chip chip--${state}${adopted ? " chip--adopted" : ""}`} transform={`translate(${p.x} ${p.y})`} style={style}>
+            <g key={node.id} className={`coord coord--${state}${adopted ? " coord--adopted" : ""}`} transform={`translate(${p.x} ${p.y})`} style={style}>
               <title>{`${node.id} · ${CHIP_WORDS[state]}`}</title>
-              <rect className="chip__box" width={CHIP_W} height={CHIP_H} rx={8} />
-              <text className="chip__id" x={CHIP_W / 2 - (state === "down" ? 5 : 0)} y={CHIP_H / 2} dy="0.35em" textAnchor="middle">
+              <rect className="coord__box" width={CHIP_W} height={CHIP_H} rx={8} />
+              <text className="coord__id" x={CHIP_W / 2 - (state === "down" ? 5 : 0)} y={CHIP_H / 2} dy="0.35em" textAnchor="middle">
                 {node.id}
               </text>
               {state === "down" && (
                 <path
-                  className="chip__cross"
+                  className="coord__cross"
                   d={`M${CHIP_W - 15 - CROSS} ${CHIP_H / 2 - CROSS}l${2 * CROSS} ${2 * CROSS}m0 ${-2 * CROSS}l${-2 * CROSS} ${2 * CROSS}`}
                 />
               )}
-              {state === "restarting" && actor.outage && <rect className="chip__restart" x={4} y={CHIP_H - 6} width={CHIP_W - 8} height={3} rx={1.5} />}
+              {state === "restarting" && actor.outage && <rect className="coord__restart" x={4} y={CHIP_H - 6} width={CHIP_W - 8} height={3} rx={1.5} />}
               {root === node.id && (
-                <g className="chip__tag" transform={`translate(${CHIP_W / 2} ${-TAG_H / 2 - 2})`}>
+                <g className="coord__tag" transform={`translate(${CHIP_W / 2} ${-TAG_H / 2 - 2})`}>
                   <rect x={-(rootLabel.length * 3.4 + 7)} y={-TAG_H / 2} width={rootLabel.length * 6.8 + 14} height={TAG_H} rx={TAG_H / 2} />
                   <text dy="0.35em" textAnchor="middle">
                     {rootLabel}

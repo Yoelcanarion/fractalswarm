@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { ArenaPage } from "./arena/ArenaPage";
+import { HelpsPage } from "./arena/helps/HelpsPage";
 import { parseArenaRoute, type ArenaRoute } from "./arena/route";
 import { RunStrip } from "./components/RunStrip";
 import { StatusBadge, ThemeToggle } from "./components/ui";
@@ -37,6 +38,7 @@ const VIEW_TITLES: Record<RunView, string> = {
 type Route =
   | { page: "run"; runId: string | null; view: RunView; playback: Playback }
   | { page: "arena"; arena: ArenaRoute }
+  | { page: "helps" }
   | { page: "charts" }
   | { page: "runs" };
 
@@ -45,6 +47,7 @@ function parseHash(hash: string): Route {
   if (arena) return { page: "arena", arena };
   const [path, query = ""] = hash.replace(/^#\/?/, "").split("?");
   const parts = path.split("/");
+  if (parts[0] === "helps") return { page: "helps" };
   if (parts[0] === "charts") return { page: "charts" };
   if (parts[0] === "runs") return { page: "runs" };
   const params = new URLSearchParams(query);
@@ -129,6 +132,9 @@ export function App() {
           <a className={route.page === "arena" ? "tab tab--on" : "tab"} href="#/arena">
             Arena
           </a>
+          <a className={route.page === "helps" ? "tab tab--on" : "tab"} href="#/helps">
+            Where it helps
+          </a>
           <a className={route.page === "charts" ? "tab tab--on" : "tab"} href="#/charts">
             Charts
           </a>
@@ -168,6 +174,7 @@ export function App() {
         {route.page === "run" && route.view === "results" && <ResultsPage />}
         {route.page === "run" && route.view === "events" && <EventsPage />}
         {route.page === "arena" && <ArenaPage route={route.arena} />}
+        {route.page === "helps" && <HelpsPage />}
         {route.page === "charts" && <ChartsPage />}
         {route.page === "runs" && <RunsPage />}
       </main>

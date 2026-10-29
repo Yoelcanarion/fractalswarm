@@ -65,6 +65,9 @@ const NAMES: Record<SystemKind, string> = {
   other: "supervisor",
 };
 
+/** How a system is named in running text: the rival's name in a caption, a column head, a sentence. */
+export const systemName = (system: string): string => (NAMES as Record<string, string>)[system] ?? system;
+
 const FACTS: Record<SystemKind, string[]> = {
   swarm: [],
   "durable-max": ["workers survive", "same log"],

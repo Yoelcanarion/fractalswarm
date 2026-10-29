@@ -76,10 +76,10 @@ describe("the board", () => {
     const html = board(session.left);
     expect(html).toContain('role="img"');
     expect(html).toContain('aria-label="a team"');
-    expect(count(html, /class="chip chip--down/)).toBe(1); // o1
-    expect(html).toContain("chip__cross");
+    expect(count(html, /class="coord coord--down/)).toBe(1); // o1
+    expect(html).toContain("coord__cross");
     expect(html).toContain("board__edge--down");
-    expect(count(html, /class="chip chip--up/)).toBe(2); // o0, o2
+    expect(count(html, /class="coord coord--up/)).toBe(2); // o0, o2
     expect(count(html, /class="dot /)).toBe(4);
     expect(count(html, /dot--adopted/)).toBe(2); // o1's two agents, now o2's
     expect(count(html, /<g class="board__team[ "]/)).toBe(1); // one team of four: o2's, o1 has none left
@@ -94,12 +94,12 @@ describe("the board", () => {
     await session.open("s", "r", { atMs: 16_000, speed: null, play: false });
     renderCurrent(session.left);
     const html = board(session.left);
-    expect(count(html, /class="chip chip--down/)).toBe(1); // o0
-    expect(count(html, /class="chip__tag"/)).toBe(1);
-    expect(html).toMatch(/<g class="chip chip--up chip--adopted"/); // o2, adopted by o1
+    expect(count(html, /class="coord coord--down/)).toBe(1); // o0
+    expect(count(html, /class="coord__tag"/)).toBe(1);
+    expect(html).toMatch(/<g class="coord coord--up coord--adopted"/); // o2, adopted by o1
     expect(html).toContain("board__edge--adopted");
     // The tag is drawn inside o1's chip: after o1's title, before o2's. The dead o0 has none.
-    const tag = html.indexOf("chip__tag");
+    const tag = html.indexOf("coord__tag");
     expect(tag).toBeGreaterThan(html.indexOf("<title>o1 · up</title>"));
     expect(tag).toBeLessThan(html.indexOf("<title>o2 · up</title>"));
   });
@@ -107,8 +107,8 @@ describe("the board", () => {
   it("shows agents working, idle, and dashed while the coordinator they answer to is out", async () => {
     const session = await opened(12_000);
     const html = board(session.right, sharedFrames(null, null)[1], "supervisor");
-    expect(count(html, /class="chip chip--restarting/)).toBe(1);
-    expect(html).toContain("chip__restart");
+    expect(count(html, /class="coord coord--restarting/)).toBe(1);
+    expect(html).toContain("coord__restart");
     expect(count(html, /dot--working/)).toBe(1);
     expect(count(html, /dot--waiting/)).toBe(3);
     expect(text(html)).toContain("supervisor");
@@ -120,7 +120,7 @@ describe("the board", () => {
     const html = board(session.right);
     expect(count(html, /dot--idle/) + count(html, /dot--working/)).toBe(4);
     expect(html).not.toContain("dot--waiting");
-    expect(html).not.toContain("chip--down");
+    expect(html).not.toContain("coord--down");
   });
 
   it("holds the same frame for both sides, so a dot is the same size in each", async () => {
