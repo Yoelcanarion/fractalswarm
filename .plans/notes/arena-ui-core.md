@@ -370,6 +370,45 @@ is keyed on a part). **A trade, not a free win:** with `shadow` the adopted and 
 are not drawn, and with `anim` the lit edges keep their dashes but stop moving. Whether any part is worth it, and
 whether it should switch on by itself at a high speed, is for the measurements and the coordinator; nothing turns it on.
 
+### Since the resume (Oct 29 evening; arena merged into this branch at f0ee8bb, from afcf732)
+No plan by days any more (Yoel): each item as soon as its inputs exist.
+
+**Live control in the UI (518653e).** W2's routes answer 200 for `kill_half`, `kill_agent` and an approval, 422 for `api_storm`
+and `net_fault`, 409 for a run that cannot take controls; every refusal is `{"error": reason}`, which `postControl` already
+read into `detail`. So:
+- the dead "Not wired yet" text is gone from the chaos panel, the plan view, the run controls and the new-task form (none of
+  those routes answers 501 now; the only 501 left is W3's real-ablation route, which no component of mine calls), and the
+  comments that said "answers 501" say what the routes do;
+- a refused chaos kind shows the server's own words ("api_storm cannot be injected into a running run: it is part of the chaos
+  plan a run starts with; live kinds are kill_half, kill_coordinator, kill_agent"), not a copy of them in the UI;
+- an approval or a rejection is built by `approveBody(proposal, approve, reason)` (`lib/plan.ts`): it names the plan on screen by
+  its `plan_hash`. That is the `plan_hash` of the latest `plan.proposed` for the goal (the fold keeps the latest), which the
+  runtime logs as the scope token and compares with the control's (`actors/orchestrator.py`, the plan hold), so when the root dies
+  holding the plan and its heir proposes another, a click on the old one cannot approve the new one. A rejection carries its
+  reason (the planner's feedback); an approval carries none. A plan with no hash (an older log) is sent without one;
+- `kill_half` no longer sends `profile: "C3"` (the server ignores it);
+- tests: `approveBody` (plan.test.ts, including the heir's new hash) and `postControl` against W2's real refusal texts (api.test.ts).
+Not done, not asked: an answer UI for an escalation (`POST /api/runs/{id}/escalations/{eid}`): no component of mine posts it.
+The New task form still says "Until runs start from here, save it and run ..." under its YAML, which is stale when the server
+starts runs (`tasks` capability true); W5's intake page supersedes the form, so I left the copy.
+
+**`rootHolder` (849f9ea), found by W5.** The reducer gave `duties: ["root"]` to every actor spawned with no parent: `board`,
+`net` and `chaos` too, which every run spawns that way, so `rootHolder` answered `chaos` even on a run that never lost its root,
+and a real root takeover (an `ownership.remapped` of the key `root` with no `duties`) never moved it: the ROOT tag of the tree
+was never on the real root. Now `rootHolder` is the owner of the `root` key (it stays with a dead owner until its heir takes over),
+else the root actor (the parentless actor that is not infrastructure); infrastructure never gets the duty; the heir of a root
+remap gets `root` in its `duties`. `ViewState` keeps its shape. Checked on three real logs: `demo/backup` (committed; o0 -> o1 ->
+o2 -> o3 at events 4538, 5722, 6856, and no other change), `t2-real-c3-swarm-seed1b` (one remap, o0 -> o0, a reclaim) and
+`t2-real-c3-central-seed1` (no remaps); W5's `rootOf` (arena/board.ts) gives the same answer as `rootHolder` at every event of
+the three, so it works unchanged before and after the merge. `rootHolder.test.ts` (13 tests; 11 fail on the old reducer).
+Visible: the ROOT tag now shows on o0 and follows the heirs. W5 was told (msg_5c7e799aa147).
+
+**Prepared for the window (scratch, not in git):** `pw/proof.mjs` (chip against the real `/takeover`, the badge against the
+real `/verify` behind the guard including a bare POST that must get 415, and the ROOT tag at events 10, 4537, 4538, 5722, 6856
+and the end of `demo-backup`) and `pw/live.mjs` (a fake-LLM run launched through the API with `auto_approve` off, driven
+through the UI: the two 422 reasons, Approve with the hash, Kill half, Verify replay after the run ends; then a second run whose
+root is killed while it holds the plan, to see the heir's new hash reach the approval). Both parse; neither has run yet.
+
 ### Plan for the quiet window (one build, read-only server on scratch dirs, nothing written to the repo but the notes)
 1. `npm --prefix web run build` (about 4 s), restore `favicon.svg`.
 2. `lite_check.mjs` (scratch, not in git): opens the swarm run where edges are lit and reads the computed
