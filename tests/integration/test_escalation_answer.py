@@ -728,6 +728,9 @@ def test_a_person_answers_through_the_api_and_the_run_goes_on(
     assert [f["version"] for f in fact_versions(log)] == [3, 4]
     assert assert_finished(log)
     done = subprocess.run(
-        [*LAUNCH, "replay", str(runs / "http"), "--verify"], capture_output=True, text=True
+        [*LAUNCH, "replay", str(runs / "http"), "--verify"],
+        capture_output=True,
+        text=True,
+        timeout=300,
     )
     assert done.returncode == 0 and done.stdout.startswith("MATCH"), done.stdout + done.stderr
