@@ -2,10 +2,12 @@
 
 import type { ViewState } from "./reducer";
 
-// Categorical slots, dark-surface steps (validated order; see the dataviz reference palette).
-// Red is reserved for death and collisions, so it is not a series color here.
-export const SERIES = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#9085e9", "#008300"];
-export const ROOT_COLOR = "#e8e6df";
+// Ownership palette: ten colour-blind-safe hues defined once in styles/tokens.css (--own-1 to
+// --own-10, stepped separately for the dark and the light theme). Red is reserved for death and
+// collisions, so it is not one of them.
+export const OWNERSHIP_SLOTS = 10;
+export const SERIES = Array.from({ length: OWNERSHIP_SLOTS }, (_, i) => `var(--own-${i + 1})`);
+export const ROOT_COLOR = "var(--own-root)";
 
 export interface Placed {
   id: string;

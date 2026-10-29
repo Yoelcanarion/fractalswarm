@@ -1,13 +1,16 @@
-import { useEffect, useMemo } from "react";
+import { useMemo, useRef } from "react";
 
+import { useClockFrame } from "../lib/clockHooks";
 import { eventGroup } from "../lib/eventlog";
 import { SPEEDS } from "../lib/playback";
 import type { RunEvent } from "../lib/types";
-import { useRun } from "../store";
+import { useRunStoreApi, useRunStoreShallow } from "../store";
 
 const MARK_TYPES: Record<string, string> = {
   "chaos.injected": "mark--chaos",
   "member.dead": "mark--dead",
+  "baseline.crashed": "mark--dead",
+  "baseline.restarted": "mark--adopt",
   "tree.adopted": "mark--adopt",
   "collision.detected": "mark--collision",
   "run.halted": "mark--dead",
@@ -23,20 +26,25 @@ const markOf = (event: RunEvent): string | undefined =>
 const seconds = (ms: number) => `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
 
 export function Timeline() {
-  const { events, cursor, playhead, playing, speed, live, following } = useRun();
-  const { seekTime, setPlaying, setSpeed, tick, seek } = useRun.getState();
+  const { events, cursor, playing, speed, live, following } = useRunStoreShallow((s) => ({
+    events: s.events,
+    cursor: s.cursor,
+    playing: s.playing,
+    speed: s.speed,
+    live: s.live,
+    following: s.following,
+  }));
+  const { seekTime, setPlaying, setSpeed, seek } = useRunStoreApi().getState();
   const end = events.at(-1)?.ts_virtual ?? 0;
 
-  useEffect(() => {
-    if (!playing) return;
-    let last = performance.now();
-    let frame = requestAnimationFrame(function loop(now) {
-      tick(now - last);
-      last = now;
-      frame = requestAnimationFrame(loop);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [playing, tick]);
+  // The thumb and the time readout follow the clock every frame, straight into the DOM, so a
+  // playing replay re-renders nothing here between events.
+  const slider = useRef<HTMLInputElement>(null);
+  const readout = useRef<HTMLDivElement>(null);
+  useClockFrame((t) => {
+    if (slider.current) slider.current.value = String(Math.min(t, end));
+    if (readout.current) readout.current.textContent = `t = ${seconds(Math.min(t, end))} / ${seconds(end)}`;
+  });
 
   const marks = useMemo(
     () =>
@@ -54,11 +62,12 @@ export function Timeline() {
       </button>
       <div className="timeline__track">
         <input
+          ref={slider}
           type="range"
           min={0}
           max={Math.max(end, 1)}
           step={1}
-          value={Math.min(playhead, end)}
+          defaultValue={0}
           onChange={(e) => {
             setPlaying(false);
             seekTime(Number(e.target.value));
@@ -72,9 +81,7 @@ export function Timeline() {
         </div>
       </div>
       <div className="timeline__readout mono">
-        <div>
-          t = {seconds(Math.min(playhead, end))} / {seconds(end)}
-        </div>
+        <div ref={readout} />
         <div>
           event {cursor} / {events.length}
         </div>

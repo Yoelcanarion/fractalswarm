@@ -23,18 +23,27 @@ export function countAtTime(events: RunEvent[], t: number): number {
   return lo;
 }
 
-/** Advance the playhead by ``realMs`` of wall time at ``speed``, skipping idle gaps longer
- * than MAX_IDLE_GAP_MS of real time. */
-export function advancePlayhead(events: RunEvent[], playhead: number, realMs: number, speed: number): number {
-  const end = events.length ? events[events.length - 1].ts_virtual : 0;
+// One frame of a fixed-step clock: the playhead moves by ``speed`` x 1/60 s whatever the real
+// frame time was, so two takes of the same scene show the same thing on the same frame.
+export const FIXED_FRAME_MS = 1000 / 60;
+
+/** Advance a playhead by ``realMs`` of wall time at ``speed``. ``nextTs`` is the virtual time
+ * of the next event still ahead (any run on the clock), ``null`` if there is none. A gap longer
+ * than MAX_IDLE_GAP_MS of real time is skipped; the playhead never passes ``end``. */
+export function advanceVirtual(playhead: number, realMs: number, speed: number, nextTs: number | null, end: number): number {
   let next = playhead + realMs * speed;
-  const nextIndex = countAtTime(events, playhead);
-  if (nextIndex < events.length) {
-    const nextTs = events[nextIndex].ts_virtual;
+  if (nextTs !== null) {
     const gapReal = (nextTs - playhead) / speed;
     if (gapReal > MAX_IDLE_GAP_MS) next = Math.max(next, nextTs - MAX_IDLE_GAP_MS * speed);
   }
   return Math.min(next, end);
+}
+
+/** The same for one event log. */
+export function advancePlayhead(events: RunEvent[], playhead: number, realMs: number, speed: number): number {
+  const end = events.length ? events[events.length - 1].ts_virtual : 0;
+  const nextIndex = countAtTime(events, playhead);
+  return advanceVirtual(playhead, realMs, speed, nextIndex < events.length ? events[nextIndex].ts_virtual : null, end);
 }
 
 export class Folder {

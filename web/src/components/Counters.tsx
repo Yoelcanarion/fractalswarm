@@ -1,33 +1,30 @@
 import { isInfraKind } from "../lib/layout";
 import type { ViewState } from "../lib/reducer";
+import { Stat } from "./ui";
 
+// The counters change many times a second while a replay plays, so they show the number as it is
+// (animate={false}) instead of chasing it with a count-up.
 export function Counters({ view }: { view: ViewState }) {
   const c = view.counters;
   const tree = view.order.filter((id) => !isInfraKind(view.actors[id].kind));
   const alive = tree.filter((id) => view.actors[id].status === "alive").length;
-  const down = tree.filter((id) => ["killed", "dead"].includes(view.actors[id].status)).length;
+  const down = tree.filter((id) => ["killed", "dead", "restarting"].includes(view.actors[id].status)).length;
   return (
     <div className="counters">
-      <div className="stat stat--hero" title="LLM tokens spent on membership, ownership and takeover">
-        <div className="stat__value">{c.coordinationTokens.toLocaleString("en")}</div>
-        <div className="stat__label">coordination tokens</div>
-      </div>
-      <Stat label="actors alive" value={`${alive}`} />
-      <Stat label="killed / dead" value={`${down}`} bad={down > 0} />
-      <Stat label="adoptions" value={`${c.adoptions}`} />
-      <Stat label="member epoch" value={`${view.memberEpoch}`} />
-      <Stat label="LLM calls" value={`${c.llmCalls}`} />
-      <Stat label="spent" value={`$${c.spentUsd.toFixed(4)}`} />
-      <Stat label="messages" value={`${c.messages}`} />
-    </div>
-  );
-}
-
-function Stat({ label, value, bad }: { label: string; value: string; bad?: boolean }) {
-  return (
-    <div className={`stat ${bad ? "stat--bad" : ""}`}>
-      <div className="stat__value">{value}</div>
-      <div className="stat__label">{label}</div>
+      <Stat
+        hero
+        animate={false}
+        label="coordination tokens"
+        value={c.coordinationTokens}
+        hint="LLM tokens spent on membership, ownership and takeover"
+      />
+      <Stat animate={false} label="actors alive" value={alive} />
+      <Stat animate={false} label="down" value={down} tone={down > 0 ? "bad" : "neutral"} hint="killed, declared dead or restarting" />
+      <Stat animate={false} label="adoptions" value={c.adoptions} />
+      <Stat animate={false} label="member epoch" value={view.memberEpoch} />
+      <Stat animate={false} label="LLM calls" value={c.llmCalls} />
+      <Stat animate={false} label="spent" prefix="$" value={c.spentUsd} decimals={4} />
+      <Stat animate={false} label="messages" value={c.messages} />
     </div>
   );
 }

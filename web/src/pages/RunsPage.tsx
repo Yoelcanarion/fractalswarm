@@ -1,10 +1,11 @@
 import { useEffect } from "react";
 
 import { NewTaskForm } from "../components/NewTaskForm";
-import { useRun } from "../store";
+import { useRunStore, useRunStoreShallow } from "../store";
 
 export function RunsPage() {
-  const { runs, runsError, loadRuns } = useRun();
+  const { runs, runsError } = useRunStoreShallow((s) => ({ runs: s.runs, runsError: s.runsError }));
+  const loadRuns = useRunStore((s) => s.loadRuns);
   useEffect(() => {
     void loadRuns();
   }, [loadRuns]);

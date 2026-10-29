@@ -6,11 +6,12 @@ import { MarketPanel } from "../components/MarketPanel";
 import { MemoryPanel } from "../components/MemoryPanel";
 import { RunControls } from "../components/RunControls";
 import { RunFrame } from "../components/RunFrame";
-import { useRun } from "../store";
+import { useRunStore, useRunStoreShallow } from "../store";
 
 /** The supporting panels (spec §16, Day 9): each is a projection of the events up to the playhead. */
 export function PanelsPage() {
-  const { runId, view, live } = useRun();
+  const { runId, live } = useRunStoreShallow((s) => ({ runId: s.runId, live: s.live }));
+  const view = useRunStore((s) => s.view);
   return (
     <RunFrame>
       <RunControls runId={runId!} view={view} live={live} />

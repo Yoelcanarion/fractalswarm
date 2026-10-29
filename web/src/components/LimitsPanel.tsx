@@ -1,5 +1,6 @@
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from "../lib/chart";
 import { compact } from "../lib/generic";
 import { remainingShare, requestsPerMinute, type ModelLimits, type Quota } from "../lib/limits";
 import type { ViewState } from "../lib/reducer";
@@ -53,8 +54,8 @@ export function LimitsPanel({ view }: { view: ViewState }) {
             <AreaChart data={history} margin={{ top: 2, right: 4, bottom: 0, left: 0 }}>
               <XAxis dataKey="t" type="number" domain={[0, "dataMax"]} hide />
               <YAxis hide domain={[0, "auto"]} />
-              <Tooltip contentStyle={{ background: "#1f1f1d", border: "1px solid #3a3936", borderRadius: 8 }} labelFormatter={(t) => `t = ${Number(t).toFixed(1)} s`} formatter={(v) => [String(v), "requests / min"]} />
-              <Area dataKey="rpm" stroke="#199e70" fill="#199e70" fillOpacity={0.25} strokeWidth={2} isAnimationActive={false} />
+              <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} labelFormatter={(t) => `t = ${Number(t).toFixed(1)} s`} formatter={(v) => [String(v), "requests / min"]} />
+              <Area dataKey="rpm" stroke="var(--own-3)" fill="var(--own-3)" fillOpacity={0.25} strokeWidth={2} isAnimationActive={false} />
             </AreaChart>
           </ResponsiveContainer>
         </>
