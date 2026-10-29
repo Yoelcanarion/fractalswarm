@@ -22,6 +22,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+from fractalswarm.baselines.durable import DURABLE_MODES
 from fractalswarm.bench.registry import (
     Cell,
     CellContext,
@@ -123,8 +124,10 @@ class BenchWorkflow:
     tasks = frozenset({"t2_conference", "t1_extraction"})
 
     def __init__(self, name: str, record: Callable[..., Awaitable[Any]] | None = None) -> None:
-        self.name = name  # also the scenario: swarm | central | single | pipeline
-        self.scalable = name in ("swarm", "central")  # the other two have one worker by design
+        # also the scenario: swarm | central | single | pipeline | durable-max | durable
+        self.name = name
+        # single and pipeline have one worker by design
+        self.scalable = name in ("swarm", "central", *DURABLE_MODES)
         self.record = record or partial(record_run, name)
 
     async def run(self, ctx: CellContext) -> None:
@@ -326,7 +329,7 @@ class LangGraphWorkflow(BenchWorkflow):
         return [route_request(session, state, [contract.id]) for contract in contracts]
 
 
-for _name in ("swarm", "central", "single", "pipeline"):
+for _name in ("swarm", "central", "single", "pipeline", *DURABLE_MODES):
     register_workflow(BenchWorkflow(_name))
 register_workflow(LangGraphWorkflow())
 register_task(

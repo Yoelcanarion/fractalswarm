@@ -38,6 +38,14 @@ across the run, each verified before the next. ``single`` is one agent that also
 LLM call at a time. ``pipeline`` plans every goal first (the planner), then works through the
 contracts (the sequential worker) and integrates. All three make the same planning calls as
 the swarm, so they plan as well as it does.
+
+``durable-max`` and ``durable`` are the arena's rivals (``baselines/durable.py``): the central
+process with workers that outlive it. A crash stops no agent and cancels none of their calls;
+what they and the board send meanwhile is in the log, and the restart (``_recover``) reads it
+from there: results, verdicts and bookings are adopted, a live worker is waited for, and only
+a contract whose agent really died is retried. The coordinator's memory survives (its state is
+a free checkpoint). The two differ in the coordinator's own plan, judge and scan calls:
+``durable-max`` keeps them running through the crash, ``durable`` loses them and asks again.
 """
 
 from typing import Any
@@ -45,6 +53,7 @@ from typing import Any
 from fractalswarm.actors import autoscale, market_maker
 from fractalswarm.actors.board import BOARD
 from fractalswarm.actors.integrator import finish_goal, leaf_outcome, merge_children
+from fractalswarm.baselines.durable import DURABLE_MODES
 from fractalswarm.baselines.supervisor import RESTART_TAG
 from fractalswarm.bench.profiles import RESTART_DELAY_MS
 from fractalswarm.bench.tasks.t1_extraction.task import T1
@@ -83,10 +92,14 @@ from fractalswarm.verify.judge import judge_request, read_verdict
 TASKS = {T1.name: T1, T2.name: T2, T3.name: T3}
 MAX_PLAN_ATTEMPTS = 3
 MAX_FEEDBACK_LINES = 20
+MIN_HEARTBEAT_MS = 10  # the fastest heartbeat a sweep may ask the swarm's detector for
 ACTIVE = ("running", "judging", "auditing", "booking")
-# One orchestrator under the best-case supervisor (spec §15.1); the last two have one worker.
-CENTRAL_MODES = ("central", "single", "pipeline")
+# One orchestrator under the best-case supervisor (spec §15.1); ``single`` and ``pipeline`` have
+# one worker. ``durable-max`` and ``durable`` are the arena's rivals (baselines/durable.py).
+CENTRAL_MODES = ("central", "single", "pipeline", *DURABLE_MODES)
 SERIAL_MODES = ("single", "pipeline")
+# The modes that split the process's agents into one squad per session.
+SQUAD_MODES = ("central", *DURABLE_MODES)
 CENTRAL_TICK = "central.tick"
 CENTRAL_TICK_MS = 1000
 CENTRAL_REDO = "central.redo"
@@ -159,12 +172,39 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "pending_crashes": 0,
         "crashed_agents": [],
         "dropped": [],  # goals dropped while the log called this incarnation dead
+        # A sweep's knobs (bench/matrix-*.yaml), present only when the run sets them: a
+        # supervisor's time to come back, and the swarm's time to declare a member dead.
+        "restart_ms": int(args.get("restart_ms", RESTART_DELAY_MS)),
+        "detect_ms": args.get("detect_ms"),
     }
     if state["membership"]:
-        state["det"] = Detector(member=actor_id, role=ROLE, group=args.get("parent"))
+        state["det"] = _detector(actor_id, args)
         guard = Guard.create(actor_id, state["channel_breakers"])
         state["ep"] = Endpoint(owner=actor_id, relay=args.get("relay"), guard=guard)
     return state
+
+
+def heartbeat_interval_ms(detect_ms: int) -> int:
+    """The heartbeat interval at which a member is declared dead ``detect_ms`` after its last
+    heartbeat, in the detector's ``dead_after`` missed beats (the spec's 1 s and 5 beats make
+    5 s). A time the interval cannot divide, or a beat under ``MIN_HEARTBEAT_MS``, is refused
+    rather than rounded: a sweep must run the detection time it names."""
+    beats = Detector(member="").dead_after
+    if detect_ms % beats or detect_ms // beats < MIN_HEARTBEAT_MS:
+        raise ValueError(
+            f"the detection time ({detect_ms} ms) must be a multiple of {beats} ms "
+            f"and at least {beats * MIN_HEARTBEAT_MS} ms"
+        )
+    return detect_ms // beats
+
+
+def _detector(actor_id: str, args: dict[str, Any]) -> Detector:
+    """The member's failure detector; a sweep's ``detect_ms`` (``params.recovery_ms``) scales
+    its heartbeat interval (``heartbeat_interval_ms``)."""
+    det = Detector(member=actor_id, role=ROLE, group=args.get("parent"))
+    if args.get("detect_ms") is not None:
+        det.interval_ms = heartbeat_interval_ms(int(args["detect_ms"]))
+    return det
 
 
 def orchestrator_handle(state: dict[str, Any], event: Event, view: View):
@@ -363,7 +403,7 @@ def _scanned(state: dict[str, Any], gid: str, source: str, event: Event):
 
 
 def _squad(state: dict[str, Any]) -> list[str]:
-    if state["mode"] != "central":  # a leaf's agents, or the one worker of single and pipeline
+    if state["mode"] not in SQUAD_MODES:  # a leaf's agents, or the one worker of single/pipeline
         return list(state["children"])
     size = state["agents_per_leaf"]
     squads = max(1, len(state["children"]) // size)
@@ -514,6 +554,10 @@ def _assign_children(state: dict[str, Any], gid: str, children: list[dict[str, A
     for child in sorted(children, key=lambda c: c["id"]):
         body = {"goal": child, "scope_token": state["scope"], "parent": gid, "level": level}
         if state["mode"] in CENTRAL_MODES:  # one process: the child goal starts in place
+            if state["mode"] in DURABLE_MODES:  # the log learns it, as it learns an assignment
+                opened = {"goal_id": child["id"], "owner": state["id"], "parent": gid}
+                opened |= {"level": level, "goal": child}
+                commands.append(Emit(type="goal.opened", payload=opened))
             state, more = _start_goal(state, child, state["id"], gid, level, view)
             commands += more
         else:
@@ -1438,7 +1482,10 @@ def _central_step(state: dict[str, Any], event: Event, view: View):
 
 
 def _crash(state: dict[str, Any], view: View):
-    """Process-tree crash: everything in flight dies, the workers' calls included."""
+    """Process-tree crash: everything in flight dies, the workers' calls included. A durable
+    supervisor (``DURABLE_MODES``) stops nobody."""
+    if state["mode"] in DURABLE_MODES:
+        return _crash_durable(state)
     tags: list[str] = []
     lost: list[str] = []
     for gid in sorted(state["goals"]):
@@ -1459,29 +1506,77 @@ def _crash(state: dict[str, Any], view: View):
         "crash": number,
         "dispatched": _dispatched_count(state),
         "lost": lost,
-        "restart_in_ms": RESTART_DELAY_MS,
+        "restart_in_ms": state["restart_ms"],
     }
     commands: list[Command] = [Emit(type="baseline.crashed", payload=payload)]
     commands += [Cancel(tag=tag) for tag in tags]
     commands += [Stop(actor_id=agent, reason="crash", cancel=True) for agent in agents]
-    commands.append(SetTimer(delay_ms=RESTART_DELAY_MS, tag=RESTART_TAG))
+    commands.append(SetTimer(delay_ms=state["restart_ms"], tag=RESTART_TAG))
     state = {**state, "up": False, "crashes": number, "crashed_agents": agents}
     return state, commands
 
 
+def _crash_durable(state: dict[str, Any]):
+    """The coordinator's process dies and nothing else does: no worker is stopped and none of
+    their calls is cancelled; what they and the board send meanwhile is in the log. Its own
+    calls in flight (``_own_tags``) are lost under ``durable``, a realistic supervisor (the
+    framework drops the call with the process), and kept under ``durable-max``, whose planner
+    and judge calls are durable jobs. ``lost`` lists the cancelled calls."""
+    tags = _own_tags(state) if state["mode"] == "durable" else []
+    number = state["crashes"] + 1
+    payload = {
+        "coordinator": state["id"],
+        "crash": number,
+        "dispatched": _dispatched_count(state),
+        "lost": tags,
+        "restart_in_ms": state["restart_ms"],
+    }
+    commands: list[Command] = [Emit(type="baseline.crashed", payload=payload)]
+    commands += [Cancel(tag=tag) for tag in tags]
+    commands.append(SetTimer(delay_ms=state["restart_ms"], tag=RESTART_TAG))
+    return {**state, "up": False, "crashes": number}, commands
+
+
+def _own_tags(state: dict[str, Any]) -> list[str]:
+    """The tags of the coordinator's own calls in flight, goal by goal: the plan of a planning
+    goal, the scans of a scanning one, the verdict a judging contract waits for."""
+    tags: list[str] = []
+    task = TASKS[state["task"]]
+    for gid in sorted(state["goals"]):
+        entry = state["goals"][gid]
+        if entry["phase"] == "planning":
+            tags.append(f"plan|{gid}|{entry['attempt']}")
+        elif entry["phase"] == "scanning":
+            tags += [
+                f"scan|{gid}|{source}"
+                for source, _ in task.attachments(entry["goal"])
+                if source not in entry["scans"]
+            ]
+        for cid in sorted(entry.get("status", {})):
+            if entry["status"][cid] == "judging":
+                tags.append(f"judge|{gid}|{cid}|{entry['contracts'][cid]['attempt']}")
+    return tags
+
+
 def _restart(state: dict[str, Any]):
-    """Back ``RESTART_DELAY_MS`` after the crash; the restart itself takes 0 s. The workers
-    come back first, so the redo (a 0 ms timer later) can dispatch to them."""
+    """Back ``restart_ms`` after the crash (5 s unless a sweep says otherwise); the restart
+    itself takes 0 s. The workers come back first, so the redo (a 0 ms timer later) can
+    dispatch to them."""
     commands: list[Command] = [
         Spawn(actor_id=agent, kind="agent", args=_agent_args(state))
         for agent in state["crashed_agents"]
     ]
-    state = {**state, "up": True, "crashed_agents": []}
+    # A durable supervisor serves again only once ``_recover`` has read the log: nothing (the
+    # 1 s tick, a late delivery) is handled in the 0 ms between, so the adoption counts it all.
+    serving = state["mode"] not in DURABLE_MODES
+    state = {**state, "up": serving, "crashed_agents": []}
     return state, [*commands, SetTimer(delay_ms=0, tag=CENTRAL_REDO)]
 
 
 def _redo(state: dict[str, Any], view: View):
     """Redo only the work the crash lost: completed work was kept (native persistence)."""
+    if state["mode"] in DURABLE_MODES:
+        return _recover(state, view)
     commands: list[Command] = []
     redo: list[str] = []
     for gid in sorted(state["goals"]):
@@ -1513,6 +1608,139 @@ def _redo(state: dict[str, Any], view: View):
     if state["pending_crashes"]:
         state = {**state, "pending_crashes": state["pending_crashes"] - 1}
         state, more = _crash(state, view)
+        commands += more
+    return state, commands
+
+
+def _recover(state: dict[str, Any], view: View):
+    """The durable restart (``baselines/durable.py``). The coordinator's memory survived the
+    crash, a free and perfect checkpoint that the swarm's heirs do not get, and the rival keeps
+    it; only what reached the log while it was down is read from there: agent results, judge
+    verdicts and booking outcomes, and its own plan and judge completions. A worker that is
+    alive and a call still in flight are waited for. Only what is really gone is redone: an own
+    call that the crash cancelled (``durable``), and a contract whose agent died. No LLM call
+    recovers anything, and none is paid twice."""
+    own = view.views["own"]
+    state = {**state, "up": True}
+    tally: dict[str, list[str]] = {
+        key: [] for key in ("redo", "results", "verdicts", "plans", "bookings", "waiting")
+    }
+    commands: list[Command] = []
+    for gid in sorted(state["goals"]):
+        entry = state["goals"][gid]
+        if entry["phase"] == "scanning":
+            state, more = _recover_scans(state, gid, own, tally)
+        elif entry["phase"] == "planning":
+            state, more = _recover_plan(state, gid, own, view, tally)
+        elif entry["phase"] == "running" and _is_leaf(state, entry):
+            state, more = _recover_contracts(state, gid, own, view, tally)
+        else:
+            continue  # a goal over sub-goals waits for them, in this very process
+        commands += more
+    restarted = {"coordinator": state["id"], "crash": state["crashes"], "redo": tally["redo"]}
+    adopted = {key: tally[key] for key in ("results", "verdicts", "plans", "bookings", "waiting")}
+    adopted |= {"coordinator": state["id"], "crash": state["crashes"]}
+    commands = [
+        Emit(type="baseline.restarted", payload=restarted),
+        Emit(type="supervisor.adopted", payload=adopted),
+        *commands,
+    ]
+    finished = all(entry["phase"] == "done" for entry in state["goals"].values())
+    if state["pending_crashes"] and not finished:
+        state = {**state, "pending_crashes": state["pending_crashes"] - 1}
+        state, more = _crash(state, view)
+        commands += more
+    return state, commands
+
+
+def _recover_scans(state: dict[str, Any], gid: str, own: Any, tally: dict[str, list[str]]):
+    """A scanning goal: the scans that came back are taken, the ones in flight are waited
+    for, and the rest (cancelled by the crash) start again."""
+    commands: list[Command] = []
+    for source, text in TASKS[state["task"]].attachments(state["goals"][gid]["goal"]):
+        entry, tag = state["goals"][gid], f"scan|{gid}|{source}"
+        if entry["phase"] != "scanning" or source in entry["scans"]:
+            continue
+        done = own.completion(state["id"], tag)
+        if done is not None:
+            tally["plans"].append(f"{gid}/{source}")
+            state, more = _scanned(state, gid, source, done)
+            commands += more
+        elif own.in_flight(state["id"], tag):
+            tally["waiting"].append(tag)
+        else:
+            tally["redo"].append(f"{gid}/{source}")
+            request = scan_request(text, "attachment", source)
+            commands.append(StartEffect(kind="firewall", request=request, tag=tag))
+    return state, commands
+
+
+def _recover_plan(
+    state: dict[str, Any], gid: str, own: Any, view: View, tally: dict[str, list[str]]
+):
+    """A planning goal: its plan came back while the coordinator was down (adopt it), is still
+    in flight (wait), or died with the crash (ask again)."""
+    attempt = state["goals"][gid]["attempt"]
+    tag = f"plan|{gid}|{attempt}"
+    done = own.completion(state["id"], tag)
+    if done is not None:
+        tally["plans"].append(gid)
+        return _planned(state, gid, attempt, done, view)
+    if own.in_flight(state["id"], tag):
+        tally["waiting"].append(tag)
+        return state, []
+    tally["redo"].append(gid)
+    return state, [_plan_effect(state, gid)]
+
+
+def _recover_contracts(
+    state: dict[str, Any], gid: str, own: Any, view: View, tally: dict[str, list[str]]
+):
+    """A leaf goal's contracts, one by one, from the log: a result, a verdict or a booking that
+    arrived during the outage is consumed; a live worker or an own call in flight is waited
+    for (the difference from the process-tree crash); the rest starts again."""
+    commands: list[Command] = []
+    for cid in sorted(state["goals"][gid]["status"]):
+        entry = state["goals"][gid]
+        if entry["phase"] != "running":
+            break
+        work, contract = f"{gid}/{cid}", entry["contracts"][cid]
+        attempt, logged = contract["attempt"], _logged(view, gid, cid)
+        status = entry["status"][cid]
+        if status == "running":
+            result = logged.results.get(attempt) if logged is not None else None
+            if result is not None:
+                tally["results"].append(work)
+                state, more = _contract_result(state, result, view)
+            elif _alive(view, contract["assignee"]):
+                tally["waiting"].append(work)
+                continue
+            else:
+                tally["redo"].append(work)
+                reason = f"agent {contract['assignee']} was lost"
+                state, more = _retry(state, gid, cid, "lost", [reason], view)
+        elif status == "judging":
+            tag = f"judge|{gid}|{cid}|{attempt}"
+            if logged is not None and attempt in logged.judged:
+                tally["verdicts"].append(work)
+            elif own.in_flight(state["id"], tag):
+                tally["waiting"].append(tag)
+                continue
+            else:
+                tally["redo"].append(work)
+            state, more = _judge(state, gid, cid, view)  # reuses a verdict the log holds
+        elif status == "booking":
+            if logged is not None and attempt in logged.booked:
+                tally["bookings"].append(work)
+            else:
+                tally["redo"].append(work)  # the board answers a booking it has made again
+            state, more = _accept(state, gid, cid, view)
+        else:
+            continue
+        commands += more
+    entry = state["goals"][gid]
+    if entry["phase"] == "running" and "pending" in entry["status"].values():
+        state, more = _dispatch(state, gid, view)
         commands += more
     return state, commands
 
@@ -1581,9 +1809,13 @@ def _agent_args(state: dict[str, Any]) -> dict[str, Any]:
 
 
 def _opt_ins(state: dict[str, Any]) -> dict[str, Any]:
-    """The opt-in features this run turned on, for the orchestrators spawned below. They are
-    left out when off, so a run that did not ask for them logs the spawn args it always did."""
-    return {name: True for name in ("audit", "feasibility") if state[name]}
+    """The opt-in features this run turned on, and a sweep's detection time, for the
+    orchestrators spawned below. They are left out when off, so a run that did not ask for
+    them logs the spawn args it always did."""
+    passed: dict[str, Any] = {name: True for name in ("audit", "feasibility") if state[name]}
+    if state["detect_ms"] is not None:
+        passed["detect_ms"] = state["detect_ms"]
+    return passed
 
 
 def _route(state: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:

@@ -3,6 +3,9 @@
 The same chaos for both (crash points, agent kills, network and API faults from one seed).
 The gate passes when the swarm stalls less and pays less extra than the central baseline at
 C2 and C3, by a clear margin; a flat chart means stop and revisit the semantics.
+
+The arena's two durable rivals ride along: they must complete with a valid program and take the
+same number of coordinator crashes. Nothing here compares them with the swarm.
 """
 
 import asyncio
@@ -17,6 +20,8 @@ from fractalswarm.runs import replay_run
 
 PROFILES = ["C0", "C2", "C3"]
 CRASHES = {"C0": 0, "C2": 3, "C3": 5}
+SUPERVISED = ["central", "durable-max", "durable"]
+WORKFLOWS = ["swarm", *SUPERVISED]
 
 
 @pytest.fixture(scope="module")
@@ -24,7 +29,7 @@ def gate(tmp_path_factory: pytest.TempPathFactory) -> tuple[MatrixReport, Path]:
     out = tmp_path_factory.mktemp("gate")
     matrix = Matrix(
         name="gate-smoke",
-        workflows=["swarm", "central"],
+        workflows=WORKFLOWS,
         tasks=["t2_conference"],
         profiles=PROFILES,
         seeds=["1"],
@@ -42,7 +47,7 @@ def row(report: MatrixReport, workflow: str, profile: str) -> dict:
 def test_every_cell_completes_with_a_valid_program(gate) -> None:
     report, _ = gate
     assert report.failed == {}
-    assert len(report.rows) == 2 * len(PROFILES)
+    assert len(report.rows) == len(WORKFLOWS) * len(PROFILES)
     assert all(r["completed"] and r["valid"] for r in report.rows), report.rows
 
 
@@ -58,22 +63,24 @@ def test_the_swarm_stalls_less_and_pays_less_extra(gate, profile: str) -> None:
 
 
 @pytest.mark.parametrize("profile", PROFILES)
-def test_both_workflows_get_the_same_number_of_crashes(gate, profile: str) -> None:
+def test_every_workflow_gets_the_same_number_of_crashes(gate, profile: str) -> None:
     _, out = gate
-    for workflow in ("swarm", "central"):
+    for workflow in WORKFLOWS:
         events = load_events(out / "runs" / f"{workflow}__t2_conference__{profile}__s1")
         kills = [
             e
             for e in events
             if e.type == "chaos.injected" and e.payload["fault"] == "kill_coordinator"
         ]
-        assert len(kills) == CRASHES[profile]
-        assert all(e.payload.get("target") for e in kills), "a crash was skipped"
-        if workflow == "central":
-            assert sum(e.type == "baseline.crashed" for e in events) == CRASHES[profile]
+        assert len(kills) == CRASHES[profile], workflow
+        assert all(e.payload.get("target") for e in kills), f"{workflow}: a crash was skipped"
+        if workflow in SUPERVISED:
+            crashed = sum(e.type == "baseline.crashed" for e in events)
+            restarted = sum(e.type == "baseline.restarted" for e in events)
+            assert crashed == restarted == CRASHES[profile], workflow
 
 
-@pytest.mark.parametrize("workflow", ["swarm", "central"])
+@pytest.mark.parametrize("workflow", WORKFLOWS)
 async def test_a_c3_cell_replays_bit_for_bit(gate, workflow: str) -> None:
     _, out = gate
     report = await replay_run(out / "runs" / f"{workflow}__t2_conference__C3__s1")

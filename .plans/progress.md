@@ -965,3 +965,102 @@ Its restart re-dispatched 22 contracts, because `TreeView` never registers centr
 4. the known issues.
 
 Then it brings Yoel one message of Phase 0 decisions, and starts W1–W4.
+
+## Phase 2, Thu 29 Oct 2026: Phase 0, then W1–W4 started
+
+**Phase 0 (spec §K)**, done by the coordinator on the night of Oct 28–29. Arena HEAD is 3b1fe9b.
+
+**1. Shared evidence, out of git**
+- `config.py` already read `FRACTALSWARM_RUNS_DIR` from `~/.fractalswarm/.env`, like the ledger path.
+- The 14 run dirs (509 MB) moved from `day-09/runs` to `~/.fractalswarm/runs`, and the shared env points there.
+- The catalogue lists the 11 runs from both the arena and day-09 worktrees. `replay t2-real-killhalf-seed1 --verify` MATCHes from both (8177 events).
+- No test depends on a repo-relative `runs/`: nothing was written to the shared dir during a full suite.
+- `bench/results/*/runs/` is gitignored. `bench/results/` is copied from day-09 (347 MB, out of git). The 29 v1 cell summaries are committed (bc2bece).
+
+**2. The `day-09-integration` merge** (6c05341)
+- A normal merge, since arena had moved. It was clean; then `uv sync --extra safety`.
+- **$0 references:** recorded before and after with the new `scripts/refs/` tools (6ac79f6): the 11 CLI runs and the 32-cell fake matrix. All 43 runs are event-identical except `run.started`, which gains `config.llm.roles.roles.supervisor` (the LangGraph role snapshot). Old runs replay from their own snapshot.
+- **A semantic conflict** the Day 9 merge missed, since it ran only ruff: LangGraph called `expected_contracts(corpus)`, which T1/T3 had changed to `(task, corpus)`. All 17 LangGraph tests failed. Fixed in 99547ab.
+- **Checks:**
+  - full `pytest`: 1073 passed in 712 s;
+  - `ruff check` and `ruff format --check` clean;
+  - `demo --verify` MATCH;
+  - `replay --verify` MATCH on demo/backup, demo/toy and both golden bundles.
+- **Economy mutation checks.** The saved script holds 20 mutations: the report's 8 and 12 more. All 20 now make at least one test fail:
+  - 16 fail their designated tests;
+  - "the epoch auction is switched off" needed adapting to the current code, and is caught;
+  - "a parent no longer asks for the floors below it" is caught by other market tests;
+  - "a squad's cap ignores the grants of its other markets" was caught by no test. It now has a unit test (3b1fe9b);
+  - "autoscale: affordable by the full estimate again" **hangs** the suite instead of failing. Only a timeout stops it.
+- **References at the Phase 0 head** (3b1fe9b): event-identical to the post-merge ones (43 of 43). They are the workers' BEFORE, kept read-only in `~/.fractalswarm/refs/phase0-3b1fe9b`.
+
+**3. The v1 tail: the replay check** (backend-design §3's claim holds)
+- The 18 cells recorded at 587c88f diverge at HEAD at their first LLM call, because `security.routed` came later.
+- 10 of the 11 cells recorded at f13b20a MATCH at HEAD, before and after the merge.
+- `single__t2_conference__C1__s1` replays at no commit:
+  - its re-run under the same run id hit `UNIQUE constraint failed: entries.reservation_id` on its first call;
+  - that local error never reached the cassette, so the replay fails with a CassetteMismatch at seq 109.
+  - **Fixed** (22d2966): a re-run reserves under `run/effect#2`, `#3`, … and settles the same id. The event log is unchanged.
+- Recommendation to Yoel: supersede v1 with matrix v2.
+
+**4. Known issues**
+- **Crashed runs show "running":** W2's step 1. It is not a one-liner, because it needs a liveness rule.
+- **The PromptGuard tokenizer warning:**
+  - fresh local scores reproduce Day 8 exactly (polite 0.0010, authority 0.0010, ai_addressed 0.0022, explicit 0.9971, system_override 0.9979);
+  - `fix_mistral_regex=True` adds 2 tokens per email but moves the scores by at most 0.0002, and changes no verdict;
+  - so the model card's plain load stays.
+- **Stale reservations:** `spend` now lists the reservations open for over an hour, by run, and what would remain if none was billed (22d2966). It releases nothing. Today: 167 reservations, $2.9458, in 23 runs.
+
+**5. Decisions message to Yoel** (00:30). Recommendations:
+- resume stays opt-in and out of the demo: yes;
+- v1 tail: supersede it;
+- a real resume smoke run: no;
+- delete the 7 `worktree-agent-*` branches: yes. They hold no commits of their own; one holds an uncommitted copy of the LangGraph dependencies;
+- ff `master` (2440cc6) to arena: yes.
+
+Answers pending.
+
+**Workers started** at about 00:30, in run `run_b6aeda164409`. They run Sonnet 5.5 at max effort, in child worktrees from arena 3b1fe9b. W5 waits for W4's first merge.
+
+| worker | branch | dispatch |
+|---|---|---|
+| W1 rival | `Yoelcanarion/arena-rival` | ctx_ebb659781851 |
+| W2 intake | `Yoelcanarion/arena-intake` | ctx_3e78b0454272 |
+| W3 meta | `Yoelcanarion/arena-meta` | ctx_f47649048726 |
+| W4 ui-core | `Yoelcanarion/arena-ui-core` | ctx_f518eab848c2 |
+
+Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
+
+**Merges**
+- **W3 step 1, the Muse lens API** (1dc03e9, from bedf843):
+  - read-only routes `/api/runs/{id}/calls`, `/calls/{effect_id}` and `/models`; no event added;
+  - reviewed: the cassette attempts expose no headers, run ids resolve through the catalogue, the cache is bounded;
+  - checks: W3's full suite, 1097 passed and 3 skipped (PromptGuard, no safety extra in its venv), at 839e8fe; on the merged tree, ruff and format clean, the API tests (57) pass, `demo --verify` and the golden replays MATCH;
+  - no $0 reference comparison: the change is outside the paths that need one.
+
+**Supervision notes**
+- **Memory went down to 1.0 GB free at 00:53:** W3's suite, plus an unslotted probe of W1's (900 MB). W1 stopped it. Rule added: a worker script that runs several fake runs, or holds more than about 300 MB, needs a slot.
+- **`demo --verify` serves the UI and opens a browser by default** (found by W3). Workers now use `--no-serve --no-browser`.
+- **W1's probe:** the detector handles sub-second detection on the fake LLM (no false deaths, replay MATCH). Events grow like 1/heartbeat interval: 5.6K events at 5 s, 22K at 1 s, 42K at 0.5 s (1.4, 7.4 and 16.2 s of wall time per run). This is input for the sweep plan.
+
+**Spend:** no real calls.
+- Settled: $11.8194 before and after.
+- Reserved: $2.9458, all stale.
+- Phase budget left to the hard stop: $49.98.
+
+**Deviations**
+- The integration merge was a normal merge, not `--ff-only`.
+- The mutation check ran the script's 20 mutations instead of the report's 8.
+- Three fixes beyond the brief, each with tests: the LangGraph merge fix, the reservation-id collision, and the squad-cap test.
+
+**Issues**
+- **No per-test timeout:** a regression like the autoscale mutation hangs a suite instead of failing it, and holds a slot and memory.
+- **Arena's venv needs `uv sync --extra safety`:** a plain `uv sync` removes PromptGuard.
+- **An orphan pytest,** stuck on the autoscale mutation since 18:50, was stopped: three processes from day-09-economy.
+
+**Next**
+- Supervise W1–W4. The merge order:
+  - W1's durable modes and metrics first;
+  - W3's lens API;
+  - W4's first merge (tokens and the store factory), then start W5.
+- Fri Oct 30: the $0 gate v2 and the sensitivity sweep, then the decision gate with Yoel (spec §C.4).
