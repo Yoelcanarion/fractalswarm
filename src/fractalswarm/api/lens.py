@@ -14,8 +14,9 @@ Routes (``lens_routes``), all under ``/api/runs/{run_id}``:
 - ``/models``: the "Muse meter": dollars and tokens by model, the cache share, and the
   coordination and recovery tokens, which are computed from roles and tags, never hard-coded;
 - ``/disputes``: the semantic disputes of the run (``actors/arbitration.py``), each with its
-  candidates, its arbitration calls, its ruling and escalation, and for one still open when the
-  log ends, what it was waiting for.
+  candidates, its arbitration calls, its ruling, its escalation (id, options, deadline, and the
+  answers a person gave, accepted or not) and, for one still open when the log ends, what it was
+  waiting for.
 
 Dollars and tokens follow ``bench/scoring.py`` (``llm_calls``), so the lens totals are the bench
 numbers: a call cut off by a crash is billed the same estimate, and says so (``estimated``).
@@ -57,7 +58,7 @@ from fractalswarm.bench.tasks.t2_conference.ablation import (
     frame_of,
 )
 from fractalswarm.bench.tasks.t2_conference.generator import DAYS, SLOT_STARTS, generate, slot_end
-from fractalswarm.kernel.events import Event
+from fractalswarm.kernel.events import GOAL_CONTROL, Event
 from fractalswarm.kernel.ids import digest
 from fractalswarm.kernel.store import COLUMNS, _from_row
 from fractalswarm.llm.client import LLMClient, LLMRequest
@@ -401,6 +402,18 @@ def _describe(event: Event) -> str:
                 f"{p['question']} A person may answer within {p['timeout_ms'] // 1000} s; "
                 f"otherwise {p['default']} stands (confidence {p['confidence']:.2f})"
             )
+        case "escalation.answered":
+            who = "a person" if p["by"] == "human" else p["by"]
+            if not p["accepted"]:
+                return f"the answer {p['choice']} to {p['id']} was ignored: {p.get('reason', '')}"
+            if p["overruled"]:
+                return f"{who} overruled the ruling for {p['id']} with {p['choice']}"
+            return f"{who} confirmed the ruling for {p['id']}: {p['choice']} stands"
+        case "arbitration.overruled":
+            work = p.get("work") or p["winner"]
+            return f"the ruling for {p['key']} was overruled: {p['winner']} ({work}) now stands"
+        case "control.injected":
+            return _describe_control(p)
         case "goal.completed":
             return f"{p['goal_id']} completed: {p['status']}"
         case "budget.settled":
@@ -408,6 +421,48 @@ def _describe(event: Event) -> str:
         case "msg.sent":
             return _describe_message(event)
     return event.type
+
+
+KILLS = {
+    "kill_coordinator": "a coordinator kill",
+    "kill_agent": "an agent kill",
+    "kill_agents": "an agent kill",
+    "partition": "a network partition",
+}
+MAX_FEEDBACK_CHARS = 120
+
+
+def _describe_control(p: dict[str, Any]) -> str:
+    """A control a person sent (``kernel/events.py: ControlInjected``), worded as the request it
+    is: whether anything came of it is what the events after it say."""
+    op, body, to = p["op"], p.get("body") or {}, p["to"]
+    goal = to.removeprefix(GOAL_CONTROL) if to.startswith(GOAL_CONTROL) else None
+    if op == "chaos":
+        return _describe_chaos(body)
+    if op == "approve" and goal:
+        return f"a person approved the plan for {goal}"
+    if op == "replan" and goal:
+        feedback = " ".join(str(body.get("feedback") or "no reason given").split())
+        if len(feedback) > MAX_FEEDBACK_CHARS:
+            feedback = feedback[: MAX_FEEDBACK_CHARS - 1] + "…"
+        return f"a person sent the plan for {goal} back: {feedback}"
+    if op == "answer" and goal:
+        return f"a person answered {body.get('escalation_id')} with {body.get('choice')}"
+    return f"a person sent {op} to {to}"
+
+
+def _describe_chaos(body: dict[str, Any]) -> str:
+    kind, target, count, at = (body.get(name) for name in ("kind", "target", "count", "at"))
+    if not isinstance(kind, str) or not kind:
+        return "a person sent a chaos control"
+    what = KILLS.get(kind, f"a {kind} fault")
+    if target:
+        what += f" of {target}"
+    elif isinstance(count, int) and not isinstance(count, bool) and count > 1:
+        what = f"a kill of {count} agents"
+    numeric = isinstance(at, int | float) and not isinstance(at, bool)
+    when = f"at {at:.0%} of the run" if numeric and at else "now"
+    return f"a person asked for {what} {when}"
 
 
 def _describe_message(event: Event) -> str:
@@ -1170,6 +1225,7 @@ DISPUTE_TYPES = (
     "arbitration.requested",
     "arbitration.ruled",
     "escalation.opened",
+    "escalation.answered",
 )
 MAX_ABLATION_NOTES = 200
 MAX_RUNNING_ABLATIONS = 2
@@ -1354,14 +1410,37 @@ def _why_open(dispute: dict[str, Any]) -> str:
     return "the arbiter's answer is in the log and no ruling followed it"
 
 
+def _escalation_state(
+    escalation: dict[str, Any], accepted: dict[str, Any] | None, now_ts: int | None, ended: bool
+) -> str:
+    """Where an escalation stands as the log ends: ``answered`` or ``overruled`` once a person's
+    answer was accepted; else ``expired`` when the log is past its deadline, ``closed`` when the
+    run ended before the deadline (nobody can answer any more) and ``waiting`` while a person
+    still can."""
+    if accepted is not None:
+        return "overruled" if accepted["overruled"] else "answered"
+    if now_ts is not None and now_ts > escalation["deadline_ts"]:
+        return "expired"
+    return "closed" if ended else "waiting"
+
+
 def disputes_view(lens: RunLens, events: list[Event]) -> dict[str, Any]:
     """The semantic disputes of a run (``actors/arbitration.py``) as its log ends: the key two
-    contracts published different values for, the candidates, the arbitration calls, the ruling
-    and any escalation. A run never waits on a person, so a dispute can still be open when it
-    ends: ``open`` counts those, and ``why_open`` says what each was waiting for."""
+    contracts published different values for, the candidates, the arbitration calls, the ruling,
+    any escalation and the answer a person gave it. A run never waits on a person, so a dispute
+    can still be open when it ends: ``open`` counts those, and ``why_open`` says what each was
+    waiting for."""
     by_key: dict[str, dict[str, Any]] = {}
+    escalated: dict[str, dict[str, Any]] = {}  # escalation id -> its dispute
     for event in events:
         payload = event.payload
+        if event.type == "escalation.answered":
+            found = escalated.get(payload["id"])
+            if found is not None:  # an answer to an id nobody opened belongs to no dispute
+                answer = {name: payload[name] for name in ("choice", "by", "accepted", "overruled")}
+                answer |= {"reason": payload.get("reason", ""), "seq": event.seq}
+                found["escalation"]["answers"].append(answer | {"ts_virtual": event.ts_virtual})
+            continue
         if event.type == "collision.detected":
             if payload.get("kind") != "semantic":
                 continue
@@ -1381,6 +1460,8 @@ def disputes_view(lens: RunLens, events: list[Event]) -> dict[str, Any]:
                         "calls": [],
                         "ruling": None,
                         "escalation": None,
+                        "answer": None,
+                        "standing": None,
                         "why_open": None,
                     },
                 )
@@ -1402,7 +1483,15 @@ def disputes_view(lens: RunLens, events: list[Event]) -> dict[str, Any]:
         elif event.type == "escalation.opened":
             kept = ("id", "options", "default", "confidence", "timeout_ms")
             dispute["escalation"] = {name: payload[name] for name in kept}
-            dispute["escalation"] |= {"ts_virtual": event.ts_virtual}
+            dispute["escalation"] |= {
+                "goal_id": payload.get("goal_id"),
+                "question": payload.get("question", ""),
+                "ts_virtual": event.ts_virtual,
+                "deadline_ts": event.ts_virtual + payload["timeout_ms"],
+                "state": "waiting",
+                "answers": [],
+            }
+            escalated[payload["id"]] = dispute
     for row in lens.rows:
         ref = row["ref"]
         dispute = by_key.get(ref.get("key", "")) if ref["kind"] == "arbitrate" else None
@@ -1414,15 +1503,32 @@ def disputes_view(lens: RunLens, events: list[Event]) -> dict[str, Any]:
                 | {"attempt": ref["attempt"], "cancel": row["cancel"]}
             )
     ended = lens.halted is not None or any(e.type == "run.completed" for e in lens.events)
+    now_ts = max((e.ts_virtual for e in (*lens.events, *events)), default=None)
     disputes = sorted(by_key.values(), key=lambda d: d["opened_seq"])
     for dispute in disputes:
-        if dispute["ruling"] is None:
+        ruling, escalation = dispute["ruling"], dispute["escalation"]
+        if ruling is None:
             dispute["why_open"] = _why_open(dispute)
+            continue
+        accepted = None
+        if escalation is not None:  # the first accepted answer settles it; the rest were ignored
+            accepted = next((a for a in escalation["answers"] if a["accepted"]), None)
+            escalation["state"] = _escalation_state(escalation, accepted, now_ts, ended)
+        dispute["standing"] = {"winner": ruling["winner"], "by": ruling["by"]}
+        if accepted is not None:
+            kept = ("choice", "by", "overruled", "seq", "ts_virtual")
+            dispute["answer"] = {name: accepted[name] for name in kept}
+            dispute["status"] = "overruled" if accepted["overruled"] else "answered"
+            if accepted["overruled"]:
+                dispute["standing"] = {"winner": accepted["choice"], "by": accepted["by"]}
+    waiting = sum(1 for d in disputes if d["escalation"] and d["escalation"]["state"] == "waiting")
     return {
         "run_id": lens.entry.id,
         "ended": ended,
+        "now_ts": now_ts,
         "count": len(disputes),
         "open": sum(1 for d in disputes if d["ruling"] is None),
+        "waiting": waiting,
         "disputes": disputes,
     }
 
