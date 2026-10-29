@@ -219,6 +219,14 @@ and the rival's (the recovery report's three checks); s5's tree fills the frame 
 the heir and the root rings land on the right nodes; the note sits in the run page's band and covers nothing. One
 thing was wrong and is fixed in the sources, to be seen again: the run stage's minimum height (above).
 
+Second and third look (Oct 29, 21:40 and 21:52, the same fake pair): after the min-height reset the run page fits under the note's band with its
+whole timeline (s4, s5 at the home camera); the flow stages (s3, s7) and the title card (s9) are right under the camera clamp
+(it only keeps the camera inside the stage; a pan the scene asks for within the stage is not touched); and, on the bundle built
+from the merged sources (arena at ea40fa0 in, 0da4bfb), s1, s6, s8, s4 and s5 show the arena counters on W4's fold: at 73 s of
+the fake pair the dependency row reads 5.0 s for the swarm and 25.0 s for the rival (contract-seconds, the scored definition;
+it was 5.0 and 5.0 as the outage length), duplicated work 0 and 6 calls. `demo --verify --no-serve --no-browser`: MATCH, backup,
+8177 events, head b052b4bc33cfe1b54c7b6ceb2872de26. No flag in any sidecar of any of the three slots.
+
 Rule from the coordinator (Oct 29): `real` is flipped to `true` in `sources.json` in the same commit that points
 it at the final real pair, when the run ids are handed over; never before, and never by hand in a take.
 
