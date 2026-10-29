@@ -165,9 +165,22 @@ Estimates for the matrices (sequential, one process each; interpolated between t
 - **$0 references**: recorded on the merged tree with `scripts/refs/record_refs.ps1` and compared with the shared `arena-c2b5e08`: 43 of 43 runs identical.
 - **Demo**: `fractalswarm demo --verify --no-serve` reads `MATCH backup: 8177 events, head b052b4bc33cfe1b54c7b6ceb2872de26`, exit 0. Without `--no-serve` the command goes on to serve the UI, and port 8765 was in use.
 - **Verdicts**: `bench verdicts` over the committed results, re-run on the merged tree, prints the same text as `bench/results/verdicts.txt` apart from the `Code:` stamp.
-- **Next, after this merges**: the small API follow-up for W5 (the `recovery` key of `/api/runs/{id}/metrics` and `GET /api/runs/{id}/recovery`, next to `/takeover` in `api/app.py`), as the coordinator wrote.
+- **Merged**: the coordinator merged this branch into the arena as 0025e22 (clean), accepted deviations 1, 2 and 5, kept the fixture commit, and asked for the follow-up below.
+
+## Part 5: the follow-up for W5 (on the arena tip 0025e22, which holds Parts 2-3)
+
+My branch was moved to the arena tip with `git merge --ff-only` (nothing of the arena's changed), so that the follow-up sits on W2's current `api/app.py` and on `docs/claims.md`.
+
+### What was built
+- **`recovery` in `GET /api/runs/{id}/metrics`** (`api/app.py`, `run_metrics`): the top-level key that was reserved and null is now the run's `RecoveryMetrics` from `bench/recovery.py`, the object `metrics.recovery` already carried: `idle_agent_s`, `ttr_own_mean_s`, `cdt_s`, `blast_*`, `dup_*`, `preserved_*`, `false_death_remaps`, and one `outages[]` row per crash or partition. A mean over no crashes is null (a run with no crash: `crashes: 0`, `ttr_own_mean_s: null`); the whole of it is never null, because the route scores the log it is given, a run still recording included.
+- **`GET /api/runs/{id}/recovery`**: the `RecoveryReport` of `verify/recovery.py` as JSON (`run_id`, `events`, `system`, `supervised`, `metrics`, `restarts[]`, `checks[]`, `ok`), shaped like `/takeover`: 409 until the run has completed, 404 for an unknown run, cached per (run path, head hash). For a swarm log `restarts` is empty and only the table and `no_repeat` apply; its kills are `/takeover`'s.
+- **`GET /api/bench/honesty`** (the coordinator's second request, for W5's where-it-helps panel): `bench/results/honesty.json` as committed, parsed and returned as the body; 404 until the file exists. Tests: the committed file comes back equal, and 404 without it (`tests/integration/test_api_recovery.py`).
+- **`bench/tables.py`** and `fractalswarm bench tables [NAME] [--results DIR] [--check REPORT]`: the generator of the REPORT's 26 tables (the scratch script of Parts 3-4, typed, in the repo). It reads `honesty.json` and `rivals-gate/results.json`, prints the tables, and `--check` exits 1 naming any table that is not in the report word for word. Its output is byte-identical to what the REPORT holds. The per-seed win rule of `gate_t2_seeds` is `verdicts.judge` on `verdicts.RULES`, not a second copy of the floors; the seed columns come from the rows. `tests/unit/test_report_tables.py`: every table is in `bench/REPORT.md` word for word, a moved number is named, and the CLI.
+- **REPORT**: the headline placeholder cites `bench/PREREG.md` §7 for what a headline may say and `docs/claims.md` for the claims the project makes; the *cheaper* sentence of §4.2 cites both; §7 says how the tables are made and checked. Only text of mine, plus the headline placeholder's pointer, which was the coordinator's to fix.
+
+### Tests
+- `tests/integration/test_api_recovery.py` (7): `/metrics` over the real C3 swarm run (5 crashes, `ttr_own_mean_s` 4.73), over a run with no crash (null means) and over a run still recording; `/recovery` over the swarm run, over a `durable-max` T2 run with one crash (one restart row, the five checks ok, `ttr_own_mean_s` equal to the restart's `down_s`), 409 and 404, and one computation per head.
+- `tests/integration/test_launch_api.py` (W2's file): one assertion pinned `recovery` to null for a launched run. It now says that the key is the run's own recovery and that a run without chaos has no crash. A one-line consequence of filling the key.
 
 ## Open questions
 - None blocking.
-- Do you want the table generator (a scratch script that lays out `results.json` and `honesty.json`) committed under `bench/`? It is not in the brief's file list.
-- `docs/claims.md` is not on this branch; the REPORT cites PREREG §7 for what a headline may say.

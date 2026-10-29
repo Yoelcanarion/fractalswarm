@@ -9,8 +9,9 @@
 > `TBD` rows of §3, §4.10 and the results of §8).
 
 **Headline: [PLACEHOLDER].** The headline sentence is the coordinator's and Yoel's call at the
-decision gate (`bench/PREREG.md` §7), and it is not written here. What the preregistered rules
-derive from the runs in §4 is outcome **B** (§4.9).
+decision gate, and it is not written here. What a headline may say is fixed in `bench/PREREG.md` §7,
+and the claims the project makes, each with its evidence, are in `docs/claims.md`. What the
+preregistered rules derive from the runs in §4 is outcome **B** (§4.9).
 
 ## 1. Rivals and fairness rules (read these first)
 
@@ -290,7 +291,8 @@ On T2 the swarm's extra cost is negative and the rivals' is positive. The swarm'
 dearer than theirs ($0.327 against $0.320, §3), so its percentages start from a different base. In
 dollars at C3 the swarm's mean is $0.324 against $0.347 for `durable-max`. By the preregistered
 rule (PREREG §3: a difference of 5 points on every seed) H2 is a tie against `durable-max` at all six
-gate points (§4.5), so the gate does not support the word *cheaper* (PREREG §7).
+gate points (§4.5), so the gate does not support the word *cheaper* (PREREG §7; `docs/claims.md`,
+"Not claimed").
 
 ### 4.3 Recovery, per crash
 
@@ -725,7 +727,14 @@ uv run fractalswarm bench verdicts bench/results/rivals-gate bench/results/sweep
     --json bench/results/honesty.json    # the verdicts, the regime map and the derived outcome
 uv run fractalswarm bench rescore bench/results/rivals-gate         # metrics again from the logs, $0
 uv run fractalswarm recovery <run_dir>                              # a run's table per crash and its checks
+uv run fractalswarm bench tables --check bench/REPORT.md            # every table of this file is the results'
 ```
+
+The tables of §3, §4 and the appendices are laid out from `bench/results/honesty.json` and
+`bench/results/rivals-gate/results.json` by `fractalswarm bench tables` (`bench/tables.py`); the
+prose around them is written by hand. `--check` names any table that is not in this file word for
+word, and `tests/unit/test_report_tables.py` runs the same check, so a number cannot drift from the
+files without the test failing.
 
 ## 8. Scaling sweep (spec §15.6)
 
