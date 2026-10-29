@@ -124,9 +124,9 @@ class Catalog:
         """``read`` with at most ``limit`` events, and the last seq of the log as the page saw it.
 
         The page and the last seq come from one snapshot, so a page that reaches that seq has
-        reached the end of the log. Two reads (the page, then ``last``) look at two moments, and
-        a reader that pages until it is at the end never gets there while the run commits faster
-        than a round trip: something is always newer than the page it just read."""
+        reached the end of the log as it was when the page was read. With two reads (the page,
+        then ``last``) a run that commits every few hundred microseconds is almost always ahead
+        of the second one, and a reader that pages until it is at the end keeps chasing it."""
         if entry.sqlite.exists():
             query = f"SELECT {COLUMNS} FROM events WHERE seq >= ? ORDER BY seq LIMIT ?"
             with _readonly(entry.sqlite) as db:
