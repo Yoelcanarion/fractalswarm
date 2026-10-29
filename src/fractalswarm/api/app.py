@@ -156,7 +156,10 @@ def create_app(
 
     async def capabilities(request: Request) -> JSONResponse:
         """Which controls this server really does. A control that is ``false`` answers 501
-        (``not_wired``), or 503 without a private directory."""
+        (``not_wired``), or 503 without a private directory. ``real`` says a billed launch can
+        pass the gate (the server flag is on and there is a key): without it a preflight comes
+        back with no token."""
+        gate = spending.gate if spending is not None else None
         return JSONResponse(
             {
                 "tasks": private is not None,  # POST /api/tasks, /api/intake and /api/arena
@@ -164,6 +167,7 @@ def create_app(
                 "approve": False,
                 "budget": True,
                 "halt": True,
+                "real": gate is not None and gate.allow_real and gate.has_key,
             }
         )
 

@@ -118,7 +118,14 @@ def test_capabilities_say_which_controls_are_real(
 ) -> None:
     caps = client.get("/api/capabilities").json()
     # Without a private directory nothing can be launched; halt and budget act on live runs.
-    assert caps == {"tasks": False, "chaos": False, "approve": False, "budget": True, "halt": True}
+    assert caps == {
+        "tasks": False,
+        "chaos": False,
+        "approve": False,
+        "budget": True,
+        "halt": True,
+        "real": False,  # a billed launch needs the server flag and a key (api/spend.py)
+    }
     assert client.get("/api/jobs").status_code == 503  # what "tasks: false" means
 
     # What it calls false is not wired, and what it calls true is.
@@ -132,6 +139,29 @@ def test_capabilities_say_which_controls_are_real(
     with TestClient(launching) as launch_client:
         assert launch_client.get("/api/capabilities").json()["tasks"] is True
         assert launch_client.get("/api/jobs").status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("allow_real", "has_key", "real"),
+    [(True, True, True), (False, True, False), (True, False, False)],
+)
+def test_capabilities_say_whether_a_billed_launch_can_pass_the_gate(
+    dirs: dict[str, Path], tmp_path: Path, allow_real: bool, has_key: bool, real: bool
+) -> None:
+    from fractalswarm.api.spend import Spend, SpendGate
+
+    gate = SpendGate(tmp_path / "ledger.sqlite", 150.0, allow_real=allow_real, has_key=has_key)
+    app = create_app(
+        dirs["runs"],
+        dirs["demo"],
+        dirs["bench"],
+        dirs["static"],
+        private_dir=tmp_path / "private",
+        spend=Spend(gate),
+    )
+    caps = TestClient(app).get("/api/capabilities").json()
+    assert caps["real"] is real and caps["tasks"] is True
+    assert not gate.ledger_path.exists()  # asking never opens the ledger
 
 
 @pytest.fixture

@@ -229,9 +229,11 @@ and `status` in `completed | halted | running | interrupted | empty`.
 
 ### What this server can do, and what a finished run proves
 
-`GET /api/capabilities` → `{ "tasks": true, "chaos": false, "approve": false, "budget": true, "halt": true }`.
-A control that is `false` answers 501 (`tasks` is false, and the launch routes answer 503, when the API
-has no private directory). The run catalogue's `status` is one of `running | completed | halted |
+`GET /api/capabilities` → `{ "tasks": true, "chaos": false, "approve": false, "budget": true, "halt": true,
+"real": false }`. A control that is `false` answers 501 (`tasks` is false, and the launch routes answer 503,
+when the API has no private directory). `real` is an extra key beyond the five you asked for: it is true when
+a billed launch can pass the gate (the server runs with `FRACTALSWARM_ALLOW_UI_REAL=1` and has a key), so the UI
+can show or grey out the "real" choice without posting a preflight. It is false by default. The run catalogue's `status` is one of `running | completed | halted |
 interrupted | empty`.
 
 `GET /api/runs/{id}/takeover` → 200 (`verify/takeover.py::check_run`, recomputed from the finished log,
