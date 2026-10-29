@@ -16,7 +16,7 @@ Branch `Yoelcanarion/arena-ui-core`. Web only: no Python was touched.
 | 8 Proof surfaces | done: timeline marks, replay badge, takeover chip (against `GET api/runs/{id}/takeover`, 404 fallback) |
 | 9 Muse lens | done: drawer, Muse meter, fixtures from two recorded runs (W3's API is merged) |
 | Build, screenshots, checks | done (see Checks and Screenshots) |
-| Frame times, absolute | pending a quiet window |
+| Frame times, absolute | done in the quiet window of Oct 29 (19:23-19:27 CET): see Frame times; the 60 fps budget is not met |
 
 ## For W5: what to build on
 
@@ -77,7 +77,9 @@ Nothing here adds a field to an event payload; every read is tolerant of a missi
 The W1 and W3 shapes are the ones in their briefs. If they change, tell me and I adjust the readers.
 
 ### Arena counters (`arenaCounters(view, nowMs)`)
-Display values, as a pure fold. The official numbers are Python's (`/api/runs/{id}/metrics`).
+Display values, as a pure fold. The official numbers are Python's (`/api/runs/{id}/metrics`). Two of the counters are ports of the
+scored definitions (`lib/recovery.ts`, Oct 29 evening) and end on the scored number, to the millisecond; the others approximate, and
+the table says which.
 
 | Counter | Definition |
 |---|---|
@@ -85,18 +87,14 @@ Display values, as a pure fold. The official numbers are Python's (`/api/runs/{i
 | `coordinatorDownMs` | per crash a window: a supervisor's crash → restart; the swarm's kill → last `ownership.remapped`/`tree.adopted`/`member.dead` for the victim. An open window grows with `nowMs` |
 | `idleAgentMs`, `idleAgentsNow` | agents that are **alive**, have no LLM call in flight, and answer to a coordinator that is killed or restarting. An agent that a crash stopped is gone (the supervisor's restart respawns it and its work is redone), not idle: since Oct 29 evening it no longer counts, because `bench/recovery.py` scores the central and the pipeline baseline 0.0. A member the detector declared dead with no kill (a false death) does not count. Approximates "idle agent-seconds", which also needs the agent's session to have work waiting on the coordinator |
 | `redispatches` | `contract.dispatched` of work rejected as `lost`, or of an `idem_key` sent before |
-| `duplicatedCalls` | LLM calls cancelled and then redone (same request again, or the agent's contract dispatched again), plus completed calls whose request was already paid for |
+| `duplicatedCalls` | **the scored `dup_calls`** (`lib/recovery.ts`, a port of `_fates`): a call of an attempt that a later attempt of its contract replaced (once that one is verified), an own call (`plan\|`, `judge\|`, `scan\|`) asked again once the later one has completed, and a completed call whose request was already paid for. A failed call (`error`, `refused`) is never one |
+| `dependencyMs` | **the scored coordinator-dependency time `cdt_s`** (a port of `_items`, `_outages`, `_Owners` and the run-level overlap): the contract-time that work spent waiting (dispatch, result, judge, booking, plan, a lost own call) while the coordinator that owned its goal was down. "So far" is the scored analysis of the log up to the playhead, so it moves when a wait *ends*, not while it goes on |
 | `costUsd`, `hardViolations` | `budget.settled` summed; the schedule check once it lands |
 
-**Check against Python (`verify/takeover.py::analyze` on copies of three recorded runs):** equal on every run.
-
-| Run | crashes | duplicated calls | contracts dispatched again |
-|---|---|---|---|
-| `t2-real-c3-central-seed1` | 5 / 5 | 27 / 27 (5 by request + 22 by contract) | 22 / 22 |
-| `tmp-pipeline-c3` | 5 / 5 | 5 / 5 | 5 / 5 |
-| `t2-real-c3-swarm-seed1b` | 5 / 5 | 3 / 3 | 2 / 2 |
-
-`arena.real.test.ts` keeps these numbers and skips itself where the runs are not on disk.
+**Superseded check (`verify/takeover.py::analyze`, the first version of the duplicated-calls counter):** the fold was equal to it on three
+recorded runs (duplicated calls 27 / 5 / 3 for central, pipeline, swarm). That is an older and narrower definition than the one
+`bench/recovery.py` scores (42 / 5 / 13), so the counter now follows the scored one (below). `arena.real.test.ts` keeps the headline
+numbers of each run and skips itself where the runs are not on disk.
 
 **Check against W1's scored metrics (`bench/recovery.py::analyze`, what `/api/runs/{id}/metrics` serves as `recovery`), on four
 logs, `arena.parity.test.ts` with `lib/fixtures/recovery-official.json`.** The scoreboard shows the fold while a run plays and the
@@ -108,14 +106,20 @@ scored number once it ended, so where they differ a figure jumps at the last eve
 | outage windows (crash outages) | identical to the ms | identical | identical | identical | equal |
 | contracts sent again / `lost_redispatches` | 0 / 0 | 22 / 22 | 2 / 2 | 5 / 5 | equal |
 | idle agent-seconds / `idle_agent_s` | 14.08 / 9.44 | 0 / 0 | 26.56 / 26.56 | 0 / 0 | equal, except the demo, where the fold is above: the scored one also needs the session to have work waiting. (Before the fix of the evening it said 170.7 for central and 25.0 for pipeline: it counted the agents the crash stopped.) |
-| duplicated calls / `dup_calls` | 0 / 11 | 27 / 42 | 3 / 13 | 5 / 5 | **the fold undercounts**: it has no cause for the work redone after a rejected verdict ("other": 11 in the demo, 10 in swarm-c3) nor for a replaced attempt that was not cancelled |
-| outage window / `cdt_s` (coordinator-dependency time) | 23.67 / 4.72 | 25.11 / 135.59 | 30.85 / 26.56 | 25.00 / 99.00 | **not the same quantity**: the window is the length of the outage, `cdt_s` is contract-seconds of waiting inside it (nothing waiting in a crash with nothing in flight: lower; many contracts waiting on one supervisor: higher) |
+| duplicated calls / `dup_calls` | 11 / 11 | 42 / 42 | 13 / 13 | 5 / 5 | **equal** since the port (it was 0 / 27 / 3 / 5: the old fold had no notion of work redone after a rejected verdict or of an attempt a later one replaced) |
+| `dependencyMs` / `cdt_s` (coordinator-dependency time) | 4.719 / 4.719 | 135.587 / 135.587 | 26.564 / 26.564 | 99.0 / 99.0 | **equal** since the port, to the millisecond |
+| waits it is made of / `blocked_total_s` | 5.532 / 5.532 | 135.587 / 135.587 | 28.797 / 28.797 | 985.582 / 985.582 | equal |
+| outage window (`coordinatorDownMs`) / `cdt_s` | 23.67 / 4.72 | 25.11 / 135.59 | 30.85 / 26.56 | 25.00 / 99.00 | **not the same quantity**, and the test says so: the window is the length of the outage, `cdt_s` is contract-seconds of waiting inside it. A row named "Coordinator-dependency time" must read `dependencyMs`; `coordinatorDownMs` is the outage length |
+| every prefix of the log, 413 of them | equal | equal | equal | equal | `analyze()` run in Python on `events[:k]` (k at every 5 %, and just after each crash, restart, chaos fault, takeover and completed goal) against `recoveryAt` after the first k events; the fixture holds the Python numbers |
 
-So: crashes, outage windows and re-dispatches are safe to show live. The live "Coordinator-dependency time" row (W5's `rows.ts` feeds it
-`coordinatorDownMs`) is the outage length, which is lower or higher than the scored figure by a factor of about 5; the live
-"Duplicated work" row undercounts. Either the row says "so far" and the scored figure replaces it at the end (what W5 does), or the
-fold takes on W1's definitions: wait intervals for `cdt_s` and the fate of each call for `dup_calls`, both ports of about 150
-lines of `bench/recovery.py` (not done: not asked, and the claims come from the scored numbers).
+So: crashes, outage windows, re-dispatches, duplicated work and coordinator-dependency time are what the scoring says at every event
+of the four logs; the one counter that still differs is the idle agent-seconds of the demo (above the scored figure, which needs the
+session to have work waiting). W5's `rows.ts` can now feed the "Coordinator-dependency time" row from `counters.dependencyMs` instead of
+`coordinatorDownMs` (their row is named for what it shows until they do).
+
+Cost (`recoveryAt`, 14,047-event swarm log, 2,257 of them kept): the fold adds about 1 ms per 200 events (it keeps the few events the
+figures read, as a persistent list); the first read after a change takes 7 ms, a repeat read 0.03-0.15 ms; folding 200 events and
+reading the counters again takes 1.7 ms.
 
 ## Deviations
 - Statuses: `"restarting"` is a new `ActorStatus`; `Counters` shows "down" (killed, dead or restarting) instead of "killed / dead".
@@ -325,10 +329,34 @@ any screenshot yet** (it shows nothing on a 404). It is to be shot against the r
   `lib/api.test.ts` covers these.
 - The schedule grid's clock scope writes `--now` only while a ruling mark fades (see frame times).
 
-### Frame times (`t2-real-c3-swarm-seed1b`, 14,047 events, 20x): **absolute numbers pending a quiet window**
-Everything below was measured between about 13:15 and 13:40 CET. Yoel opened the UI at 13:13, so the machine was not quiet
-(his browser, a second server, under 2 GB free). Read these as **relative** numbers; the absolute ones are to be taken
-again when the coordinator says the machine is quiet.
+### Frame times (`t2-real-c3-swarm-seed1b`, 14,047 events, 20x)
+
+**The quiet window of Oct 29, 19:23-19:27 CET (the numbers to quote).** Same harness as below (`pw/compare.mjs`, not in git):
+Playwright Chromium 130, headless 1920x1080, software rendering (SwiftShader), a generic `requestAnimationFrame` logger, the seven
+variants taken in turns, one warm-up pass, three counted rounds; nothing else of mine was running. Medians (per round in brackets);
+style and script are % of wall time:
+
+| Variant | fps | p95 frame | style | script |
+|---|---|---|---|---|
+| Phase 1 UI (`before`) | 44.3 (44.2 / 44.3 / 45.9) | 33.4 ms | 31 | 28 |
+| Phase 2, before the clock fix (`old`) | 33.3 (31.7 / 33.3 / 34.1) | 50.0 ms | 40 | 27 |
+| Phase 2, this build (`new`) | 37.3 (36.3 / 38.3 / 37.3) | 33.4 ms | 33 | 30 |
+| `new` with `?lite=all` | 39.6 (37.3 / 39.6 / 40.5) | 33.4 ms | 31 | 32 |
+| `new` with `?lite=anim` | 36.7 (36.4 / 36.7 / 38.3) | 33.4 ms | 33 | 30 |
+| `new` with `?lite=filter` | 37.4 (37.4 / 36.6 / 39.6) | 33.4 ms | 33 | 30 |
+| `new` with `?lite=shadow` | 40.5 (38.2 / 40.5 / 43.1) | 33.4 ms | 31 | 30 |
+
+Reading: **the clock fix is real** (33.3 -> 37.3 fps; p95 50 -> 33.4 ms; frames over 34 ms in round 1: 21 of 220 -> 9 of 252).
+**Of the three lite parts only `shadow` moves the number** (about +3 fps, up to 43 in round 3); `anim` and `filter` alone are inside
+the round-to-round spread (about +/-1.5 fps). All three together are no better than `shadow` alone. **The 60 fps budget is not met**
+(software rendering; the main thread is busy 96-100 % of the wall time in every variant), and the Phase 1 UI is still about 7 fps
+faster than this build: the gap is the extra DOM per frame (run strip, lens buttons, node buttons) and the style recalculation it
+causes. `lite_check.mjs` confirmed beforehand that each `?lite` part changes the computed style it names (`animation-name`
+`dashdraw` -> `none`; `filter` `drop-shadow(...)` -> `none`; `box-shadow` of the 4 px ring -> `none`; all three together). Whether
+`shadow` is worth the loss of the takeover rings is for the coordinator; nothing turns it on.
+
+**The first measurement (Oct 29, 13:15-13:40 CET; superseded by the one above).** Yoel opened the UI at 13:13, so the machine was
+not quiet (his browser, a second server, under 2 GB free). Those are **relative** numbers, kept for how they were found:
 
 Harness (not in git; `scratchpad\pw\compare.mjs`): Playwright Chromium 130, headless, 1920x1080, software rendering
 (SwiftShader), a generic `requestAnimationFrame` logger injected into both builds, the browser's own CPU counters, the
@@ -359,13 +387,9 @@ tested). The tree's scope still writes every frame; switching it off changed not
 `--now` only on the elements that fade, and dropped it: an element React creates while the clock is paused (after a seek)
 would never get it and would stay fully lit, whereas an inherited value is always right.
 
-**The fix itself is not measured yet** (the run that would have measured it was cut by the release request), and the
-screenshots predate it. Expected: back to the "grid switched off" row, about 24 fps, still **below Phase 1 (31 fps in the same
-harness) and far below the 60 fps of the brief**. So the budget is **not met**, and it was not met by the Phase 1 UI either.
-Suspects not yet tested, with toggles ready in `compare.mjs` (`new-noanim`, `new-nofilter`, `new-noshadow`): the animated
-edges (React Flow animates `stroke-dashoffset` on the main thread; at 20x they are lit almost all the time), the
-`drop-shadow` filter on talking edges, the card shadows; and the extra DOM per frame of the run strip, the lens buttons and
-the node buttons, which is the rest of the gap to Phase 1.
+**The fix itself was measured in the window** (the table at the top): `old` 33.3 -> `new` 37.3 fps. The suspects (the animated
+edges, the `drop-shadow` filter on talking edges, the card shadows) were tried as the product's `?lite` switch: only the shadows
+matter. The rest of the gap to Phase 1 is the extra DOM per frame of the run strip, the lens buttons and the node buttons.
 
 ### Deviations (this part)
 - `VerifyBadge` moved from the top bar into the run strip (same component, same behaviour).
@@ -375,7 +399,7 @@ the node buttons, which is the rest of the gap to Phase 1.
   stop per node.
 - The 60 fps budget of step 5 is not met (see above); reported, not hidden.
 
-### Lite motion switch (prepared Oct 29; in the source, NOT in the committed bundle until the next build)
+### Lite motion switch (in the bundle since the build of the Oct 29 evening window)
 The coordinator asked for the three CSS toggles as one switch, so the quiet window needs one build. `lib/lite.ts` and
 `styles/lite.css`: `?lite=all`, or `?lite=anim,filter,shadow`, in the query string or in the hash query, sets
 `<html data-lite="...">`. It is off by default and changes nothing without the attribute. Parts:
@@ -388,6 +412,7 @@ runs by setting the attribute. `lite.test.ts` keeps the part list and the CSS in
 is keyed on a part). **A trade, not a free win:** with `shadow` the adopted and restarted rings, the cue for a takeover,
 are not drawn, and with `anim` the lit edges keep their dashes but stop moving. Whether any part is worth it, and
 whether it should switch on by itself at a high speed, is for the measurements and the coordinator; nothing turns it on.
+Measured in the window: only `shadow` moves the frame rate (about +3 fps); see Frame times.
 
 ### Since the resume (Oct 29 evening; arena merged into this branch at f0ee8bb, from afcf732)
 No plan by days any more (Yoel): each item as soon as its inputs exist.
@@ -456,9 +481,42 @@ and the end of `demo-backup`), `pw/form.mjs` (the New task form on the real serv
 Submit to a 202 with `{spec, backend: "fake"}`, the link to the run, the job ending, Replay verified on the run it left) and
 `pw/live.mjs` (a fake-LLM run launched through the API with `auto_approve` off, driven through the UI: the two 422 reasons, Approve
 with the hash, Kill half, Verify replay after the run ends; then a second run whose root is killed while it holds the plan, to see
-the heir's new hash reach the approval). All parse; none has run yet.
+the heir's new hash reach the approval). All three ran in the window; results below.
 
-### Plan for the quiet window (one build, read-only server on scratch dirs, nothing written to the repo but the notes)
+### The quiet window (Oct 29: GO 19:21; my session was down 19:30-20:07 on a network error; finished 20:15)
+One build, a server on scratch dirs on port 8794, one headless Chromium at a time, fake backend only ($0), nothing written to
+the repo but these notes and the bundle. The server and every browser were stopped at 20:15; the 7 fake-LLM jobs of the window
+had all ended (one cancelled by me).
+
+| Script | Result |
+|---|---|
+| `npm --prefix web run build` | 4.6 s at tree `46c524e`; `index-CKgXM_1N.js` 1,015 kB (310 kB gzip), `index-Cnh2QwWT.css` 69 kB; `favicon.svg` restored. The answer buttons are not in it |
+| `lite_check.mjs` | each `?lite` part changes the computed style it names (see Frame times) |
+| `final.mjs` | 6 shots, all publishable (no MISMATCH badge), 0 errors: `final-demo-end`, `final-demo-lens-facts`, `final-demo-lens-facts-light`, `final-demo-lens-inflight` (1920x1080), `final-clip-actor`, `final-clip-cancelled` (720x827 clips of the lens drawer) |
+| `compare.mjs` | the table at the top of Frame times |
+| `proof.mjs` | 15 of 15: the takeover chip says "Takeover OK ✓ 7 hand-overs" against the real `GET /takeover` (5 kills, 7 takeovers, 0 violations); the app's own `POST /verify` is JSON and gets 200, a bare POST gets 415; the ROOT tag sits on one node at every step and moves o0 -> o1 -> o2 -> o3 at events 4538, 5722, 6856 of 8177 |
+| `form.mjs` | 15 of 15: the default input `fixture: tasks/fixtures/t2/seed-1`; no YAML upload; Submit waits for a goal; the missing-input message; `POST /api/tasks` gets 202 with exactly `{spec, backend: "fake"}`; the answer links the run; the job completes (6,698 events); the link opens the run and Replay verified; near its end the tree shows 22 actors |
+| `live.mjs` | 14 of 14 (run 1: 10, run 2: 4): `api_storm` and `net_fault` show the server's own 422 words; Approve sends `plan_hash` and gets 200 ("approved by human"); Kill half = 5 chaos actions; Verify replay gets 200 and ends in Replay verified; the log holds one `approve` and five `chaos` controls. Run 2: o3 takes the `root` key (`ownership.remapped`, seq 1643, 24.4 s) and proposes the plan again (seq 1854, 31.1 s); the plan page shows it awaiting approval and the approval names its hash |
+
+Shots, all in the scratchpad (not in git): `win-final/` (the 6 above), `win-proof/` (`proof-runstrip-demo` 1920x53,
+`proof-root-at-4538`, `proof-root-at-end`), `win-form3/` (`form-input-missing`, `form-started`, `form-run-opened`), `win-live2/`
+(`live-1-plan-awaiting`, `live-1-chaos-422`, `live-1-plan-approved`, `live-1-chaos-kill-half`, `live-1-verified`,
+`live-2-plan-heir`, `live-2-plan-approved`).
+
+Found in the window:
+- **Script bugs of mine, not app bugs** (fixed in the scratch scripts): `form.mjs` expected nodes at event 0 (a finished run opens
+  paused at its first event, where the tree is still empty: "Waiting for the first actor to spawn") and navigated by hash alone,
+  which does not re-read `?at=`; `live.mjs` expected the heir's plan to carry another hash.
+- **The heir's plan has the same hash as the first one on a fake run** (`scope-1b3d2f26e494...` both times): the fake planner is
+  deterministic. So "the approval names the heir's plan, not the first" cannot be told apart by hash on a fake run; what the run
+  shows is that the heir proposes again after the takeover and holds again, and the approval names the hash of the latest
+  `plan.proposed`. A real planner that answers differently would make the two hashes differ.
+- A run launched from the New task form opens, from its link, at event 0 with an empty tree until Play (or `?at=`). That is how every
+  finished run opens; mentioned because the form's answer says "Started run ...", and a fast fake run is finished by the time it is clicked.
+- My first `live.mjs` left its second job running (waiting for approval for ever) after the script failed; I cancelled it
+  (`POST /api/jobs/{id}/cancel`) and the script now cancels a job it leaves behind.
+
+### Plan for the quiet window (kept for the record; done above)
 1. `npm --prefix web run build` (about 4 s), restore `favicon.svg`.
 2. `lite_check.mjs` (scratch, not in git): opens the swarm run where edges are lit and reads the computed
    `animation-name`, `filter` and `box-shadow` with and without each part, so a lite number is known to come from a switch
@@ -471,7 +529,7 @@ the heir's new hash reach the approval). All parse; none has run yet.
    (the chaos panel and the approve flow on fake-LLM runs launched through the API), each on a server with scratch dirs.
 
 ### Still to do (needs a slot or a later merge)
-1. A quiet window: absolute frame times, the fix measured, the three CSS toggles tried; re-shoot the lens scenes on the
+1. (done in the window of Oct 29, see above) A quiet window: absolute frame times, the fix measured, the three CSS toggles tried; the lens scenes re-shot on the
    final build, using `demo-backup` wherever a badge is visible. **The app verifies a completed run as soon as it opens
    it** (`App.tsx` calls `runVerify`), so every scene on a Phase 1 run shows MISMATCH in the run strip, clicked or not;
    leaving Verify alone does not avoid it. `demo-backup` has no cancelled LLM call (its 10 `effect.cancelled` are not
@@ -479,8 +537,7 @@ the heir's new hash reach the approval). All parse; none has run yet.
    (MATCH, with the new chip "Takeover OK ✓ 7 hand-overs"), the Phase 1 scenes as clips of the lens drawer, which leave the
    strip out. The scratch script `final.mjs` (not in git) enforces it: a shot whose region overlaps a MISMATCH badge goes
    to `internal/` and is marked `publishable: false`.
-2. (done, second slot) The static bundle is rebuilt for the chip fix of Oct 29. The next build, in the window, also takes
-   in the lite switch above.
-3. W2's merge is in arena (24995b5): the chip screenshot against the real endpoint (a server on scratch dirs; the demo
-   bundle shows "Takeover OK ✓ 7 hand-overs" with MATCH), and a run of the Verify button against the guard. Both come
-   with the quiet window, after the coordinator's combined merge.
+2. (done) The static bundle was rebuilt in the window (tree `46c524e`): the chip fix, the lite switch, the New task form, the
+   escalations panel and the dup/cdt port. The answer buttons (below) need one more build.
+3. (done in the window) W2's merge is in arena (24995b5): the chip against the real endpoint ("Takeover OK ✓ 7 hand-overs" with
+   MATCH) and the Verify button against the guard (JSON 200, bare 415).
