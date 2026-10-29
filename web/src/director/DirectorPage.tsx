@@ -33,6 +33,9 @@ export interface DirectorApi {
   /** Frames of the take drawn so far. */
   readonly frame: number;
   readonly done: boolean;
+  /** Steps in the scene, and how many have run: a scene too short for its own script says so. */
+  steps: number;
+  readonly position: number;
   readonly warnings: string[];
   /** Why the stage cannot be shown, or null. */
   readonly problem: string | null;
@@ -289,6 +292,10 @@ function Frame({ scene, sources, hold, hud }: FrameProps) {
       },
       get done() {
         return made.state.getState().done;
+      },
+      steps: scene.steps.length,
+      get position() {
+        return made.state.getState().position;
       },
       get warnings() {
         return made.state.getState().warnings;

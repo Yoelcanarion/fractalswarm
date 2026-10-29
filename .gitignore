@@ -17,3 +17,6 @@ bench/results/*/runs/
 # Web
 web/node_modules/
 web/dist/
+
+# Recorded scene clips (PNG frames, mp4 and webm: hundreds of MB), from scripts/record_scenes.mjs
+video/
