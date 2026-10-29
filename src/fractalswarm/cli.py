@@ -125,6 +125,20 @@ def run(
     chaos: Annotated[
         str, typer.Option(help="C0-C3, or kill-half: the root, two track leads, two sessions")
     ] = "C0",
+    chaos_plan: Annotated[
+        Path | None,
+        typer.Option(
+            help="a ChaosPlan JSON file, used instead of --chaos: "
+            "the same plan for both runs of an arena pair"
+        ),
+    ] = None,
+    start_barrier: Annotated[
+        Path | None,
+        typer.Option(
+            help="a directory: warm up, write <run_id>.ready there, and wait "
+            "for a file named go before the clock starts"
+        ),
+    ] = None,
     firewall: Annotated[
         str | None,
         typer.Option(
@@ -183,7 +197,9 @@ def run(
         params["cross_audit"] = True
     if feasibility_report:
         params["feasibility_report"] = True
-    if chaos == "kill-half":
+    if chaos_plan is not None:
+        params |= chaos_plan_params(chaos_plan)
+    elif chaos == "kill-half":
         params |= {"chaos": kill_half_plan(spec.seed), "membership": True}
     elif chaos in ("C0", "C1", "C2", "C3"):
         params |= {"chaos": {"profile": chaos, "seed": spec.seed}}
@@ -220,6 +236,14 @@ def run(
     scanner.warm()  # before the clock starts
 
     run_id = run_id or f"{taskspec.stem}-{datetime.now():%Y%m%d-%H%M%S}"
+    if start_barrier is not None:
+        from fractalswarm.runs import wait_at_barrier
+
+        try:
+            wait_at_barrier(start_barrier, run_id)
+        except TimeoutError as exc:
+            typer.echo(f"start barrier: {exc}")
+            raise typer.Exit(1) from None
     result = asyncio.run(
         record_run(
             scenario,
@@ -355,6 +379,23 @@ def kill_half_plan(seed: str) -> dict:
         for at, target in zip(CRASH_POINTS, targets, strict=True)
     )
     return ChaosPlan(profile="kill-half", seed=seed, actions=actions).model_dump(mode="json")
+
+
+def chaos_plan_params(path: Path) -> dict:
+    """The run params for a ChaosPlan JSON file. A plan that crashes coordinators turns the
+    failure detector on, as ``--chaos kill-half`` does: the takeover needs it."""
+    import json
+
+    from fractalswarm.api.arena import parse_plan
+
+    try:
+        plan = parse_plan(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError) as exc:
+        raise typer.BadParameter(f"--chaos-plan {path}: {exc}") from None
+    params: dict = {"chaos": plan.model_dump(mode="json")}
+    if any(action.kind == "kill_coordinator" for action in plan.actions):
+        params["membership"] = True
+    return params
 
 
 def task_outcome(paths) -> dict | None:

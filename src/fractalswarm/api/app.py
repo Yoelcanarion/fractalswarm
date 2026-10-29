@@ -32,7 +32,7 @@ from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
-from fractalswarm.api import jobs
+from fractalswarm.api import arena, jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
 from fractalswarm.api.jobs import JobError, JobManager
 from fractalswarm.api.lens import lens_routes
@@ -251,6 +251,24 @@ def create_app(
             raise job_error(exc) from None
         return JSONResponse(launched(job), status_code=202)
 
+    async def launch_pair(request: Request) -> JSONResponse:
+        _, jobs_ = need_private()
+        body = await _json_body(request)
+        try:
+            started = await anyio.to_thread.run_sync(arena.launch_arena, jobs_, body)
+        except JobError as exc:
+            raise job_error(exc) from None
+        return JSONResponse(started, status_code=202)
+
+    async def list_pairs(request: Request) -> JSONResponse:
+        return JSONResponse(arena.list_pairs(need_private()[1]))
+
+    async def get_pair(request: Request) -> JSONResponse:
+        try:
+            return JSONResponse(arena.get_pair(need_private()[1], request.path_params["pair_id"]))
+        except JobError as exc:
+            raise job_error(exc) from None
+
     async def list_jobs(request: Request) -> JSONResponse:
         return JSONResponse(need_private()[1].listing())
 
@@ -395,6 +413,9 @@ def create_app(
         Route("/api/bench/results", bench_results),
         Route("/api/runs/{run_id}/metrics", run_metrics),
         Route("/api/tasks", launch_task, methods=["POST"]),
+        Route("/api/arena", launch_pair, methods=["POST"]),
+        Route("/api/pairs", list_pairs),
+        Route("/api/pairs/{pair_id}", get_pair),
         Route("/api/jobs", list_jobs),
         Route("/api/jobs/{job_id}", get_job),
         Route("/api/jobs/{job_id}/cancel", cancel_job, methods=["POST"]),
