@@ -238,6 +238,45 @@ def test_cancel_halts_a_running_job_and_the_log_says_so(api: Api) -> None:
     assert api.post(f"/api/jobs/{job_id}/cancel").status_code == 409  # nothing left to cancel
 
 
+def start_live_job(api: Api, run_id: str) -> str:
+    body = {"spec": FIXTURE_SPEC, "run_id": run_id, "clock": "live", "speed": 1}
+    job_id = api.post("/api/tasks", body).json()["job_id"]
+    api.wait(
+        lambda: api.get("/api/jobs/" + job_id).json()["runs"][0]["status"] == "running",
+        "the run to start",
+    )
+    return job_id
+
+
+def test_a_cancel_that_is_not_answered_kills_the_process_tree(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(jobs, "CANCEL_GRACE_S", 0.0)  # the halt gets no time: straight to the kill
+    job_id = start_live_job(api, "ui-kill")
+    cancelled = api.post(f"/api/jobs/{job_id}/cancel").json()
+    assert cancelled["state"] == "cancelled"
+    run = cancelled["runs"][0]
+    assert run["exit_code"] is not None  # the process is gone
+    assert run["status"] == "interrupted"  # its log stops mid-run, and nothing touches LIVE
+
+
+def test_a_restarted_api_still_lists_and_cancels_a_running_job(api: Api, tmp_path: Path) -> None:
+    job_id = start_live_job(api, "ui-restart")
+    second = TestClient(
+        create_app(api.runs, None, tmp_path / "bench", tmp_path / "s", private_dir=api.private)
+    )
+    seen = second.get(f"/api/jobs/{job_id}").json()
+    assert seen["state"] == "running" and seen["runs"][0]["exit_code"] is None
+    assert [j["id"] for j in second.get("/api/jobs").json()] == [job_id]
+
+    cancelled = second.post(f"/api/jobs/{job_id}/cancel")  # it holds no process handle
+    assert cancelled.status_code == 200 and cancelled.json()["state"] == "cancelled"
+    assert api.get("/api/runs/ui-restart").json()["status"] == "halted"
+    api.wait(
+        lambda: api.get(f"/api/jobs/{job_id}").json()["runs"][0]["exit_code"] is not None, "exit"
+    )
+
+
 # -- live input ------------------------------------------------------------------------------
 
 
@@ -318,6 +357,15 @@ def test_an_intake_needs_talks_and_sane_rooms(api: Api) -> None:
     assert api.post("/api/intake", {"talks": "x", "backend": "real"}).status_code == 403
     assert api.get("/api/intake/nope").status_code == 404
     assert api.get("/api/intake/..%2Fx").status_code in (404, 422)
+
+
+def test_an_intake_that_cannot_start_leaves_no_text_behind(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(jobs, "MAX_ACTIVE", 0)
+    answer = api.post("/api/intake", {"talks": "Title: a talk someone pasted"})
+    assert answer.status_code == 429
+    assert not list((api.private / "intake").glob("*"))
 
 
 def test_the_sample_text_is_served_without_its_answer(api: Api) -> None:

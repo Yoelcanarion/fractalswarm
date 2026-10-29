@@ -329,17 +329,20 @@ class JobManager:
             raise JobError(404, f"no job {job_id!r}")
         if self.view_state(job)["state"] not in ACTIVE:
             raise JobError(409, f"job {job_id} is {job['state']}: nothing to cancel")
+        halting = [run for run in job["runs"] if self.run_status(run) == "running"]
+        for run in halting:
+            RunPaths(Path(run["dir"])).request_control(
+                {"op": "halt", "reason": "cancelled from the API", "by": "human"}
+            )
         for run in job["runs"]:
-            if self.run_status(run) == "running":
-                RunPaths(Path(run["dir"])).request_control(
-                    {"op": "halt", "reason": "cancelled from the API", "by": "human"}
-                )
+            if run not in halting and self._alive_run(job, run):  # no log yet: nothing to halt
+                self._kill(job, run)
         deadline = time.monotonic() + CANCEL_GRACE_S
-        while time.monotonic() < deadline and self._alive(job):
+        while time.monotonic() < deadline and any(self._alive_run(job, run) for run in halting):
             await asyncio.sleep(0.2)
-        for run in job["runs"]:
+        for run in halting:
             if self._alive_run(job, run):
-                kill_tree(self._pid_of(job, run))
+                self._kill(job, run)
         await asyncio.sleep(0.1)
         job["state"] = "cancelled"
         job["finished_at"] = utc_now()
@@ -347,8 +350,11 @@ class JobManager:
         self._save(job)
         return self.view(job)
 
-    def _alive(self, job: dict[str, Any]) -> bool:
-        return any(self._alive_run(job, run) for run in job["runs"])
+    def _kill(self, job: dict[str, Any], run: dict[str, Any]) -> None:
+        """Kill a run's process tree, and clear its ``LIVE`` marker so the run reads as
+        interrupted now instead of running for another few seconds."""
+        kill_tree(self._pid_of(job, run))
+        (Path(run["dir"]) / "LIVE").unlink(missing_ok=True)
 
     def _alive_run(self, job: dict[str, Any], run: dict[str, Any]) -> bool:
         proc = self.procs.get((job["id"], run["run_id"]))

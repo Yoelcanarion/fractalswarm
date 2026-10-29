@@ -18,6 +18,7 @@ until the runtime behind them lands.
 import asyncio
 import json
 import math
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -264,7 +265,8 @@ def create_app(
             job = await anyio.to_thread.run_sync(jobs.launch_intake, jobs_, intake_id, backend)
         except service.IntakeError as exc:
             raise HTTPException(422, str(exc)) from None
-        except JobError as exc:
+        except JobError as exc:  # nothing started: do not leave the pasted text behind
+            shutil.rmtree(private_.intake_dir(intake_id), ignore_errors=True)
             raise job_error(exc) from None
         answer = {"intake_id": intake_id, "job_id": job["id"], "state": "reading", "private": True}
         return JSONResponse(answer | {"warnings": job["warnings"]}, status_code=202)
