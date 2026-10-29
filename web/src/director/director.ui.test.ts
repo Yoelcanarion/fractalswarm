@@ -13,7 +13,7 @@ import { renderCurrent } from "../lib/testing";
 import type { RunEvent } from "../lib/types";
 import type { RunApi } from "../store";
 import { DirectorPage } from "./DirectorPage";
-import { OverlayLayer } from "./OverlayLayer";
+import { OverlayLayer, tipPosition } from "./OverlayLayer";
 import { createTake } from "./take";
 import { REGIONS } from "./targets";
 import { createArenaStage } from "./stages";
@@ -116,6 +116,24 @@ describe("what is drawn over the stage", () => {
     expect(html).toContain('aria-hidden="true"');
   });
 
+  it("draws a tooltip as a box with the words, under a target in the upper half and over one in the lower half", () => {
+    const key = JSON.stringify({ kind: "region", region: "swarm-proof" });
+    const take = createTake(
+      sceneOf({ steps: [{ do: "tooltip", target: { region: "swarm-proof" }, ms: 3000 }] }),
+      fakeReplay(),
+      fakeSurface({ [key]: { x: 300, y: 200, w: 400, h: 60 } }, {}, null, { [key]: "the heir of each, recomputed from the log, is the one the run used" }),
+    );
+    frames(take, 40);
+    renderCurrent(take.state);
+    const html = renderToStaticMarkup(createElement(OverlayLayer, { take, note: null }));
+    expect(html).toContain('class="dir__tip"');
+    expect(plainText(html)).toBe("the heir of each, recomputed from the log, is the one the run used");
+    expect(html).toMatch(/left:300px;top:270px/); // 10px under the target
+    expect(tipPosition({ x: 300, y: 900, w: 400, h: 60 }, 1)).toEqual({ left: 300, bottom: 190, opacity: 1 }); // over a target in the lower half
+    expect(tipPosition({ x: 1800, y: 100, w: 100, h: 40 }, 1).left).toBe(1920 - 48 - 760); // kept inside the frame
+    expect(tipPosition({ x: 0, y: 100, w: 100, h: 40 }, 1).left).toBe(48);
+  });
+
   it("is a statement for an overlay caption, which fades in from nothing", () => {
     const take = createTake(sceneOf({ steps: [{ do: "wait", ms: 500 }, { do: "caption", text: "heir = highest hash(goal, member)", style: "overlay", ms: 2000 }] }), fakeReplay(), surface());
     const drawn = (): string => {
@@ -172,6 +190,9 @@ describe("the pages that say a scene cannot be shown", () => {
     const read = (name: string): string => readFileSync(new URL(name, import.meta.url), "utf-8");
     expect(read("./DirectorPage.tsx")).toContain('<div className="dir" data-scene={scene.id} data-stage={scene.stage}>');
     expect(read("./director.css")).toMatch(/\.dir\[data-stage="arena"\] \.dir__note \{\s*left: 24px;\s*right: auto;/);
+    // the run page's strip is full: its stage starts under a band that is the note's
+    expect(read("./director.css")).toMatch(/\.dir\[data-stage="run"\] \.dir__camera \{\s*padding-top: var\(--dir-band\);/);
+    expect(read("./director.css")).toMatch(/\.dir\[data-stage="run"\] \.dir__stage--fit \{\s*height: calc\(1080px - var\(--dir-band\)\);/);
   });
 
   it("says which runs a scene needs, and where to give them", () => {

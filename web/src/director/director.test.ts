@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DURABLE_MAX_SCENARIO, crash, kill, restart, rivalStream, swarmStream, takeOver } from "../arena/testing";
 import { emptyView, foldEvents } from "../lib/reducer";
 import { crashesOf, resolveActor, subtreeOf } from "./anchors";
-import { FRAME_H, FRAME_W, HOME, cameraAt, contentRect, fit, lerp, lookAt, panned, speedAt, transformOf, union, zoomedTo, type Rect } from "./camera";
+import { FRAME_H, FRAME_W, HOME, cameraAt, contentRect, fit, lerp, lookAt, panned, speedAt, transformOf, union, within, zoomedTo, type Rect } from "./camera";
 import { FADE_MS, addCaption, captionOpacity, envelope, liveCaptions, ringOpacity } from "./overlay";
 import { createProgram, type Host } from "./program";
 import { parseScene, type Step } from "./script";
@@ -134,6 +134,9 @@ describe("a scene script", () => {
     expect(reason(arenaScene({ steps: [{ do: "highlight", target: { actor: "root", region: "swarm" }, ms: 1000 }] }))).toMatch(/exactly one/);
     expect(reason(arenaScene({ steps: [{ do: "highlight", target: { region: "nowhere" }, ms: 1000 }] }))).toMatch(/not a region/);
     expect(reason(arenaScene({ steps: [{ do: "highlight", target: { region: "lens" }, ms: 1000 }] }))).toMatch(/not on the arena stage/);
+    expect(reason(arenaScene({ steps: [{ do: "tooltip", target: { region: "lens" }, ms: 1000 }] }))).toMatch(/not on the arena stage/);
+    expect(reason(arenaScene({ steps: [{ do: "tooltip", target: { region: "swarm-proof" }, ms: 1000, text: "My own words" }] }))).toMatch(/text/); // the words are the page's
+    expect(reason(arenaScene({ steps: [{ do: "tooltip", target: { region: "swarm-proof" } }] }))).toMatch(/ms/);
     expect(reason(arenaScene({ steps: [{ do: "highlight", target: { actor: "$crashed:0" }, ms: 1000 }] }))).toMatch(/not an actor id/);
     expect(reason(arenaScene({ steps: [{ do: "highlight", target: { actor: "root", side: "up" }, ms: 1000 }] }))).toMatch(/\.side/);
     expect(reason(arenaScene({ steps: [{ do: "highlight", target: { actor: "root", colour: "red" }, ms: 1000 }] }))).toMatch(/\.colour/);
@@ -273,6 +276,22 @@ describe("the camera", () => {
     expect(padded.zoom).toBeCloseTo(2 / 1.5);
     expect(padded.x + FRAME_W / padded.zoom / 2).toBeCloseTo(580);
     expect(padded.y + FRAME_H / padded.zoom / 2).toBeCloseTo(370);
+  });
+
+  it("pads whichever side limits the fit, the width of a wide rectangle and the height of a tall one", () => {
+    expect(fit({ x: 0, y: 0, w: 1600, h: 200 }, 0.25).zoom).toBeCloseTo(FRAME_W / 2400);
+    expect(fit({ x: 0, y: 0, w: 200, h: 900 }, 0.25).zoom).toBeCloseTo(FRAME_H / 1350);
+  });
+
+  it("stays inside the stage: no black past its edges, and a view larger than the stage is centred on it", () => {
+    const stage = { w: FRAME_W, h: FRAME_H };
+    expect(within({ x: 100, y: 50, zoom: 2 }, stage)).toEqual({ x: 100, y: 50, zoom: 2 });
+    expect(within({ x: -152, y: -40, zoom: 3 }, stage)).toEqual({ x: 0, y: 0, zoom: 3 });
+    expect(within({ x: 1800, y: 1000, zoom: 2 }, stage)).toEqual({ x: FRAME_W - FRAME_W / 2, y: FRAME_H - FRAME_H / 2, zoom: 2 });
+    expect(within({ x: 5, y: 5, zoom: 0.5 }, stage)).toEqual({ x: (FRAME_W - FRAME_W / 0.5) / 2, y: (FRAME_H - FRAME_H / 0.5) / 2, zoom: 0.5 });
+    // a stage taller than the frame (a page that flows) can be looked down
+    expect(within({ x: 0, y: 1500, zoom: 1 }, { w: FRAME_W, h: 2400 })).toEqual({ x: 0, y: 1320, zoom: 1 });
+    expect(within({ x: 0, y: 3000, zoom: 1 }, { w: FRAME_W, h: 2400 }).y).toBe(1320);
   });
 
   it("does not fill the frame with a single dot, and stays within the zoom limits", () => {
@@ -555,6 +574,17 @@ describe("a take", () => {
     expect(take.state.getState().camera).toEqual(fit(BOARD, 0));
   });
 
+  it("keeps a camera fit near the edge of the stage inside it", () => {
+    const corner = { x: 0, y: 0, w: 300, h: 200 };
+    const surface = fakeSurface({ [target({ region: "swarm" })]: corner });
+    const take = createTake(sceneOf({ steps: [{ do: "camera", fit: { region: "swarm" }, pad: 0.35, ms: 0 }] }), fakeReplay(), surface);
+    take.tick();
+    const { camera } = take.state.getState();
+    expect(camera.zoom).toBeGreaterThan(3);
+    expect(camera.x).toBe(0);
+    expect(camera.y).toBe(0);
+  });
+
   it("goes home, and chains a new move from where the camera is", () => {
     const { take, surface } = takeOf({ steps: [{ do: "camera", fit: { region: "swarm" }, pad: 0, ms: 600 }, { do: "wait", ms: 300 }, { do: "camera", home: true, ms: 600 }] });
     for (let i = 0; i < 18; i++) take.tick();
@@ -572,6 +602,33 @@ describe("a take", () => {
     expect(warnings.filter((w) => /camera's target/.test(w))).toHaveLength(1);
     expect(warnings.filter((w) => /highlight's target/.test(w))).toHaveLength(1);
     expect(captions.map((c) => c.text)).toEqual(["Still here"]);
+  });
+
+  it("draws a tooltip with the words the page carries for its target, where the target is, and takes it away when its time is up", () => {
+    const key = target({ region: "swarm-proof" });
+    const surface = fakeSurface({ [key]: { x: 100, y: 120, w: 300, h: 40 } }, {}, null, { [key]: "the heir of each, recomputed from the log, is the one the run used" });
+    const take = createTake(sceneOf({ steps: [{ do: "wait", ms: 200 }, { do: "tooltip", target: { region: "swarm-proof" }, ms: 1000 }] }), fakeReplay(), surface);
+    for (let i = 0; i < 10; i++) take.tick();
+    expect(take.state.getState().tips).toEqual([]);
+    for (let i = 0; i < 30; i++) take.tick();
+    const [tip] = take.state.getState().tips;
+    expect(tip.text).toBe("the heir of each, recomputed from the log, is the one the run used");
+    expect(tip.rect).toEqual({ x: 100, y: 120, w: 300, h: 40 });
+    expect(tip.opacity).toBeGreaterThan(0.9);
+    for (let i = 0; i < 40; i++) take.tick();
+    expect(take.state.getState().tips).toEqual([]);
+    expect(take.state.getState().warnings).toEqual([]);
+  });
+
+  it("warns, once, of a tooltip whose target has no hover text, or is not on the page", () => {
+    const key = target({ region: "swarm-proof" });
+    const surface = fakeSurface({ [key]: { x: 100, y: 120, w: 300, h: 40 } });
+    const take = createTake(sceneOf({ steps: [{ do: "tooltip", target: { region: "swarm-proof" }, ms: 1000 }, { do: "tooltip", target: { region: "rival-proof" }, ms: 1000 }] }), fakeReplay(), surface);
+    for (let i = 0; i < 45; i++) take.tick();
+    const { warnings, tips } = take.state.getState();
+    expect(tips).toEqual([]);
+    expect(warnings.filter((w) => /no hover text/.test(w))).toHaveLength(1);
+    expect(warnings.filter((w) => /tooltip's target is not on the page/.test(w))).toHaveLength(1);
   });
 
   it("gives a highlight's target a few frames to be drawn (a lens just opened) before it warns", () => {

@@ -14,8 +14,8 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import { FIXED_FRAME_MS } from "../lib/playback";
-import { cameraAt, fit, HOME, moveEnded, panned, speedAt, zoomedTo, type Camera, type Move, type Ramp, type Rect } from "./camera";
-import { addCaption, liveCaptions, liveRings, ringOpacity, type Caption, type Placed, type Ring } from "./overlay";
+import { cameraAt, fit, HOME, moveEnded, panned, speedAt, within, zoomedTo, type Camera, type Move, type Ramp, type Rect } from "./camera";
+import { addCaption, liveCaptions, liveRings, ringOpacity, tipOpacity, type Caption, type Placed, type PlacedTip, type Ring, type Tip } from "./overlay";
 import { createProgram, type Host, type Program } from "./program";
 import type { PanelName, Scene, Step } from "./script";
 import type { Target } from "./targets";
@@ -46,6 +46,10 @@ export interface Surface {
   contentRect(target: Target): Rect | null;
   /** A target as it is on screen now, with the camera applied; null when it is not on the page. */
   screenRect(target: Target): Rect | null;
+  /** How large the stage is, in the frame's own pixels: what the camera may look at. */
+  bounds(): { w: number; h: number };
+  /** The hover text the target carries (its `title`, or its first descendant's), as the page words it; null when it has none. */
+  titleOf(target: Target): string | null;
   apply(camera: Camera): void;
   panel(name: PanelName, show: boolean): void;
   /** Open a call of the lens by the name the scene gave it, or close it (null). Returns why it could not, or null. */
@@ -62,6 +66,7 @@ export interface TakeState {
   camera: Camera;
   captions: Caption[];
   rings: Placed[];
+  tips: PlacedTip[];
   done: boolean;
   /** Steps of the scene that have run: fewer than it has when the scene ends before its script does. */
   position: number;
@@ -87,7 +92,7 @@ export const framesOf = (durationMs: number): number => Math.ceil(durationMs / F
 
 export function createTake(scene: Scene, replay: ReplayClock | null, surface: Surface): Take {
   const frames = framesOf(scene.durationMs);
-  const state = createStore<TakeState>(() => ({ frame: 0, ms: 0, camera: HOME, captions: [], rings: [], done: false, position: 0, warnings: [] }));
+  const state = createStore<TakeState>(() => ({ frame: 0, ms: 0, camera: HOME, captions: [], rings: [], tips: [], done: false, position: 0, warnings: [] }));
 
   let frame = 0;
   let camera = HOME;
@@ -95,6 +100,7 @@ export function createTake(scene: Scene, replay: ReplayClock | null, surface: Su
   let ramp: Ramp | null = null;
   let captions: Caption[] = [];
   let rings: Ring[] = [];
+  let tips: Tip[] = [];
   let ids = 0;
   let warnings: string[] = [];
   const unplaced = new Set<number>();
@@ -113,6 +119,7 @@ export function createTake(scene: Scene, replay: ReplayClock | null, surface: Su
       to = fit(rect, step.pad);
       if (step.zoom !== null) to = zoomedTo(to, step.zoom);
       if (step.pan !== null) to = panned(to, step.pan);
+      to = within(to, surface.bounds());
     }
     move = { from: move === null ? camera : cameraAt(move, clockMs()), to, start: clockMs(), ms: step.ms, ease: step.ease };
   }
@@ -150,6 +157,9 @@ export function createTake(scene: Scene, replay: ReplayClock | null, surface: Su
           case "highlight":
             rings = [...rings, { id: ++ids, target: step.target, from: clockMs(), to: clockMs() + step.ms }];
             return;
+          case "tooltip":
+            tips = [...tips, { id: ++ids, target: step.target, from: clockMs(), to: clockMs() + step.ms }];
+            return;
           case "caption":
             captions = addCaption(captions, { id: ++ids, text: step.text, kicker: step.kicker, style: step.style, from: clockMs(), to: clockMs() + step.ms });
             return;
@@ -179,7 +189,20 @@ export function createTake(scene: Scene, replay: ReplayClock | null, surface: Su
       }
       placed.push({ ring, rect, opacity: ringOpacity(ring, t) });
     }
-    state.setState({ frame, ms: t, camera, captions, rings: placed, done, position: program.position(), warnings });
+    const placedTips: PlacedTip[] = [];
+    for (const tip of tips) {
+      const rect = surface.screenRect(tip.target);
+      const text = rect === null ? null : surface.titleOf(tip.target);
+      if (rect === null || text === null) {
+        if (t - tip.from >= Math.min(RING_GRACE_MS, tip.to - tip.from) && !unplaced.has(tip.id)) {
+          unplaced.add(tip.id);
+          warn(`a tooltip's target ${rect === null ? "is not on the page" : "has no hover text"} (it began at ${(tip.from / 1000).toFixed(2)} s)`);
+        }
+        continue;
+      }
+      placedTips.push({ tip, rect, text, opacity: tipOpacity(tip, t) });
+    }
+    state.setState({ frame, ms: t, camera, captions, rings: placed, tips: placedTips, done, position: program.position(), warnings });
   }
 
   function reset(): void {
@@ -189,6 +212,7 @@ export function createTake(scene: Scene, replay: ReplayClock | null, surface: Su
     ramp = null;
     captions = [];
     rings = [];
+    tips = [];
     warnings = [];
     unplaced.clear();
     program = createProgram(scene.steps, host());
@@ -227,6 +251,7 @@ export function createTake(scene: Scene, replay: ReplayClock | null, surface: Su
       surface.apply(camera);
       captions = liveCaptions(captions, t);
       rings = liveRings(rings, t);
+      tips = liveRings(tips, t);
       frame += 1;
       publish(frame >= frames);
     },

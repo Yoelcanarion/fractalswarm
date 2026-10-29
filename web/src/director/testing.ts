@@ -58,13 +58,15 @@ export interface FakeSurface extends Surface {
 
 /** A page with a few rectangles in it, keyed by the target's JSON; a target that is not listed is not on the page,
  * unless `anywhere` says where everything else is. */
-export function fakeSurface(rects: Record<string, Rect>, context: Partial<TimeContext> = {}, anywhere: Rect | null = null): FakeSurface {
+export function fakeSurface(rects: Record<string, Rect>, context: Partial<TimeContext> = {}, anywhere: Rect | null = null, titles: Record<string, string> | string = {}): FakeSurface {
   const key = (target: Target): string => JSON.stringify(target);
   const surface: FakeSurface = {
     applied: HOME,
     panels: {},
     opened: [],
     contentRect: (target) => rects[key(target)] ?? anywhere,
+    bounds: () => ({ w: FRAME_W, h: FRAME_H }),
+    titleOf: (target) => (typeof titles === "string" ? titles : titles[key(target)] ?? null),
     screenRect(target) {
       const rect = rects[key(target)] ?? anywhere;
       if (!rect) return null;
