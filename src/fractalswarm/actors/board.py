@@ -15,6 +15,8 @@ With arbitration on (``actors/arbitration.py``) a publish whose value differs fr
 contract's value for the same key does not overwrite it: the fact is marked ``disputed``, its
 candidates are logged (``collision.detected``, kind ``semantic``), and the owner of the lowest
 common ancestor is told. The owner's ``fact.resolve`` makes the winner's value the verified fact.
+A person may overrule the ruling (``escalation.answered``): the owner's ``fact.overrule`` then
+replaces the verified fact with the chosen candidate's value, if the log holds that overruling.
 """
 
 import copy
@@ -106,7 +108,7 @@ def board_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "mail": Mailbox(),
         "arbitration": bool(args.get("arbitration")),
         "disputes": {},  # key -> the candidates of an open semantic dispute
-        "settled": set(),  # keys with a ruling: tested for membership only
+        "settled": {},  # key -> the candidates its ruling chose from (an overruling picks again)
     }
 
 
@@ -133,6 +135,8 @@ def board_handle(state: dict[str, Any], event: Event, view: View):
         return state, commands
     if topic == arbitration.TOPIC_RESOLVE:
         return state, _resolve(state, board, body, view)
+    if topic == arbitration.TOPIC_OVERRULE:
+        return state, _overrule(state, board, body, view)
     if topic == "book":
         return state, _book(board, body, sender, view)
     if topic == MAIL_PUT:
@@ -305,6 +309,36 @@ def _resolve(state: dict[str, Any], board: Blackboard, body: dict[str, Any], vie
     )
     if winner is None:
         return []
+    stored = _verified(board, key, winner, view)
+    state["settled"][key] = state["disputes"].pop(key)["candidates"]
+    resolved = {"key": key, "contract": winner["by"][0]["contract"], "version": stored.version}
+    return [Emit(type="fact.resolved", payload=resolved | {"by": body["by"]})]
+
+
+def _overrule(state: dict[str, Any], board: Blackboard, body: dict[str, Any], view: View):
+    """The owner's order after a person overruled the ruling: the chosen candidate's value
+    replaces the verified fact. It is applied only if the log holds that overruling, and once."""
+    key = body["key"]
+    candidates = state["settled"].get(key)
+    if candidates is None:
+        return []  # no ruling was applied here: there is nothing to overrule
+    overruling = arbitration.overruling_of(view, key)
+    if overruling is None or overruling["contract"] != body["contract"]:
+        return []  # the order is not what the log says the person chose
+    if board.facts[key].provenance.contract == body["contract"]:
+        return []  # a second order for the same choice
+    winner = next(
+        (c for c in candidates if any(s["contract"] == body["contract"] for s in c["by"])), None
+    )
+    if winner is None:
+        return []
+    stored = _verified(board, key, winner, view)
+    resolved = {"key": key, "contract": body["contract"], "version": stored.version}
+    return [Emit(type="fact.resolved", payload=resolved | {"by": body["by"]})]
+
+
+def _verified(board: Blackboard, key: str, winner: dict[str, Any], view: View) -> Fact:
+    """The winner's value as the verified, global fact, in place of whatever the board holds."""
     first = winner["by"][0]
     fact = Fact(
         key=key,
@@ -320,11 +354,7 @@ def _resolve(state: dict[str, Any], board: Blackboard, body: dict[str, Any], vie
         visibility="global",
         lamport=view.lamport,
     )
-    stored = board.publish(fact)
-    del state["disputes"][key]
-    state["settled"].add(key)
-    resolved = {"key": key, "contract": first["contract"], "version": stored.version}
-    return [Emit(type="fact.resolved", payload=resolved | {"by": body["by"]})]
+    return board.publish(fact)
 
 
 def _book(board: Blackboard, body: dict[str, Any], sender: str, view: View) -> list[Command]:

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { planStatus, rootProposal, tracksOf } from "./plan";
+import { approveBody, planStatus, rootProposal, tracksOf } from "./plan";
 import { foldEvents } from "./reducer";
 import { Stream } from "./testing";
 
@@ -82,5 +82,37 @@ describe("plan approval", () => {
   it("takes the first proposed goal as the root's when none is called root", () => {
     const s = new Stream().emit("plan.proposed", "o0", { goal_id: "report", plan: { sections: 3 }, plan_hash: "h" });
     expect(rootProposal(foldEvents(s.events).panels.plan)?.goalId).toBe("report");
+  });
+});
+
+describe("the answer to a plan held for a person (POST api/runs/{id}/approve)", () => {
+  const shown = (s: Stream) => rootProposal(foldEvents(s.events).panels.plan)!;
+
+  it("approves the plan on screen, naming it by its hash", () => {
+    expect(approveBody(shown(proposed(new Stream())), true, "")).toEqual({ goal_id: "root", approve: true, plan_hash: "scope-8092ff56e3db" });
+  });
+
+  it("sends a rejection back to the planner with the reason, and only a rejection carries one", () => {
+    const plan = shown(proposed(new Stream()));
+    expect(approveBody(plan, false, "  split track-ai in two  ")).toEqual({
+      goal_id: "root",
+      approve: false,
+      plan_hash: "scope-8092ff56e3db",
+      reason: "split track-ai in two",
+    });
+    expect(approveBody(plan, false, "   ")).not.toHaveProperty("reason"); // the server then words the feedback itself
+    expect(approveBody(plan, true, "looks fine")).not.toHaveProperty("reason");
+  });
+
+  it("leaves the hash out for a plan that has none (an older log), rather than sending an empty one", () => {
+    const s = new Stream().emit("plan.proposed", "o0", { goal_id: "root", plan, fallback: false });
+    expect(approveBody(shown(s), true, "")).toEqual({ goal_id: "root", approve: true });
+  });
+
+  it("follows the plan that replaced it: the root dies holding the plan and its heir proposes another", () => {
+    const s = proposed(new Stream()).at(8000).emit("plan.proposed", "o1", { goal_id: "root", plan, plan_hash: "scope-91bc0d17a2e4", fallback: false });
+    expect(shown(s).actor).toBe("o1");
+    expect(approveBody(shown(s), true, "").plan_hash).toBe("scope-91bc0d17a2e4");
+    expect(planStatus(foldEvents(s.events).panels.plan)).toBe("awaiting"); // a new plan needs its own answer
   });
 });

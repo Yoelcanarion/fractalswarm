@@ -282,6 +282,8 @@ def _handle(state: dict[str, Any], event: Event, view: View):
             return _arb_woken(state, tag[1], view)
         return state, []
     if kind == "control.injected":
+        if state["arbitration"] and event.payload["op"] == arbitration.OP_ANSWER:
+            return state, arbitration.answer(state, view, event, _arb_tools(state, view))
         return _controlled(state, event.payload, view)
     if kind != "msg.sent":
         return state, []
@@ -1971,13 +1973,17 @@ def _arbitrate(state: dict[str, Any], view: View) -> list[Command]:
     (``actors/arbitration.py``): on the board's word, on every tick, and after a takeover."""
     if not state["arbitration"]:
         return []
-    tools = arbitration.Tools(
+    return arbitration.step(state, view, _arb_tools(state, view))
+
+
+def _arb_tools(state: dict[str, Any], view: View) -> arbitration.Tools:
+    """What the orchestrator lends the arbiter: its fenced writes, its model routing, the tree."""
+    return arbitration.Tools(
         emit=_emitter(state),
         route=lambda request: _route(state, request),
         parent_of=_parent_of(state, view),
         board=BOARD,
     )
-    return arbitration.step(state, view, tools)
 
 
 def _parent_of(state: dict[str, Any], view: View):

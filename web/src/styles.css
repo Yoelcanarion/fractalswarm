@@ -1430,6 +1430,33 @@ textarea {
   border-left-color: var(--warn);
 }
 
+/* ---- a person's answer to an escalation ---- */
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0 2px;
+}
+
+.answer__choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.answer__label {
+  font-size: var(--fs-label);
+  color: var(--text-muted);
+}
+
+.answer__choices .btn {
+  max-width: 32ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .clist {
   list-style: none;
   margin: 0;

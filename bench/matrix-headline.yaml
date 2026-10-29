@@ -1,0 +1,36 @@
+# The standard headline runs (arena spec C.6, second bullet), for after the handler freeze: the
+# swarm against durable-max and durable on T2 at C3, three seeds, with Contributor routing and the
+# fairness settings and caps of the rival rows (matrix-rivals-real.yaml): detection 5 s for every
+# system, the supervisors restart at once, completed work is preserved, the same crash points and
+# agent kills for everyone. Every C3 cell has its C0 twin on the same seed, because the harness
+# measures the extra cost and pairs a run against the same workflow's own C0:
+# 3 workflows x T2 x {C0, C3} x 3 seeds = 18 paid cells (9 at C3, 9 at C0).
+#
+# Its own results dir, results/headline. The cells already in results/v1 were run before the
+# handler freeze, and the harness skips a cell that has a result file, so sharing a dir would hand
+# back those cells instead of running these. Nothing here writes to results/v1.
+#
+# The harness runs the cells one at a time, workflow by workflow (the swarm, then durable-max, then
+# durable; within one, C0 then C3, seed by seed) and skips a cell that has a result file, so a
+# stopped run resumes where it stopped and loses at most the cell that was running (its spend, up
+# to the run cap). Read the results with `bench verdicts bench/results/headline` (it prints; the
+# T2 C3 point comes out as "gate C3" because the directory has no knob).
+#   uv run fractalswarm bench bench/matrix-headline.yaml --dry-run
+#   uv run fractalswarm bench bench/matrix-headline.yaml --confirm-real-spend
+name: headline
+workflows: [swarm, durable-max, durable]
+tasks: [t2_conference]
+profiles: [C0, C3]
+seeds: [1, 2, 3]
+# Contributor routing (spec §7.5): synthetic tasks, explicit opt-in for the bench matrix.
+contributor: true
+out_dir: results/headline
+chart_task: t2_conference
+budget:
+  run_cap_usd: 0.50
+  matrix_cap_usd: 9.00  # the worst case: 18 cells x the run cap
+notes: >
+  Fair failure semantics (spec §15.2): same crashes at the same progress points, 5 s
+  best-case restart for the baselines, completed work preserved. durable-max keeps its workers
+  and its own calls through a crash; durable keeps its workers and loses its own calls in flight
+  (arena spec §A).

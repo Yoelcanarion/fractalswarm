@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react";
 
-import { postControl, type ControlResult } from "../lib/api";
-import { buildTaskSpec, defaultForm, KNOWN_TASKS, toYaml, type TaskForm } from "../lib/taskspec";
+import { launchTask, type LaunchResult } from "../lib/api";
+import { buildTaskSpec, defaultForm, KNOWN_TASKS, taskLaunchBody, toYaml, type TaskForm } from "../lib/taskspec";
 import { ControlButton } from "./ControlButton";
 
 /** The New task form (spec §16 item 6, MVI). It builds a TaskSpec; "Submit for planning" posts it to
- * /api/tasks, which answers 501 until the runtime starts runs from the API. Until then the YAML below
- * is what ``fractalswarm run`` takes. */
+ * /api/tasks as `{spec, backend: "fake"}`, which starts a fake-LLM run on a server that has a private
+ * directory (503 on one that has not). The YAML below is what ``fractalswarm run`` takes. */
 export function NewTaskForm() {
   const [form, setForm] = useState<TaskForm>(defaultForm);
-  const [result, setResult] = useState<ControlResult | null>(null);
+  const [launched, setLaunched] = useState<{ result: LaunchResult; waits: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const built = useMemo(() => buildTaskSpec(form), [form]);
@@ -19,10 +19,11 @@ export function NewTaskForm() {
   const submit = async () => {
     if (!built.spec) return;
     setBusy(true);
+    const waits = !form.autoApprove;
     try {
-      setResult(await postControl("api/tasks", built.spec));
+      setLaunched({ result: await launchTask(taskLaunchBody(built.spec)), waits });
     } catch (error) {
-      setResult({ ok: false, status: 0, detail: String(error) });
+      setLaunched({ result: { ok: false, status: 0, detail: String(error), runId: null, jobId: null, warnings: [] }, waits });
     } finally {
       setBusy(false);
     }
@@ -95,7 +96,7 @@ export function NewTaskForm() {
       </div>
 
       <label className="newtask__field">
-        Task inputs <span className="muted">(one “key: value” per line, optional)</span>
+        Task inputs <span className="muted">(one “key: value” per line; a conference task needs a fixture)</span>
         <textarea value={form.inputs} onChange={(e) => set("inputs", e.target.value)} rows={3} spellCheck={false} placeholder={"fixture: tasks/fixtures/t2/seed-1\npoison: 1"} />
       </label>
 
@@ -127,49 +128,36 @@ export function NewTaskForm() {
           Download task.yaml
         </button>
       </div>
-      {result && (
-        <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>
-          {result.status === 501 ? "Not wired yet — " : ""}
-          {result.detail}
-        </div>
-      )}
+      {launched && <Launched result={launched.result} waits={launched.waits} />}
 
       {built.spec && (
         <>
           <pre className="newtask__yaml mono">{yaml}</pre>
           <div className="muted">
-            Until runs start from here, save it and run <code>uv run fractalswarm run task.yaml</code>: the fake LLM costs nothing; a real run needs <code>--backend real --confirm-real-spend</code>.
+            Submit starts the run on the fake LLM, the simulated clock and no failures, so it costs nothing. To run the same task yourself, save the YAML and run <code>uv run fractalswarm run task.yaml</code> (a real run needs <code>--backend real --confirm-real-spend</code>).
           </div>
         </>
       )}
-
-      <details className="results__raw">
-        <summary>Or upload a TaskSpec YAML</summary>
-        <YamlUpload />
-      </details>
     </section>
   );
 }
 
-// The Day 7 fallback: send a TaskSpec YAML as text, for a server that parses it.
-function YamlUpload() {
-  const [yaml, setYaml] = useState("");
-  const [result, setResult] = useState<ControlResult | null>(null);
+/** What the server said to a launch: the run it started, linked, or its reason for refusing. */
+export function Launched({ result, waits }: { result: LaunchResult; waits: boolean }) {
+  if (result.runId === null) {
+    return (
+      <div className="chaos__result chaos__result--bad" role="alert">
+        {result.detail}
+      </div>
+    );
+  }
+  const href = `#/run/${encodeURIComponent(result.runId)}${waits ? "/plan" : ""}`;
   return (
-    <div className="newtask">
-      <input
-        type="file"
-        accept=".yaml,.yml"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (file) setYaml(await file.text());
-        }}
-      />
-      <textarea value={yaml} onChange={(e) => setYaml(e.target.value)} placeholder="goal: ..." rows={6} spellCheck={false} />
-      <button className="btn" disabled={!yaml.trim()} onClick={async () => setResult(await postControl("api/tasks", { yaml }))}>
-        Submit the YAML for planning
-      </button>
-      {result && <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>{result.detail}</div>}
+    <div className="chaos__result" role="status">
+      Started run <a href={href}>{result.runId}</a>. {waits ? "Its plan waits for your approval on the Plan tab." : "Its plan is approved automatically."}
+      {result.warnings.map((warning) => (
+        <div key={warning}>{warning}</div>
+      ))}
     </div>
   );
 }
