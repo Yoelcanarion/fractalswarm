@@ -29,12 +29,14 @@ goals: the track goal when both sessions are in one track, the root otherwise.
    A person's answer to an escalation is ``control.injected{op: "answer", to: "goal:<id>",
    body: {escalation_id, choice}}``; the owner of that goal, as its own tree has it at that event
    (after a takeover, the heir), judges it against the log: the escalation must exist at that goal,
-   nobody may have answered it before, ``timeout_ms`` must not have run out, and the choice must be
-   one of its options. The verdict is ``escalation.answered`` either way. The ruling is already
-   in force, so a choice equal to it confirms it and nothing else moves; another candidate
-   overrules it (``arbitration.overruled`` and ``fact.overrule`` to the board, which replaces the
-   verified fact). Contracts already placed keep their value; those not yet dispatched take the
-   person's.
+   nobody may have answered it before, ``timeout_ms`` must not have run out when the person
+   answered, and the choice must be one of its options. The verdict is ``escalation.answered``
+   either way. The ruling is already in force, so a choice equal to it confirms it and nothing
+   else moves; another candidate overrules it (``arbitration.overruled`` and ``fact.overrule`` to
+   the board, which replaces the verified fact). Contracts already placed keep their value; those
+   not yet dispatched take the person's. An answer that reached nobody (its goal's owner was
+   dead and its heir had not taken over, or a central coordinator was down) stays in the log with
+   no verdict, so ``step`` judges it as of the time the person answered, once an owner is back.
 
 Off unless the run asks for it (``arbitration: true``); with it off no event, spawn argument or
 prompt differs from a run without this module, and a run that nobody answers is the run it was.
@@ -59,6 +61,7 @@ TOPIC_RULING = "arbitration.ruling"  # the arbiter to the squads that wait for i
 TOPIC_RESOLVE = "fact.resolve"  # the arbiter to the board
 TOPIC_OVERRULE = "fact.overrule"  # the arbiter to the board: a person's choice replaces the ruling
 OP_ANSWER = "answer"  # the op of the control.injected that answers an escalation
+IDEM_ANSWERED = "escalation.answered"  # its verdict's idem key is <this>:<seq of the control>
 HUMAN = "human"  # who answers: the only source of a control
 MAX_ANSWER_CHARS = 200  # the longest id or choice an answer logs of what a person sent
 ROOT_GOAL = "root"
@@ -235,6 +238,7 @@ class DisputesView:
         self.disputes: dict[str, Dispute] = {}
         self.calls: dict[str, list[Call]] = {}  # key -> its calls, in the order they started
         self.escalations: dict[str, str] = {}  # escalation id -> the key it is about
+        self.asked: dict[int, dict[str, Any]] = {}  # answers (by control seq) with no verdict yet
         self._by_effect: dict[str, tuple[str, Call]] = {}
 
     # -- queries --------------------------------------------------------------------------
@@ -252,6 +256,11 @@ class DisputesView:
 
     def open_disputes(self) -> list[Dispute]:
         return [d for _, d in sorted(self.disputes.items()) if d.ruling is None]
+
+    def unjudged(self) -> list[dict[str, Any]]:
+        """The answers of a person that no owner has judged yet, oldest first: each is the
+        control's ``seq``, ``ts_virtual``, ``to`` and ``body``."""
+        return [self.asked[seq] for seq in sorted(self.asked)]
 
     def calls_of(self, key: str) -> list[Call]:
         return list(self.calls.get(key, []))
@@ -282,6 +291,8 @@ class DisputesView:
                 dispute.ruling = payload
         elif kind == "escalation.opened":
             self._escalated(event)
+        elif kind == "control.injected":
+            self._asked(event)
         elif kind == "escalation.answered":
             self._answered(event)
         elif kind == "arbitration.overruled":
@@ -300,7 +311,22 @@ class DisputesView:
             dispute.escalation = payload | {"opened_ms": event.ts_virtual, "seq": event.seq}
             self.escalations[payload["id"]] = payload["key"]
 
+    def _asked(self, event: Event) -> None:
+        """A control that answers an escalation, until some owner logs its verdict."""
+        control = event.payload
+        body = control.get("body") or {}
+        if (
+            control["op"] == OP_ANSWER
+            and control["to"].startswith(GOAL_CONTROL)
+            and isinstance(body.get("escalation_id"), str)
+            and isinstance(body.get("choice"), str)
+        ):
+            self.asked[event.seq] = {"seq": event.seq, "ts_virtual": event.ts_virtual} | control
+
     def _answered(self, event: Event) -> None:
+        prefix, _, seq = event.idem_key.rpartition(":")
+        if prefix == IDEM_ANSWERED and seq.isdigit():
+            self.asked.pop(int(seq), None)  # judged, by whichever owner wrote the verdict
         dispute = self.escalated(event.payload["id"])
         if dispute is not None:  # an answer to an id nobody opened has nothing to attach to
             dispute.answers.append(
@@ -503,12 +529,13 @@ class Tools(NamedTuple):
 
 
 def step(state: dict[str, Any], view: View, tools: Tools) -> list[Command]:
-    """Take up the open disputes whose LCA goal this orchestrator owns (it holds the goal)."""
+    """Take up the open disputes whose LCA goal this orchestrator owns (it holds the goal), and
+    judge the answer of a person that reached no owner."""
     disputes = view.views.get("disputes")
     hooks = TASK_HOOKS.get(state["task"])
     if disputes is None or hooks is None:
         return []
-    commands: list[Command] = []
+    commands = _judge_unjudged(state, view, disputes, tools)
     for dispute in disputes.open_disputes():
         lca = lca_of(tools.parent_of, dispute.goals())
         entry = state["goals"].get(lca)
@@ -723,20 +750,20 @@ def _owns(view: View, actor: str, goal: str) -> bool:
 
 
 def judge(
-    disputes: DisputesView, goal: str, asked: str, chosen: str, now: int
+    disputes: DisputesView, goal: str, asked: str, chosen: str, at: int
 ) -> tuple[Dispute | None, dict[str, Any] | None, str]:
-    """The log's verdict on an answer: the dispute, the candidate chosen, and why the answer
-    cannot be accepted (``""`` when it can). Only the log is read, so an heir judges as the dead
-    owner would have: the escalation must exist at this goal, nobody may have answered it, its
-    ``timeout_ms`` must not have run out (an answer exactly at the end is in time), and the choice
-    must be one of its options."""
+    """The log's verdict on an answer given at virtual time ``at``: the dispute, the candidate
+    chosen, and why the answer cannot be accepted (``""`` when it can). Only the log is read, so
+    an heir judges as the dead owner would have: the escalation must exist at this goal, nobody
+    may have answered it, its ``timeout_ms`` must not have run out (an answer exactly at the end
+    is in time), and the choice must be one of its options."""
     dispute = disputes.escalated(asked)
     found = dispute.escalation if dispute is not None else None
     if dispute is None or found is None or dispute.ruling is None or found["goal_id"] != goal:
         return None, None, f"no escalation {asked} is open at {goal}"
     if (earlier := dispute.answer()) is not None:
         return dispute, None, f"the escalation was already answered ({earlier['choice']})"
-    late = now - found["opened_ms"] - found["timeout_ms"]
+    late = at - found["opened_ms"] - found["timeout_ms"]
     if late > 0:
         why = f"the answer came {late} ms after the time to answer ({found['timeout_ms']} ms)"
         return dispute, None, why
@@ -753,9 +780,35 @@ def answer(state: dict[str, Any], view: View, event: Event, tools: Tools) -> lis
     logged as ``escalation.answered`` whatever it is. A choice that names another candidate than
     the ruling also logs ``arbitration.overruled`` and orders the board to replace the verified
     fact; one that names the ruled candidate confirms it and nothing else moves."""
-    control = event.payload
     disputes = view.views.get("disputes")
-    if disputes is None or not control["to"].startswith(GOAL_CONTROL):
+    if disputes is None:
+        return []
+    control = {"seq": event.seq, "ts_virtual": event.ts_virtual} | event.payload
+    return _answer(state, view, disputes, control, tools)
+
+
+def _judge_unjudged(
+    state: dict[str, Any], view: View, disputes: DisputesView, tools: Tools
+) -> list[Command]:
+    """The oldest answer in the log that nobody judged, if this orchestrator owns its goal now.
+    One per turn: its verdict is in the log before the next answer is judged, so two answers to
+    one escalation cannot both be accepted."""
+    for control in disputes.unjudged():
+        if commands := _answer(state, view, disputes, control, tools):
+            return commands
+    return []
+
+
+def _answer(
+    state: dict[str, Any],
+    view: View,
+    disputes: DisputesView,
+    control: dict[str, Any],
+    tools: Tools,
+) -> list[Command]:
+    """The verdict on one answer, judged as of the time the person gave it (``ts_virtual`` of its
+    control), by the owner of its goal: nothing from any other orchestrator."""
+    if not control["to"].startswith(GOAL_CONTROL):
         return []
     goal = control["to"].removeprefix(GOAL_CONTROL)
     if goal not in state["goals"] or not _owns(view, state["id"], goal):
@@ -764,7 +817,7 @@ def answer(state: dict[str, Any], view: View, event: Event, tools: Tools) -> lis
     if not isinstance(asked, str) or not isinstance(chosen, str):
         return []  # not an answer: the API checks the body before it sends one
     asked, chosen = asked[:MAX_ANSWER_CHARS], chosen[:MAX_ANSWER_CHARS]
-    dispute, picked, why = judge(disputes, goal, asked, chosen, view.now)
+    dispute, picked, why = judge(disputes, goal, asked, chosen, control["ts_virtual"])
     ruled = dispute.ruling["winner"] if dispute is not None and dispute.ruling else ""
     overruled = picked is not None and chosen != ruled
     reason = why or (f"overrules {ruled} with {chosen}" if overruled else "confirms the ruling")
@@ -776,7 +829,7 @@ def answer(state: dict[str, Any], view: View, event: Event, tools: Tools) -> lis
         "overruled": overruled,
         "reason": reason,
     }
-    idem = f"escalation.answered:{event.seq}"  # one verdict per control, whoever writes it
+    idem = f"{IDEM_ANSWERED}:{control['seq']}"  # one verdict per control, whoever writes it
     commands: list[Command] = [tools.emit(goal, "escalation.answered", logged, idem)]
     if overruled and dispute is not None and picked is not None:
         first = picked["by"][0]
