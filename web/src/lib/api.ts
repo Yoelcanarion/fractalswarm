@@ -3,6 +3,7 @@
 import { DEFAULT_CAPABILITIES, parseCapabilities, type Capabilities } from "./controls";
 import { readCallDetail, readCalls, readMeter, type CallDetail, type CallsResponse, type Meter } from "./lens";
 import { readTakeover, type TakeoverSummary } from "./takeover";
+import type { TaskLaunch } from "./taskspec";
 import type { RunEvent, RunListing, VerifyReport } from "./types";
 
 async function json<T>(response: Response): Promise<T> {
@@ -90,20 +91,63 @@ export interface ControlResult {
   detail: string;
 }
 
-/** POST a control action (chaos, approve, halt, ...). A refusal comes back as `{ok: false}` with the
- * server's own reason in `detail`: 422 for a body it cannot take (an `api_storm` on a live run, say), 409
- * for a run that cannot take controls (a recording, or one the API did not launch). */
-export async function postControl(path: string, body: unknown): Promise<ControlResult> {
+async function postJson(path: string, body: unknown): Promise<{ response: Response; payload: Record<string, unknown> }> {
   const response = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const payload = (await response.json().catch(() => ({}))) as { detail?: string; error?: string };
+  const payload = await response.json().catch(() => ({}));
+  return { response, payload: payload !== null && typeof payload === "object" ? (payload as Record<string, unknown>) : {} };
+}
+
+/** The server's own reason for a refusal: `{error}` (the API's `http_error`) or `{detail}`, which is a
+ * string, or a list of `{loc, msg}` when FastAPI itself refused the body. */
+function reasonOf(payload: Record<string, unknown>, fallback: string): string {
+  const { detail, error } = payload;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const reasons = detail.flatMap((item) => {
+      const { loc, msg } = (item ?? {}) as { loc?: unknown; msg?: unknown };
+      if (typeof msg !== "string") return [];
+      return [Array.isArray(loc) && loc.length > 0 ? `${loc.filter((part) => part !== "body").join(".")}: ${msg}` : msg];
+    });
+    if (reasons.length > 0) return reasons.join("; ");
+  }
+  return typeof error === "string" ? error : fallback;
+}
+
+/** POST a control action (chaos, approve, halt, ...). A refusal comes back as `{ok: false}` with the
+ * server's own reason in `detail`: 422 for a body it cannot take (an `api_storm` on a live run, say), 409
+ * for a run that cannot take controls (a recording, or one the API did not launch). */
+export async function postControl(path: string, body: unknown): Promise<ControlResult> {
+  const { response, payload } = await postJson(path, body);
+  return { ok: response.ok, status: response.status, detail: reasonOf(payload, response.statusText) };
+}
+
+export interface LaunchResult extends ControlResult {
+  /** The run the job started and the job that runs it; null when the server refused. */
+  runId: string | null;
+  jobId: string | null;
+  /** What the server warned about at launch (a busy CPU on a live clock, say). */
+  warnings: string[];
+}
+
+/** Start a fake-LLM run (`POST api/tasks`, 202). The refusals carry the server's reason: 422 for a spec or
+ * an input it cannot take, 409 for a used run id or an intake with no approved input, 429 at 8 active jobs,
+ * 503 where the server has no private directory. */
+export async function launchTask(body: TaskLaunch): Promise<LaunchResult> {
+  const { response, payload } = await postJson("api/tasks", body);
+  const runId = response.ok && typeof payload.run_id === "string" ? payload.run_id : null;
+  const jobId = response.ok && typeof payload.job_id === "string" ? payload.job_id : null;
+  const warnings = response.ok && Array.isArray(payload.warnings) ? payload.warnings.filter((w): w is string => typeof w === "string") : [];
   return {
     ok: response.ok,
     status: response.status,
-    detail: payload.detail ?? payload.error ?? response.statusText,
+    detail: runId !== null ? `Started run ${runId}.` : reasonOf(payload, response.statusText),
+    runId,
+    jobId,
+    warnings,
   };
 }
 

@@ -1,8 +1,24 @@
 // The New task form (spec §16 item 6, MVI): a TaskSpec built from form fields, as an object (what
-// POST /api/tasks takes) and as YAML (what ``fractalswarm run`` takes). The fields are those of
-// planning/taskspec.py; the server validates the rest (``extra="forbid"``).
+// POST /api/tasks takes under ``spec``) and as YAML (what ``fractalswarm run`` takes). The fields are
+// those of planning/taskspec.py; the server validates the rest (``extra="forbid"``).
 
 export const KNOWN_TASKS = ["t2_conference", "t3_report"] as const;
+
+/** The tasks whose input the server will not guess (api/jobs.py ``check_spec``): a fixture, an inline
+ * corpus or an approved intake must be named, or the launch is refused with a 422. */
+const NEEDS_INPUT: readonly string[] = ["t1_extraction", "t2_conference"];
+const INPUT_KEYS = ["fixture", "inline", "intake"] as const;
+
+/** The body of POST /api/tasks (api/jobs.py ``TaskRequest``, ``extra="forbid"``): the TaskSpec goes
+ * under ``spec``, never bare. Only a fake-LLM run starts from here (``backend`` is not a choice): a
+ * billed one needs the preflight flow of the intake page. Scenario, chaos and clock are left to the
+ * server's defaults (swarm, C0, simulated clock). */
+export interface TaskLaunch {
+  spec: Record<string, unknown>;
+  backend: "fake";
+}
+
+export const taskLaunchBody = (spec: Record<string, unknown>): TaskLaunch => ({ spec, backend: "fake" });
 
 export interface TaskForm {
   goal: string;
@@ -27,7 +43,7 @@ export const defaultForm = (): TaskForm => ({
   agentsPerLeaf: "2",
   contributorOptIn: false,
   autoApprove: true,
-  inputs: "",
+  inputs: "fixture: tasks/fixtures/t2/seed-1", // the default task needs one; the server refuses a launch without
 });
 
 /** ``key: value`` lines to a flat object. A value that is valid JSON (a number, true, "text",
@@ -70,10 +86,14 @@ export function buildTaskSpec(form: TaskForm): BuiltTask {
   if (!Number.isInteger(agents) || agents < 1) errors.push("the agents per leaf is a whole number from 1");
   const inputs = parseInputs(form.inputs);
   errors.push(...inputs.errors);
+  const task = form.task.trim() || "t2_conference";
+  if (inputs.errors.length === 0 && NEEDS_INPUT.includes(task) && !INPUT_KEYS.some((key) => key in inputs.value)) {
+    errors.push(`${task} needs an input: add a line like "fixture: tasks/fixtures/${task.split("_")[0]}/seed-1"`);
+  }
   if (errors.length > 0) return { spec: null, errors };
   const spec: Record<string, unknown> = {
     goal: form.goal.trim(),
-    task: form.task.trim() || "t2_conference",
+    task,
   };
   if (Object.keys(inputs.value).length > 0) spec.inputs = inputs.value;
   spec.seed = form.seed.trim() || "1";

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchCapabilities, fetchTakeover, postControl, verifyRun } from "./api";
+import { fetchCapabilities, fetchTakeover, launchTask, postControl, verifyRun } from "./api";
+import { buildTaskSpec, defaultForm, taskLaunchBody } from "./taskspec";
 
 const reply = (status: number, body: unknown = {}) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -64,6 +65,66 @@ describe("a control the server takes or refuses", () => {
   it("falls back to the status text when the answer is not JSON (a proxy's error page)", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("<html>bad gateway</html>", { status: 502, statusText: "Bad Gateway" })));
     await expect(postControl("api/runs/r1/chaos", { kind: "kill_half" })).resolves.toEqual({ ok: false, status: 502, detail: "Bad Gateway" });
+  });
+
+  it("reads FastAPI's own list of problems when it refused the body before the API's handler saw it", async () => {
+    server(422, { detail: [{ type: "missing", loc: ["body", "spec"], msg: "Field required" }, { loc: [], msg: "second" }, { oops: true }] });
+    await expect(postControl("api/tasks", {})).resolves.toEqual({ ok: false, status: 422, detail: "spec: Field required; second" });
+  });
+});
+
+// The request and the answers are those of api/jobs.py (`TaskRequest`, extra="forbid") and of the API reference in
+// .plans/notes/arena-intake.md: a TaskSpec goes under `spec`, and a 202 names the run it started.
+describe("a run started from the New task form", () => {
+  const accepted = {
+    job_id: "job-20261029-001228-cc5e",
+    run_id: "ui-20261029-001228-cc5e",
+    run_ids: ["ui-20261029-001228-cc5e"],
+    state: "starting",
+    private: false,
+    warnings: ["the CPU is at 91%: a live-clock run may miss heartbeats"],
+    job: { id: "job-20261029-001228-cc5e", kind: "run" },
+  };
+  const built = () => buildTaskSpec({ ...defaultForm(), goal: "Build the program." }).spec!;
+
+  it("posts the TaskSpec under `spec`, and only a fake-LLM run, never the bare spec that the server refuses (422)", async () => {
+    const calls = server(202, accepted);
+    await launchTask(taskLaunchBody(built()));
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe("api/tasks");
+    expect(calls[0].init).toMatchObject({ method: "POST", headers: { "Content-Type": "application/json" } });
+    const sent = JSON.parse(String(calls[0].init?.body)) as Record<string, unknown>;
+    expect(Object.keys(sent).sort()).toEqual(["backend", "spec"]);
+    expect(sent.backend).toBe("fake");
+    expect(sent.spec).toEqual(built());
+  });
+
+  it("names the run the server started, with the job and what it warned about", async () => {
+    server(202, accepted);
+    await expect(launchTask(taskLaunchBody(built()))).resolves.toEqual({
+      ok: true,
+      status: 202,
+      detail: "Started run ui-20261029-001228-cc5e.",
+      runId: "ui-20261029-001228-cc5e",
+      jobId: "job-20261029-001228-cc5e",
+      warnings: ["the CPU is at 91%: a live-clock run may miss heartbeats"],
+    });
+  });
+
+  it.each([
+    [422, "inputs: give the input: inputs.fixture, inputs.inline or inputs.intake"],
+    [422, "spec.goal: String should have at least 1 character"],
+    [409, "run id 'ui-1' is already used"],
+    [429, "8 jobs are active"],
+    [503, "the API was started without a private directory"],
+  ])("shows the server's reason for a refusal (%i) and starts nothing", async (status, reason) => {
+    server(status, { error: reason });
+    await expect(launchTask(taskLaunchBody(built()))).resolves.toEqual({ ok: false, status, detail: reason, runId: null, jobId: null, warnings: [] });
+  });
+
+  it("is not fooled by a body that is not an object (a proxy's page)", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("null", { status: 502, statusText: "Bad Gateway", headers: { "Content-Type": "application/json" } })));
+    await expect(launchTask(taskLaunchBody(built()))).resolves.toMatchObject({ ok: false, status: 502, detail: "Bad Gateway", runId: null });
   });
 });
 
