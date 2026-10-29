@@ -126,7 +126,7 @@ Anything that doesn't answer one of them stays out of the video.
 ### s8-proof (2:26–2:36)
 **On screen:**
 - The verify badge, "Replay verified ✓", with a short hash.
-- "takeover OK: {{heirs}} of {{heirs}} heirs recomputed from the log" (swarm).
+- The takeover chip, as the UI words it: "Takeover OK ✓ {{heirs}} hand-overs", and its hover, "the heir of each, recomputed from the log, is the one the run used" (swarm).
 - The recovery report (supervisor).
 
 **Voice-over (≈ 27 words):**
