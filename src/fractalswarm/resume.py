@@ -26,7 +26,7 @@ from fractalswarm.llm.cassette import Cassette, CassetteBackend
 from fractalswarm.llm.client import Backend, LLMClient
 from fractalswarm.llm.transport import ApiFaults, FaultyBackend
 from fractalswarm.market.ledger import ProjectLedger, Refusal
-from fractalswarm.runs import RunPaths, RunResult, replay_setup
+from fractalswarm.runs import LiveMarker, RunPaths, RunResult, replay_setup
 from fractalswarm.safety.firewall import Firewall
 
 # Effects with no outside world: running them again costs nothing and changes nothing.
@@ -282,7 +282,8 @@ async def resume_run(
             "timer": _timer_effect(open_ids, runtime.vtime),
         }
         runner = EffectRunner(effects, EffectContext(runtime.run_id, clock))
-        completed = await drive(runtime, runner, control=paths.poll_control)
+        with LiveMarker(paths.live):
+            completed = await drive(runtime, runner, control=paths.poll_control)
         log.export_jsonl(paths.events_jsonl)
         run = RunResult(runtime.run_id, paths, completed, log.head_hash, log.last_seq)
         return ResumeResult(run, plan)
