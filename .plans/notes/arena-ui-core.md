@@ -104,3 +104,43 @@ Display values, as a pure fold. The official numbers are Python's (`/api/runs/{i
 ## Open questions
 - Which endpoint backs the "takeover OK" chip (step 8)? `/api/runs/{id}/takeover`?
 - The W3 lens shapes and the W1 fixture, when they merge.
+
+## Status when the usage limit hit (Oct 29, 01:47 CET)
+
+Commits on `Yoelcanarion/arena-ui-core`: `c292602` (steps 1-4 and 7; merge_ready sent), `fd9b341`
+(steps 5 and 6), `bf09899` (step 8, timeline). At `bf09899`: typecheck clean, vitest 19 files / 266 tests.
+Not run since `fd9b341`, because they need a SLOT: web build, `uv run pytest`, ruff, `tests/integration/test_api.py`,
+`fractalswarm demo --verify`.
+
+### Done since the first merge
+- **Step 5, motion.** Tree glide in JS (`lib/glide.ts`, `components/useTreeMotion.ts`), camera fit only when the
+  structure changes, grid cells animate only on a new placement, charts animate on first draw only, reduced motion.
+  Dev frame logger: open the app with `?frames` on a dev server (or a scratch build with `VITE_FRAME_LOG=1`) and
+  read `window.__frames.report()`. **The frame-time numbers are not measured yet.**
+- **Step 6, controls.** `lib/controls.ts`, `components/ControlButton.tsx` (`useControlState`), `StatusBadge`.
+  The store has `runStatus` (from the catalog), `capabilities` and a 5 s status poll while a run is live.
+  A crashed run (catalog `interrupted`) opens as a recording and is no longer tailed.
+- **Step 8, partly.** Timeline marks (`lib/timeline.ts`: coordinator kill tall and red, agent kill, crash, restart,
+  adoption, verdicts, collisions, halt), each mark jumps to its moment; the playhead is a 6x24 px thumb.
+  `VerifyBadge` already goes pending -> "Replay verified ✓ hash match <12-char head>"; no change was needed.
+
+### Not done
+- **Step 8:** the "takeover OK" chip. No takeover endpoint exists. The check is `verify.takeover.check_run` /
+  `analyze` -> `TakeoverReport.ok` (+ `violations`).
+- **Step 9:** the Muse lens (side panel with `motion/react` AnimatePresence, the Muse meter in the top bar, a fixture
+  until W3 merges).
+- **Measurements and visuals:** frame times on `t2-real-c3-swarm-seed1b` (14,047 events) at 20x; before/after
+  screenshots at 1920x1080; the static build into `src/fractalswarm/api/static/` with the stale hashed assets removed.
+- **Final checks** listed in the brief, then `worker_done`.
+
+### Open asks for the coordinator (W2 / W3)
+1. `GET api/capabilities` -> `{tasks, chaos, approve, budget, halt}` booleans. Without it (404) the UI offers budget
+   and halt on live runs and keeps chaos, approve and new task off with a tooltip.
+2. Catalog `status` values `running | completed | halted | interrupted | empty`, as in backend-design.
+3. A takeover endpoint for the chip, for example `GET api/runs/{id}/takeover` -> `{ok, violations}`.
+4. The shape of W3's lens endpoint, and W1/W3 fixtures.
+
+### For W5
+`ControlButton` / `useControlState`, `StatusBadge`, store fields `runStatus`, `capabilities` and `epoch` (counts jumps),
+`clock.motion()` (animation time, deterministic in fixed-step mode), `ClockScope` (`--now` for CSS decay),
+`lib/chartMotion.ts`, `marksOf` in `lib/timeline.ts`.
