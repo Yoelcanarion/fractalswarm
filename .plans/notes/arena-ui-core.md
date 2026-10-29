@@ -9,7 +9,7 @@ Branch `Yoelcanarion/arena-ui-core`. Web only: no Python was touched.
 | 1 Tokens and theme | done |
 | 2 Fonts and icons, offline | done (bundle not yet checked for network use: needs a build slot) |
 | 3 Store factory, shared clock, fixed step | done |
-| 4 Reducer additions | done, checked against `takeover.analyze` on 3 real runs |
+| 4 Reducer additions | done, checked against `takeover.analyze` on 3 real runs and against W1's `bench/recovery.py` on 4 (see Arena counters) |
 | 5 Motion | done; frame times measured, relative numbers only, the 60 fps budget is not met (see Frame times) |
 | 6 Controls state | done |
 | 7 Shared components | done: `Stat`, `ModelBadge`, `Card`, `Skeleton`, `Tooltip`, `ThemeToggle` |
@@ -83,7 +83,7 @@ Display values, as a pure fold. The official numbers are Python's (`/api/runs/{i
 |---|---|
 | `coordinatorCrashes` | one per `kill_coordinator` fault, or per `baseline.crashed` that no fault explains |
 | `coordinatorDownMs` | per crash a window: a supervisor's crash → restart; the swarm's kill → last `ownership.remapped`/`tree.adopted`/`member.dead` for the victim. An open window grows with `nowMs` |
-| `idleAgentMs`, `idleAgentsNow` | agents that are alive (or stopped by the crash and waiting for the restart), have no LLM call in flight, and answer to a coordinator that is killed or restarting. A member the detector declared dead with no kill (a false death) does not count. Approximates "idle agent-seconds", which also needs a blocked contract |
+| `idleAgentMs`, `idleAgentsNow` | agents that are **alive**, have no LLM call in flight, and answer to a coordinator that is killed or restarting. An agent that a crash stopped is gone (the supervisor's restart respawns it and its work is redone), not idle: since Oct 29 evening it no longer counts, because `bench/recovery.py` scores the central and the pipeline baseline 0.0. A member the detector declared dead with no kill (a false death) does not count. Approximates "idle agent-seconds", which also needs the agent's session to have work waiting on the coordinator |
 | `redispatches` | `contract.dispatched` of work rejected as `lost`, or of an `idem_key` sent before |
 | `duplicatedCalls` | LLM calls cancelled and then redone (same request again, or the agent's contract dispatched again), plus completed calls whose request was already paid for |
 | `costUsd`, `hardViolations` | `budget.settled` summed; the schedule check once it lands |
@@ -96,7 +96,26 @@ Display values, as a pure fold. The official numbers are Python's (`/api/runs/{i
 | `tmp-pipeline-c3` | 5 / 5 | 5 / 5 | 5 / 5 |
 | `t2-real-c3-swarm-seed1b` | 5 / 5 | 3 / 3 | 2 / 2 |
 
-`arena.real.test.ts` keeps these numbers and skips itself where the runs are not on disk. The parity test against W1's metrics waits for W1's fixture.
+`arena.real.test.ts` keeps these numbers and skips itself where the runs are not on disk.
+
+**Check against W1's scored metrics (`bench/recovery.py::analyze`, what `/api/runs/{id}/metrics` serves as `recovery`), on four
+logs, `arena.parity.test.ts` with `lib/fixtures/recovery-official.json`.** The scoreboard shows the fold while a run plays and the
+scored number once it ended, so where they differ a figure jumps at the last event:
+
+| Counter | demo-backup (swarm, committed) | central | swarm-c3 | pipeline-c3 | Verdict |
+|---|---|---|---|---|---|
+| crashes | 5 / 5 | 5 / 5 | 5 / 5 | 5 / 5 | equal |
+| outage windows (crash outages) | identical to the ms | identical | identical | identical | equal |
+| contracts sent again / `lost_redispatches` | 0 / 0 | 22 / 22 | 2 / 2 | 5 / 5 | equal |
+| idle agent-seconds / `idle_agent_s` | 14.08 / 9.44 | 0 / 0 | 26.56 / 26.56 | 0 / 0 | equal, except the demo, where the fold is above: the scored one also needs the session to have work waiting. (Before the fix of the evening it said 170.7 for central and 25.0 for pipeline: it counted the agents the crash stopped.) |
+| duplicated calls / `dup_calls` | 0 / 11 | 27 / 42 | 3 / 13 | 5 / 5 | **the fold undercounts**: it has no cause for the work redone after a rejected verdict ("other": 11 in the demo, 10 in swarm-c3) nor for a replaced attempt that was not cancelled |
+| outage window / `cdt_s` (coordinator-dependency time) | 23.67 / 4.72 | 25.11 / 135.59 | 30.85 / 26.56 | 25.00 / 99.00 | **not the same quantity**: the window is the length of the outage, `cdt_s` is contract-seconds of waiting inside it (nothing waiting in a crash with nothing in flight: lower; many contracts waiting on one supervisor: higher) |
+
+So: crashes, outage windows and re-dispatches are safe to show live. The live "Coordinator-dependency time" row (W5's `rows.ts` feeds it
+`coordinatorDownMs`) is the outage length, which is lower or higher than the scored figure by a factor of about 5; the live
+"Duplicated work" row undercounts. Either the row says "so far" and the scored figure replaces it at the end (what W5 does), or the
+fold takes on W1's definitions: wait intervals for `cdt_s` and the fate of each call for `dup_calls`, both ports of about 150
+lines of `bench/recovery.py` (not done: not asked, and the claims come from the scored numbers).
 
 ## Deviations
 - Statuses: `"restarting"` is a new `ActorStatus`; `Counters` shows "down" (killed, dead or restarting) instead of "killed / dead".
@@ -388,9 +407,37 @@ read into `detail`. So:
   reason (the planner's feedback); an approval carries none. A plan with no hash (an older log) is sent without one;
 - `kill_half` no longer sends `profile: "C3"` (the server ignores it);
 - tests: `approveBody` (plan.test.ts, including the heir's new hash) and `postControl` against W2's real refusal texts (api.test.ts).
-Not done, not asked: an answer UI for an escalation (`POST /api/runs/{id}/escalations/{eid}`): no component of mine posts it.
-The New task form still says "Until runs start from here, save it and run ..." under its YAML, which is stale when the server
-starts runs (`tasks` capability true); W5's intake page supersedes the form, so I left the copy.
+Not done, not asked: an answer UI for an escalation (`POST /api/runs/{id}/escalations/{eid}` with `{choice}`): no component of mine
+posts it (the panel now shows the window, the options and the verdicts; see "Escalations" below).
+
+**The New task form (33cf10b), found by W5.** `POST /api/tasks` takes `{spec, scenario?, chaos?, clock?, speed?, backend?, run_id?,
+budget_usd?, ...}` with extra keys forbidden (`api/jobs.py` `TaskRequest`), and the form posted the bare TaskSpec, so every launch
+was a 422 (`spec: Field required`). Now it posts `{spec, backend: "fake"}` (`taskLaunchBody`, `lib/taskspec.ts`: the type allows no
+other backend, so a billed run cannot start from this form; scenario, chaos and clock are the server's defaults: swarm, C0, the
+simulated clock). The answer is `launchTask` (`lib/api.ts`): the run it started, linked (`#/run/<id>`, or `/plan` when the form
+asked for a person's approval), the warnings of the launch, or the server's own reason for a refusal (409 used run id, 422 spec or
+input, 429 at 8 active jobs, 503 without a private directory; FastAPI's own list of problems is read too). The default form now
+carries `fixture: tasks/fixtures/t2/seed-1` (the server refuses a conference task with no input), and a conference task with none
+is told so by the form before the request. Removed: the "Or upload a TaskSpec YAML" box, which posted `{yaml}` (the Day 7 fallback
+for a server that parses YAML text; none does, so it could only 422), and the stale hint under the YAML. Checked against the real
+`parse_request` on eight shapes of the form (default, manual approval, autoscale, contributor, t3 report, poison, generate_seed,
+seed 4): all accepted wrapped, all refused bare. Tests: `taskspec.test.ts`, `api.test.ts` (the 202 of the API reference, each
+refusal), `NewTaskForm.test.ts` (render of the answer).
+
+**Escalations (5df8812), found by W3.** `foldHuman` closed an escalation on every `escalation.answered`; W3's answer path logs a
+verdict for each answer, and an ignored one (not an option, a second one, too late, an unknown id) has `accepted: false` and leaves
+the escalation open. It now closes only on an accepted answer (an answer with no `accepted` field still closes: the shape the panel
+was built on), keeps the ignored ones with their `reason`, and reads what `escalation.opened` carries (`question`, `options`,
+`default`, `timeout_ms`). `escalationState(h, nowTs, ended)` gives `waiting | answered | overruled | expired | closed` the way
+`GET /disputes` does (an answer given at the last millisecond of the window is in time), and `timeLeftMs` is `deadline - nowTs` in
+the run's **virtual** time (`ViewState.lastTs`), never the wall clock. The Escalations panel says which, and why: "needs a human" only
+while the window is open (with the options, the ruled label and the time left), "confirmed", "overruled (a person chose A over B)",
+"expired (nobody answered in time; B stands)", "closed (the run ended before anyone answered)", and each ignored answer with its
+reason. The "5 · human" count is the escalations that are waiting. Tests: `escalations.test.ts` (fold and selectors),
+`EscalationsPanel.test.ts` (render). No answer buttons yet.
+
+**Counters against W1's metrics (f39f0e2).** See "Arena counters" above: the fold no longer counts an agent that a crash stopped as
+idle, and `arena.parity.test.ts` pins the four logs beside the scored numbers.
 
 **`rootHolder` (849f9ea), found by W5.** The reducer gave `duties: ["root"]` to every actor spawned with no parent: `board`,
 `net` and `chaos` too, which every run spawns that way, so `rootHolder` answered `chaos` even on a run that never lost its root,
@@ -405,9 +452,11 @@ Visible: the ROOT tag now shows on o0 and follows the heirs. W5 was told (msg_5c
 
 **Prepared for the window (scratch, not in git):** `pw/proof.mjs` (chip against the real `/takeover`, the badge against the
 real `/verify` behind the guard including a bare POST that must get 415, and the ROOT tag at events 10, 4537, 4538, 5722, 6856
-and the end of `demo-backup`) and `pw/live.mjs` (a fake-LLM run launched through the API with `auto_approve` off, driven
-through the UI: the two 422 reasons, Approve with the hash, Kill half, Verify replay after the run ends; then a second run whose
-root is killed while it holds the plan, to see the heir's new hash reach the approval). Both parse; neither has run yet.
+and the end of `demo-backup`), `pw/form.mjs` (the New task form on the real server: the default inputs, the missing-input message,
+Submit to a 202 with `{spec, backend: "fake"}`, the link to the run, the job ending, Replay verified on the run it left) and
+`pw/live.mjs` (a fake-LLM run launched through the API with `auto_approve` off, driven through the UI: the two 422 reasons, Approve
+with the hash, Kill half, Verify replay after the run ends; then a second run whose root is killed while it holds the plan, to see
+the heir's new hash reach the approval). All parse; none has run yet.
 
 ### Plan for the quiet window (one build, read-only server on scratch dirs, nothing written to the repo but the notes)
 1. `npm --prefix web run build` (about 4 s), restore `favicon.svg`.
@@ -418,6 +467,8 @@ root is killed while it holds the plan, to see the heir's new hash reach the app
 4. `compare.mjs`, variants taken in turns: `before` (Phase 1 UI), `old` (before the clock fix), `new` (this build),
    `new-lite`, `new-lite-anim`, `new-lite-filter`, `new-lite-shadow` (the product switch in the same build), and the
    injected-CSS variants as a cross-check. 3 counted rounds after one warm-up: about 10 minutes for 7 variants.
+5. `proof.mjs` (chip, Verify against the 415 guard, ROOT tag), `form.mjs` (the New task form end to end), then `live.mjs`
+   (the chaos panel and the approve flow on fake-LLM runs launched through the API), each on a server with scratch dirs.
 
 ### Still to do (needs a slot or a later merge)
 1. A quiet window: absolute frame times, the fix measured, the three CSS toggles tried; re-shoot the lens scenes on the
