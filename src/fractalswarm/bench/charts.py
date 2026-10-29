@@ -424,6 +424,7 @@ AXIS_LABELS = {
     "rival_recovery_ms": "Supervisors' detection and restart (s); the swarm keeps 5 s",
     "rival_restart_ms": "Supervisors' extra restart time (s), on top of 5 s detection",
     "agent_latency_scale": "Agents' latency scale",
+    "crash_jitter_pct": "Crash-time jitter (each crash moved by up to ± points of progress)",
 }
 SECONDS_AXES = ("recovery_ms", "rival_recovery_ms", "rival_restart_ms")
 
@@ -444,6 +445,8 @@ def axis_label(axis: str, x: float) -> str:
         return f"{x / 1000:g}"
     if axis == "agent_latency_scale":
         return f"{x:g}x"
+    if axis == "crash_jitter_pct":
+        return f"±{x:g}" if x else "0"
     return f"{x:g}"
 
 

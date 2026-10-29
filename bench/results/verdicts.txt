@@ -1,5 +1,5 @@
 Verdicts under bench/PREREG.md (sha 25d4a75919b3); sources: rivals-gate, agent_latency_scale, agents, per-process-rivals, per-process-swarm, recovery_ms, recovery_ms_extreme, rival_recovery_ms, rival_restart_ms
-Code: 3e723a8ab0e3
+Code: 48601dfa193e
 Every verdict is the swarm's: win = better by the minimum effect on every seed.
 
 Outcome B (read against durable-max, t2_conference)

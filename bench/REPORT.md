@@ -1,17 +1,23 @@
 # FractalSwarm benchmark report
 
-> Status: **the $0 sections are written; the headline, §5 and the real-model results are not.**
-> §3 (setup) and §4 (results) report the fake-LLM runs of the arena phase on the simulated clock:
-> the rivals gate, the sensitivity sweeps, the per-process view and the false deaths. Every number
-> in them is read from files committed under `bench/results/` (`results.csv`, `results.json`,
-> `honesty.json`, `verdicts.txt`). Blocks marked **[PLACEHOLDER]** are not written yet: the
-> headline, the reading in §5, the conclusions, and everything that needs the real model (the
-> `TBD` rows of §3, §4.10 and the results of §8).
+> Status: **the $0 sections, the headline and the reading in §5 are written; the real-model
+> results are not.** §3 (setup) and §4 (results) report the fake-LLM runs of the arena phase on the
+> simulated clock: the rivals gate, the sensitivity sweeps, an exploratory crash-time jitter sweep,
+> the per-process view and the false deaths. Every number in them is read from files committed
+> under `bench/results/` (`results.csv`, `results.json`, `honesty.json`, `verdicts.txt`). What needs
+> the real model (the `TBD` rows of §3, §4.10 and the results of §8) is not written yet.
 
-**Headline: [PLACEHOLDER].** The headline sentence is the coordinator's and Yoel's call at the
-decision gate, and it is not written here. What a headline may say is fixed in `bench/PREREG.md` §7,
-and the claims the project makes, each with its evidence, are in `docs/claims.md`. What the
-preregistered rules derive from the runs in §4 is outcome **B** (§4.9).
+**Headline (decision gate, Oct 29: outcome B). Resilience comparable to an ideal durable
+supervisor, without a central coordinator or a separate recovery mechanism.** Against
+`durable-max`, stall time and extra cost tie at all six gate points, and locality ties on T2 at C2
+and C3, so the stronger claim, that recovery stays local to the affected subtree, is not made
+(§4.5, §4.9). Locality would hold where the supervisor needs 1–3 s more to restart a coordinator,
+and it fails where an external supervisor detects and restarts within 0.5–1 s (§4.6). Per process
+the two are comparable, and the supervisor recovers sooner (§4.7); the swarm's failure detector
+produces false deaths, the supervisors' none (§4.8). Against the in-process supervisor
+(`central`), whose workers die with it, the swarm stalls 1.2 s against 34.3 s and pays −1.0%
+against +66.6% extra on T2 at C3 (§4.1, §4.2). What a headline may say is fixed in
+`bench/PREREG.md` §7; the claims, each with its evidence, are in `docs/claims.md`.
 
 ## 1. Rivals and fairness rules (read these first)
 
@@ -149,12 +155,13 @@ each a chain of three contracts: extract, place, blurb) and **T1** the extractio
 | Gate | `bench/matrix-rivals-gate.yaml`: swarm, durable-max, durable and central × T2 and T1 × C0–C3 × seeds 1–4 = **128 cells, 0 failed**. Detection is 5 s for every system, and the supervisors restart at once. |
 | Chaos profiles | C0: none. C1: 1 coordinator crash, 10% of agents killed, 5% API faults, 5% message loss. C2: 3 crashes, 30% killed, 10% API faults, 10% message loss and a partition. C3: 5 crashes at 20/35/50/65/80% of the contracts dispatched, 50% killed, 20% API faults, 20% message loss and one 8 s partition. The crash points and agent kills are the same for every workflow; the bus faults (loss, duplication, delay, reordering, partition) reach only the swarm's bus, since the supervisors have none (§1, rule 4; PREREG §5). |
 | Sensitivity sweeps | Six matrices, **378 cells**: swarm, durable-max and durable × T2 × C0 and C3 × seeds 1–3. `recovery_ms` {1, 2, 2.5, 5, 10, 20 s} (108) and {0.5 s} (18); `rival_restart_ms` {0, 1, 3 s} (54); `rival_recovery_ms` {0.5, 1 s} (36); `agent_latency_scale` {0.25, 0.5, 1, 2} (72); agents {4, 8, 12, 24, 48} (90). |
+| Crash-time jitter (exploratory) | `bench/matrix-sweep-jitter.yaml`: swarm, durable-max and durable × T2 × C0 and C3 × seeds 1–4 × jitter of 0, ±5, ±10 and ±15 points of progress on the five crashes of C3 = **96 cells, 0 failed**. It is not in PREREG, so it is outside `sweeps/` and `honesty.json` (§4.6.1). |
 | Per-process probes | **68 cells**, T2, seeds 1–4: the swarm at C0 and at ten single-crash probes `K-<target>` (44 cells), and the three supervisors at C0 and `K-o0` (24 cells). |
-| Seeds | Gate and per-process probes: 1–4. Sweeps: 1–3. The default settings (5 s detection, no extra restart, 1× latency, 12 agents) are in the gate and in four of the sweeps (`recovery_ms` 5 s, `rival_restart_ms` 0, latency 1×, 12 agents), so the same cells are read twice, with different seeds: the locality ratios at T2 C3 against durable-max (cdt / blast / idle) are 0.37 / 0.29 / 0.47 at the gate (4 seeds) and 0.48 / 0.32 / 0.62 in the sweeps (seeds 1–3, identical in all four). |
+| Seeds | Gate, per-process probes and the jitter sweep: 1–4. Sweeps: 1–3. The default settings (5 s detection, no extra restart, 1× latency, 12 agents) are in the gate and in four of the sweeps (`recovery_ms` 5 s, `rival_restart_ms` 0, latency 1×, 12 agents), so the same cells are read twice, with different seeds: the locality ratios at T2 C3 against durable-max (cdt / blast / idle) are 0.37 / 0.29 / 0.47 at the gate (4 seeds) and 0.48 / 0.32 / 0.62 in the sweeps (seeds 1–3, identical in all four). |
 | Rules | `bench/PREREG.md`, written before the first gate run and applied mechanically by `fractalswarm bench verdicts --prereg`; SHA `25d4a75919b3`. Ratio of the seed means, win, tie and loss are defined in §4. |
-| Verdicts | Run over everything at commit `3e723a8` with a clean tree: `bench/results/honesty.json` (every comparison, losses and ties included), `verdicts.txt`, `regime.png`, `regime.json`. The gate alone gives `bench/results/rivals-gate/` the same files, where the outcome reads PENDING because it has no sweeps. |
+| Verdicts | Run over everything at commit `48601df` with a clean tree: `bench/results/honesty.json` (every comparison, losses and ties included), `verdicts.txt`, `regime.png`, `regime.json`. The gate alone gives `bench/results/rivals-gate/` the same files, where the outcome reads PENDING because it has no sweeps. The exploratory jitter sweep (§4.6.1) is in none of them. |
 | Files | Each results directory holds `cells/`, `results.csv`, `results.json` and the charts. The run bundles (`runs/`, about 5 GB) are not committed; each row names its run directory, and `fractalswarm replay <run_dir> --verify` rebuilds a run bit for bit. The matrices are deterministic: the default cells recur in four sweeps and are identical in all four. |
-| Cost of the runs | About 29 minutes of compute on one core in all (table below); peak working set 145 MB for the gate and up to 730 MB for the 0.5 s detection sweep. |
+| Cost of the runs | About 29 minutes of compute on one core in all, and 4.3 more for the exploratory jitter sweep (table below); peak working set 145 MB for the gate and up to 730 MB for the 0.5 s detection sweep. |
 
 | Stage | Cells | Wall time | Peak memory |
 |---|---|---|---|
@@ -167,6 +174,7 @@ each a chain of three contracts: extract, place, blurb) and **T1** the extractio
 | Agents (width) | 90 | 365.2 s | 561 MB |
 | Per-process, swarm | 44 | 135.3 s | 147 MB |
 | Per-process, supervisors | 24 | 31.2 s | 137 MB |
+| Crash-time jitter (exploratory) | 96 | 260.5 s | 139 MB |
 
 ### Two facts about the setup
 
@@ -544,6 +552,131 @@ seed (durable-max minus swarm, in points of extra cost) is 12.34, 15.06, 5.24 an
 minimum effect of 5. PREREG §7 allows *cheaper* only for an H2 win against the same rival under the
 same failures, and the preregistered gate has none.
 
+#### 4.6.1 Crash-time jitter (exploratory, not pre-registered)
+
+Does the comparison hinge on the five crashes landing at 20/35/50/65/80% of the contracts dispatched?
+This sweep moves each coordinator crash of C3 by a seeded displacement of up to ±5, ±10 or ±15 points
+of progress. T2 has 18 contracts, so a point is 0.18 of a contract. The displacements depend on the
+seed alone, so every workflow of a seed gets the same crash times; the rest of the plan (the agent kills,
+the partition, the bus faults and the API-fault rate) is unchanged. The matrix is
+`bench/matrix-sweep-jitter.yaml`: swarm, durable-max and durable × T2 × C0 and C3 × seeds 1–4 × four
+settings = **96 cells, 0 failed**, 260.5 s, peak 139 MB, $0, in `bench/results/exploratory/crash_jitter_pct/`
+(its run bundles, 665 MB, are not committed). Two checks that the knob changes nothing else: setting 0 is
+the gate's plan spelled out, and its 24 cells equal the gate's cells in every metric; at C0 there is no
+crash to move, and the 36 C0 cells of the other three settings equal the 12 of setting 0.
+
+**It is exploratory.** PREREG §5 fixes C3's crash points and does not list this sweep, so no setting is in
+the plausible region, and nothing here is in `honesty.json`, in the tallies of §4.5 and §4.6 or in the
+derived outcome (§4.9). Adding its rows to the gate and the sweeps in `bench verdicts` leaves outcome **B** as it is, with the
+same gate points and the same plausible points, and adds four lines to its conditions, each "outside the
+plausible region". The words below (win, tie, loss, holds, fails) are PREREG §3 and §4's, applied by the same tool.
+
+Where the crashes land, in percent of the contracts dispatched, in order. The displacements of a seed are
+the same draws scaled by the setting. Progress moves in whole contracts (5.6 points on T2), so a few
+points can leave a crash where it was, or put two together: seed 1 at ±15 has its third and fourth crashes
+at 62 and 63%, and both fire at 54.5 s, with 12 of the 18 contracts dispatched.
+
+| Seed | Jitter 0 | Jitter ±5 | Jitter ±10 | Jitter ±15 |
+|---|---|---|---|---|
+| 1 | 20 / 35 / 50 / 65 / 80 | 21 / 34 / 54 / 64 / 80 | 21 / 34 / 58 / 64 / 80 | 22 / 33 / 62 / 63 / 80 |
+| 2 | 20 / 35 / 50 / 65 / 80 | 25 / 37 / 54 / 69 / 77 | 30 / 39 / 58 / 74 / 75 | 34 / 42 / 62 / 72 / 78 |
+| 3 | 20 / 35 / 50 / 65 / 80 | 24 / 32 / 49 / 70 / 76 | 27 / 30 / 47 / 73 / 74 | 27 / 31 / 46 / 69 / 79 |
+| 4 | 20 / 35 / 50 / 65 / 80 | 24 / 37 / 50 / 63 / 76 | 28 / 39 / 49 / 62 / 72 | 33 / 41 / 49 / 60 / 68 |
+
+Locality of the swarm against each rival, with the ratios of the seed means (descriptive):
+
+| Jitter (points) | vs durable-max | cdt | blast | idle | vs durable | cdt | blast | idle |
+|---|---|---|---|---|---|---|---|---|
+| 0 | ties | 0.37 | 0.29 | 0.47 | holds | 0.25 | 0.33 | 0.34 |
+| ±5 | ties | 0.45 | 0.35 | 0.35 | holds | 0.23 | 0.31 | 0.20 |
+| ±10 | ties | 0.53 | 0.47 | 0.49 | ties | 0.27 | 0.40 | 0.27 |
+| ±15 | ties | 0.40 | 0.34 | 0.43 | ties | 0.24 | 0.33 | 0.24 |
+
+Swarm wins / ties / losses over the four settings (as in §4.6; stall is reported, not a hypothesis):
+
+| Hypothesis | vs durable-max | vs durable |
+|---|---|---|
+| H1 Preserved work | 0 / 4 / 0 | 3 / 1 / 0 |
+| H2 Extra cost (%) | 1 / 3 / 0 | 2 / 2 / 0 |
+| H3 Time to recover (s) | 0 / 4 / 0 | 0 / 4 / 0 |
+| H4a Dependency time (s) | 0 / 4 / 0 | 3 / 1 / 0 |
+| H4b Blast radius (% sessions) | 3 / 1 / 0 | 2 / 2 / 0 |
+| H4c Idle agent-seconds | 0 / 4 / 0 | 2 / 2 / 0 |
+| H5 Unnecessary reassignments | 0 / 0 / 4 | 0 / 0 / 4 |
+| H6 Duplicated spend (points) | 0 / 4 / 0 | 0 / 4 / 0 |
+| S Stall time (s), not a hypothesis | 0 / 4 / 0 | 0 / 4 / 0 |
+
+Means over the four seeds, T2 at C3:
+
+| Jitter (points) | Workflow | cdt (s) | Blast (% sessions) | Idle agent-s | Extra cost (%) | Stall (s) |
+|---|---|---|---|---|---|---|
+| 0 | swarm | 12.0 | 10.8 | 17.4 | -1.0 | 1.2 |
+| 0 | durable-max | 32.9 | 37.5 | 36.7 | 8.4 | 2.4 |
+| 0 | durable | 48.8 | 32.5 | 50.6 | 13.0 | 13.8 |
+| ±5 | swarm | 11.4 | 11.7 | 14.6 | -3.4 | 2.7 |
+| ±5 | durable-max | 25.2 | 33.3 | 41.8 | 7.2 | 1.5 |
+| ±5 | durable | 48.7 | 37.5 | 72.7 | 19.2 | 14.9 |
+| ±10 | swarm | 12.2 | 14.2 | 16.3 | 0.8 | 1.4 |
+| ±10 | durable-max | 23.2 | 30.0 | 33.2 | 6.4 | 3.9 |
+| ±10 | durable | 44.7 | 35.8 | 61.0 | 16.9 | 12.0 |
+| ±15 | swarm | 9.5 | 10.0 | 12.7 | 0.7 | 14.5 |
+| ±15 | durable-max | 23.5 | 29.2 | 29.7 | 6.7 | 1.2 |
+| ±15 | durable | 39.1 | 30.0 | 53.7 | 16.5 | 20.6 |
+
+Seed by seed against `durable-max`: swarm / `durable-max` = ratio, for cdt, blast radius and idle
+agent-seconds, and "no win" for a seed that does not reach PREREG's minimum effect:
+
+| Metric | Seed | Jitter 0 | Jitter ±5 | Jitter ±10 | Jitter ±15 |
+|---|---|---|---|---|---|
+| cdt | 1 | 12.3 / 28.6 = 0.43 | 9.0 / 30.9 = 0.29 | 19.4 / 33.5 = 0.58 (no win) | 14.4 / 25.3 = 0.57 (no win) |
+| cdt | 2 | 13.0 / 25.3 = 0.51 (no win) | 13.5 / 24.5 = 0.55 (no win) | 7.7 / 12.6 = 0.61 (no win) | 5.4 / 17.7 = 0.30 |
+| cdt | 3 | 16.0 / 31.5 = 0.51 (no win) | 11.8 / 28.4 = 0.42 | 8.2 / 29.4 = 0.28 | 14.5 / 29.4 = 0.49 |
+| cdt | 4 | 6.9 / 46.0 = 0.15 | 11.3 / 17.1 = 0.66 (no win) | 13.6 / 17.5 = 0.78 (no win) | 3.7 / 21.5 = 0.17 |
+| blast | 1 | 10.0 / 36.7 = 0.27 | 16.7 / 43.3 = 0.38 | 23.3 / 40.0 = 0.58 (no win) | 13.3 / 30.0 = 0.44 |
+| blast | 2 | 10.0 / 26.7 = 0.38 | 10.0 / 26.7 = 0.38 | 16.7 / 23.3 = 0.71 (no win) | 3.3 / 23.3 = 0.14 |
+| blast | 3 | 13.3 / 40.0 = 0.33 | 10.0 / 40.0 = 0.25 | 6.7 / 33.3 = 0.20 | 16.7 / 36.7 = 0.45 |
+| blast | 4 | 10.0 / 46.7 = 0.21 | 10.0 / 23.3 = 0.43 | 10.0 / 23.3 = 0.43 | 6.7 / 26.7 = 0.25 |
+| idle | 1 | 16.9 / 34.3 = 0.49 | 11.1 / 36.2 = 0.31 | 25.5 / 45.5 = 0.56 (no win) | 18.6 / 19.0 = 0.98 (no win) |
+| idle | 2 | 23.0 / 29.9 = 0.77 (no win) | 14.9 / 45.6 = 0.33 | 11.4 / 13.1 = 0.87 (no win) | 10.7 / 21.7 = 0.49 |
+| idle | 3 | 16.0 / 26.0 = 0.61 (no win) | 11.8 / 49.7 = 0.24 | 8.2 / 49.2 = 0.17 | 14.5 / 49.2 = 0.29 |
+| idle | 4 | 13.7 / 56.7 = 0.24 | 20.8 / 35.6 = 0.58 (no win) | 20.0 / 24.9 = 0.80 (no win) | 6.8 / 28.9 = 0.23 |
+
+- **Locality.** Against `durable-max` it ties at all four settings, the same reading as at 0, the gate's
+  own point, and fails at none. Against `durable` it holds at 0 and ±5 and ties at ±10 and ±15. Every
+  ratio of the means in the table is between 0.20 and 0.53, and the swarm's mean cdt is 9.5–12.2 s against
+  23.2–32.9 s for `durable-max` and 39.1–48.8 s for `durable`.
+- **The ties are made of single seeds.** In all 48 seed-and-metric cells the swarm is below `durable-max`
+  (ratios 0.14–0.98), but a win needs every seed to reach the minimum effect, and some seeds do not: over
+  the 16 seed-and-setting cells the swarm reaches it on cdt in 8, on blast radius in 14 and on idle
+  agent-seconds in 9. Which seed misses moves with the setting: seed 4's cdt ratio is 0.15 at 0, 0.66 at
+  ±5, 0.78 at ±10 and 0.17 at ±15.
+- **Losses.** H5 is the only hypothesis with a loss, at all four settings against both rivals: the swarm's
+  detector gives away 2.0–2.75 live coordinators per run, at most 4 in one run (2.25 at 0, the gate's T2 C3
+  figure of §4.8), and the supervisors have none.
+- **Stall.** The swarm's mean stall is 1.2, 2.7, 1.4 and 14.5 s at the four settings, against 2.4, 1.5, 3.9
+  and 1.2 s for `durable-max`, and the tool reads it as a tie at each. The 14.5 s is one run: seed 2 at ±15
+  stalls 55.1 s, and the other 15 swarm cells 0.0–9.1 s. It is one stretch (129.5–184.6 s) with no agent
+  call in flight and one judge call: it started at 106.1 s, after the last crash (91.0 s) and the last
+  member death (99.0 s), drew an injected 503 with a 60 s Retry-After and then a second 503, and took 78.5 s
+  over three attempts. It is the unpaired API-fault noise of §6, the stretch of §4.1 where a long judge call
+  counts as stall, and not a recovery: a fault is keyed by the effect id and the attempt, an effect id
+  carries the call's place in the log, and moving a crash moves the later calls, so the same seed puts its
+  faults on other calls. `durable` stalls 44.6 s on that seed (37.0 s on seed 1) and `durable-max` 4.1 s;
+  the swarm's makespan on it is 188.9 s against 138.4 s at 0. It is a swarm cell and it is in the means.
+- **Cost.** The swarm's mean extra cost is −1.0, −3.4, 0.8 and 0.7% against 8.4, 7.2, 6.4 and 6.7% for
+  `durable-max` (each against its own C0, §6), and H2 is one win and three ties against it. As in §4.6,
+  that carries no cost claim: PREREG §7 allows *cheaper* only for an H2 win against the same rival under
+  the same failures, and the preregistered gate has none.
+- **Validity.** 23 of the 96 cells are invalid, all of them T2 seed 3, which is invalid at C0 for every
+  workflow (§4.4) and so not because of a crash; they are in every mean, as at the gate.
+- **What it does not show.** Four seeds are four draws of the displacements (and of the API faults) per
+  setting, so it cannot say how often a swarm cell meets a draw like seed 2's at ±15. It is T2 at C3 only,
+  with the crash times drawn once per seed and shared by the workflows; larger displacements and crash
+  times drawn per workflow were not run.
+
+Chart (six panels along the setting, T2 at C3):
+[`crash_jitter_pct`](results/exploratory/crash_jitter_pct/recovery-t2_conference-crash_jitter_pct.png).
+
 ### 4.7 Per-process view
 
 The main runs give every system the same number of coordinator crashes. If instead every coordinator
@@ -631,7 +764,7 @@ the swarm's cells are the same.
 
 PREREG §7 derives the outcome mechanically. **Outcome A** needs locality against `durable-max` to hold on
 T2 at C2 and C3 of the gate *and* at every point of the plausible region; anything else is **outcome B**.
-The tool (`fractalswarm bench verdicts … --prereg`, commit `3e723a8`) derives **B**. The deciding points,
+The tool (`fractalswarm bench verdicts … --prereg`, commit `48601df`) derives **B**. The deciding points,
 in PREREG's order, with the ratios of the seed means (descriptive):
 
 | Point (T2, C3 unless a gate row) | Setting | Locality (PREREG) | cdt | blast | idle |
@@ -651,8 +784,8 @@ in PREREG's order, with the ratios of the seed means (descriptive):
 
 B is already fixed by the gate: locality ties at T2 C2 and C3 against `durable-max` (§4.5). The ten points
 of the plausible region then read: 2 hold (`rival_restart_ms` 1 s and 3 s), 6 tie (`recovery_ms` 1–10 s
-and `rival_restart_ms` 0), and 2 fail (`rival_recovery_ms` 0.5 and 1 s). The wording of the headline that
-goes with the outcome is not written here (see the placeholder at the top).
+and `rival_restart_ms` 0), and 2 fail (`rival_recovery_ms` 0.5 and 1 s). The headline that goes with the
+outcome, settled at the decision gate on Oct 29, is at the top of this report.
 
 ### 4.10 The real-model matrix
 
@@ -661,15 +794,28 @@ chart (`results/v1/hero-t2_conference.png`), once they exist. The coordinator ma
 
 ## 5. Reading the chart honestly
 
-**[PLACEHOLDER]** The reading of §4 and the conclusions are written by the coordinator with the
-headline. The two bullets below are the skeleton's and are kept as they were written. The first is
-flagged: its last sentence ("only one doesn't stall or pay twice") is not what the gate shows against
-`durable-max`, where stall time and duplicated spend are ties at all six points (§4.1, §4.5), and T2
-validity is 75–81% for every workflow because of seed 3 (§4.4).
+This reading covers the $0 runs of §4; the real-model rows are read in §4.10 when they exist.
 
-- With best-case supervisors every workflow may finish (completion and validity near
-  100%). That is the honest point: "everyone finishes; only one doesn't stall or pay twice".
-- TBD: observations, outliers, seed variance.
+- **Everyone finishes.** Every run of every workflow completed, at every profile (§4.4). Finishing
+  does not separate the systems; what a crash costs while they finish does.
+- **Against a supervisor whose workers die with it** (`central`), a crash is expensive: on T2 it
+  stalls 16–34 s and pays 14–67% extra, because the restarted coordinator dispatches the lost work
+  again (§4.1–4.3). The swarm stalls 1–5 s and its cost is no higher than its own C0. The hero
+  chart shows this comparison, which is with an in-process design, not with a durable one.
+- **Against an ideal durable supervisor** (`durable-max`: its workers and its own calls survive a
+  crash, and it restarts in 5 s), stall time and extra cost tie at all six gate points (§4.1,
+  §4.5). On T2 at C2 and C3 the swarm's blast radius is smaller on every seed, and its
+  coordinator-dependency time is 2.5–3 times lower on the seed means, but not below half on every
+  seed, which is what the preregistered rule asks; so locality ties (§4.9).
+- **Where the comparison turns** (§4.6): a slower supervisor restart (1–3 s more) lets locality
+  hold; a fast external restart (0.5–1 s detection while the swarm keeps 5 s) makes it fail, at
+  6–13 times the supervisor's dependency time. Per process, the two are comparable (§4.7).
+- **What having no supervisor costs:** false deaths. The swarm's detector declares live members
+  dead (1.25–2.25 per run at C2–C3 with the default 5 s detection; more, and not monotonically,
+  at shorter detection), and each costs a reassignment; the supervisors have none (§4.8).
+- **Seed variance:** T2 seed 3 is invalid for every workflow, C0 included, a property of that
+  instance under the fake LLM (§4.4); three T1 runs carry the swarm's stall (§4.1). With four
+  seeds one outlier moves a mean, which is why every verdict is taken per seed.
 
 ## 6. Limitations
 
@@ -701,10 +847,11 @@ validity is 75–81% for every workflow because of seed 3 (§4.4).
   they have no detector (§1).
 - **Extra cost has different bases.** It is measured against each system's own C0, and on T2 the swarm's
   C0 is a little dearer than the others' (§3, §4.2).
-- **Crash times are not swept.** They are fixed at 20/35/50/65/80% of the contracts dispatched, and the
-  per-process probes crash one coordinator, once, at 50%. A different time, or two crashes, may give
-  different impacts, and r is a ratio of means over four seeds (§4.7). No crash-time jitter sweep
-  was run in this phase (it is not in PREREG §5).
+- **Crash times are swept only exploratorily.** The pre-registered runs fix them at 20/35/50/65/80% of
+  the contracts dispatched, and the per-process probes crash one coordinator, once, at 50%. A different
+  time, or two crashes, may give different impacts, and r is a ratio of means over four seeds (§4.7).
+  An exploratory sweep (§4.6.1) moves the five crashes of C3 by up to ±15 points on four seeds; it is
+  not in PREREG §5 and decides nothing.
 - **T2 seed 3 is invalid at C0** for every workflow under the fake LLM (§4.4), so every T2 validity figure
   carries it.
 
@@ -723,15 +870,19 @@ The $0 runs of §4 (fake LLM, simulated clock) need no key. Point `FRACTALSWARM_
 uv run fractalswarm bench bench/matrix-rivals-gate.yaml --fake      # 128 cells, about 4 min
 uv run fractalswarm bench bench/matrix-sweep-recovery.yaml --fake   # the other matrix-sweep-*.yaml and
                                                                     # matrix-per-process-*.yaml likewise
+uv run fractalswarm bench bench/matrix-sweep-jitter.yaml --fake     # exploratory, about 4 min; its results go to
+                                                                    # bench/results/exploratory/, not to sweeps/
 uv run fractalswarm bench verdicts bench/results/rivals-gate bench/results/sweeps --prereg \
     --json bench/results/honesty.json    # the verdicts, the regime map and the derived outcome
 uv run fractalswarm bench rescore bench/results/rivals-gate         # metrics again from the logs, $0
+uv run fractalswarm bench verdicts bench/results/exploratory        # the jitter sweep alone: prints, writes nothing
 uv run fractalswarm recovery <run_dir>                              # a run's table per crash and its checks
 uv run fractalswarm bench tables --check bench/REPORT.md            # every table of this file is the results'
 ```
 
 The tables of §3, §4 and the appendices are laid out from `bench/results/honesty.json` and
-`bench/results/rivals-gate/results.json` by `fractalswarm bench tables` (`bench/tables.py`); the
+`bench/results/rivals-gate/results.json` (§4.6.1: also the jitter sweep's own `results.json`) by
+`fractalswarm bench tables` (`bench/tables.py`); the
 prose around them is written by hand. `--check` names any table that is not in this file word for
 word, and `tests/unit/test_report_tables.py` runs the same check, so a number cannot drift from the
 files without the test failing.

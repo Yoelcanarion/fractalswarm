@@ -9,12 +9,17 @@ have been dispatched (0.5 unless given), and no other fault. Run on every level 
 tree and on a supervisor's ``o0``, it measures what one process failure costs per level.
 """
 
+import random
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
 # Coordinator crashes happen at these fractions of contracts dispatched, in this order.
 CRASH_POINTS = (0.20, 0.35, 0.50, 0.65, 0.80)
+# Crash-time jitter (arena spec §C.2): the sweep knob ``crash_jitter_pct`` moves each crash of a
+# plan up to this many points of progress either way. The crash points are 15 apart, so at the
+# cap a crash can land anywhere in a band as wide as the gap between two of them.
+JITTER_MAX_PCT = 15
 # A crashed baseline coordinator restarts this long after the crash (= swarm detection, §5.2).
 RESTART_DELAY_MS = 5_000
 SINGLE_CRASH_PREFIX = "K-"
@@ -118,6 +123,42 @@ def single_crash_plan(chaos: ChaosProfile, seed: str = "0") -> dict[str, Any]:
         raise ValueError(f"{chaos.name} is not a single-crash profile")
     action = {"at": chaos.at, "kind": "kill_coordinator", "target": chaos.target}
     return {"profile": chaos.name, "seed": seed, "actions": [action]}
+
+
+def crash_jitter(seed: str, jitter_pct: int) -> tuple[int, ...]:
+    """How far each of the shared crash points moves, in points of progress.
+
+    One draw in [-1, 1] per point, from the seed alone and always all of them, scaled by
+    ``jitter_pct`` and rounded: a wider jitter stretches the same draws, and every workflow and
+    profile of a seed sees the same displacements (C2's three crashes take the first three
+    of C3's five)."""
+    if isinstance(jitter_pct, bool) or not isinstance(jitter_pct, int):
+        raise ValueError(f"crash jitter is in whole points of progress, got {jitter_pct!r}")
+    if not 0 <= jitter_pct <= JITTER_MAX_PCT:
+        raise ValueError(f"crash jitter is 0 to {JITTER_MAX_PCT} points, got {jitter_pct}")
+    rng = random.Random(f"{seed}:chaos:crash-jitter")
+    return tuple(round(jitter_pct * rng.uniform(-1.0, 1.0)) for _ in CRASH_POINTS)
+
+
+def jittered_plan(plan: dict[str, Any], seed: str, jitter_pct: int) -> dict[str, Any]:
+    """``plan`` (the JSON of a ``ChaosPlan``) with its coordinator crashes moved: the k-th crash
+    by the k-th displacement of ``crash_jitter``. Agent kills, the partition and the network and
+    API faults stay where they are, so only the moment a coordinator dies changes. The actions
+    keep the order a built plan has (by progress, then kind), which the monkey relies on; two
+    crashes that land on the same point are fired together, and a supervisor that is down
+    crashes again after its restart (``actors/orchestrator.py``)."""
+    moves = crash_jitter(seed, jitter_pct)
+    actions: list[dict[str, Any]] = []
+    crashes = 0
+    for action in plan["actions"]:
+        if action["kind"] == "kill_coordinator":
+            if crashes == len(moves):
+                raise ValueError(f"a plan can have at most {len(moves)} crashes to jitter")
+            action = {**action, "at": round(action["at"] + moves[crashes] / 100, 2)}
+            crashes += 1
+        actions.append(action)
+    actions.sort(key=lambda action: (action["at"], action["kind"]))
+    return {**plan, "actions": actions}
 
 
 def half_the_brains_plan(seed: str = "0") -> dict[str, Any]:

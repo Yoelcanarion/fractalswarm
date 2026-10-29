@@ -14,12 +14,19 @@ from statistics import mean
 from typing import Any
 
 from fractalswarm.bench.harness import read_results
-from fractalswarm.bench.verdicts import RIVALS, RULES, judge
+from fractalswarm.bench.profiles import jittered_plan
+from fractalswarm.bench.verdicts import RIVALS, RULES, evaluate, judge, parse_knobs
+from fractalswarm.comms.chaos import build_plan
 
 Row = dict[str, Any]
 
 HONESTY = "honesty.json"
 GATE_ROWS = "rivals-gate/results.json"
+# The exploratory crash-time jitter sweep: outside ``sweeps/`` and ``honesty.json`` on purpose (it
+# is not preregistered), so its tables are laid out from its own rows, and only when it was run.
+JITTER_AXIS = "crash_jitter_pct"
+JITTER_ROWS = "exploratory/crash_jitter_pct/results.json"
+JITTER_RIVALS = ("durable-max", "durable")  # `central` is not in the sweep
 TASKS = {"t1_extraction": "T1", "t2_conference": "T2"}
 T2_FIRST = ("t2_conference", "t1_extraction")  # the task the gate decides on comes first
 FLOWS = ("swarm", *RIVALS)
@@ -50,9 +57,11 @@ LOCALITY = (("cdt_s", "cdt"), ("blast_sessions_mean_pct", "blast"), ("idle_agent
 
 def report_tables(results: Path) -> dict[str, str]:
     """Every generated block of the report by name, in the order the report shows them.
-    ``results`` is ``bench/results``: ``honesty.json`` and ``rivals-gate/results.json``."""
+    ``results`` is ``bench/results``: ``honesty.json`` and ``rivals-gate/results.json``, and the
+    jitter sweep's rows when it was run."""
     honesty: Row = json.loads((results / HONESTY).read_text(encoding="utf-8"))
     rows = read_results(results / GATE_ROWS)
+    jitter = results / JITTER_ROWS
     return {
         **_regimes(honesty),
         "deciding": _deciding(honesty),
@@ -64,6 +73,7 @@ def report_tables(results: Path) -> dict[str, str]:
         **_per_process(honesty),
         "losses": _losses(honesty),
         **_seeds(rows),
+        **(_jitter(read_results(jitter)) if jitter.is_file() else {}),
     }
 
 
@@ -517,5 +527,121 @@ def _per_process(honesty: Row) -> dict[str, str]:
     ]
     out["per_process_ratio"] = _table(
         ["r = swarm / rival", "cdt", "Idle agent-s", "Time to recover", "Blast (agents)"], body
+    )
+    return out
+
+
+# -- the exploratory crash-time jitter sweep -------------------------------------------------
+
+
+def _points(value: float) -> str:
+    return f"±{value:g}" if value else "0"
+
+
+def _jitter(rows: list[Row]) -> dict[str, str]:
+    """T2 at C3 at each jitter setting (each with its own C0 twin): where the crashes of each
+    seed's plan land, the locality of the swarm against each rival as ``bench verdicts`` reads it,
+    each workflow's means, and the locality metrics seed by seed against ``durable-max``.
+    Exploratory: none of it is in ``honesty.json``."""
+    swept = [
+        (parse_knobs(r.get("knobs")).get(JITTER_AXIS), r)
+        for r in rows
+        if r["task"] == "t2_conference"
+    ]
+    mine = [(setting, r) for setting, r in swept if setting is not None]
+    settings = sorted({setting for setting, _ in mine})
+    chaos = [(setting, r) for setting, r in mine if r["profile"] == "C3"]
+
+    seeds = _seeds_of(r for _, r in chaos)
+    plans = []
+    for seed in seeds:  # where the crashes of the plan land: what a setting means
+        row = [seed]
+        for setting in settings:
+            plan = jittered_plan(build_plan("C3", seed).model_dump(mode="json"), seed, int(setting))
+            at = [a["at"] for a in plan["actions"] if a["kind"] == "kill_coordinator"]
+            row.append(" / ".join(f"{x * 100:.0f}" for x in at))
+        plans.append(row)
+    out = {"jitter_plans": _table(["Seed", *(f"Jitter {_points(s)}" for s in settings)], plans)}
+
+    honesty = evaluate([(JITTER_AXIS, [r for _, r in mine])])
+    found = {
+        (r.rival, r.value): r
+        for r in honesty.regimes
+        if r.axis == JITTER_AXIS and r.profile == "C3"
+    }
+    body = []
+    for setting in settings:
+        row = [_points(setting)]
+        for rival in JITTER_RIVALS:
+            point = found.get((rival, setting))
+            row += ["-"] * 4 if point is None else [point.locality, *_ratios(point.model_dump())]
+        body.append(row)
+    out["jitter_locality"] = _table(
+        [
+            "Jitter (points)",
+            "vs durable-max",
+            "cdt",
+            "blast",
+            "idle",
+            "vs durable",
+            "cdt",
+            "blast",
+            "idle",
+        ],
+        body,
+    )
+
+    counts = {h.id: h.tally for h in honesty.hypotheses}
+    body = [
+        [
+            f"{hid} {label}",
+            *(f"{c.win} / {c.tie} / {c.loss}" for c in (counts[hid][r] for r in JITTER_RIVALS)),
+        ]
+        for hid, label in HYPOTHESIS_ROWS
+    ]
+    out["jitter_tally"] = _table(["Hypothesis", *(f"vs {r}" for r in JITTER_RIVALS)], body)
+
+    body = []
+    for setting in settings:
+        for w in ("swarm", "durable-max", "durable"):
+            cell = [r for s, r in chaos if s == setting and r["workflow"] == w]
+            body.append(
+                [
+                    _points(setting),
+                    w,
+                    _avg(cell, "cdt_s"),
+                    _avg(cell, "blast_sessions_mean_pct"),
+                    _avg(cell, "idle_agent_s"),
+                    _avg(cell, "extra_cost_pct"),
+                    _avg(cell, "stall_s"),
+                ]
+            )
+    out["jitter_means"] = _table(
+        [
+            "Jitter (points)",
+            "Workflow",
+            "cdt (s)",
+            "Blast (% sessions)",
+            "Idle agent-s",
+            "Extra cost (%)",
+            "Stall (s)",
+        ],
+        body,
+    )
+
+    index = {(s, r["workflow"], r["seed"]): r for s, r in chaos}
+    body = []
+    for metric, label in LOCALITY:
+        for seed in seeds:
+            cells = []
+            for setting in settings:
+                a = index[(setting, "swarm", seed)][metric]
+                b = index[(setting, "durable-max", seed)][metric]
+                ratio = f"{a / b:.2f}" if b else "-"
+                win = judge(RULES[metric], a, b) == "win"
+                cells.append(f"{a:.1f} / {b:.1f} = {ratio}{'' if win else ' (no win)'}")
+            body.append([label, seed, *cells])
+    out["jitter_seeds"] = _table(
+        ["Metric", "Seed", *(f"Jitter {_points(s)}" for s in settings)], body
     )
     return out
