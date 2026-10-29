@@ -2,11 +2,11 @@
 
 A matrix is workflows × tasks × chaos profiles × seeds, and optionally × total agents (the
 scaling sweep, ``bench/scaling.py``) and × sweep settings (``knobs``: the recovery and restart
-times of the arena's sensitivity sweeps, the agents' latency scale). Each cell records one run
-into ``<out>/runs/<cell>/`` and writes its metrics to ``<out>/cells/<cell>.json`` once the run
-is scored; a cell with a result file is skipped next time, so an interrupted matrix resumes
-where it stopped. A run directory without a result file is a run that died half-way: it is
-wiped and recorded again.
+times of the arena's sensitivity sweeps, the agents' latency scale, the crash-time jitter).
+Each cell records one run into ``<out>/runs/<cell>/`` and writes its metrics to
+``<out>/cells/<cell>.json`` once the run is scored; a cell with a result file is skipped next
+time, so an interrupted matrix resumes where it stopped. A run directory without a result file
+is a run that died half-way: it is wiped and recorded again.
 
 After the cells, the harness pairs every row with the C0 row of the same workflow, task, seed,
 agents and knobs (extra cost and time lost vs C0) and writes ``results.csv``, ``results.json``
@@ -27,7 +27,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, field_validator
 
-from fractalswarm.bench.profiles import profile
+from fractalswarm.bench.profiles import JITTER_MAX_PCT, profile
 from fractalswarm.bench.registry import (
     BACKEND_KNOBS,
     KNOBS,
@@ -147,7 +147,13 @@ class Matrix(BaseModel):
                     raise ValueError(f"knob {name} needs a number >= 0, got {setting!r}")
                 if name in BACKEND_KNOBS and setting <= 0:
                     raise ValueError(f"knob {name} needs a number > 0, got {setting!r}")
-                if name not in BACKEND_KNOBS and int(setting) != setting:
+                if name == "crash_jitter_pct":
+                    if int(setting) != setting or setting > JITTER_MAX_PCT:
+                        raise ValueError(
+                            f"knob {name} is in whole points of progress, 0 to {JITTER_MAX_PCT}, "
+                            f"got {setting!r}"
+                        )
+                elif name not in BACKEND_KNOBS and int(setting) != setting:
                     raise ValueError(f"knob {name} is in whole milliseconds, got {setting!r}")
         return value
 
@@ -160,6 +166,13 @@ class Matrix(BaseModel):
             profile(name)
         if "C0" not in matrix.profiles:
             raise ValueError("a matrix needs the C0 profile: extra cost is measured against it")
+        if any("crash_jitter_pct" in point for point in matrix.knobs or []):
+            probes = [name for name in matrix.profiles if profile(name).target is not None]
+            if probes:  # a probe crashes one named actor at a time of its own
+                raise ValueError(
+                    f"crash_jitter_pct moves the crashes of C0-C3, and {', '.join(probes)} "
+                    "sets its own time"
+                )
         return matrix
 
     def cells(self) -> list[Cell]:

@@ -75,6 +75,7 @@ def test_the_labels_read_in_the_unit_of_the_axis() -> None:
     assert axis_label("agent_latency_scale", 0.25) == "0.25x"
     assert axis_label("agents", 12) == "12"
     assert axis_label(CHAOS_AXIS, 3) == "3"
+    assert axis_label("crash_jitter_pct", 10) == "±10" and axis_label("crash_jitter_pct", 0) == "0"
 
 
 def test_the_series_of_the_chaos_axis_average_the_seeds_and_skip_sweep_rows() -> None:
@@ -138,6 +139,23 @@ def test_the_recovery_chart_of_a_sweep_labels_its_axis_in_seconds(tmp_path: Path
     assert data["axis"] == "recovery_ms" and data["profile"] == "C3"
     assert data["x_labels"] == ["0.5", "2.5", "20"]
     assert "(s)" in data["x_label"]
+
+
+def test_the_recovery_chart_of_the_crash_jitter_reads_its_settings_in_points(
+    tmp_path: Path,
+) -> None:
+    rows = [
+        row(w, "1", 5, knobs=f"crash_jitter_pct={j}", profile="C3", cdt_s=float(j))
+        for w in ("swarm", "durable-max")
+        for j in (0, 5, 15)
+    ]
+    _, js = recovery_chart(
+        rows, tmp_path / "jitter", task=T2, title="jitter", axis="crash_jitter_pct", profile="C3"
+    )
+    data = json.loads(js.read_text(encoding="utf-8"))
+    assert data["axis"] == "crash_jitter_pct" and data["profile"] == "C3"
+    assert data["x_labels"] == ["0", "±5", "±15"]
+    assert "points of progress" in data["x_label"]
 
 
 def test_a_chart_with_nothing_to_draw_is_still_written(tmp_path: Path) -> None:

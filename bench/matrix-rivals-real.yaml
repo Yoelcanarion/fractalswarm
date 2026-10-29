@@ -1,0 +1,32 @@
+# The real rows of the two durable rivals (arena spec C.6), next to chart v1: durable-max and
+# durable x {T2, T1} x C0-C3 x 2 seeds = 32 paid cells, with Contributor routing and the fairness
+# settings and caps of matrix-final.yaml. The harness runs the cells one at a time, in this order
+# (the rivals first), and skips a cell that has a result file.
+#
+# One results dir. The harness writes results.json, results.csv and the charts from the cells of
+# the matrix it ran, so a matrix of the two rivals alone would overwrite v1's with rivals-only
+# versions. This one lists the four in-house workflows too: their cells that already have a result
+# file (v1's 29 T2 cells) are skipped, and the others are paid for once, here: the 32 T1 rows of
+# the final matrix and the 3 T2 pipeline cells that v1 never finished.
+# Run it instead of matrix-final.yaml. Run after matrix-final.yaml it pays only the 32 rival cells.
+# If results.json or a chart ever shows fewer workflows than there are cells on disk, run it again:
+# with every cell done it pays nothing and writes them again from all six workflows.
+#   uv run fractalswarm bench bench/matrix-rivals-real.yaml --dry-run
+#   uv run fractalswarm bench bench/matrix-rivals-real.yaml --confirm-real-spend
+name: rivals-real
+workflows: [durable-max, durable, swarm, central, single, pipeline]
+tasks: [t2_conference, t1_extraction]
+profiles: [C0, C1, C2, C3]
+seeds: [1, 2]
+# Contributor routing (spec §7.5): synthetic tasks, explicit opt-in for the bench matrix.
+contributor: true
+out_dir: results/v1
+chart_task: t2_conference
+budget:
+  run_cap_usd: 0.50
+  matrix_cap_usd: 33.50  # the worst case of the 67 cells still to run: 32 rival + 32 T1 + 3 T2
+notes: >
+  Fair failure semantics (spec §15.2): same crashes at the same progress points, 5 s
+  best-case restart for the baselines, completed work preserved. durable-max keeps its workers
+  and its own calls through a crash; durable keeps its workers and loses its own calls in flight
+  (arena spec §A).

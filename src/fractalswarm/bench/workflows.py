@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from fractalswarm.baselines.durable import DURABLE_MODES
-from fractalswarm.bench.profiles import single_crash_plan
+from fractalswarm.bench.profiles import jittered_plan, single_crash_plan
 from fractalswarm.bench.registry import (
     PARAM_KNOBS,
     Cell,
@@ -43,7 +43,7 @@ from fractalswarm.bench.tasks.t1_extraction.task import T1, company_of
 from fractalswarm.bench.tasks.t2_conference.fake import t2_script
 from fractalswarm.bench.tasks.t2_conference.generator import DAYS, TRACKS
 from fractalswarm.bench.tasks.t2_conference.task import T2
-from fractalswarm.comms.chaos import plan_from
+from fractalswarm.comms.chaos import build_plan, plan_from
 from fractalswarm.kernel.events import Event
 from fractalswarm.llm.client import Backend
 from fractalswarm.llm.fake import FakeBackend, FakeReply, Script, default_script
@@ -123,6 +123,9 @@ def _params(spec: TaskSpec, cell: Cell, contributor: bool) -> dict[str, Any]:
     params = run_params(spec)
     if cell.profile.target is not None:  # a per-process probe: one crash, on a named actor
         params["chaos"] = single_crash_plan(cell.profile, cell.seed)
+    elif (jitter := cell.knob("crash_jitter_pct")) is not None:  # the plan, spelled out
+        plan = build_plan(cell.profile.name, cell.seed).model_dump(mode="json")
+        params["chaos"] = jittered_plan(plan, cell.seed, int(jitter))
     else:
         params["chaos"] = {"profile": cell.profile.name, "seed": cell.seed}
     params["contributor"] = contributor

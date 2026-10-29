@@ -26,7 +26,8 @@ A multi-agent LLM runtime for the Meta Global AI Developer Hackathon (Indie trac
   - only the coordinator edits `.plans/progress.md`.
 - **Money:** the phase cap is **$50**, counted from Oct 28. The hard stop is **$61.8** of settled project spend. Only the coordinator makes real calls, in quiet windows (workers hold their heavy commands).
 - **Replay safety:** never add a field to an existing event payload model, because old runs would stop replaying. Use new event types, and gate new behaviour by new modes or params.
-- **Handler freeze:** Sun Nov 1, 20:00 CET.
+- **No plan by days** (Yoel, Oct 29): everything as soon as its inputs exist, in the order of the arena spec §I.
+- **Handler freeze:** as soon as the last handler change has merged and the real rival rows have run; Sun Nov 1, 20:00 CET at the latest.
 - **Claims:** they come only from `docs/claims.md`. "No supervisor needed" is not "simpler", "cheaper" or "more reliable".
 - **Private data:** live input typed by Yoel stays in `~/.fractalswarm/private`, never in git.
 - **Pushes:** a nightly push of the working branches to the private origin is pre-approved. `master` and publishing still need Yoel's OK.

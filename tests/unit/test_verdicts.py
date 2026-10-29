@@ -5,6 +5,7 @@ what they say, and the tests check that the rules read them as written."""
 import json
 import shutil
 import subprocess
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -16,9 +17,12 @@ from fractalswarm.bench.scoring import RunMetrics
 from fractalswarm.bench.verdicts import (
     HYPOTHESIS,
     PLAUSIBLE,
+    RIVALS,
     RULES,
     Honesty,
+    LocalityTally,
     Regime,
+    Tally,
     code_version,
     combine,
     compare,
@@ -469,6 +473,64 @@ def test_a_slow_swarm_at_one_setting_is_outcome_b_and_says_where() -> None:
         "locality ties at recovery_ms=10000 (t2_conference, C3); ratios of the seed means, "
         "descriptive (no verdict): cdt 0.80, blast 0.20, idle 0.12"  # 8 / 10, 20 / 100, 5 / 40
     ]
+
+
+def region_sources(slow_at: float | None = None) -> list[tuple[str, list[dict[str, Any]]]]:
+    """The gate and the whole plausible region; with ``slow_at`` the swarm is slow at that
+    ``recovery_ms`` setting only."""
+    sources = [("gate", gate_rows())]
+    for axis, settings in PLAUSIBLE.items():
+        if axis == "recovery_ms" and slow_at is not None:
+            fast = [s for s in settings if s != slow_at]
+            sources.append((axis, sweep_rows(axis, fast) + sweep_rows(axis, [slow_at], 8.0)))
+        else:
+            sources.append((axis, sweep_rows(axis, list(settings))))
+    return sources
+
+
+def test_the_tallies_of_each_rival_add_up_to_the_total_and_to_its_hypotheses() -> None:
+    honesty = evaluate(region_sources())
+    assert set(honesty.tally_by_rival) == set(RIVALS)
+    for column in ("win", "tie", "loss", "na"):
+        assert sum(getattr(t, column) for t in honesty.tally_by_rival.values()) == getattr(
+            honesty.tally, column
+        )
+    for rival, tally in honesty.tally_by_rival.items():
+        mine = [b.tally[rival] for b in honesty.hypotheses if b.id != "S"]  # H1-H6, not stall
+        for column in ("win", "tie", "loss", "na"):
+            assert getattr(tally, column) == sum(getattr(t, column) for t in mine)
+    assert honesty.tally_by_rival["durable-max"].win > 0  # the locality metrics of these rows
+    assert honesty.tally_by_rival["durable"] == Tally()  # no such rival in these rows
+
+
+def test_the_locality_of_each_rival_is_counted_over_its_regime_points() -> None:
+    honesty = evaluate(region_sources())
+    points = [r for r in honesty.regimes if r.rival == "durable-max"]
+    assert len(points) == 2 + sum(len(s) for s in PLAUSIBLE.values())  # gate C2, C3 and the sweeps
+    assert honesty.locality_by_rival["durable-max"].model_dump() == {
+        "holds": len(points),
+        "ties": 0,
+        "fails": 0,
+        "na": 0,
+    }
+    assert honesty.locality_by_rival["central"] == LocalityTally()  # no such rival in these rows
+    slow = evaluate(region_sources(slow_at=10000))
+    counted = slow.locality_by_rival["durable-max"]
+    assert (counted.holds, counted.ties, counted.fails) == (len(points) - 1, 1, 0)
+    assert Counter(r.locality for r in slow.regimes if r.rival == "durable-max") == {
+        "holds": counted.holds,
+        "ties": counted.ties,
+    }
+
+
+def test_the_two_new_keys_are_in_honesty_json(tmp_path: Path) -> None:
+    path = tmp_path / "honesty.json"
+    write_json(evaluate(region_sources()), path)
+    written = json.loads(path.read_text(encoding="utf-8"))
+    assert written["schema_version"] == 1
+    assert set(written["tally_by_rival"]) == set(written["locality_by_rival"]) == set(RIVALS)
+    assert set(written["tally_by_rival"]["durable-max"]) == {"win", "tie", "loss", "na"}
+    assert set(written["locality_by_rival"]["durable-max"]) == {"holds", "ties", "fails", "na"}
 
 
 # -- the per-process view --------------------------------------------------------------------

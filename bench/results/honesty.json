@@ -5,7 +5,7 @@
     "sha": "25d4a75919b3"
   },
   "code": {
-    "commit": "3e723a8ab0e32e6a9e3ecf8926b32162b7954b5e",
+    "commit": "48601dfa193ec8c77ee6e162d38615c57f5a7c9d",
     "dirty": false
   },
   "sources": [
@@ -15527,5 +15527,45 @@
     "tie": 249,
     "loss": 68,
     "na": 0
+  },
+  "tally_by_rival": {
+    "durable-max": {
+      "win": 42,
+      "tie": 141,
+      "loss": 33,
+      "na": 0
+    },
+    "durable": {
+      "win": 91,
+      "tie": 98,
+      "loss": 27,
+      "na": 0
+    },
+    "central": {
+      "win": 30,
+      "tie": 10,
+      "loss": 8,
+      "na": 0
+    }
+  },
+  "locality_by_rival": {
+    "durable-max": {
+      "holds": 7,
+      "ties": 18,
+      "fails": 2,
+      "na": 0
+    },
+    "durable": {
+      "holds": 18,
+      "ties": 8,
+      "fails": 1,
+      "na": 0
+    },
+    "central": {
+      "holds": 2,
+      "ties": 4,
+      "fails": 0,
+      "na": 0
+    }
   }
 }
