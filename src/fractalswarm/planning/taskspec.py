@@ -73,6 +73,11 @@ class TaskInputs(BaseModel):
     subjects: list[str] = Field(default_factory=list, exclude=True)  # what the report compares
     criteria: dict[str, str] = Field(default_factory=dict, exclude=True)  # id -> question
     sources: list[str] = Field(default_factory=list, exclude=True)  # URLs the task provides
+    # T2 on input a person gave (arena "live input"). Excluded like the T3 fields: the run
+    # records the corpus and truth they build, and ``params.input``, so it replays from its
+    # own directory.
+    inline: dict[str, Any] | None = Field(default=None, exclude=True)  # {corpus, truth?}
+    intake: str | None = Field(default=None, exclude=True)  # the id of an approved intake
 
 
 class TaskSpec(BaseModel):
@@ -133,11 +138,14 @@ def resolve_path(value: str, base: Path) -> Path:
     return (REPO_ROOT / path).resolve()
 
 
-def run_params(spec: TaskSpec) -> dict[str, Any]:
+def run_params(spec: TaskSpec, private_dir: Path | None = None) -> dict[str, Any]:
     """The swarm scenario's params: the spec plus the task's corpus and ground truth.
 
     They are recorded in ``run.started``, so a run replays without the fixture files.
+    ``private_dir`` is where an approved intake is read from (default: the settings').
     """
+    if spec.inputs.inline is not None or spec.inputs.intake is not None:
+        return _with_economy(spec, _live_params(spec, private_dir))
     if spec.task == "t3_report":
         from fractalswarm.bench.tasks.t3_report.web import corpus
 
@@ -170,6 +178,59 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
     if fixture.resolve().is_relative_to(REPO_ROOT):  # no machine-specific paths in the log
         recorded["inputs"]["fixture"] = fixture.resolve().relative_to(REPO_ROOT).as_posix()
     return _with_economy(spec, {"spec": recorded, "corpus": corpus, "truth": truth})
+
+
+def _live_params(spec: TaskSpec, private_dir: Path | None) -> dict[str, Any]:
+    """T2 on input a person gave: an approved intake, or a corpus handed over whole.
+
+    ``params.input`` says where it came from (``source``), its hash, and what the checker
+    knows (``truth_mode``): ``approved`` (a person reviewed the reading of the text),
+    ``given`` (the caller sent a truth) or ``derived`` (none: structure only, see
+    ``derived_truth``). Email addresses are pseudonymized before the corpus can enter a log,
+    and Contributor is off: the text is theirs.
+    """
+    from fractalswarm.config import Settings
+    from fractalswarm.intake.pseudonym import Pseudonyms
+    from fractalswarm.intake.store import PrivateDir
+    from fractalswarm.intake.truth import (
+        corpus_and_truth,
+        input_sha256,
+        validate_corpus,
+        validate_truth,
+    )
+
+    inputs = spec.inputs
+    if spec.task != "t2_conference":
+        raise ValueError("inputs.inline and inputs.intake are for the t2_conference task")
+    if inputs.inline is not None and inputs.intake is not None:
+        raise ValueError("give inputs.inline or inputs.intake, not both")
+    if inputs.intake is not None:
+        private = PrivateDir(private_dir or Settings().private_dir)
+        approved = private.approved(inputs.intake)
+        if approved is None:
+            raise FileNotFoundError(f"intake {inputs.intake!r} has no approved input")
+        try:
+            corpus, truth = corpus_and_truth(approved)
+        except ValueError as exc:
+            raise ValueError(f"approved input of {inputs.intake!r}: {exc}") from None
+        source, mode = "intake", "approved"
+    else:
+        assert inputs.inline is not None
+        corpus, truth = inputs.inline.get("corpus"), inputs.inline.get("truth") or {}
+        source, mode = "inline", "given" if truth else "derived"
+    corpus = Pseudonyms().mask_value(corpus)  # no address reaches a log, whoever sent it
+    validate_corpus(corpus)
+    if truth:
+        validate_truth(corpus, truth)
+    recorded = spec.model_dump(mode="json")
+    recorded["contributor_opt_in"] = False
+    return {
+        "spec": recorded,
+        "corpus": corpus,
+        "truth": truth,
+        "input": {"source": source, "sha256": input_sha256(corpus, truth), "truth_mode": mode},
+        "contributor": False,
+    }
 
 
 def _with_economy(spec: TaskSpec, params: dict[str, Any]) -> dict[str, Any]:
