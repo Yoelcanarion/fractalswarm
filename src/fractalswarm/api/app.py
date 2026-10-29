@@ -23,6 +23,7 @@ from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
 
 from fractalswarm.api.catalog import Catalog, RunEntry
+from fractalswarm.api.lens import lens_routes
 from fractalswarm.api.ws import stream_events
 from fractalswarm.config import CONFIG_DIR
 
@@ -188,6 +189,7 @@ def create_app(
         WebSocketRoute("/api/runs/{run_id}/events", websocket),
         Route("/api/runs/{run_id}/verify", verify_run, methods=["POST"]),
         Route("/api/runs/{run_id}/feasibility", feasibility),
+        *lens_routes(catalog),
         Route("/api/bench/results", bench_results),
         Route("/api/tasks", not_wired("tasks", "the Day 4 T2 slice"), methods=["POST"]),
         Route(
