@@ -7,7 +7,7 @@ Owner of: `api/lens.py`, the ablation, Wonder arbitration. Only the coordinator 
 |---|---|
 | 1. Muse lens API (merge point 1) | **done**, see below |
 | 2. Ablation (merge point 2, own commit) | **done and merged** into arena at 9140dce (my 73a33fe); see "Step 2" below |
-| 3. Wonder arbitration (merge point 2, own commit) | **built and tested at $0**; full suite and references pending a slot; see "Step 3" below |
+| 3. Wonder arbitration (merge point 2, own commit) | **built, tested at $0, merge_ready**; suite green, references 43/43; see "Step 3" below |
 
 ---
 
@@ -378,4 +378,7 @@ An answer a dead owner got is adopted by the heir without a new call (`reused: t
 - Claims: "no supervisor needed" is the only thing these runs back (the heir and the restarted coordinator both finish the job). They do not say arbitration is cheaper or more reliable than anything.
 
 ### $0 reference comparison
-(filled in at merge_ready)
+- **Suite** at `e5061b8` (`pytest -m 'not promptguard'`, run in three chunks because of the 9-minute limit): unit 813 passed, integration 330 + 237 passed, 3 promptguard deselected, 0 failed. `ruff check` and `ruff format --check` clean.
+- **What the suite caught:** the board's `_tool` had gained a required `state` argument, and the LangGraph baseline calls it on a bare `Blackboard` (`baselines/langgraph_teams.py:521`); 11 baseline tests errored and 3 more failed downstream. `state` is optional again (without it there are no disputes) and a unit test pins the call shape. The baseline file is untouched.
+- **References:** 43 of 43 runs identical to `~/.fractalswarm/refs/arena-c2b5e08` by `compare_refs.py` (the 11 CLI runs and the 32-cell fake matrix; event counts and hash-chain heads equal). Arbitration is off unless `params.arbitration` is set, and `DisputesView` adds no event.
+- `fractalswarm demo --verify --no-serve --no-browser` (scratch dirs): MATCH, 8177 events.
