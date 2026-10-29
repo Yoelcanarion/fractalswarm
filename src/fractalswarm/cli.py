@@ -1024,6 +1024,41 @@ def bench_verdicts(
         typer.echo("\n".join(["", f"wrote {target}", *(f"      {path}" for path in drawn)]))
 
 
+@bench_app.command("tables")
+def bench_tables(
+    name: Annotated[
+        str | None, typer.Argument(help="one table by name (default: all of them)")
+    ] = None,
+    results: Annotated[
+        Path, typer.Option(help="the committed results: honesty.json and rivals-gate/results.json")
+    ] = Path("bench/results"),
+    check: Annotated[
+        Path | None,
+        typer.Option("--check", help="a report: name the tables that are not in it word for word"),
+    ] = None,
+) -> None:
+    """Lay out the tables of bench/REPORT.md from the committed results, at $0. With --check,
+    exit 1 if a table of the results is not in the given report as generated."""
+    from fractalswarm.bench.tables import missing, report_tables
+
+    try:
+        made = report_tables(results)
+    except OSError as exc:
+        raise typer.BadParameter(f"cannot read the results in {results}: {exc}") from exc
+    if check is not None:
+        stale = missing(check.read_text(encoding="utf-8"), made)
+        for table in stale:
+            typer.echo(f"not in {check} word for word: {table}")
+        typer.echo(f"{len(made) - len(stale)} of {len(made)} tables are in {check}")
+        raise typer.Exit(1 if stale else 0)
+    if name is None:
+        typer.echo("\n\n".join(f"<!-- {table} -->\n{text}" for table, text in made.items()))
+    elif name in made:
+        typer.echo(made[name])
+    else:
+        raise typer.BadParameter(f"no table {name!r}; the tables are: {', '.join(made)}")
+
+
 def _serve(runs_dir: Path, host: str, port: int, open_run: str | None, browser: bool) -> None:
     import threading
     import webbrowser
