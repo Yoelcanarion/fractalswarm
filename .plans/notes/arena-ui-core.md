@@ -16,7 +16,7 @@ Branch `Yoelcanarion/arena-ui-core`. Web only: no Python was touched.
 | 8 Proof surfaces | done: timeline marks, replay badge, takeover chip (against `GET api/runs/{id}/takeover`, 404 fallback) |
 | 9 Muse lens | done: drawer, Muse meter, fixtures from two recorded runs (W3's API is merged) |
 | Build, screenshots, checks | done (see Checks and Screenshots) |
-| Answer buttons (Escalations panel) | in the source and tested; not in the bundle yet, not seen in a real browser yet (see Answer buttons) |
+| Answer buttons (Escalations panel) | done: in the bundle, and clicked in a real browser on a real server (see The GO window) |
 | Frame times, absolute | done in the quiet window of Oct 29 (19:23-19:27 CET): see Frame times; the 60 fps budget is not met |
 
 ## For W5: what to build on
@@ -512,8 +512,8 @@ gives up, 404, the caller gone), `AnswerBox.test.ts` (buttons, ruled mark, no op
 pending request, each verdict and the 409/422/404 refusals), `EscalationsPanel.test.ts` (buttons only with a `runId`, only while it
 waits, still there after an ignored answer), `api.test.ts` (route and body with the ids escaped; the refusal words verbatim;
 `fetchDisputes`).
-**Not yet done:** the buttons are not in the bundle (the last build predates them), and no real browser has clicked them. That needs
-a fake-LLM run with a waiting arbitration escalation (`arbitration: true`) on a server with scratch dirs, so it goes with the next build slot.
+Checked in a real browser on a real server in the GO window of Oct 29 evening (see The GO window): a 200, the owner's verdict read
+back, a 409 in the server's words.
 
 ### The quiet window (Oct 29: GO 19:21; my session was down 19:30-20:07 on a network error; finished 20:15)
 One build, a server on scratch dirs on port 8794, one headless Chromium at a time, fake backend only ($0), nothing written to
@@ -548,6 +548,49 @@ Found in the window:
 - My first `live.mjs` left its second job running (waiting for approval for ever) after the script failed; I cancelled it
   (`POST /api/jobs/{id}/cancel`) and the script now cancels a job it leaves behind.
 
+### The GO window (Oct 29 evening, 21:26-21:37 CET): build, tests, references, the answer buttons on a real server
+**Merge first.** arena `a6db325` (W5 MP1, W1's matrix, notes) is merged into this branch (`5d9c80b`). Only the static bundle conflicted
+(two builds of the same sources, two hashes); it was arena's until the rebuild below. `web/src` merged clean.
+
+| Step | Result |
+|---|---|
+| Build at tree `3a14838` (21:26) | vite 2.9 s, 6.5 s with `tsc`. `index-B9ApM25o.js` 1,205 kB (368 kB gzip), `index-CJ0yU3pF.css` 113 kB (22 kB gzip): W5's arena views are in it, which is the growth from 1,015 kB. `favicon.svg` restored |
+| tsc, vitest (one worker) | clean; 71 files / 1,122 tests |
+| `tests/integration/test_api.py` + `test_guard.py`, `ruff check` | 87 passed (10 s); all checks passed |
+| `demo --verify --no-serve --no-browser` | MATCH, 8,177 events, head `b052b4bc33cf` |
+| `$0` references vs `arena-c2b5e08` (`record_refs.ps1` then `compare_refs.py`, 2.5 min) | **43 of 43 runs have identical event bodies** (11 runs + 32 bench cells) |
+| The buttons on a real server (`pw/answer.mjs` and `esc/escalate.py`, scratch; 8794, one browser) | 15 of 15, below |
+| A second build (21:36), after the `lcrow` fix below | vite 0.8 s, 2.4 s with `tsc`: `index-CuucwkCz.js` 1,205 kB, `index-DDb34IoW.css` 113 kB. This is the bundle in the tree. vitest 72 files / 1,126 tests |
+
+**The answer buttons, clicked.** No recorded run holds an escalation, and a live one needs the scripted backend of
+`tests/integration/test_escalation_answer.py` (a forced dispute on S02, an arbiter that rules with confidence 0.4, the blurbs 50 s
+late so the run outlasts the time to answer). `esc/escalate.py` (scratch, not in git) records that run on the live clock (speed 2) into
+the scratch runs dir, once with `live_control` on and once off; the server finds it like any run. Fake LLM only, $0.
+- **Run A (takes controls; the ruling is B).** The panel shows "needs a human ... options A, B (ruled: B) · 58.5 s left" and the
+  buttons "A" and "B (ruled)". A click on A sends `POST /api/runs/{id}/escalations/arbitration%3Aspeaker%3AS02%3Aavailability` with
+  `{"choice":"A"}` and gets 200; the line reads "A: answer to arbitration:speaker:S02:availability requested for goal:root · asking
+  the server how the owner took it…", then "· accepted: A overrules B". The poll of `GET /disputes` came 451 ms after the request
+  (200). The row reads "overruled ... a person chose A over B", the buttons are gone, the line stays. The log holds one answer:
+  accepted, overruled, by human, reason "overrules B with A". No console error, page error or 404.
+- **Run B (not launched to take controls).** The same click gets 409 and the line is the server's own words: "A: run 'ui-ans-b-...' was
+  not launched to take controls: start it from the API". Nothing is read back from `/disputes` (0 requests in 6 s), and the buttons
+  stay, enabled: the escalation still waits. The browser logs its own "Failed to load resource ... 409" line, nothing else.
+- My first pass said 14 of 15: the script counted the `/disputes` requests at the instant the verdict showed, but the stream had
+  brought the verdict before the poll's first look at +0.4 s (the fallback of `withLoggedVerdict`: the box shows the verdict in the
+  page's own copy of the log). The look still comes; the script now waits for it. Not an app fault.
+- Shots (scratch): `win-answer2/answer-a-waiting`, `answer-a-verdict`, `answer-b-refused` (1920x1080).
+
+**Found by the click: two stylesheets, one class name.** The screenshot of the Panels page showed the Collisions card with a
+collision key wrapped one character per line. The Muse lens's call rows (`components/lens/CallList.tsx`, `styles/lens.css`) and the
+Collisions panel's rows (`components/CollisionsPanel.tsx`, `styles.css`) were both `crow`; the lens's `display: grid` won, so a
+collision row laid out as a call row (the key in a zero-width track). It has been so since step 9 and no check looked at a collision
+row. Measured on the real page: the row was 366 px tall with the key 0 px wide; after the rename it is 99 px tall, the key one line.
+The lens rows are `lcrow` now (CSS, `CallList.tsx`, my scratch scripts). `styles/classnames.test.ts` keeps the lens's class names to
+itself: no class the lens's stylesheet starts a rule with may also start a rule in another stylesheet, except `run`, `timeline` and
+`actor`, which the lens adds a property or two to on purpose (a positioning context, a minimum height, a pointer; none of them is a
+property the base rule sets). The six lens shots were taken again after the rename (`win-final2/`, 0 errors, publishable): the drawer
+is pixel-identical to the earlier one by eye. Shot of the card: `win-crow/collisions-card.png`.
+
 ### Plan for the quiet window (kept for the record; done above)
 1. `npm --prefix web run build` (about 4 s), restore `favicon.svg`.
 2. `lite_check.mjs` (scratch, not in git): opens the swarm run where edges are lit and reads the computed
@@ -570,6 +613,7 @@ Found in the window:
    strip out. The scratch script `final.mjs` (not in git) enforces it: a shot whose region overlaps a MISMATCH badge goes
    to `internal/` and is marked `publishable: false`.
 2. (done) The static bundle was rebuilt in the window (tree `46c524e`): the chip fix, the lite switch, the New task form, the
-   escalations panel and the dup/cdt port. The answer buttons (below) need one more build.
+   escalations panel and the dup/cdt port; and again in the GO window of the evening (arena merged, the answer buttons, the
+   `lcrow` fix: see The GO window).
 3. (done in the window) W2's merge is in arena (24995b5): the chip against the real endpoint ("Takeover OK ✓ 7 hand-overs" with
    MATCH) and the Verify button against the guard (JSON 200, bare 415).
