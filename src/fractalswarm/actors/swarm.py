@@ -9,7 +9,10 @@
   endpoint (``comms/channel_breakers.py``): ``True``, or a dict of ``GuardPolicy`` overrides
   (default: the spec's ``channel_breakers``, off). Nothing is recorded for a run without it;
 - ``"market"``: the economy's settings (``planning/taskspec.py: market_params``). Present
-  only when the epoch auction or autoscale is on; a log without it replays as off.
+  only when the epoch auction or autoscale is on; a log without it replays as off;
+- ``"arbitration"``: Wonder rules a semantic dispute between two contracts' facts at the lowest
+  common ancestor (``actors/arbitration.py``). Passed to the board and the root only when on,
+  so a run that never asked for it logs the spawn args it always did.
 
 ``central`` is the central baseline (spec §15.1) on the same task, the same LLM calls and the
 same chaos: one orchestrator plans every level and leads every squad, under the best-case
@@ -31,6 +34,7 @@ from typing import Any
 
 from fractalswarm.actors import events as _events  # noqa: F401  (registers the event types)
 from fractalswarm.actors.agent import agent_handle, agent_init
+from fractalswarm.actors.arbitration import TASK_HOOKS, DisputesView
 from fractalswarm.actors.board import BOARD, board_handle, board_init
 from fractalswarm.actors.orchestrator import (
     CENTRAL_MODES,
@@ -106,6 +110,7 @@ class SwarmScenario:
             CrossAuditView(),
             RunConfigView(),
             MarketView(),
+            DisputesView(),
         ]
         if self.mode in DURABLE_MODES:  # the rivals read their own calls back from the log
             views.append(OwnEffectsView())
@@ -154,13 +159,19 @@ class SwarmScenario:
             args["audit"] = True
         if bool(params.get("feasibility_report", spec.get("feasibility_report"))):
             args["feasibility"] = True
+        arbitration = bool(params.get("arbitration", spec.get("arbitration")))
+        if arbitration:
+            if spec["task"] not in TASK_HOOKS:
+                raise ValueError(f"arbitration needs a task with evidence: {sorted(TASK_HOOKS)}")
+            args["arbitration"] = True
         market = params.get("market") if self.mode == "swarm" else None
         if market is not None:
             args["market"] = market
         if autoscale is not None:
             args["autoscale"] = autoscale
         args |= self.sweep_knobs(params)
-        commands: list[Command] = [Spawn(actor_id=BOARD, kind="board", args={})]
+        board_args = {"arbitration": True} if arbitration else {}
+        commands: list[Command] = [Spawn(actor_id=BOARD, kind="board", args=board_args)]
         if args["relay"] is not None:
             commands.append(Spawn(actor_id=NET, kind=NET, args={}))
         commands.append(Spawn(actor_id=ROOT, kind="orchestrator", args=args))

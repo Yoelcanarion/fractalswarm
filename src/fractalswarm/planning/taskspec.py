@@ -92,6 +92,10 @@ class TaskSpec(BaseModel):
     channel_breakers: bool = False  # per-pair and per-topic bus breakers (spec §8); opt-in
     cross_audit: bool = False  # a sibling audits sampled contracts (spec §11.3)
     feasibility_report: bool = False  # emit the feasibility report at plan approval (§12)
+    # Wonder rules a semantic dispute between two contracts' facts at the lowest common ancestor
+    # (actors/arbitration.py). Left out of the recorded spec, which a default run keeps as it was;
+    # a run that asks for it records ``params["arbitration"]`` instead (run_params).
+    arbitration: bool = Field(default=False, exclude=True)
 
     @classmethod
     def load(cls, path: Path) -> "TaskSpec":
@@ -174,7 +178,7 @@ def run_params(spec: TaskSpec) -> dict[str, Any]:
 
 def _with_economy(spec: TaskSpec, params: dict[str, Any]) -> dict[str, Any]:
     """Leave the economy's defaults out of the recorded spec, so a default run's log stays as
-    it was, and add the economy's resolved numbers when it is on."""
+    it was, and add the economy's resolved numbers (and the arbitration flag) when they are on."""
     recorded = params["spec"]
     if spec.market == Market():  # opt-in settings stay out of a default run's log
         del recorded["market"]
@@ -184,6 +188,8 @@ def _with_economy(spec: TaskSpec, params: dict[str, Any]) -> dict[str, Any]:
     economy = market_params(spec)
     if economy is not None:
         params["market"] = economy
+    if spec.arbitration:  # opt-in: a run that never asked for it records nothing new
+        params["arbitration"] = True
     return params
 
 
