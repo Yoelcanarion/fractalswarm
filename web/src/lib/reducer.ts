@@ -11,7 +11,8 @@
 //   member.dead         {member, incarnation?}                 envelope member_epoch is bumped
 //   tree.adopted        {dead [from], adopter [to, new_parent], children?, duties?}
 //   ownership.assigned  {key, owner}
-//   ownership.remapped  {key | keys, owner [to], previous [from], duties?}   duties ["root"] = root succession
+//   ownership.remapped  {key | keys, owner [to], previous [from], duties?}   the key `root` moving is the root
+//                                                                            succession; it carries no `duties`
 //
 // The baselines' supervised coordinator (baseline.crashed -> baseline.restarted) takes the node
 // through "restarting": ``outage`` carries what the restart ring needs, and ``supervision`` keeps one
@@ -24,6 +25,7 @@
 import { emptyArena, fingerprint, foldArena, type ArenaState } from "./arena";
 import { eventGroup } from "./eventlog";
 import { asNumber, asString } from "./generic";
+import { isInfraKind } from "./layout";
 import { emptyPanels, foldPanels, type PanelsState } from "./panels";
 import { emptySchedule, foldSchedule, type ScheduleState } from "./schedule";
 import { emptySupervision, foldSupervision, type SupervisionState } from "./supervision";
@@ -127,6 +129,8 @@ export interface ViewState {
 }
 
 export const MESSAGE_WINDOW = 40;
+// The root duties, and the ownership key whose owner holds them (spec §5.3).
+const ROOT = "root";
 const KILL_REASONS = new Set(["killed", "chaos", "crash", "crashed"]);
 const HEARTBEAT_TOPICS = new Set(["heartbeat", "member.heartbeat"]);
 // Faults of the chaos network: thousands per run, so they are counted, not listed.
@@ -233,8 +237,7 @@ function adopt(state: ViewState, event: RunEvent): ViewState {
 function addDuties(state: ViewState, id: string, duties: string[]): ViewState {
   const actor = state.actors[id];
   if (!actor || duties.length === 0) return state;
-  const merged = [...actor.duties, ...duties.filter((d) => !actor.duties.includes(d))];
-  return patchActor(state, id, { duties: merged });
+  return patchActor(state, id, { duties: [...new Set([...actor.duties, ...duties])] });
 }
 
 function foldCore(state: ViewState, event: RunEvent): ViewState {
@@ -246,15 +249,17 @@ function foldCore(state: ViewState, event: RunEvent): ViewState {
       return { ...state, completed: true };
     case "actor.spawned": {
       const id = String(p.actor_id);
+      const kind = String(p.kind);
       const node: ActorNode = {
         id,
-        kind: String(p.kind),
+        kind,
         parent: p.parent ?? null,
         originalParent: p.parent ?? null,
         spawnedSeq: event.seq,
         status: "alive",
         suspected: false,
-        duties: p.parent ? [] : ["root"],
+        // The board, the network and the chaos monkey are spawned with no parent too, and are not the root.
+        duties: p.parent || isInfraKind(kind) ? [] : [ROOT],
         llmCalls: 0,
         tokens: 0,
         lastActiveSeq: event.seq,
@@ -364,7 +369,9 @@ function foldCore(state: ViewState, event: RunEvent): ViewState {
       const owner = String(p.owner ?? p.to);
       const ownership = { ...state.ownership };
       for (const key of keys) ownership[key] = owner;
-      const next = addDuties({ ...state, ownership }, owner, asList(p.duties));
+      // A real root takeover is this event for the key `root`, with no `duties`: the heir takes them on.
+      const duties = keys.includes(ROOT) ? [...asList(p.duties), ROOT] : asList(p.duties);
+      const next = addDuties({ ...state, ownership }, owner, duties);
       return bump(next, { remappedKeys: keys.length });
     }
     default:
@@ -394,9 +401,14 @@ export function foldEvent(state: ViewState, event: RunEvent): ViewState {
 export const foldEvents = (events: RunEvent[], from: ViewState = emptyView()): ViewState =>
   events.reduce(foldEvent, from);
 
-/** Root duties: the original root while alive, else whoever took them over (spec §5.3). */
+/** Who holds the root duties now (spec §5.3). The log says: the owner of the `root` key, which a takeover
+ * moves (it stays with a dead owner until its heir takes over). Before any takeover, and in a run that
+ * never remaps (a baseline), it is the root actor: the one spawned with no parent that is not
+ * infrastructure. A log that gives the duties by `duties` alone falls to the last of them still alive. */
 export function rootHolder(state: ViewState): string | null {
-  const holders = state.order.filter((id) => state.actors[id].duties.includes("root"));
+  const owner = state.ownership[ROOT];
+  if (owner !== undefined && state.actors[owner]) return owner;
+  const holders = state.order.filter((id) => state.actors[id].duties.includes(ROOT));
   const alive = holders.filter((id) => state.actors[id].status === "alive");
   return alive.at(-1) ?? holders.at(-1) ?? null;
 }
