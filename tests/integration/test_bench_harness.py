@@ -22,6 +22,7 @@ from fractalswarm.bench.harness import (
     aggregate,
     preflight,
     read_results,
+    rescore,
     resolve_out_dir,
     run_matrix,
 )
@@ -60,6 +61,29 @@ async def test_smoke_matrix_runs_end_to_end(tmp_path: Path) -> None:
     png, js = (Path(path) for path in report.chart_paths)
     assert png.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
     assert set(json.loads(js.read_text(encoding="utf-8"))["series"]) == {"toy"}
+
+
+async def test_rescore_recomputes_the_metrics_of_a_finished_matrix_from_its_logs(
+    tmp_path: Path,
+) -> None:
+    report = await run_matrix(smoke(["1"]), tmp_path, options())
+    before = read_results(Path(report.csv_path))
+    cells = sorted((tmp_path / "cells").glob("*.json"))
+    # A result written before the arena has no recovery metrics ...
+    old = CellResult.model_validate_json(cells[0].read_text(encoding="utf-8"))
+    bare = old.metrics.model_copy(update={"recovery": None})
+    cells[0].write_text(old.model_copy(update={"metrics": bare}).model_dump_json(indent=2))
+    assert aggregate([CellResult.model_validate_json(cells[0].read_text())])[0]["cdt_s"] is None
+    # ... and one whose run directory was deleted cannot be scored again.
+    gone = CellResult.model_validate_json(cells[1].read_text(encoding="utf-8"))
+    shutil.rmtree(tmp_path / gone.run_dir)
+
+    done = rescore(tmp_path)
+    assert done.missing == [gone.cell] and not done.failed
+    assert len(done.rescored) == len(cells) - 1
+    assert done.changed == {}, "the same logs give the numbers every earlier result carries"
+    assert read_results(Path(done.csv_path)) == before
+    assert Path(done.json_path).exists()
 
 
 async def test_the_matrix_resumes_and_reruns_half_finished_cells(tmp_path: Path) -> None:
@@ -303,6 +327,36 @@ def test_cli_fake_smoke(tmp_path: Path) -> None:
     again = runner.invoke(app, ["bench", str(SMOKE), "--fake", "--out", str(tmp_path)])
     assert "ran 0, skipped 8" in again.output
     shutil.rmtree(tmp_path / "runs")
+
+
+def test_cli_rescore_and_verdicts_read_a_finished_matrix(tmp_path: Path) -> None:
+    runner = CliRunner()
+    assert (
+        runner.invoke(app, ["bench", str(SMOKE), "--fake", "--out", str(tmp_path)]).exit_code == 0
+    )
+    done = runner.invoke(app, ["bench", "rescore", str(tmp_path)])
+    assert done.exit_code == 0, done.output
+    assert "rescored 8, run directory gone 0, failed 0" in done.output
+    assert "MOVED" not in done.output
+    shown = runner.invoke(app, ["bench", "verdicts", str(tmp_path)])
+    assert shown.exit_code == 0, shown.output
+    assert "Outcome PENDING" in shown.output
+    assert not (tmp_path / "honesty.json").exists() and not (tmp_path / "regime.png").exists()
+    written = runner.invoke(app, ["bench", "verdicts", str(tmp_path), "--prereg"])
+    assert written.exit_code == 0 and (tmp_path / "honesty.json").is_file()
+    assert (tmp_path / "regime.png").is_file() and (tmp_path / "regime.json").is_file()
+    stamped = json.loads((tmp_path / "regime.json").read_text(encoding="utf-8"))
+    assert stamped["prereg"]["sha"] and stamped["outcome"] == "pending"
+    assert runner.invoke(app, ["bench", "rescore", str(tmp_path / "cells")]).exit_code != 0
+    assert runner.invoke(app, ["bench", "verdicts", str(tmp_path / "nowhere")]).exit_code != 0
+    assert runner.invoke(app, ["bench", "verdicts", str(tmp_path), "--json", "x"]).exit_code != 0
+    shutil.rmtree(tmp_path / "runs")
+
+
+def test_cli_bench_help_lists_the_three_commands() -> None:
+    shown = CliRunner().invoke(app, ["bench", "--help"])
+    assert shown.exit_code == 0
+    assert all(name in shown.output for name in ("run", "rescore", "verdicts"))
 
 
 def test_cli_refuses_real_runs_without_confirmation(tmp_path: Path) -> None:

@@ -1,0 +1,267 @@
+{
+  "seed": "4",
+  "fields": [
+    "ceo",
+    "headquarters",
+    "founded_year",
+    "employees",
+    "revenue_musd",
+    "ticker",
+    "industry",
+    "product"
+  ],
+  "companies": [
+    "Arbor Analytics",
+    "Arbor Energy",
+    "Brightline Systems",
+    "Cobalt Robotics",
+    "Fjord Foods",
+    "Fjord Robotics",
+    "Juniper Foods",
+    "Juniper Systems",
+    "Nimbus Works",
+    "Orchard Analytics"
+  ],
+  "docs": [
+    {
+      "id": "doc-01",
+      "date": "2024-02-14",
+      "title": "Fjord Foods: update of 2024-02-14",
+      "text": "Its rival Juniper Systems, by contrast, is run by Hugo Ivanova. Since its founding in 1990, Fjord Foods has grown. From its head office in Turin, Fjord Foods serves customers in many countries. Fjord Foods sells Keystone 7, its best-known product. Fjord Foods is led by chief executive Nadia Jensen. The report covers the last 25 months of activity. Fjord Foods is a payments company."
+    },
+    {
+      "id": "doc-02",
+      "date": "2023-07-17",
+      "title": "Nimbus Works: update of 2023-07-17",
+      "text": "Nimbus Works was founded in 1983. Its flagship product is Lattice 2. The company's headcount stands at 22,479 employees. Annual revenue reached $2152 million. Nimbus Works is a logistics software company. Analysts expect the market to grow by 84% next year. Juniper Systems posted $3409 million in revenue."
+    },
+    {
+      "id": "doc-03",
+      "date": "2025-02-14",
+      "title": "Brightline Systems: update of 2025-02-14",
+      "text": "CEO Bruno Costa said Brightline Systems expects a busy year. Rival Arbor Analytics has 23,772 staff. Brightline Systems sells Lattice 4, its best-known product. Analysts expect the market to grow by 27% next year. The company's headcount stands at 14,642 employees. Brightline Systems is a industrial robotics company. Brightline Systems reported revenue of $2410 million for the year."
+    },
+    {
+      "id": "doc-04",
+      "date": "2024-08-05",
+      "title": "Orchard Analytics: update of 2024-08-05",
+      "text": "Orchard Analytics trades under the ticker ORCX. Annual revenue reached $264 million. About 20 customers attended the annual conference. Its rival Fjord Robotics, by contrast, is run by Dmitri Brandt. CEO Quentin Eriksen said Orchard Analytics expects a busy year. Orchard Analytics is a satellite data company. Orchard Analytics is headquartered in Cork."
+    },
+    {
+      "id": "doc-05",
+      "date": "2023-02-14",
+      "title": "Fjord Foods: update of 2023-02-14",
+      "text": "The company's headcount stands at 10,317 employees. Annual revenue reached $3069 million. Rival Cobalt Robotics has 24,960 staff. Fjord Foods works in payments. From its head office in Turin, Fjord Foods serves customers in many countries. Fjord Foods sells Keystone 7, its best-known product. The report covers the last 85 months of activity."
+    },
+    {
+      "id": "doc-06",
+      "date": "2024-07-29",
+      "title": "Juniper Systems: update of 2024-07-29",
+      "text": "Since its founding in 1982, Juniper Systems has grown. Juniper Systems sells Quill 8, its best-known product. CEO Bruno Lindqvist said Juniper Systems expects a busy year. Annual revenue reached $2955 million. About 66 customers attended the annual conference. Juniper Systems is headquartered in Osaka. Arbor Analytics competes with its own product, Mosaic 7."
+    },
+    {
+      "id": "doc-07",
+      "date": "2024-02-19",
+      "title": "Arbor Energy: update of 2024-02-19",
+      "text": "Arbor Energy is led by chief executive Quentin Haddad. Shares of Arbor Energy (ARBZ) rose this week. The company's headcount stands at 12,597 employees. Arbor Energy sells Atlas 8, its best-known product. The report covers the last 36 months of activity. Arbor Energy is headquartered in Valencia. Rival Cobalt Robotics has 22,770 staff."
+    },
+    {
+      "id": "doc-08",
+      "date": "2025-03-29",
+      "title": "Fjord Foods: update of 2025-03-29",
+      "text": "Nimbus Works competes with its own product, Flux 2. Fjord Foods sells Jade 2, its best-known product. Fjord Foods was founded in 1990. Analysts expect the market to grow by 88% next year. Fjord Foods is a payments company. Annual revenue reached $3069 million. Fjord Foods is headquartered in Turin."
+    },
+    {
+      "id": "doc-09",
+      "date": "2024-04-05",
+      "title": "Juniper Foods: update of 2024-04-05",
+      "text": "Shares of Juniper Foods (JUNQ) rose this week. Juniper Foods was founded in 2016. Nimbus Works posted $2759 million in revenue. Juniper Foods works in payments. Juniper Foods now employs 10,826 people. Annual revenue reached $235 million. About 85 customers attended the annual conference."
+    },
+    {
+      "id": "doc-10",
+      "date": "2023-04-07",
+      "title": "Brightline Systems: update of 2023-04-07",
+      "text": "The company's headcount stands at 14,642 employees. The company opened 46 new offices in the region. CEO Bruno Dubois said Brightline Systems expects a busy year. Brightline Systems works in industrial robotics. Its rival Cobalt Robotics, by contrast, is run by Chiara Eriksen. Annual revenue reached $2410 million. Brightline Systems sells Orbit 8, its best-known product."
+    },
+    {
+      "id": "doc-11",
+      "date": "2023-07-14",
+      "title": "Juniper Foods: update of 2023-07-14",
+      "text": "Its flagship product is Mosaic 4. Juniper Foods works in payments. Shares of Juniper Foods (JUNQ) rose this week. Juniper Foods reported revenue of $235 million for the year. CEO Tomas Eriksen said Juniper Foods expects a busy year. The report covers the last 58 months of activity. Nimbus Works posted $532 million in revenue."
+    },
+    {
+      "id": "doc-12",
+      "date": "2024-04-01",
+      "title": "Fjord Robotics: update of 2024-04-01",
+      "text": "Fjord Robotics is led by chief executive Omar Ivanova. Analysts expect the market to grow by 69% next year. Its flagship product is Nova 7. Fjord Robotics was founded in 1978. Competitor Fjord Foods is based in Toronto. From its head office in Leipzig, Fjord Robotics serves customers in many countries. Shares of Fjord Robotics (FJOZ) rose this week."
+    },
+    {
+      "id": "doc-13",
+      "date": "2023-04-01",
+      "title": "Juniper Systems: update of 2023-04-01",
+      "text": "Shares of Juniper Systems (JUNX) rose this week. Since its founding in 1982, Juniper Systems has grown. The report covers the last 39 months of activity. The company's headcount stands at 14,279 employees. Competitor Juniper Foods is based in Tallinn. Juniper Systems works in logistics software. From its head office in Osaka, Juniper Systems serves customers in many countries."
+    },
+    {
+      "id": "doc-14",
+      "date": "2024-12-30",
+      "title": "Arbor Analytics: update of 2024-12-30",
+      "text": "Analysts expect the market to grow by 14% next year. Shares of Arbor Analytics (ARBX) rose this week. Its rival Juniper Systems, by contrast, is run by Farid Haddad. CEO Omar Costa said Arbor Analytics expects a busy year. From its head office in Toronto, Arbor Analytics serves customers in many countries. Arbor Analytics sells Nova 6, its best-known product. The company's headcount stands at 23,174 employees."
+    },
+    {
+      "id": "doc-15",
+      "date": "2023-12-20",
+      "title": "Brightline Systems: update of 2023-12-20",
+      "text": "Brightline Systems now employs 14,642 people. The report covers the last 9 months of activity. Brightline Systems is a industrial robotics company. Cobalt Robotics competes with its own product, Keystone 5. CEO Bruno Costa said Brightline Systems expects a busy year. Its flagship product is Orbit 3. Brightline Systems is headquartered in Toronto."
+    },
+    {
+      "id": "doc-16",
+      "date": "2025-02-12",
+      "title": "Fjord Robotics: update of 2025-02-12",
+      "text": "The report covers the last 45 months of activity. Its rival Juniper Foods, by contrast, is run by Bruno Eriksen. CEO Bruno Ivanova said Fjord Robotics expects a busy year. Its flagship product is Nova 7. Fjord Robotics trades under the ticker FJOZ. Fjord Robotics works in industrial robotics. Fjord Robotics reported revenue of $3387 million for the year."
+    },
+    {
+      "id": "doc-17",
+      "date": "2025-05-30",
+      "title": "Nimbus Works: update of 2025-05-30",
+      "text": "Annual revenue reached $2403 million. Competitor Fjord Robotics is based in Lisbon. Shares of Nimbus Works (NIMX) rose this week. Nimbus Works is a logistics software company. The company opened 79 new offices in the region. Nimbus Works sells Relay 3, its best-known product. Nimbus Works is headquartered in Tallinn."
+    },
+    {
+      "id": "doc-18",
+      "date": "2025-05-04",
+      "title": "Juniper Foods: update of 2025-05-04",
+      "text": "Rival Fjord Robotics has 21,538 staff. Juniper Foods is led by chief executive Tomas Eriksen. Juniper Foods reported revenue of $235 million for the year. Juniper Foods trades under the ticker JUNQ. From its head office in Nantes, Juniper Foods serves customers in many countries. The company's headcount stands at 5,046 employees. The company opened 8 new offices in the region."
+    },
+    {
+      "id": "doc-19",
+      "date": "2023-09-13",
+      "title": "Arbor Analytics: update of 2023-09-13",
+      "text": "Arbor Analytics sells Atlas 3, its best-known product. The report covers the last 23 months of activity. Cobalt Robotics competes with its own product, Atlas 7. Arbor Analytics trades under the ticker ARBX. Annual revenue reached $2308 million. CEO Rosa Brandt said Arbor Analytics expects a busy year. Arbor Analytics is a plant-based foods company."
+    },
+    {
+      "id": "doc-20",
+      "date": "2023-10-08",
+      "title": "Arbor Analytics: update of 2023-10-08",
+      "text": "Arbor Analytics is led by chief executive Omar Costa. Its rival Brightline Systems, by contrast, is run by Jonas Brandt. The report covers the last 48 months of activity. Annual revenue reached $2308 million. From its head office in Lyon, Arbor Analytics serves customers in many countries. Arbor Analytics was founded in 1988. Its flagship product is Delta 8."
+    },
+    {
+      "id": "doc-21",
+      "date": "2023-10-20",
+      "title": "Juniper Systems: update of 2023-10-20",
+      "text": "Competitor Arbor Energy is based in Toronto. About 41 customers attended the annual conference. Juniper Systems trades under the ticker JUNX. Juniper Systems works in logistics software. Since its founding in 1982, Juniper Systems has grown. Juniper Systems is headquartered in Osaka. Juniper Systems sells Quill 8, its best-known product."
+    },
+    {
+      "id": "doc-22",
+      "date": "2023-01-16",
+      "title": "Fjord Robotics: update of 2023-01-16",
+      "text": "The report covers the last 48 months of activity. Fjord Robotics is led by chief executive Rosa Jensen. Fjord Robotics is a industrial robotics company. Fjord Robotics reported revenue of $1382 million for the year. Competitor Fjord Foods is based in Lisbon. Its flagship product is Cascade 8. From its head office in Leipzig, Fjord Robotics serves customers in many countries."
+    },
+    {
+      "id": "doc-23",
+      "date": "2024-09-21",
+      "title": "Orchard Analytics: update of 2024-09-21",
+      "text": "Annual revenue reached $264 million. Orchard Analytics is led by chief executive Quentin Eriksen. Its flagship product is Prism 7. Juniper Systems competes with its own product, Delta 7. Orchard Analytics was founded in 1982. Orchard Analytics is a satellite data company. Analysts expect the market to grow by 24% next year."
+    },
+    {
+      "id": "doc-24",
+      "date": "2024-11-25",
+      "title": "Orchard Analytics: update of 2024-11-25",
+      "text": "Orchard Analytics was founded in 1982. Orchard Analytics reported revenue of $2840 million for the year. Orchard Analytics is led by chief executive Jonas Brandt. Competitor Cobalt Robotics is based in Cork. Orchard Analytics is headquartered in Denver. About 2 customers attended the annual conference. Orchard Analytics now employs 23,364 people."
+    },
+    {
+      "id": "doc-25",
+      "date": "2024-02-26",
+      "title": "Arbor Analytics: update of 2024-02-26",
+      "text": "From its head office in Toronto, Arbor Analytics serves customers in many countries. Arbor Analytics sells Delta 8, its best-known product. Arbor Analytics works in plant-based foods. Fjord Foods competes with its own product, Lattice 2. Since its founding in 1988, Arbor Analytics has grown. Analysts expect the market to grow by 12% next year. Arbor Analytics trades under the ticker ARBX."
+    },
+    {
+      "id": "doc-26",
+      "date": "2023-06-09",
+      "title": "Cobalt Robotics: update of 2023-06-09",
+      "text": "Cobalt Robotics is led by chief executive Nadia Ferreira. Cobalt Robotics was founded in 1984. Cobalt Robotics now employs 16,980 people. Its rival Arbor Analytics, by contrast, is run by Greta Okafor. Cobalt Robotics is a plant-based foods company. Cobalt Robotics trades under the ticker COBQ. The company opened 33 new offices in the region."
+    },
+    {
+      "id": "doc-27",
+      "date": "2025-01-27",
+      "title": "Cobalt Robotics: update of 2025-01-27",
+      "text": "Cobalt Robotics reported revenue of $3166 million for the year. From its head office in Osaka, Cobalt Robotics serves customers in many countries. Cobalt Robotics is led by chief executive Nadia Ferreira. The company opened 28 new offices in the region. Competitor Orchard Analytics is based in Utrecht. The company's headcount stands at 19,390 employees. Since its founding in 1984, Cobalt Robotics has grown."
+    },
+    {
+      "id": "doc-28",
+      "date": "2025-03-24",
+      "title": "Brightline Systems: update of 2025-03-24",
+      "text": "The company opened 42 new offices in the region. Since its founding in 2006, Brightline Systems has grown. Its flagship product is Delta 8. Shares of Brightline Systems (BRIY) rose this week. Brightline Systems now employs 16,239 people. From its head office in Toronto, Brightline Systems serves customers in many countries. Rival Orchard Analytics has 15,773 staff. Brightline Systems works in industrial robotics."
+    },
+    {
+      "id": "doc-29",
+      "date": "2023-04-04",
+      "title": "Cobalt Robotics: update of 2023-04-04",
+      "text": "Rival Nimbus Works has 19,662 staff. Annual revenue reached $2243 million. Cobalt Robotics sells Glide 7, its best-known product. The company opened 10 new offices in the region. Cobalt Robotics now employs 3,016 people. Since its founding in 1984, Cobalt Robotics has grown. Cobalt Robotics is a plant-based foods company."
+    },
+    {
+      "id": "doc-30",
+      "date": "2025-03-30",
+      "title": "Fjord Foods: update of 2025-03-30",
+      "text": "The company opened 29 new offices in the region. Its flagship product is Jade 2. Juniper Systems posted $2980 million in revenue. Fjord Foods works in payments. Fjord Foods trades under the ticker FJOX. From its head office in Turin, Fjord Foods serves customers in many countries. Annual revenue reached $3069 million."
+    },
+    {
+      "id": "doc-31",
+      "date": "2025-01-02",
+      "title": "Arbor Energy: update of 2025-01-02",
+      "text": "Arbor Energy is a plant-based foods company. Arbor Energy is led by chief executive Quentin Haddad. The company's headcount stands at 12,597 employees. Arbor Energy trades under the ticker ARBZ. Rival Arbor Analytics has 23,663 staff. Its flagship product is Atlas 8. The company opened 44 new offices in the region."
+    },
+    {
+      "id": "doc-32",
+      "date": "2023-01-17",
+      "title": "Arbor Energy: update of 2023-01-17",
+      "text": "Analysts expect the market to grow by 28% next year. Shares of Arbor Energy (ARBZ) rose this week. From its head office in Valencia, Arbor Energy serves customers in many countries. Arbor Energy now employs 19,208 people. CEO Rosa Okafor said Arbor Energy expects a busy year. Since its founding in 2017, Arbor Energy has grown. Rival Brightline Systems has 4,670 staff."
+    },
+    {
+      "id": "doc-33",
+      "date": "2023-07-09",
+      "title": "Arbor Energy: update of 2023-07-09",
+      "text": "Its rival Juniper Systems, by contrast, is run by Chiara Nakamura. Arbor Energy sells Glide 5, its best-known product. Arbor Energy is led by chief executive Rosa Okafor. The company opened 18 new offices in the region. Arbor Energy was founded in 2017. Arbor Energy now employs 12,597 people. Annual revenue reached $2366 million."
+    },
+    {
+      "id": "doc-34",
+      "date": "2024-04-22",
+      "title": "Nimbus Works: update of 2024-04-22",
+      "text": "The company opened 33 new offices in the region. Nimbus Works works in logistics software. CEO Ines Jensen said Nimbus Works expects a busy year. Shares of Nimbus Works (NIMX) rose this week. The company's headcount stands at 24,866 employees. Nimbus Works sells Relay 3, its best-known product. Orchard Analytics competes with its own product, Nova 2."
+    },
+    {
+      "id": "doc-35",
+      "date": "2023-07-14",
+      "title": "Orchard Analytics: update of 2023-07-14",
+      "text": "Orchard Analytics trades under the ticker ORCX. Orchard Analytics reported revenue of $264 million for the year. Analysts expect the market to grow by 81% next year. Orchard Analytics is a satellite data company. Its flagship product is Echo 7. Rival Brightline Systems has 872 staff. The company's headcount stands at 13,248 employees."
+    },
+    {
+      "id": "doc-36",
+      "date": "2023-02-22",
+      "title": "Nimbus Works: update of 2023-02-22",
+      "text": "Nimbus Works is led by chief executive Sven Ferreira. Juniper Foods competes with its own product, Jade 5. Nimbus Works reported revenue of $2152 million for the year. The report covers the last 60 months of activity. Nimbus Works is a logistics software company. Nimbus Works was founded in 1983. Its flagship product is Lattice 2."
+    },
+    {
+      "id": "doc-37",
+      "date": "2024-04-04",
+      "title": "Cobalt Robotics: update of 2024-04-04",
+      "text": "Annual revenue reached $3166 million. Brightline Systems posted $182 million in revenue. Cobalt Robotics is a plant-based foods company. Since its founding in 1984, Cobalt Robotics has grown. From its head office in Osaka, Cobalt Robotics serves customers in many countries. The company opened 30 new offices in the region. Its flagship product is Ion 2."
+    },
+    {
+      "id": "doc-38",
+      "date": "2023-07-11",
+      "title": "Fjord Robotics: update of 2023-07-11",
+      "text": "Since its founding in 1978, Fjord Robotics has grown. Fjord Robotics is headquartered in Leipzig. Annual revenue reached $1382 million. The report covers the last 61 months of activity. Competitor Arbor Analytics is based in Porto. Its flagship product is Cascade 8. Fjord Robotics now employs 5,264 people. Shares of Fjord Robotics (FJOZ) rose this week."
+    },
+    {
+      "id": "doc-39",
+      "date": "2023-02-21",
+      "title": "Juniper Systems: update of 2023-02-21",
+      "text": "Juniper Systems sells Quill 8, its best-known product. The report covers the last 85 months of activity. Juniper Systems is led by chief executive Bruno Lindqvist. Juniper Systems is headquartered in Osaka. Annual revenue reached $1898 million. Juniper Systems works in logistics software. Its rival Fjord Foods, by contrast, is run by Omar Eriksen."
+    },
+    {
+      "id": "doc-40",
+      "date": "2023-07-22",
+      "title": "Juniper Foods: update of 2023-07-22",
+      "text": "Its flagship product is Mosaic 5. Juniper Foods now employs 10,826 people. Shares of Juniper Foods (JUNQ) rose this week. Competitor Nimbus Works is based in Austin. Since its founding in 2016, Juniper Foods has grown. The report covers the last 9 months of activity. From its head office in Nantes, Juniper Foods serves customers in many countries."
+    }
+  ]
+}

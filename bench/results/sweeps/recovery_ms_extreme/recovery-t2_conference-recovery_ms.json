@@ -1,0 +1,155 @@
+{
+  "axis": "recovery_ms",
+  "panels": [
+    {
+      "label": "Time to recover (s)",
+      "metric": "ttr_own_mean_s",
+      "note": "crash to the heir or the restart"
+    },
+    {
+      "label": "Coordinator-dependency time (contract-s)",
+      "metric": "cdt_s",
+      "note": "work that waited for a dead coordinator"
+    },
+    {
+      "label": "Blast radius (% of sessions)",
+      "metric": "blast_sessions_mean_pct",
+      "note": "held up by one crash"
+    },
+    {
+      "label": "Idle agent-seconds",
+      "metric": "idle_agent_s",
+      "note": "free agents whose session was waiting"
+    },
+    {
+      "label": "Preserved work (%)",
+      "metric": "preserved_pct",
+      "note": "calls in flight at a crash that were used"
+    },
+    {
+      "label": "Duplicated spend ($)",
+      "metric": "dup_usd",
+      "note": "work paid twice, by every cause"
+    }
+  ],
+  "profile": "C3",
+  "series": {
+    "durable": {
+      "color": "#6250d6",
+      "points": [
+        {
+          "blast_sessions_mean_pct": 13.333333333333334,
+          "blast_sessions_mean_pct_max": 20.0,
+          "blast_sessions_mean_pct_min": 6.666666666666667,
+          "cdt_s": 3.0,
+          "cdt_s_max": 3.5,
+          "cdt_s_min": 2.5,
+          "dup_usd": 0.054834833333333347,
+          "dup_usd_max": 0.07692125000000001,
+          "dup_usd_min": 0.03333350000000001,
+          "idle_agent_s": 2.0,
+          "idle_agent_s_max": 3.0,
+          "idle_agent_s_min": 1.0,
+          "preserved_pct": 71.16032116032116,
+          "preserved_pct_max": 73.07692307692308,
+          "preserved_pct_min": 68.18181818181819,
+          "runs": [
+            "runs/durable__t2_conference__C3__s1__recovery_ms-500",
+            "runs/durable__t2_conference__C3__s2__recovery_ms-500",
+            "runs/durable__t2_conference__C3__s3__recovery_ms-500"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 0.5,
+          "ttr_own_mean_s_max": 0.5,
+          "ttr_own_mean_s_min": 0.5,
+          "x": 500.0
+        }
+      ]
+    },
+    "durable-max": {
+      "color": "#008300",
+      "points": [
+        {
+          "blast_sessions_mean_pct": 7.777777777777779,
+          "blast_sessions_mean_pct_max": 13.333333333333334,
+          "blast_sessions_mean_pct_min": 3.3333333333333335,
+          "cdt_s": 1.0416666666666667,
+          "cdt_s_max": 1.604,
+          "cdt_s_min": 0.5,
+          "dup_usd": 0.021106833333333335,
+          "dup_usd_max": 0.024890500000000003,
+          "dup_usd_min": 0.01790175,
+          "idle_agent_s": 0.736,
+          "idle_agent_s_max": 1.208,
+          "idle_agent_s_min": 0.5,
+          "preserved_pct": 94.43478260869566,
+          "preserved_pct_max": 100.0,
+          "preserved_pct_min": 91.30434782608695,
+          "runs": [
+            "runs/durable-max__t2_conference__C3__s1__recovery_ms-500",
+            "runs/durable-max__t2_conference__C3__s2__recovery_ms-500",
+            "runs/durable-max__t2_conference__C3__s3__recovery_ms-500"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 0.5,
+          "ttr_own_mean_s_max": 0.5,
+          "ttr_own_mean_s_min": 0.5,
+          "x": 500.0
+        }
+      ]
+    },
+    "swarm": {
+      "color": "#2a78d6",
+      "points": [
+        {
+          "blast_sessions_mean_pct": 4.444444444444445,
+          "blast_sessions_mean_pct_max": 6.666666666666667,
+          "blast_sessions_mean_pct_min": 0.0,
+          "cdt_s": 0.769,
+          "cdt_s_max": 1.357,
+          "cdt_s_min": 0.0,
+          "dup_usd": 0.16912341666666664,
+          "dup_usd_max": 0.22654474999999993,
+          "dup_usd_min": 0.08488524999999998,
+          "idle_agent_s": 0.169,
+          "idle_agent_s_max": 0.45,
+          "idle_agent_s_min": 0.0,
+          "preserved_pct": 88.33333333333333,
+          "preserved_pct_max": 90.0,
+          "preserved_pct_min": 87.5,
+          "runs": [
+            "runs/swarm__t2_conference__C3__s1__recovery_ms-500",
+            "runs/swarm__t2_conference__C3__s2__recovery_ms-500",
+            "runs/swarm__t2_conference__C3__s3__recovery_ms-500"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 0.6699999999999999,
+          "ttr_own_mean_s_max": 0.6799999999999999,
+          "ttr_own_mean_s_min": 0.6599999999999999,
+          "x": 500.0
+        }
+      ]
+    }
+  },
+  "task": "t2_conference",
+  "title": "sweep-recovery-ms-extreme",
+  "x": [
+    500.0
+  ],
+  "x_label": "Detection and restart time (s), the same for both",
+  "x_labels": [
+    "0.5"
+  ]
+}

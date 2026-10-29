@@ -1,0 +1,345 @@
+{
+  "axis": "rival_restart_ms",
+  "panels": [
+    {
+      "label": "Time to recover (s)",
+      "metric": "ttr_own_mean_s",
+      "note": "crash to the heir or the restart"
+    },
+    {
+      "label": "Coordinator-dependency time (contract-s)",
+      "metric": "cdt_s",
+      "note": "work that waited for a dead coordinator"
+    },
+    {
+      "label": "Blast radius (% of sessions)",
+      "metric": "blast_sessions_mean_pct",
+      "note": "held up by one crash"
+    },
+    {
+      "label": "Idle agent-seconds",
+      "metric": "idle_agent_s",
+      "note": "free agents whose session was waiting"
+    },
+    {
+      "label": "Preserved work (%)",
+      "metric": "preserved_pct",
+      "note": "calls in flight at a crash that were used"
+    },
+    {
+      "label": "Duplicated spend ($)",
+      "metric": "dup_usd",
+      "note": "work paid twice, by every cause"
+    }
+  ],
+  "profile": "C3",
+  "series": {
+    "durable": {
+      "color": "#6250d6",
+      "points": [
+        {
+          "blast_sessions_mean_pct": 31.111111111111114,
+          "blast_sessions_mean_pct_max": 33.333333333333336,
+          "blast_sessions_mean_pct_min": 26.666666666666668,
+          "cdt_s": 49.06366666666667,
+          "cdt_s_max": 52.354,
+          "cdt_s_min": 47.036,
+          "dup_usd": 0.046926,
+          "dup_usd_max": 0.063927,
+          "dup_usd_min": 0.02912525,
+          "idle_agent_s": 46.01866666666667,
+          "idle_agent_s_max": 52.131,
+          "idle_agent_s_min": 38.16,
+          "preserved_pct": 69.08939014202171,
+          "preserved_pct_max": 80.95238095238095,
+          "preserved_pct_min": 63.1578947368421,
+          "runs": [
+            "runs/durable__t2_conference__C3__s1__rival_restart_ms-0",
+            "runs/durable__t2_conference__C3__s2__rival_restart_ms-0",
+            "runs/durable__t2_conference__C3__s3__rival_restart_ms-0"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 5.0,
+          "ttr_own_mean_s_max": 5.0,
+          "ttr_own_mean_s_min": 5.0,
+          "x": 0.0
+        },
+        {
+          "blast_sessions_mean_pct": 41.111111111111114,
+          "blast_sessions_mean_pct_max": 60.0,
+          "blast_sessions_mean_pct_min": 30.0,
+          "cdt_s": 64.15033333333334,
+          "cdt_s_max": 82.37,
+          "cdt_s_min": 54.284,
+          "dup_usd": 0.05902283333333334,
+          "dup_usd_max": 0.0698235,
+          "dup_usd_min": 0.04012425,
+          "idle_agent_s": 62.21633333333333,
+          "idle_agent_s_max": 94.235,
+          "idle_agent_s_min": 43.604,
+          "preserved_pct": 66.55971479500892,
+          "preserved_pct_max": 70.58823529411765,
+          "preserved_pct_min": 59.09090909090909,
+          "runs": [
+            "runs/durable__t2_conference__C3__s1__rival_restart_ms-1000",
+            "runs/durable__t2_conference__C3__s2__rival_restart_ms-1000",
+            "runs/durable__t2_conference__C3__s3__rival_restart_ms-1000"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 6.0,
+          "ttr_own_mean_s_max": 6.0,
+          "ttr_own_mean_s_min": 6.0,
+          "x": 1000.0
+        },
+        {
+          "blast_sessions_mean_pct": 37.77777777777778,
+          "blast_sessions_mean_pct_max": 53.333333333333336,
+          "blast_sessions_mean_pct_min": 26.666666666666668,
+          "cdt_s": 75.53766666666667,
+          "cdt_s_max": 91.347,
+          "cdt_s_min": 67.363,
+          "dup_usd": 0.054571,
+          "dup_usd_max": 0.06863525000000001,
+          "dup_usd_min": 0.037107,
+          "idle_agent_s": 65.70266666666667,
+          "idle_agent_s_max": 109.986,
+          "idle_agent_s_min": 39.219,
+          "preserved_pct": 68.9484126984127,
+          "preserved_pct_max": 71.42857142857143,
+          "preserved_pct_min": 66.66666666666667,
+          "runs": [
+            "runs/durable__t2_conference__C3__s1__rival_restart_ms-3000",
+            "runs/durable__t2_conference__C3__s2__rival_restart_ms-3000",
+            "runs/durable__t2_conference__C3__s3__rival_restart_ms-3000"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 8.0,
+          "ttr_own_mean_s_max": 8.0,
+          "ttr_own_mean_s_min": 8.0,
+          "x": 3000.0
+        }
+      ]
+    },
+    "durable-max": {
+      "color": "#008300",
+      "points": [
+        {
+          "blast_sessions_mean_pct": 34.44444444444444,
+          "blast_sessions_mean_pct_max": 40.0,
+          "blast_sessions_mean_pct_min": 26.666666666666668,
+          "cdt_s": 28.482,
+          "cdt_s_max": 31.498,
+          "cdt_s_min": 25.346,
+          "dup_usd": 0.023301500000000003,
+          "dup_usd_max": 0.029314750000000004,
+          "dup_usd_min": 0.01583925,
+          "idle_agent_s": 30.071666666666665,
+          "idle_agent_s_max": 34.294000000000004,
+          "idle_agent_s_min": 26.041999999999998,
+          "preserved_pct": 94.5,
+          "preserved_pct_max": 96.0,
+          "preserved_pct_min": 91.66666666666667,
+          "runs": [
+            "runs/durable-max__t2_conference__C3__s1__rival_restart_ms-0",
+            "runs/durable-max__t2_conference__C3__s2__rival_restart_ms-0",
+            "runs/durable-max__t2_conference__C3__s3__rival_restart_ms-0"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 5.0,
+          "ttr_own_mean_s_max": 5.0,
+          "ttr_own_mean_s_min": 5.0,
+          "x": 0.0
+        },
+        {
+          "blast_sessions_mean_pct": 46.66666666666667,
+          "blast_sessions_mean_pct_max": 46.66666666666667,
+          "blast_sessions_mean_pct_min": 46.66666666666667,
+          "cdt_s": 49.31133333333334,
+          "cdt_s_max": 56.218,
+          "cdt_s_min": 40.351,
+          "dup_usd": 0.021313666666666668,
+          "dup_usd_max": 0.030565500000000002,
+          "dup_usd_min": 0.0148235,
+          "idle_agent_s": 60.69166666666667,
+          "idle_agent_s_max": 64.781,
+          "idle_agent_s_min": 55.454,
+          "preserved_pct": 93.16666666666667,
+          "preserved_pct_max": 100.0,
+          "preserved_pct_min": 87.5,
+          "runs": [
+            "runs/durable-max__t2_conference__C3__s1__rival_restart_ms-1000",
+            "runs/durable-max__t2_conference__C3__s2__rival_restart_ms-1000",
+            "runs/durable-max__t2_conference__C3__s3__rival_restart_ms-1000"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 6.0,
+          "ttr_own_mean_s_max": 6.0,
+          "ttr_own_mean_s_min": 6.0,
+          "x": 1000.0
+        },
+        {
+          "blast_sessions_mean_pct": 51.111111111111114,
+          "blast_sessions_mean_pct_max": 53.333333333333336,
+          "blast_sessions_mean_pct_min": 46.66666666666667,
+          "cdt_s": 71.96733333333333,
+          "cdt_s_max": 78.48,
+          "cdt_s_min": 66.83,
+          "dup_usd": 0.020255083333333333,
+          "dup_usd_max": 0.0258455,
+          "dup_usd_min": 0.0150105,
+          "idle_agent_s": 87.593,
+          "idle_agent_s_max": 120.678,
+          "idle_agent_s_min": 63.423,
+          "preserved_pct": 95.76811594202898,
+          "preserved_pct_max": 100.0,
+          "preserved_pct_min": 91.30434782608695,
+          "runs": [
+            "runs/durable-max__t2_conference__C3__s1__rival_restart_ms-3000",
+            "runs/durable-max__t2_conference__C3__s2__rival_restart_ms-3000",
+            "runs/durable-max__t2_conference__C3__s3__rival_restart_ms-3000"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 8.0,
+          "ttr_own_mean_s_max": 8.0,
+          "ttr_own_mean_s_min": 8.0,
+          "x": 3000.0
+        }
+      ]
+    },
+    "swarm": {
+      "color": "#2a78d6",
+      "points": [
+        {
+          "blast_sessions_mean_pct": 11.11111111111111,
+          "blast_sessions_mean_pct_max": 13.333333333333334,
+          "blast_sessions_mean_pct_min": 10.0,
+          "cdt_s": 13.747,
+          "cdt_s_max": 15.969,
+          "cdt_s_min": 12.32,
+          "dup_usd": 0.005456583333333333,
+          "dup_usd_max": 0.00772375,
+          "dup_usd_min": 0.00333375,
+          "idle_agent_s": 18.631999999999998,
+          "idle_agent_s_max": 23.034,
+          "idle_agent_s_min": 15.969,
+          "preserved_pct": 91.07142857142857,
+          "preserved_pct_max": 100.0,
+          "preserved_pct_min": 85.71428571428571,
+          "runs": [
+            "runs/swarm__t2_conference__C3__s1__rival_restart_ms-0",
+            "runs/swarm__t2_conference__C3__s2__rival_restart_ms-0",
+            "runs/swarm__t2_conference__C3__s3__rival_restart_ms-0"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 5.933333333333334,
+          "ttr_own_mean_s_max": 6.5,
+          "ttr_own_mean_s_min": 5.4,
+          "x": 0.0
+        },
+        {
+          "blast_sessions_mean_pct": 11.11111111111111,
+          "blast_sessions_mean_pct_max": 13.333333333333334,
+          "blast_sessions_mean_pct_min": 10.0,
+          "cdt_s": 13.747,
+          "cdt_s_max": 15.969,
+          "cdt_s_min": 12.32,
+          "dup_usd": 0.005456583333333333,
+          "dup_usd_max": 0.00772375,
+          "dup_usd_min": 0.00333375,
+          "idle_agent_s": 18.631999999999998,
+          "idle_agent_s_max": 23.034,
+          "idle_agent_s_min": 15.969,
+          "preserved_pct": 91.07142857142857,
+          "preserved_pct_max": 100.0,
+          "preserved_pct_min": 85.71428571428571,
+          "runs": [
+            "runs/swarm__t2_conference__C3__s1__rival_restart_ms-1000",
+            "runs/swarm__t2_conference__C3__s2__rival_restart_ms-1000",
+            "runs/swarm__t2_conference__C3__s3__rival_restart_ms-1000"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 5.933333333333334,
+          "ttr_own_mean_s_max": 6.5,
+          "ttr_own_mean_s_min": 5.4,
+          "x": 1000.0
+        },
+        {
+          "blast_sessions_mean_pct": 11.11111111111111,
+          "blast_sessions_mean_pct_max": 13.333333333333334,
+          "blast_sessions_mean_pct_min": 10.0,
+          "cdt_s": 13.747,
+          "cdt_s_max": 15.969,
+          "cdt_s_min": 12.32,
+          "dup_usd": 0.005456583333333333,
+          "dup_usd_max": 0.00772375,
+          "dup_usd_min": 0.00333375,
+          "idle_agent_s": 18.631999999999998,
+          "idle_agent_s_max": 23.034,
+          "idle_agent_s_min": 15.969,
+          "preserved_pct": 91.07142857142857,
+          "preserved_pct_max": 100.0,
+          "preserved_pct_min": 85.71428571428571,
+          "runs": [
+            "runs/swarm__t2_conference__C3__s1__rival_restart_ms-3000",
+            "runs/swarm__t2_conference__C3__s2__rival_restart_ms-3000",
+            "runs/swarm__t2_conference__C3__s3__rival_restart_ms-3000"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 5.933333333333334,
+          "ttr_own_mean_s_max": 6.5,
+          "ttr_own_mean_s_min": 5.4,
+          "x": 3000.0
+        }
+      ]
+    }
+  },
+  "task": "t2_conference",
+  "title": "sweep-rival-restart-ms",
+  "x": [
+    0.0,
+    1000.0,
+    3000.0
+  ],
+  "x_label": "Supervisors' extra restart time (s), on top of 5 s detection",
+  "x_labels": [
+    "0",
+    "1",
+    "3"
+  ]
+}

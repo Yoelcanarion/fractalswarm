@@ -1,0 +1,14 @@
+# The per-process failure model (arena spec §C.2, PREREG §6), supervisor side: the one coordinator
+# process of a supervisor, o0, crashed once at half the contracts dispatched, no other fault.
+# 3 workflows x 2 profiles x 4 seeds = 24 runs.
+#   uv run fractalswarm bench bench/matrix-per-process-rivals.yaml --fake
+name: per-process-rivals
+workflows: [durable-max, durable, central]
+tasks: [t2_conference]
+profiles: [C0, K-o0]
+seeds: [1, 2, 3, 4]
+contributor: false
+out_dir: results/sweeps/per-process-rivals
+chart_task: t2_conference
+notes: >
+  A supervisor has one coordinator process, so one probe stands for the whole system.

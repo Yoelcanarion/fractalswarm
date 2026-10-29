@@ -1,0 +1,190 @@
+{
+  "against": "durable-max",
+  "columns": [
+    {
+      "axis": "gate",
+      "series": {
+        "central|t1_extraction": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": null,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.1388888888888889,
+            "cdt_ratio": 0.08684166666666668,
+            "idle_ratio": null,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.1801801801801802,
+            "cdt_ratio": 0.13721081081081082,
+            "idle_ratio": null,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C3"
+          }
+        ],
+        "central|t2_conference": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": null,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.15625,
+            "cdt_ratio": 0.09373432835820895,
+            "idle_ratio": null,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.14444444444444443,
+            "cdt_ratio": 0.10128,
+            "idle_ratio": null,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C3"
+          }
+        ],
+        "durable-max|t1_extraction": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": 0.0,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.27027027027027023,
+            "cdt_ratio": 0.252965546259285,
+            "idle_ratio": 0.18752549257905823,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.38461538461538464,
+            "cdt_ratio": 0.5073350121917096,
+            "idle_ratio": 0.4138706438522362,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C3"
+          }
+        ],
+        "durable-max|t2_conference": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": 0.0,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.3448275862068966,
+            "cdt_ratio": 0.39792931277008275,
+            "idle_ratio": 0.3729124703602662,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.2888888888888889,
+            "cdt_ratio": 0.3660602186865113,
+            "idle_ratio": 0.4739701037383941,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C3"
+          }
+        ],
+        "durable|t1_extraction": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": 0.0,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.2,
+            "cdt_ratio": 0.1650999693701877,
+            "idle_ratio": 0.12030107308685357,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.3125,
+            "cdt_ratio": 0.3140962185705801,
+            "idle_ratio": 0.2607515279310743,
+            "locality": "ties",
+            "plausible": false,
+            "x": "C3"
+          }
+        ],
+        "durable|t2_conference": [
+          {
+            "blast_ratio": 0.0,
+            "cdt_ratio": 0.0,
+            "idle_ratio": 0.0,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C1"
+          },
+          {
+            "blast_ratio": 0.30303030303030304,
+            "cdt_ratio": 0.20888741061034427,
+            "idle_ratio": 0.1859505182950086,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C2"
+          },
+          {
+            "blast_ratio": 0.33333333333333337,
+            "cdt_ratio": 0.24628584885375815,
+            "idle_ratio": 0.34427177841614215,
+            "locality": "holds",
+            "plausible": false,
+            "x": "C3"
+          }
+        ]
+      },
+      "x": [
+        "C1",
+        "C2",
+        "C3"
+      ]
+    }
+  ],
+  "outcome": "pending",
+  "prereg": {
+    "path": "bench/PREREG.md",
+    "sha": "25d4a75919b3"
+  },
+  "rows": [
+    {
+      "hypothesis": "H4a",
+      "label": "CDT, swarm / rival",
+      "metric": "cdt_ratio"
+    },
+    {
+      "hypothesis": "H4b",
+      "label": "blast radius, swarm / rival",
+      "metric": "blast_ratio"
+    }
+  ],
+  "threshold": 0.5,
+  "title": ""
+}

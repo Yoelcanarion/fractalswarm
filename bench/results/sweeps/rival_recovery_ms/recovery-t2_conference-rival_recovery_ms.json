@@ -1,0 +1,250 @@
+{
+  "axis": "rival_recovery_ms",
+  "panels": [
+    {
+      "label": "Time to recover (s)",
+      "metric": "ttr_own_mean_s",
+      "note": "crash to the heir or the restart"
+    },
+    {
+      "label": "Coordinator-dependency time (contract-s)",
+      "metric": "cdt_s",
+      "note": "work that waited for a dead coordinator"
+    },
+    {
+      "label": "Blast radius (% of sessions)",
+      "metric": "blast_sessions_mean_pct",
+      "note": "held up by one crash"
+    },
+    {
+      "label": "Idle agent-seconds",
+      "metric": "idle_agent_s",
+      "note": "free agents whose session was waiting"
+    },
+    {
+      "label": "Preserved work (%)",
+      "metric": "preserved_pct",
+      "note": "calls in flight at a crash that were used"
+    },
+    {
+      "label": "Duplicated spend ($)",
+      "metric": "dup_usd",
+      "note": "work paid twice, by every cause"
+    }
+  ],
+  "profile": "C3",
+  "series": {
+    "durable": {
+      "color": "#6250d6",
+      "points": [
+        {
+          "blast_sessions_mean_pct": 13.333333333333334,
+          "blast_sessions_mean_pct_max": 20.0,
+          "blast_sessions_mean_pct_min": 6.666666666666667,
+          "cdt_s": 3.0,
+          "cdt_s_max": 3.5,
+          "cdt_s_min": 2.5,
+          "dup_usd": 0.054834833333333347,
+          "dup_usd_max": 0.07692125000000001,
+          "dup_usd_min": 0.03333350000000001,
+          "idle_agent_s": 2.0,
+          "idle_agent_s_max": 3.0,
+          "idle_agent_s_min": 1.0,
+          "preserved_pct": 71.16032116032116,
+          "preserved_pct_max": 73.07692307692308,
+          "preserved_pct_min": 68.18181818181819,
+          "runs": [
+            "runs/durable__t2_conference__C3__s1__rival_recovery_ms-500",
+            "runs/durable__t2_conference__C3__s2__rival_recovery_ms-500",
+            "runs/durable__t2_conference__C3__s3__rival_recovery_ms-500"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 0.5,
+          "ttr_own_mean_s_max": 0.5,
+          "ttr_own_mean_s_min": 0.5,
+          "x": 500.0
+        },
+        {
+          "blast_sessions_mean_pct": 20.0,
+          "blast_sessions_mean_pct_max": 26.666666666666668,
+          "blast_sessions_mean_pct_min": 16.666666666666668,
+          "cdt_s": 8.107,
+          "cdt_s_max": 8.68,
+          "cdt_s_min": 7.641,
+          "dup_usd": 0.054484500000000005,
+          "dup_usd_max": 0.06959425000000001,
+          "dup_usd_min": 0.04620475,
+          "idle_agent_s": 6.5473333333333334,
+          "idle_agent_s_max": 9.36,
+          "idle_agent_s_min": 5.0,
+          "preserved_pct": 65.37037037037037,
+          "preserved_pct_max": 75.0,
+          "preserved_pct_min": 60.0,
+          "runs": [
+            "runs/durable__t2_conference__C3__s1__rival_recovery_ms-1000",
+            "runs/durable__t2_conference__C3__s2__rival_recovery_ms-1000",
+            "runs/durable__t2_conference__C3__s3__rival_recovery_ms-1000"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 1.0,
+          "ttr_own_mean_s_max": 1.0,
+          "ttr_own_mean_s_min": 1.0,
+          "x": 1000.0
+        }
+      ]
+    },
+    "durable-max": {
+      "color": "#008300",
+      "points": [
+        {
+          "blast_sessions_mean_pct": 7.777777777777779,
+          "blast_sessions_mean_pct_max": 13.333333333333334,
+          "blast_sessions_mean_pct_min": 3.3333333333333335,
+          "cdt_s": 1.0416666666666667,
+          "cdt_s_max": 1.604,
+          "cdt_s_min": 0.5,
+          "dup_usd": 0.021106833333333335,
+          "dup_usd_max": 0.024890500000000003,
+          "dup_usd_min": 0.01790175,
+          "idle_agent_s": 0.736,
+          "idle_agent_s_max": 1.208,
+          "idle_agent_s_min": 0.5,
+          "preserved_pct": 94.43478260869566,
+          "preserved_pct_max": 100.0,
+          "preserved_pct_min": 91.30434782608695,
+          "runs": [
+            "runs/durable-max__t2_conference__C3__s1__rival_recovery_ms-500",
+            "runs/durable-max__t2_conference__C3__s2__rival_recovery_ms-500",
+            "runs/durable-max__t2_conference__C3__s3__rival_recovery_ms-500"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 0.5,
+          "ttr_own_mean_s_max": 0.5,
+          "ttr_own_mean_s_min": 0.5,
+          "x": 500.0
+        },
+        {
+          "blast_sessions_mean_pct": 10.0,
+          "blast_sessions_mean_pct_max": 16.666666666666668,
+          "blast_sessions_mean_pct_min": 6.666666666666667,
+          "cdt_s": 2.4063333333333334,
+          "cdt_s_max": 3.467,
+          "cdt_s_min": 1.231,
+          "dup_usd": 0.023356666666666668,
+          "dup_usd_max": 0.030098000000000007,
+          "dup_usd_min": 0.015393,
+          "idle_agent_s": 1.797,
+          "idle_agent_s_max": 2.467,
+          "idle_agent_s_min": 1.0,
+          "preserved_pct": 95.70223978919631,
+          "preserved_pct_max": 96.0,
+          "preserved_pct_min": 95.45454545454545,
+          "runs": [
+            "runs/durable-max__t2_conference__C3__s1__rival_recovery_ms-1000",
+            "runs/durable-max__t2_conference__C3__s2__rival_recovery_ms-1000",
+            "runs/durable-max__t2_conference__C3__s3__rival_recovery_ms-1000"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 1.0,
+          "ttr_own_mean_s_max": 1.0,
+          "ttr_own_mean_s_min": 1.0,
+          "x": 1000.0
+        }
+      ]
+    },
+    "swarm": {
+      "color": "#2a78d6",
+      "points": [
+        {
+          "blast_sessions_mean_pct": 11.11111111111111,
+          "blast_sessions_mean_pct_max": 13.333333333333334,
+          "blast_sessions_mean_pct_min": 10.0,
+          "cdt_s": 13.747,
+          "cdt_s_max": 15.969,
+          "cdt_s_min": 12.32,
+          "dup_usd": 0.005456583333333333,
+          "dup_usd_max": 0.00772375,
+          "dup_usd_min": 0.00333375,
+          "idle_agent_s": 18.631999999999998,
+          "idle_agent_s_max": 23.034,
+          "idle_agent_s_min": 15.969,
+          "preserved_pct": 91.07142857142857,
+          "preserved_pct_max": 100.0,
+          "preserved_pct_min": 85.71428571428571,
+          "runs": [
+            "runs/swarm__t2_conference__C3__s1__rival_recovery_ms-500",
+            "runs/swarm__t2_conference__C3__s2__rival_recovery_ms-500",
+            "runs/swarm__t2_conference__C3__s3__rival_recovery_ms-500"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 5.933333333333334,
+          "ttr_own_mean_s_max": 6.5,
+          "ttr_own_mean_s_min": 5.4,
+          "x": 500.0
+        },
+        {
+          "blast_sessions_mean_pct": 11.11111111111111,
+          "blast_sessions_mean_pct_max": 13.333333333333334,
+          "blast_sessions_mean_pct_min": 10.0,
+          "cdt_s": 13.747,
+          "cdt_s_max": 15.969,
+          "cdt_s_min": 12.32,
+          "dup_usd": 0.005456583333333333,
+          "dup_usd_max": 0.00772375,
+          "dup_usd_min": 0.00333375,
+          "idle_agent_s": 18.631999999999998,
+          "idle_agent_s_max": 23.034,
+          "idle_agent_s_min": 15.969,
+          "preserved_pct": 91.07142857142857,
+          "preserved_pct_max": 100.0,
+          "preserved_pct_min": 85.71428571428571,
+          "runs": [
+            "runs/swarm__t2_conference__C3__s1__rival_recovery_ms-1000",
+            "runs/swarm__t2_conference__C3__s2__rival_recovery_ms-1000",
+            "runs/swarm__t2_conference__C3__s3__rival_recovery_ms-1000"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 5.933333333333334,
+          "ttr_own_mean_s_max": 6.5,
+          "ttr_own_mean_s_min": 5.4,
+          "x": 1000.0
+        }
+      ]
+    }
+  },
+  "task": "t2_conference",
+  "title": "sweep-rival-recovery-ms",
+  "x": [
+    500.0,
+    1000.0
+  ],
+  "x_label": "Supervisors' detection and restart (s); the swarm keeps 5 s",
+  "x_labels": [
+    "0.5",
+    "1"
+  ]
+}
