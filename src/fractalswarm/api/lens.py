@@ -16,17 +16,29 @@ Routes (``lens_routes``), all under ``/api/runs/{run_id}``:
 
 Dollars and tokens follow ``bench/scoring.py`` (``llm_calls``), so the lens totals are the bench
 numbers: a call cut off by a crash is billed the same estimate, and says so (``estimated``).
+
+The ablation (``bench/tasks/t2_conference/ablation.py``) has two routes of its own:
+
+- ``POST /api/ablation`` starts a fake-backend ablation (the same notes through the regex parser
+  and through Muse) and answers at once; the real backend is the coordinator's, through the CLI
+  or the job manager, never this route;
+- ``GET /api/ablation/{run_id}`` gives its status, its progress, the notes read so far and,
+  when it is done, the summary with its caveats. The run log is the record: a job is only the
+  thread that writes it.
 """
 
+import asyncio
 import json
 import re
 import sqlite3
+import threading
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import anyio
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -34,7 +46,16 @@ from starlette.routing import Route
 
 from fractalswarm.api.catalog import Catalog, RunEntry
 from fractalswarm.bench.scoring import LLMCall, is_coordination, llm_calls
+from fractalswarm.bench.tasks.t2_conference.ablation import (
+    CAP_USD,
+    SCENARIO,
+    Case,
+    cases_of,
+    frame_of,
+)
+from fractalswarm.bench.tasks.t2_conference.generator import DAYS, SLOT_STARTS, generate, slot_end
 from fractalswarm.kernel.events import Event
+from fractalswarm.kernel.ids import digest
 from fractalswarm.kernel.store import COLUMNS, _from_row
 from fractalswarm.llm.client import LLMClient, LLMRequest
 from fractalswarm.llm.roles import CONTRIBUTOR_SUFFIX
@@ -63,6 +84,7 @@ MAX_CACHED_RUNS = 8
 MAX_PAYLOAD_CHARS = 4096  # a decision event's payload beyond this is left to /events?from_seq=
 RECOVERY_ROLE = "recovery"
 RECOVERY_TAG_PREFIX = "recovery:"
+ABLATE_TAG_PREFIX = "ablate|"  # a Muse call of the ablation: ablate|<note id>
 
 # What a role's tokens buy, for the "every Muse token goes to the problem" reading. The
 # benchmark's own coordination definition (scoring.COORDINATION_ROLES) is used as it is.
@@ -173,6 +195,8 @@ def badge(model: str | None) -> str:
 
 
 def purpose_of(role: str, tag: str | None) -> str:
+    if (tag or "").startswith(ABLATE_TAG_PREFIX):
+        return "ablation"
     if (tag or "").startswith(RECOVERY_TAG_PREFIX):
         return "recovery"
     if (tag or "").startswith("coord:"):
@@ -201,6 +225,8 @@ def call_ref(tag: str | None, prompt_text: str) -> dict[str, Any]:
             "contract_id": parts[2],
             "attempt": _int(parts[3]),
         }
+    if kind == "ablate" and len(parts) >= 2:
+        return {"kind": "ablate", "note_id": parts[1]}
     agent = AGENT_TAG.match(tag or "")
     head = CONTRACT_HEAD.search(prompt_text[:600])
     if agent and head:
@@ -1110,6 +1136,178 @@ def _count(rows: list[dict[str, Any]], name: str) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
+# -- the ablation ---------------------------------------------------------------------------
+
+ABLATION_TYPES = ("run.started", "run.completed", "run.halted", "ablation.note", "ablation.done")
+MAX_ABLATION_NOTES = 200
+MAX_RUNNING_ABLATIONS = 2
+
+
+class Slot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    index: int
+    start: str
+    end: str
+
+
+class Frame(BaseModel):
+    """The days and slots posted notes are read against (the generator's, when left out)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    days: list[int] = Field(min_length=1)
+    slots: list[Slot] = Field(min_length=1)
+
+
+class AblationRequest(BaseModel):
+    """The body of ``POST /api/ablation``: the generator's notes, or notes posted with the
+    reference a person approved for each. Only the fake backend is run from here."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source: Literal["generator", "inline"] = "generator"
+    seed: int = 1
+    emails: int = Field(8, ge=0, le=MAX_ABLATION_NOTES)
+    abstracts: int = Field(8, ge=0, le=MAX_ABLATION_NOTES)
+    cases: list[Case] | None = Field(None, max_length=MAX_ABLATION_NOTES)
+    frame: Frame | None = None
+    backend: Literal["fake", "real"] = "fake"
+
+    @model_validator(mode="after")
+    def _source_fits_its_fields(self) -> "AblationRequest":
+        if self.source == "inline" and not self.cases:
+            raise ValueError("source inline needs cases")
+        if self.source == "generator" and (self.cases or self.frame):
+            raise ValueError("cases and frame belong to source inline")
+        if self.source == "generator" and self.emails + self.abstracts == 0:
+            raise ValueError("emails and abstracts cannot both be 0")
+        return self
+
+
+def default_frame() -> dict[str, Any]:
+    slots = [{"index": i, "start": s, "end": slot_end(i)} for i, s in enumerate(SLOT_STARTS)]
+    return {"days": list(DAYS), "slots": slots}
+
+
+def ablation_params(plan: AblationRequest) -> dict[str, Any]:
+    """The params of the ablation run a request asks for."""
+    if plan.source == "generator":
+        corpus, truth = generate(plan.seed)
+        options = {"emails": plan.emails, "abstracts": plan.abstracts}
+        return {"corpus": corpus, "truth": truth, "ablation": options}
+    frame = plan.frame.model_dump() if plan.frame else default_frame()
+    cases = [case.model_dump(mode="json") for case in plan.cases or []]
+    return {"ablation": {"cases": cases, "frame": frame, "source": "inline"}}
+
+
+class AblationJobs:
+    """The ablation runs this server is writing. The run log is the record, so a job is only
+    the thread that writes it; what the thread cannot say, the log says (or does not)."""
+
+    def __init__(self) -> None:
+        self.threads: dict[str, threading.Thread] = {}
+        self.notes: dict[str, int] = {}
+        self.failed: dict[str, str] = {}
+        self.lock = threading.Lock()
+
+    def alive(self, run_id: str) -> bool:
+        thread = self.threads.get(run_id)
+        return thread is not None and thread.is_alive()
+
+    def running(self) -> int:
+        return sum(thread.is_alive() for thread in self.threads.values())
+
+    def start(self, run_id: str, run_dir: Path, params: dict[str, Any], seed: str) -> None:
+        self.notes[run_id] = len(cases_of(params))
+        self.failed.pop(run_id, None)
+        args = (run_id, run_dir, params, seed)
+        thread = threading.Thread(target=self._record, args=args, daemon=True, name=run_id)
+        self.threads[run_id] = thread
+        thread.start()
+
+    def _record(self, run_id: str, run_dir: Path, params: dict[str, Any], seed: str) -> None:
+        from fractalswarm.bench.workflows import fake_backend
+        from fractalswarm.runs import record_run
+
+        try:
+            asyncio.run(
+                record_run(
+                    SCENARIO,
+                    run_id=run_id,
+                    run_dir=run_dir,
+                    backend=fake_backend(),
+                    seed=seed,
+                    params=params,
+                    run_cap_usd=CAP_USD,
+                )
+            )
+        except Exception as exc:  # the thread's last word: the status route reports it
+            self.failed[run_id] = f"{type(exc).__name__}: {exc}"
+
+
+def reading_text(value: dict[str, Any] | None, frame: dict[str, Any]) -> str | None:
+    if value is None:
+        return None
+    if "expected_attendance" in value:
+        return f"about {value['expected_attendance']} attendees"
+    return availability_reading(value, frame["slots"], frame["days"])
+
+
+def ablation_view(events: list[Event], jobs: AblationJobs, run_id: str) -> dict[str, Any]:
+    """Status, progress, the notes read so far and, once done, the summary."""
+    started = next((e for e in events if e.type == "run.started"), None)
+    if started is None or started.payload["scenario"] != SCENARIO:
+        raise HTTPException(404, f"run {run_id!r} is not an ablation")
+    params = started.payload["params"]
+    frame, cases = frame_of(params), cases_of(params)
+    order = {case.id: i for i, case in enumerate(cases)}
+    texts = {case.id: case.text for case in cases}
+    notes = sorted(
+        (e.payload for e in events if e.type == "ablation.note"), key=lambda p: order[p["note_id"]]
+    )
+    done = next((e.payload for e in events if e.type == "ablation.done"), None)
+    ended = any(e.type in ("run.completed", "run.halted") for e in events)
+    if ended:
+        status = "halted" if any(e.type == "run.halted" for e in events) else "completed"
+    elif jobs.alive(run_id):
+        status = "running"
+    else:
+        status = "failed" if run_id in jobs.failed else "interrupted"
+    return {
+        "run_id": run_id,
+        "status": status,
+        "error": jobs.failed.get(run_id),
+        "progress": {"done": len(notes), "of": len(cases)},
+        "result": done,
+        "notes": [
+            note
+            | {
+                "text": texts[note["note_id"]],
+                "reference_text": reading_text(note["reference"], frame),
+                "parser": note["parser"] | {"text": reading_text(note["parser"]["reading"], frame)},
+                "muse": note["muse"] | {"text": reading_text(note["muse"]["reading"], frame)},
+            }
+            for note in notes
+        ],
+    }
+
+
+async def _ablation_request(request: Request) -> AblationRequest:
+    raw = await request.body()
+    try:
+        body = json.loads(raw) if raw else {}
+        return AblationRequest.model_validate(body)
+    except ValueError as exc:  # bad JSON, or a body that does not fit (pydantic's is a ValueError)
+        if isinstance(exc, ValidationError):
+            why = "; ".join(
+                f"{'.'.join(map(str, e['loc'])) or 'body'}: {e['msg']}" for e in exc.errors()
+            )
+        else:
+            why = "the body must be JSON"
+        raise HTTPException(422, why) from None
+
+
 # -- the routes -----------------------------------------------------------------------------
 
 
@@ -1163,8 +1361,67 @@ def lens_routes(catalog: Catalog) -> list[Route]:
     async def models(request: Request) -> JSONResponse:
         return JSONResponse((await lens_of(request)).models())
 
+    jobs = AblationJobs()
+
+    def pending(run_id: str) -> dict[str, Any] | None:
+        """The state of an ablation the thread has not written a log for yet (or never will)."""
+        if not jobs.alive(run_id) and run_id not in jobs.failed:
+            return None
+        return {
+            "run_id": run_id,
+            "status": "running" if jobs.alive(run_id) else "failed",
+            "error": jobs.failed.get(run_id),
+            "progress": {"done": 0, "of": jobs.notes.get(run_id, 0)},
+            "result": None,
+            "notes": [],
+        }
+
+    async def start_ablation(request: Request) -> JSONResponse:
+        plan = await _ablation_request(request)
+        if plan.backend != "fake":
+            raise HTTPException(
+                501,
+                "a real ablation is launched by the coordinator through the CLI or the job "
+                "manager (preflight and SPEND), not by this route; use backend fake here",
+            )
+        params = ablation_params(plan)
+        try:
+            frame_of(params)
+            notes = len(cases_of(params))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+        run_id = f"ablation-{digest(plan.model_dump(mode='json'))[:8]}"
+        answer = {"run_id": run_id, "notes": notes, "url": f"/api/ablation/{run_id}"}
+        with jobs.lock:
+            if jobs.alive(run_id) or any(e.id == run_id for e in catalog.entries()):
+                return JSONResponse(answer | {"started": False})
+            if jobs.running() >= MAX_RUNNING_ABLATIONS:
+                raise HTTPException(429, f"{MAX_RUNNING_ABLATIONS} ablations are running; retry")
+            seed = str(plan.seed) if plan.source == "generator" else "0"
+            jobs.start(run_id, catalog.runs_dir / run_id, params, seed)
+        return JSONResponse(answer | {"started": True}, status_code=202)
+
+    async def ablation_status(request: Request) -> JSONResponse:
+        run_id = request.path_params["run_id"]
+        try:
+            entry = catalog.get(run_id)
+        except KeyError:
+            waiting = pending(run_id)
+            if waiting is None:
+                raise HTTPException(404, f"no ablation {run_id!r}") from None
+            return JSONResponse(waiting)
+        try:
+            events = await anyio.to_thread.run_sync(read_typed, catalog, entry, ABLATION_TYPES)
+        except sqlite3.OperationalError:  # the thread has made the file and not the table yet
+            events = []
+        if not events and (waiting := pending(run_id)) is not None:
+            return JSONResponse(waiting)
+        return JSONResponse(ablation_view(events, jobs, run_id))
+
     return [
         Route("/api/runs/{run_id}/calls", calls),
         Route("/api/runs/{run_id}/calls/{effect_id}", call),
         Route("/api/runs/{run_id}/models", models),
+        Route("/api/ablation", start_ablation, methods=["POST"]),
+        Route("/api/ablation/{run_id}", ablation_status),
     ]

@@ -6,7 +6,7 @@ Owner of: `api/lens.py`, the ablation, Wonder arbitration. Only the coordinator 
 | Step | State |
 |---|---|
 | 1. Muse lens API (merge point 1) | **done**, see below |
-| 2. Ablation (merge point 2, own commit) | not started |
+| 2. Ablation (merge point 2, own commit) | **done** (own commit), see "Step 2" below |
 | 3. Wonder arbitration (merge point 2, own commit) | waits for W1's durable modes |
 
 ---
@@ -46,17 +46,18 @@ All under `/api/runs/{run_id}`. Errors are `{"error": "<text>"}` with status 404
 ```ts
 type Badge = "wonder" | "spark" | "contributor" | "other";   // Contributor = model name ends "-contributor"
 type Purpose = "work" | "planning" | "verification" | "arbitration" | "intake"
-             | "safety" | "coordination" | "recovery" | "other";
+             | "safety" | "coordination" | "recovery" | "ablation" | "other";
 type CallStatus = "ok" | "incomplete" | "error" | "cancelled" | "inflight";
 
 interface Usage { input_tokens: number; cached_tokens: number; output_tokens: number;
                   reasoning_tokens: number; searches: number }   // cached ⊂ input, reasoning ⊂ output
 
 interface CallRef {                       // what the call is for
-  kind: "plan" | "judge" | "agent" | string | null;
+  kind: "plan" | "judge" | "agent" | "ablate" | string | null;
   goal_id?: string; attempt?: number;
   contract_id?: string;                   // judge, agent
   contract_kind?: string; step?: number;  // agent turns only ("extract", "place", "blurb")
+  note_id?: string;                       // kind "ablate": the note this Muse call read (step 2)
 }
 
 interface Routing { contributor: boolean; reason: string;
@@ -202,9 +203,116 @@ interface RoleRow { role: string; purpose: Purpose; /* same numbers as ModelRow 
 
 ---
 
-## Step 2 — ablation (not started)
-Plan: a kernel scenario (`fractalswarm.bench.tasks.t2_conference.ablation:ABLATION`, addressed by its `module:attr` path, so no registry edit), so that its Muse calls are real effects: budget reserved and settled, in the log, visible in the lens. The regex side is a pure function inside the handler. New event types only. Fake backend by default; the real one is the coordinator's.
-Caveat for the $0 numbers: the fake T2 model *is* `parse_email`, so on the fake backend the parser and "Muse" agree by construction. The $0 run proves the plumbing and the scoring, not the comparison.
+## Step 2 — the ablation
+
+The same notes through the hand-written regex parser and through Muse, scored against the approved reference. Headline for the UI: *"the parser understood N of M notes, Muse K of M"*, with the differences per note.
+
+### Done
+- `src/fractalswarm/bench/tasks/t2_conference/ablation.py` (new): a **kernel scenario**, `fractalswarm.bench.tasks.t2_conference.ablation:ABLATION`, addressed by that `module:attr` path (the loader accepts it; no registry edit). One actor, `ablator`. Every Muse call is therefore a real effect: budget reserved and settled, in the log and the cassette, visible in the lens.
+  - **Muse side:** per note one call, role `agent` (the extraction's own role: Spark, effort low), tag `ablate|<note id>`, scopes `contract=ablate-<id>` and `squad=ablation`, at most 6 open at once. Email → schema `t2_ablation_email` (`available[{day, slots[]}]`, `preference morning|afternoon|none`); the instructions are `EXTRACT_GUIDE` minus its memory-tool steps and the closing "Finally…" step; DATA blocks `days` and `slots`; the note is an UNTRUSTED block. Abstract → `t2_ablation_abstract` (`expected_attendance`).
+  - **Parser side:** `parse_email` / `parse_attendance` of the T2 fake, a pure function run inside the handler.
+  - **Scoring:** an email is *understood* when its (day, slot) cells match the reference exactly **and** the preference is equal; also reported: cells exact, Jaccard, preference. An abstract is understood within **±10 %** of the reference attendance (integer arithmetic: exactly 10 % counts; a reference of 0 only matches 0).
+  - **Budget:** squad cap and run cap $0.75. A refused call counts as a missed note and the run still completes. **Deadline:** 900 s on the run's clock; notes with no answer by then count as missed, the run still completes, `result.complete` is `false`.
+- New event types only: `ablation.note` (one per note, as it is scored) and `ablation.done` (the summary). No existing payload model changed. An ablation run replays bit for bit, also in a fresh process (`fractalswarm replay RUN --verify` → `MATCH`, checked).
+- `src/fractalswarm/api/lens.py`: `POST /api/ablation` and `GET /api/ablation/{run_id}` (shapes below), and the lens tags the calls: `purpose: "ablation"`, `ref: {kind: "ablate", note_id}`. No other file changed (`app.py` already includes `lens_routes`).
+- `tests/integration/test_ablation.py` (new, 35 tests): the score (exact, partial Jaccard, preference mismatch, the ±10 % boundary, zero reference), a hand-written approved sample with a **scripted Muse** so the numbers are exact ("parser 3 of 6, Muse 5 of 6", agreement 3 / 2 / 0 / 1), the caveats, the prompt (guide in, memory steps out, note untrusted, never in the instructions), budget refusal, the deadline, a window of one, replay MATCH, the routes (generator notes and posted notes), validation, 429, a job that raises, two runs at once with replay MATCH, the view of a log that never ended, and the params of a CLI run (`TaskSpec` → `run_params`) driving the scenario.
+
+### The two caveats (plus one), written into every result
+`result.caveats` is a list of `{id, text, applies}`; the UI shows those with `applies: true` next to the headline.
+1. **`generator`** (applies when the notes are the generator's): the regex wins by construction, its patterns are the phrasings the generator writes. Read the comparison on notes a person wrote.
+2. **`reference`** (applies otherwise): Muse seeds the approved reference and a person approves it, so part of the agreement with Muse is the person accepting its reading.
+3. **`fake`** (applies when every Muse call came from the fake backend; **not in the brief**): the fake T2 model *is* `parse_email`, so on a $0 run the parser and "Muse" agree by construction. A $0 run proves the plumbing and the scoring, not the comparison. Detected from the response ids (`resp_fake_…`), so it cannot be forgotten.
+
+### Where the notes come from
+- **Generator / CLI TaskSpec:** `params.corpus` + `params.truth` (what `run_params(spec)` records). The reference is the generator's truth; `source` is `generator` because the truth carries `patterns`. Options in `params.ablation`: `emails`, `abstracts` (first N by id; default all: 32 + 48 = 80 on seed 1).
+- **Approved intake (W2):** confirmed by the coordinator (backend-design §4): the approved reference uses the checker's truth schema (`track_of`, `speaker_of`, `attendance`, `availability`, `preferences`) and `run_params` builds the corpus in the generator shape (`emails[{id, speaker_id, body}]`, `talks[{id, abstract}]`, `days`, `slots`). A run launched from a TaskSpec with an intake input therefore works with no change: its params carry `corpus` and `truth`, and `source` is `approved` (no `patterns` in the truth). **The one seam is `cases_from_corpus(corpus, truth)`.** I do not parse `approved.json` myself: W2 exposes one pure converter approved intake → `(corpus, truth)`, and a later `source: "approved"` on `POST /api/ablation` will call it. Until it merges the ablation is built and tested on `generate(seed)`; `generator.live_sample` does not exist on this branch yet.
+- **Inline:** `params.ablation = {cases: [Case], frame: {days, slots}, source: "inline"}`, what `POST /api/ablation {source: "inline"}` records. For notes with a reference written by hand (the tests' approved sample).
+
+### Endpoint shapes (for W5)
+Errors are `{"error": "<text>"}`: 404 (unknown run, or not an ablation), 422 (the body does not fit), 429 (two ablations are already recording), 501 (`backend: "real"`).
+
+```ts
+interface Slot { index: number; start: string; end: string }          // "09:00", "09:45"
+interface Reading {                                                    // email → available/preference; abstract → expected_attendance
+  available?: { day: number; slots: number[] }[]; preference?: "morning" | "afternoon" | "none";
+  expected_attendance?: number }
+interface Case { id: string /* [\w.:@-]{1,64} */; kind: "email" | "abstract";
+                 subject: string; text: string /* ≤ 20,000 chars */; reference: Reading }
+
+// POST /api/ablation  (fake backend only)
+interface AblationRequest {
+  source?: "generator" | "inline";   // default "generator"
+  seed?: number;                     // default 1: the generator's seed; it also salts the run id
+  emails?: number; abstracts?: number;          // generator: first N by id, 0..200, default 8 and 8 (not both 0)
+  cases?: Case[]; frame?: { days: number[]; slots: Slot[] };   // inline only; ≤ 200 cases; frame defaults to the generator's
+  backend?: "fake" | "real";         // "real" → 501: the coordinator launches it (CLI / job manager, preflight and SPEND)
+}
+// → 202 { run_id, notes, url, started: true }; 200 { …, started: false } if that exact request already has a run
+// The run id is "ablation-" + 8 hex of the request's digest: the same request is the same run.
+
+// GET /api/ablation/{run_id}   — poll until status is not "running"
+interface AblationStatus {
+  run_id: string;
+  status: "running" | "completed" | "halted" | "failed" | "interrupted";
+  error: string | null;                         // "RuntimeError: …" when failed
+  progress: { done: number; of: number };
+  result: AblationResult | null;                // null until ablation.done
+  notes: AblationNote[];                        // in the order of the cases; grows while running
+}
+interface Scored { reading: Reading | null; text: string | null;   // text: the reading in words, ready to show
+                   score: EmailScore | AbstractScore }
+interface AblationNote {
+  note_id: string; kind: "email" | "abstract"; subject: string;
+  text: string;                                 // the note itself (untrusted: render as text)
+  reference: Reading; reference_text: string | null;
+  parser: Scored;
+  muse: Scored & { effect_id: string | null; error: string | null };   // error: why Muse has no reading
+}
+type EmailScore = { understood: boolean; cells_exact: boolean; jaccard: number; preference: boolean };
+type AbstractScore = { understood: boolean; within: boolean; error: number | null; error_pct: number | null };
+interface Side { understood: number; of: number;
+  emails: { of: number; understood: number; cells_exact: number; preference: number; mean_jaccard: number | null };
+  abstracts: { of: number; understood: number; mean_error_pct: number | null } }
+interface AblationResult {
+  complete: boolean;                            // false: the deadline cut it; unanswered notes count as missed
+  headline: string;                             // "the parser understood 3 of 6 notes, Muse 5 of 6"
+  source: "generator" | "approved" | "inline"; backend: "fake" | "real" | "mixed" | "unknown";
+  notes: number; parser: Side; muse: Side;
+  agreement: { both: number; only_muse: number; only_parser: number; neither: number };
+  differences: string[];                        // note ids where the two readings are not the same
+  caveats: { id: "generator" | "reference" | "fake"; text: string; applies: boolean }[];
+  definitions: Record<string, string>;          // tooltips: understood, jaccard, agreement, differences
+}
+```
+`status: "completed"` also covers a run the deadline cut: read `result.complete`. Each Muse call is in the lens: `GET /api/runs/{run_id}/calls` (purpose `ablation`, `ref.note_id`) and `…/calls/{effect_id}` (the prompt with the note as untrusted, the answer, the cost). The run is an ordinary run in `GET /api/runs`.
+
+Real bodies (fake backend, two posted notes): `POST` → `{"run_id":"ablation-b7874c4c","notes":2,"url":"/api/ablation/ablation-b7874c4c","started":true}`; a note:
+```json
+{"note_id":"T90","kind":"abstract","subject":"T90","text":"A full room is expected: organizers say about 80 attendees.",
+ "reference":{"expected_attendance":80},"reference_text":"about 80 attendees",
+ "parser":{"reading":{"expected_attendance":80},"text":"about 80 attendees","score":{"understood":true,"within":true,"error":0,"error_pct":0.0}},
+ "muse":{"reading":{"expected_attendance":80},"text":"about 80 attendees","effect_id":"eff-3.3","error":null,
+         "score":{"understood":true,"within":true,"error":0,"error_pct":0.0}}}
+```
+
+### Running it with the real Muse (the coordinator's, with Yoel's OK)
+- `POST /api/ablation` never spends: `backend: "real"` is a 501. A real run needs the real plumbing the CLI and W2's job manager already have (key, firewall, project ledger, preflight, SPEND).
+- **Request for the coordinator (cli.py is W1/W2's, so I have not touched it):** `fractalswarm run <t2 taskspec> --scenario ablation` needs `run` to accept `ablation` in its `--scenario` check, to pass `fractalswarm.bench.tasks.t2_conference.ablation.SCENARIO` to `record_run`, and to print `ablation.done`'s headline instead of looking for a `task.result` (it would otherwise exit 1 with "no task.result", though the run is recorded). About 10 lines. I checked with a scratch run that the params `run` builds from the T2 TaskSpec drive the scenario (80 notes, 408 events, replay MATCH, fake-priced $0.13 for the 80 calls; the T2 TaskSpec's own cap is $2). W2's job manager would need the same scenario allowance to launch it from the UI. I can make the cli.py edit and test it at $0 if you say so.
+- Cost: 80 Spark calls on the generator's notes (fake-priced $0.13); the budget line in backend-design §3 says ≈ $0.5 for intake and ablation together.
+
+### Deviations
+1. **A third caveat, `fake`**, beyond the brief's two (see above). Without it a $0 result reads as "Muse is as good as the parser".
+2. **`POST /api/ablation` answers 501 to `backend: "real"`** instead of running it. The brief says "fake by default" and "the coordinator runs the real one": the route cannot reserve budget against the project ledger or ask for SPEND, which the job manager does.
+3. The route runs the fake ablation on a **daemon thread in the API process**, not a subprocess (W2's job manager is for real runs). It is $0 and takes under two seconds for the 80 notes (measured with interpreter start included), on the sim clock; a thread was chosen over an asyncio task so the run does not depend on the request's event loop (the test client ends it with the request). At most two at a time. If you want it out of the API process like real jobs, it moves to W2's job manager unchanged: the scenario is addressed by its path.
+
+### Limits to know
+- The run id is a digest of the request, so the same request is the same run (`started: false`). A run whose server was killed mid-way stays `interrupted` for that request; change `seed` for a fresh one.
+- **Privacy of live input.** Runs are written to the catalog's runs dir (`~/.fractalswarm/runs` under `serve`), which is outside git. W2's plan keeps live-input runs in `FRACTALSWARM_PRIVATE_DIR`, pseudonymizes emails before a corpus enters a run log, and has the bundler refuse runs whose `input.source` is `intake`. An ablation recorded by `POST /api/ablation` carries no such `input` marker, so **notes a person typed must not be posted to a server whose runs dir is bundled**; the fake route is for generator notes and the hand-written sample. For real live input the run goes through W2's job manager (private dir, marker). To settle once W2's converter is in.
+- `normalize` makes each day appear once with its slots sorted and unique, and leaves out days with no slot, on both readers and the reference, so equivalent answers are not scored apart.
+- The regex's preference defaults to `none` and its availability to "all available", exactly as the fake T2 model does; a note it cannot read counts against it.
+
+### $0 reference comparison
+(see the end of this file once recorded)
 
 ## Step 3 — arbitration (not started)
 Waits for the coordinator's word that W1's durable modes have merged. Deadline: merged by Sun Nov 1, 14:00, or dropped before the 20:00 freeze.
