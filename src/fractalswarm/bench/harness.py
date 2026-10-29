@@ -1,14 +1,17 @@
 """The bench harness (spec §15.6-§15.7): matrix -> runs -> metrics -> CSV/JSON -> charts.
 
 A matrix is workflows × tasks × chaos profiles × seeds, and optionally × total agents (the
-scaling sweep, ``bench/scaling.py``). Each cell records one run into ``<out>/runs/<cell>/``
-and writes its metrics to ``<out>/cells/<cell>.json`` once the run is scored; a cell with a
-result file is skipped next time, so an interrupted matrix resumes where it stopped. A run
-directory without a result file is a run that died half-way: it is wiped and recorded again.
+scaling sweep, ``bench/scaling.py``) and × sweep settings (``knobs``: the recovery and restart
+times of the arena's sensitivity sweeps, the agents' latency scale). Each cell records one run
+into ``<out>/runs/<cell>/`` and writes its metrics to ``<out>/cells/<cell>.json`` once the run
+is scored; a cell with a result file is skipped next time, so an interrupted matrix resumes
+where it stopped. A run directory without a result file is a run that died half-way: it is
+wiped and recorded again.
 
-After the cells, the harness pairs every row with the C0 row of the same workflow, task, seed
-and agents (extra cost and time lost vs C0) and writes ``results.csv``, ``results.json`` and
-the hero chart, or the scaling chart when the matrix has an ``agents`` axis.
+After the cells, the harness pairs every row with the C0 row of the same workflow, task, seed,
+agents and knobs (extra cost and time lost vs C0) and writes ``results.csv``, ``results.json``
+and the hero chart, or the scaling chart when the matrix has an ``agents`` axis. ``rescore``
+recomputes the metrics of the cells already on disk from their logs, at $0.
 """
 
 import csv
@@ -21,14 +24,18 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, field_validator
 
 from fractalswarm.bench.profiles import profile
 from fractalswarm.bench.registry import (
+    BACKEND_KNOBS,
+    KNOBS,
     Cell,
     CellContext,
+    Knobs,
     get_task,
     get_workflow,
+    knobs_text,
     scales_with_agents,
 )
 from fractalswarm.bench.scoring import RunMetrics, extra_cost_pct, score_run, time_lost_s
@@ -60,8 +67,31 @@ RESULT_COLUMNS = (
     "messages",
     "breaker_trips",
     "chaos_events",
+    "knobs",
+    # The recovery metrics (``bench/recovery.py``): the means are over the run's crashes, and a
+    # blank is a run that had none (or a result scored before the arena, until it is rescored).
+    "crashes",
+    "ttr_own_mean_s",
+    "ttr_drain_mean_s",
+    "cdt_s",
+    "blocked_total_s",
+    "blast_sessions_mean_pct",
+    "blast_agents_mean_pct",
+    "exposure_peak_pct",
+    "idle_agent_s",
+    "idle_agent_own_s",
+    "idle_agent_wide_s",
+    "false_death_remaps",
+    "unnecessary_reassignments",
+    "dup_calls",
+    "dup_usd",
+    "dup_crash_usd",
+    "dup_agent_kill_usd",
+    "dup_false_death_usd",
+    "preserved_pct",
     "run_dir",
 )
+RECOVERY_COLUMNS = RESULT_COLUMNS[RESULT_COLUMNS.index("crashes") : RESULT_COLUMNS.index("run_dir")]
 
 
 class MatrixBudget(BaseModel):
@@ -81,6 +111,9 @@ class Matrix(BaseModel):
     seeds: list[str]
     # Total agents of each run (the scaling sweep); omitted: every workflow runs its own tree.
     agents: list[int] | None = None
+    # Sweep settings, one dict per point (``registry.KNOBS``); each point is crossed with the
+    # rest of the matrix. Omitted: every assumption at its default.
+    knobs: list[dict[str, StrictInt | StrictFloat]] | None = None
     # Contributor routing for the matrix's calls: synthetic tasks only, explicit opt-in (§7.5).
     contributor: bool = False
     # Wonder has no Contributor variant: its roles stay on Standard Wonder, or move to Spark.
@@ -97,6 +130,26 @@ class Matrix(BaseModel):
             raise ValueError("agents needs distinct totals, each >= 1")
         return value
 
+    @field_validator("knobs")
+    @classmethod
+    def _knob_points(cls, value: list[dict[str, StrictInt | StrictFloat]] | None):
+        if value is None:
+            return None
+        points = [tuple(sorted(point.items())) for point in value]
+        if not points or len(set(points)) != len(points):
+            raise ValueError("knobs needs distinct points")
+        for point in value:
+            for name, setting in point.items():
+                if name not in KNOBS:
+                    raise ValueError(f"unknown knob {name!r} (known: {', '.join(KNOBS)})")
+                if setting < 0:
+                    raise ValueError(f"knob {name} needs a number >= 0, got {setting!r}")
+                if name in BACKEND_KNOBS and setting <= 0:
+                    raise ValueError(f"knob {name} needs a number > 0, got {setting!r}")
+                if name not in BACKEND_KNOBS and int(setting) != setting:
+                    raise ValueError(f"knob {name} is in whole milliseconds, got {setting!r}")
+        return value
+
     @classmethod
     def load(cls, path: Path) -> "Matrix":
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -109,10 +162,11 @@ class Matrix(BaseModel):
         return matrix
 
     def cells(self) -> list[Cell]:
+        points: list[Knobs] = [tuple(sorted(point.items())) for point in self.knobs or [{}]]
         return [
-            Cell(workflow, task, profile(name), seed, agents)
-            for workflow, task, name, agents, seed in product(
-                self.workflows, self.tasks, self.profiles, self.agents or [None], self.seeds
+            Cell(workflow, task, profile(name), seed, agents, knobs)
+            for workflow, task, name, agents, knobs, seed in product(
+                self.workflows, self.tasks, self.profiles, self.agents or [None], points, self.seeds
             )
         ]
 
@@ -232,6 +286,11 @@ class CellResult(BaseModel):
     run_dir: str
     metrics: RunMetrics
     agents: int | None = None  # absent in results written before the agents axis
+    knobs: dict[str, int | float] = {}  # absent in results written before the knobs axis
+
+    @property
+    def knob_items(self) -> Knobs:
+        return tuple(sorted(self.knobs.items()))
 
 
 @dataclass
@@ -241,6 +300,13 @@ class HarnessOptions:
     project_ledger: ProjectLedger | None = None
     secrets: list[str] | None = None
     log: Callable[[str], None] = lambda message: None
+    # The backend of one cell, for the knobs that change it (``registry.BACKEND_KNOBS``); the
+    # zero-argument ``backend_factory`` serves every other cell.
+    cell_backend: Callable[[Cell], Backend] | None = None
+
+
+def _ignoring_cell(factory: Callable[[], Backend]) -> Callable[[Cell], Backend]:
+    return lambda cell: factory()
 
 
 class MatrixReport(BaseModel):
@@ -259,6 +325,10 @@ async def run_matrix(
     problems = preflight(matrix, out_dir).unregistered
     if problems:
         raise ValueError(f"cannot run the matrix: {', '.join(problems)}")
+    if options.cell_backend is None and any(
+        name in BACKEND_KNOBS for point in matrix.knobs or [] for name in point
+    ):
+        raise ValueError("the matrix sweeps a backend knob: HarnessOptions needs a cell_backend")
     out_dir.mkdir(parents=True, exist_ok=True)
     ran, skipped, failed = [], [], {}
     for cell in matrix.cells():
@@ -275,7 +345,7 @@ async def run_matrix(
         ctx = CellContext(
             cell=cell,
             run_dir=run_dir,
-            backend=options.backend_factory(),
+            backend=(options.cell_backend or _ignoring_cell(options.backend_factory))(cell),
             clock=options.clock,
             contributor=matrix.contributor,
             contributor_wonder=matrix.contributor_wonder,
@@ -300,6 +370,7 @@ async def run_matrix(
             run_dir=run_dir.relative_to(out_dir).as_posix(),
             metrics=metrics,
             agents=cell.agents,
+            knobs=dict(cell.knobs),
         )
         result_path.parent.mkdir(parents=True, exist_ok=True)
         result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
@@ -344,12 +415,26 @@ def load_results(out_dir: Path, matrix: Matrix | None = None) -> list[CellResult
 
 def aggregate(results: list[CellResult]) -> list[dict[str, Any]]:
     """One flat row per cell, with extra cost and time lost against its C0 twin (the same
-    workflow, task, seed and agents). Rows of the agents axis carry an ``agents`` column."""
-    c0 = {(r.workflow, r.task, r.seed, r.agents): r.metrics for r in results if r.profile == "C0"}
+    workflow, task, seed, agents and knobs). Rows of the agents axis carry an ``agents`` column."""
+    c0 = {
+        (r.workflow, r.task, r.seed, r.agents, r.knob_items): r.metrics
+        for r in results
+        if r.profile == "C0"
+    }
     rows = []
-    ordered = sorted(results, key=lambda r: (r.workflow, r.task, r.profile, r.agents or 0, r.seed))
+    ordered = sorted(
+        results,
+        key=lambda r: (
+            r.workflow,
+            r.task,
+            r.profile,
+            r.agents or 0,
+            knobs_text(r.knob_items) or "",
+            r.seed,
+        ),
+    )
     for r in ordered:
-        m, ref = r.metrics, c0.get((r.workflow, r.task, r.seed, r.agents))
+        m, ref = r.metrics, c0.get((r.workflow, r.task, r.seed, r.agents, r.knob_items))
         row = {
             "cell": r.cell,
             "workflow": r.workflow,
@@ -373,12 +458,75 @@ def aggregate(results: list[CellResult]) -> list[dict[str, Any]]:
             "messages": m.messages,
             "breaker_trips": m.breaker_trips,
             "chaos_events": m.chaos_events,
+            "knobs": knobs_text(r.knob_items),
+            **{
+                column: getattr(m.recovery, column) if m.recovery else None
+                for column in RECOVERY_COLUMNS
+            },
             "run_dir": r.run_dir,
         }
         if r.agents is not None:
             row["agents"] = r.agents
         rows.append(row)
     return rows
+
+
+class RescoreReport(BaseModel):
+    rescored: list[str]
+    missing: list[str]  # no log to score: the cell's run directory is gone
+    failed: dict[str, str]
+    changed: dict[str, list[str]]  # cells whose pre-arena numbers moved, with the metrics
+    csv_path: str
+    json_path: str
+
+
+# The numbers every earlier result carries: a rescore that moves one is worth reporting.
+RESCORE_WATCH = ("stall_s", "makespan_s", "cost_usd", "coordination_tokens", "llm_calls")
+
+
+def rescore(out_dir: Path, log: Callable[[str], None] = lambda message: None) -> RescoreReport:
+    """Recompute the metrics of the cells on disk from their recorded logs, at $0: nothing is
+    run. It rewrites the cell results, ``results.csv`` and ``results.json``. A cell whose run
+    directory is gone keeps its old metrics (and, if it has none, blank recovery columns)."""
+    rescored: list[str] = []
+    missing: list[str] = []
+    failed: dict[str, str] = {}
+    changed: dict[str, list[str]] = {}
+    for path in sorted((out_dir / "cells").glob("*.json")):
+        result = CellResult.model_validate_json(path.read_text(encoding="utf-8"))
+        run_dir = out_dir / result.run_dir
+        if not (run_dir / "events.jsonl").exists() and not (run_dir / "events.sqlite").exists():
+            missing.append(result.cell)
+            continue
+        task = get_task(result.task)
+        if task is None:
+            failed[result.cell] = f"task {result.task} is not registered"
+            continue
+        log(f"rescore {result.cell}")
+        try:
+            metrics = score_run(run_dir, task.checker)
+        except Exception as exc:  # one broken cell must not sink the rest
+            failed[result.cell] = f"{type(exc).__name__}: {exc}"
+            continue
+        moved = [
+            name
+            for name in RESCORE_WATCH
+            if abs(getattr(metrics, name) - getattr(result.metrics, name)) > 1e-6
+        ]
+        if moved:
+            changed[result.cell] = moved
+        result = result.model_copy(update={"metrics": metrics})
+        path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+        rescored.append(result.cell)
+    csv_path, json_path = write_results(aggregate(load_results(out_dir)), out_dir)
+    return RescoreReport(
+        rescored=rescored,
+        missing=missing,
+        failed=failed,
+        changed=changed,
+        csv_path=str(csv_path),
+        json_path=str(json_path),
+    )
 
 
 def result_columns(rows: list[dict[str, Any]]) -> tuple[str, ...]:
@@ -410,6 +558,7 @@ def read_results(path: Path) -> list[dict[str, Any]]:
         return [_typed(row) for row in csv.DictReader(handle)]
 
 
+_RECOVERY_INTS = {"crashes", "false_death_remaps", "unnecessary_reassignments", "dup_calls"}
 _INTS = {
     "coordinators_killed",
     "agents",
@@ -421,8 +570,17 @@ _INTS = {
     "messages",
     "breaker_trips",
     "chaos_events",
+    *_RECOVERY_INTS,
 }
-_FLOATS = {"score", "stall_s", "makespan_s", "cost_usd", "extra_cost_pct", "time_lost_s"}
+_FLOATS = {
+    "score",
+    "stall_s",
+    "makespan_s",
+    "cost_usd",
+    "extra_cost_pct",
+    "time_lost_s",
+    *(column for column in RECOVERY_COLUMNS if column not in _RECOVERY_INTS),
+}
 _BOOLS = {"completed", "valid"}
 
 

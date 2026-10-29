@@ -25,7 +25,10 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from fractalswarm.llm.fake import FakeBackend
+from fractalswarm.llm.cassette import Attempt
+from fractalswarm.llm.client import Backend
+from fractalswarm.llm.fake import FakeBackend, Sleep
+from fractalswarm.llm.roles import RoleTable
 
 POOLED = "*"
 CONTRIBUTOR_SUFFIX = "-contributor"
@@ -99,9 +102,11 @@ class Calibration(BaseModel):
     def reasoning_model(self) -> "CalibratedReasoning":
         return CalibratedReasoning(self)
 
-    def backend(self, **kwargs: Any) -> FakeBackend:
-        """A fake LLM that follows this calibration."""
-        return FakeBackend(latency=self.latency_model(), reasoning=self.reasoning_model(), **kwargs)
+    def backend(self, latency_scale: dict[str, float] | None = None, **kwargs: Any) -> Backend:
+        """A fake LLM that follows this calibration. ``latency_scale`` maps a role to the factor
+        its calls' latency is multiplied by (``RoleLatencyScale``); without it, the plain fake."""
+        fake = FakeBackend(latency=self.latency_model(), reasoning=self.reasoning_model(), **kwargs)
+        return RoleLatencyScale(fake, latency_scale) if latency_scale else fake
 
 
 class CalibratedLatency:
@@ -129,6 +134,67 @@ class CalibratedReasoning:
     def __call__(self, model: str, effort: str, rng: random.Random) -> int:
         fit = self.calibration.token_fit(model, effort)
         return max(int(math.exp(rng.gauss(fit.log_mu, fit.log_sigma))) - 1, 0)
+
+
+Signature = tuple[str, str | None, int | None]
+
+
+def _signature(model: str, effort: str | None, max_output_tokens: int | None) -> Signature:
+    return (model.removesuffix(CONTRIBUTOR_SUFFIX), effort, max_output_tokens)
+
+
+class RoleLatencyScale:
+    """A backend that stretches or shrinks the simulated latency of some roles' calls.
+
+    A sweep's ``agent_latency_scale`` changes how long the agents' work takes next to the
+    coordinators' own calls, and with it how much of a run is coordination (arena spec §C.2).
+    A request body does not name its role, so the role is read from what the role table sets:
+    ``(model, effort, max_output_tokens)`` must belong to one role only, at some level of
+    ``config/roles.yaml``. A role with no signature of its own cannot be scaled, and asking for
+    it is an error rather than a silent no-op. Both the delay the clock sees and the latency
+    the attempt reports are scaled, so the log and the cassette agree.
+    """
+
+    def __init__(
+        self, inner: Backend, scales: dict[str, float], roles: RoleTable | None = None
+    ) -> None:
+        if any(scale <= 0 for scale in scales.values()):
+            raise ValueError(f"a latency scale must be positive: {scales}")
+        roles = roles or RoleTable.load()
+        owners: dict[Signature, set[str]] = {}
+        for role, levels in roles.roles.items():
+            for spec in levels.values():
+                key = _signature(spec.model, spec.effort, spec.max_output_tokens)
+                owners.setdefault(key, set()).add(role)
+        self.inner = inner
+        self.scales = dict(scales)
+        self._scale_of: dict[Signature, float] = {}
+        for role, scale in scales.items():
+            own = [key for key, names in owners.items() if names == {role}]
+            if not own:
+                raise ValueError(f"role {role!r} has no (model, effort, max tokens) of its own")
+            self._scale_of |= dict.fromkeys(own, scale)
+
+    def scale_of(self, body: dict[str, Any]) -> float:
+        effort = (body.get("reasoning") or {}).get("effort")
+        key = _signature(str(body.get("model", "")), effort, body.get("max_output_tokens"))
+        return self._scale_of.get(key, 1.0)
+
+    async def send(self, effect_id: str, body: dict[str, Any], sleep: Sleep) -> Attempt:
+        scale = self.scale_of(body)
+        if scale == 1.0:
+            return await self.inner.send(effect_id, body, sleep)
+
+        async def scaled_sleep(latency_ms: int) -> None:
+            await sleep(round(latency_ms * scale))
+
+        attempt = await self.inner.send(effect_id, body, scaled_sleep)
+        return attempt.model_copy(update={"latency_ms": round(attempt.latency_ms * scale)})
+
+    def __getattr__(self, name: str) -> Any:  # calls, attempts: whatever the inner fake counts
+        if name == "inner":
+            raise AttributeError(name)
+        return getattr(self.inner, name)
 
 
 # -- reading ----------------------------------------------------------------------------

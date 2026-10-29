@@ -23,7 +23,9 @@ from pathlib import Path
 from typing import Any
 
 from fractalswarm.baselines.durable import DURABLE_MODES
+from fractalswarm.bench.profiles import single_crash_plan
 from fractalswarm.bench.registry import (
+    PARAM_KNOBS,
     Cell,
     CellContext,
     TaskDef,
@@ -40,6 +42,7 @@ from fractalswarm.bench.tasks.t2_conference.generator import DAYS, TRACKS
 from fractalswarm.bench.tasks.t2_conference.task import T2
 from fractalswarm.comms.chaos import plan_from
 from fractalswarm.kernel.events import Event
+from fractalswarm.llm.client import Backend
 from fractalswarm.llm.fake import FakeBackend, FakeReply, Script, default_script
 from fractalswarm.llm.roles import RoleTable
 from fractalswarm.planning.contracts import Contract
@@ -67,15 +70,29 @@ def bench_script(body: dict[str, Any], attempt: int) -> FakeReply | str:
     return default_script(body, attempt)
 
 
-def fake_backend(script: Script = bench_script) -> FakeBackend:
+def fake_backend(
+    script: Script = bench_script, latency_scale: dict[str, float] | None = None
+) -> Backend:
     """The fake LLM with latencies and reasoning tokens fitted to real calls, when a fit
     exists (the $0 gate runs on calibrated latencies, spec §15.6). ``script`` is the model's
-    answers: the bench's T2 script unless a task brings its own (T3)."""
+    answers: the bench's T2 script unless a task brings its own (T3). ``latency_scale`` maps a
+    role to the factor its calls' latency is multiplied by (a sweep's coordination density)."""
     if CALIBRATION.exists():
         from fractalswarm.llm.calibrate import Calibration
 
-        return Calibration.load(CALIBRATION).backend(script=script)
-    return FakeBackend(script=script)
+        return Calibration.load(CALIBRATION).backend(latency_scale, script=script)
+    fake = FakeBackend(script=script)
+    if latency_scale:
+        from fractalswarm.llm.calibrate import RoleLatencyScale
+
+        return RoleLatencyScale(fake, latency_scale)
+    return fake
+
+
+def cell_backend(cell: Cell) -> Backend:
+    """The fake LLM of one cell: ``fake_backend`` with the cell's ``agent_latency_scale`` knob."""
+    scale = cell.knob("agent_latency_scale")
+    return fake_backend(latency_scale=None if scale is None else {"agent": float(scale)})
 
 
 def _spec(path: Path, fixtures: Path, seed: str, agents: int | None) -> TaskSpec:
@@ -101,8 +118,15 @@ def t1_spec(seed: str, agents: int | None = None) -> TaskSpec:
 
 def _params(spec: TaskSpec, cell: Cell, contributor: bool) -> dict[str, Any]:
     params = run_params(spec)
-    params["chaos"] = {"profile": cell.profile.name, "seed": cell.seed}
+    if cell.profile.target is not None:  # a per-process probe: one crash, on a named actor
+        params["chaos"] = single_crash_plan(cell.profile, cell.seed)
+    else:
+        params["chaos"] = {"profile": cell.profile.name, "seed": cell.seed}
     params["contributor"] = contributor
+    for name in PARAM_KNOBS:  # a sweep's times, set only when the cell sweeps them
+        value = cell.knob(name)
+        if value is not None:
+            params[name] = int(value)
     return params
 
 

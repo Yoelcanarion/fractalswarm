@@ -18,6 +18,30 @@ from fractalswarm.bench.scoring import Checker, default_checker
 from fractalswarm.llm.client import Backend
 from fractalswarm.market.ledger import ProjectLedger
 
+# The sweep knobs a matrix can set per cell (``Matrix.knobs``). The first three become run
+# params that only the scenarios read (``actors/swarm.py``: ``sweep_knobs``); the last scales
+# the fake agents' latency (``llm/calibrate.py``), so it never reaches a run's params.
+PARAM_KNOBS = ("recovery_ms", "rival_recovery_ms", "rival_restart_ms")
+BACKEND_KNOBS = ("agent_latency_scale",)
+KNOBS = (*PARAM_KNOBS, *BACKEND_KNOBS)
+
+Knobs = tuple[tuple[str, int | float], ...]  # sorted by name; empty: the defaults
+
+
+def _number(value: float) -> str:
+    return str(value) if isinstance(value, int) else f"{value:g}"
+
+
+def knob_label(name: str, value: float) -> str:
+    return f"{name}-{_number(value)}"
+
+
+def knobs_text(knobs: Knobs) -> str | None:
+    """``recovery_ms=500;agent_latency_scale=0.5``: a row's knobs column; None without knobs."""
+    if not knobs:
+        return None
+    return ";".join(f"{name}={_number(value)}" for name, value in knobs)
+
 
 @dataclass(frozen=True)
 class Cell:
@@ -26,11 +50,17 @@ class Cell:
     profile: ChaosProfile
     seed: str
     agents: int | None = None  # total agents of a scaling-sweep cell; None: the workflow's own
+    knobs: Knobs = ()  # sweep settings; empty: every assumption at its default
 
     @property
     def id(self) -> str:
         base = f"{self.workflow}__{self.task}__{self.profile.name}__s{self.seed}"
+        for name, value in self.knobs:
+            base += f"__{knob_label(name, value)}"
         return base if self.agents is None else f"{base}__n{self.agents}"
+
+    def knob(self, name: str) -> int | float | None:
+        return dict(self.knobs).get(name)
 
 
 @dataclass(frozen=True)
