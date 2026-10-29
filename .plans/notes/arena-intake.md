@@ -21,9 +21,9 @@ reference for everything W2 built. It is updated at each merge point.
    16384, no Contributor, same at every level, never degraded). This changes the `run.started` roles
    snapshot of **every new run** (accepted by the rules; old runs replay from their own snapshot).
    `compare_refs.py` will show exactly this and nothing else.
-2. **Commit trailer.** The brief says `Claude Sonnet 5.5`; my commits say `Claude Opus 5.5`, because
-   the brief tells me to invoke `/hard-task` for the truth modes and the job manager, and the
-   harness attributes the commit to the model that ran.
+2. **Commit trailer.** The brief says `Claude Sonnet 5.5`; the commits of steps 1-4 say `Claude Opus 5.5`,
+   because the brief tells me to invoke `/hard-task` for the truth modes and the job manager, and the
+   harness attributes the commit to the model that ran. The commits since the resume say `Claude Sonnet 5.5`.
 3. **Everything that holds a person's text lives in `FRACTALSWARM_PRIVATE_DIR`** (default
    `~/.fractalswarm/private`), including the job records (`jobs/<id>/job.json`) and the logs of
    every job, because a log line can carry a talk title. `create_app(..., private_dir=None)` has no
@@ -39,6 +39,10 @@ reference for everything W2 built. It is updated at each merge point.
 6. `final_report` adds `truth_mode` only when the goal carries it (live-input runs). Fixture runs are
    event-identical to before: `run_params` records no `input` and no `contributor` for them (a test
    pins this).
+7. **A flaky test of mine, fixed.** `test_a_cancel_that_is_not_answered_kills_the_process_tree` raced a live
+   run against `taskkill` and failed once under load (the run answered the halt before it was killed). The
+   test now drops the halt request (`RunPaths.request_control` patched out), so the kill is the only way
+   out; it passed 5 of 5 runs.
 
 ## Replay safety
 
@@ -53,16 +57,27 @@ reference for everything W2 built. It is updated at each merge point.
   with no I/O (the firewall scan and the LLM call are effects). Not covered by the determinism lint
   today; see the open questions.
 
+## Out-of-brief edit
+
+`tests/unit/test_determinism_lint.py` (the coordinator approved it): it now lists the pure modules of the
+intake scenario (`intake/actor.py`, `shape.py`, `truth.py`, `pseudonym.py`). That is the only file edited
+outside the brief's list.
+
+## $0 references (first merge point)
+
+Recorded at `133fd58` (arena `c9603e2` merged) with `scripts/refs/record_refs.ps1`, compared with
+`C:\Users\yogar\.fractalswarm\refs\phase0-3b1fe9b`: **43 runs, all with the same event count, each
+differing in exactly one event**: `run.started` (seq 1), and there only by `+config.llm.roles.roles.intake`,
+the new role of deviation 1. Every other event body of every run is identical (the hash chain cascades from
+seq 1, so heads differ). `demo --verify --no-serve --no-browser` gives MATCH.
+
 ## Open questions for the coordinator
 
-1. **Determinism lint.** `tests/unit/test_determinism_lint.py` lists the files it checks. Please add
-   `intake/actor.py`, `intake/shape.py`, `intake/truth.py` and `intake/pseudonym.py` (not mine to edit).
-2. **`LIVE` for other runners.** `LiveMarker` wraps `record_run` only. A runner that records a run
-   without `record_run` (`resume.py`, `baselines/langgraph_teams.py`, and any rival W1 writes outside
-   `record_run`) shows `interrupted` in the catalog while it runs, and so cannot be halted from the API. The fix
-   is three lines: `with LiveMarker(paths.live):` around the run. W1 owns those files.
-3. **The "half the brains" helper.** `cli.kill_half_plan(seed)` already builds the 5-crash plan from
-   `bench.profiles.CRASH_POINTS`. W1 is to own the pure helper; until it merges I use `kill_half_plan`.
+1. **`LIVE` for other runners.** `LiveMarker` wraps `record_run` only. A runner that records a run
+   without `record_run` (`resume.py`, `baselines/langgraph_teams.py`) shows `interrupted` in the
+   catalog while it runs, and so cannot be halted from the API. The fix is three lines:
+   `with LiveMarker(paths.live):` around the run. W1 owns those files; the durable modes go through
+   `record_run` and are not affected.
 
 ## Private directory layout
 
