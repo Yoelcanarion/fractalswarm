@@ -26,12 +26,10 @@ class IntakeError(ValueError):
     """The request cannot be served; the message says why (the API answers 422)."""
 
 
-def create_input(
-    private: PrivateDir, intake_id: str, body: dict[str, Any]
-) -> tuple[dict[str, Any], Path]:
-    """Write ``input.json`` and ``pseudonyms.json`` for a new intake from a request body
-    (``talks``, ``notes``, ``conference``, ``rooms``, ``names``). Returns the run params of the
-    ``intake`` scenario and the directory."""
+def read_body(body: dict[str, Any]) -> tuple[dict[str, str], list[dict[str, Any]] | None]:
+    """The pasted segments (newlines normalized, trimmed) and the rooms of a request body, or an
+    ``IntakeError`` saying what is wrong. Nothing is written: a preflight reads a body this way
+    too."""
     segments: dict[str, str] = {}
     for name in SEGMENT_ORDER:
         value = body.get(name) or ""
@@ -42,9 +40,24 @@ def create_input(
         segments[name] = value.replace("\r\n", "\n").replace("\r", "\n").strip()
     if not segments["talks"]:
         raise IntakeError("talks is empty: paste the talks (titles, speakers, abstracts)")
-    rooms = _rooms(body.get("rooms"))
+    return segments, _rooms(body.get("rooms"))
+
+
+def mask(segments: dict[str, str]) -> tuple[dict[str, str], Pseudonyms]:
+    """The segments with every email address replaced, in the order addresses are numbered,
+    and the mapping back."""
     pseudonyms = Pseudonyms()
-    segments = {name: pseudonyms.mask(segments[name]) for name in SEGMENT_ORDER}
+    return {name: pseudonyms.mask(segments[name]) for name in SEGMENT_ORDER}, pseudonyms
+
+
+def create_input(
+    private: PrivateDir, intake_id: str, body: dict[str, Any]
+) -> tuple[dict[str, Any], Path]:
+    """Write ``input.json`` and ``pseudonyms.json`` for a new intake from a request body
+    (``talks``, ``notes``, ``conference``, ``rooms``, ``names``). Returns the run params of the
+    ``intake`` scenario and the directory."""
+    cleaned, rooms = read_body(body)
+    segments, pseudonyms = mask(cleaned)
     directory = private.intake_dir(intake_id)
     directory.mkdir(parents=True, exist_ok=False)
     write_json(directory / "pseudonyms.json", pseudonyms.mapping())

@@ -12,9 +12,10 @@ Launching: ``POST /api/tasks`` starts a run as a job (``api/jobs.py``: one subpr
 ``POST /api/intake/{id}/approve``; a task then runs on ``inputs.intake``. These need a private
 directory (``FRACTALSWARM_PRIVATE_DIR``), where what a person typed lives; without one they
 answer 503. ``POST /api/arena`` starts a pair of runs on one input under one chaos plan.
-A billed run (``backend: real``) is refused unless it carries the token of a preflight
-(``POST /api/tasks/preflight``, ``/api/arena/preflight``) and the word SPEND, and the server was
-started with ``FRACTALSWARM_ALLOW_UI_REAL`` (``api/spend.py``). The remaining control endpoints
+A billed run (``backend: real``), pair or reading of pasted text is refused unless it carries the
+token of a preflight (``POST /api/tasks/preflight``, ``/api/arena/preflight``,
+``/api/intake/preflight``) and the word SPEND, and the server was started with
+``FRACTALSWARM_ALLOW_UI_REAL`` (``api/spend.py``). The remaining control endpoints
 (plan approval, chaos, escalations) answer 501 until the runtime behind them lands;
 ``GET /api/capabilities`` says which controls are real.
 A finished run also has ``/metrics`` (the official numbers) and ``/takeover`` (what its log
@@ -40,7 +41,13 @@ from fractalswarm.api import arena, jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
 from fractalswarm.api.jobs import JobError, JobManager
 from fractalswarm.api.lens import lens_routes
-from fractalswarm.api.spend import Spend, preflight_arena, preflight_task
+from fractalswarm.api.spend import (
+    Spend,
+    intake_request_of,
+    preflight_arena,
+    preflight_intake,
+    preflight_task,
+)
 from fractalswarm.api.ws import stream_events
 from fractalswarm.config import CONFIG_DIR
 from fractalswarm.intake import service
@@ -338,23 +345,50 @@ def create_app(
         job = jobs_.view_state(max(mine, key=lambda j: j["created_at"])) if mine else None
         return service.state_of(catalog, run, private_, job)
 
-    async def create_intake(request: Request) -> JSONResponse:
+    def start_intake(body: dict[str, Any], backend: str) -> tuple[str, dict[str, Any]]:
+        """Write the pasted text and start its reading. A billed reading (``backend: real``) is
+        cleared by the spend gate first; if nothing starts, its token is given back and the text
+        is not left behind."""
         private_, jobs_ = need_private()
-        body = await _json_body(request)
-        backend = body.get("backend", "fake")
-        if backend != "fake":
-            raise HTTPException(403, "reading with the real model needs the preflight flow")
+        approval = None
+        if backend == "real":
+            approval = need_spend().approve("intake", intake_request_of(body), 1)
         intake_id = new_id("intake")
         try:
             service.create_input(private_, intake_id, body)
-            job = await anyio.to_thread.run_sync(jobs.launch_intake, jobs_, intake_id, backend)
+            job = jobs.launch_intake(jobs_, intake_id, backend, approval)
+        except BaseException:
+            if approval is not None:
+                approval.undo()
+            shutil.rmtree(private_.intake_dir(intake_id), ignore_errors=True)
+            raise
+        return intake_id, job
+
+    async def preflight_intake_route(request: Request) -> JSONResponse:
+        """Price the reading of pasted text with the real model, at its worst case, and hand out
+        the token a billed ``POST /api/intake`` needs. Writes nothing."""
+        body = await _json_body(request)
+        try:
+            answer = await anyio.to_thread.run_sync(preflight_intake, need_spend(), body)
+        except JobError as exc:
+            raise job_error(exc) from None
+        return JSONResponse(answer)
+
+    async def create_intake(request: Request) -> JSONResponse:
+        need_private()
+        body = await _json_body(request)
+        backend = body.get("backend", "fake")
+        if backend not in ("fake", "real"):
+            raise HTTPException(422, "backend must be fake or real")
+        try:
+            intake_id, job = await anyio.to_thread.run_sync(start_intake, body, backend)
         except service.IntakeError as exc:
             raise HTTPException(422, str(exc)) from None
-        except JobError as exc:  # nothing started: do not leave the pasted text behind
-            shutil.rmtree(private_.intake_dir(intake_id), ignore_errors=True)
+        except JobError as exc:
             raise job_error(exc) from None
         answer = {"intake_id": intake_id, "job_id": job["id"], "state": "reading", "private": True}
-        return JSONResponse(answer | {"warnings": job["warnings"]}, status_code=202)
+        answer |= {"billed": job["real"], "warnings": job["warnings"]}
+        return JSONResponse(answer, status_code=202)
 
     async def get_intake(request: Request) -> JSONResponse:
         found = await anyio.to_thread.run_sync(intake_state, request.path_params["intake_id"])
@@ -455,6 +489,7 @@ def create_app(
         Route("/api/jobs/{job_id}", get_job),
         Route("/api/jobs/{job_id}/cancel", cancel_job, methods=["POST"]),
         Route("/api/intake", create_intake, methods=["POST"]),
+        Route("/api/intake/preflight", preflight_intake_route, methods=["POST"]),
         Route("/api/intake/sample", intake_sample),
         Route("/api/intake/{intake_id}", get_intake),
         Route("/api/intake/{intake_id}/approve", approve_intake, methods=["POST"]),

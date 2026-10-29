@@ -9,7 +9,7 @@ one failed:
    be reserved. A token is used once and expires;
 2. the server was started with ``FRACTALSWARM_ALLOW_UI_REAL`` and has a model key;
 3. the caller typed the word ``SPEND``;
-4. the run cap is at most $0.75;
+4. the run cap is at most $0.75 (a reading of pasted text, $0.25);
 5. the worst case still fits under the project cap and under the phase cap, counting what the
    ledger holds now (settled spend plus open reservations), not what it held at the preflight;
 6. no other billed job is running (``JobManager.check_launch``).
@@ -18,6 +18,10 @@ The processes then run with ``--confirm-real-spend --no-paid-retries`` (a reques
 have been billed is never sent twice) and the run cap, on the shared ledger. Nothing here
 calls the model: the preflight prices requests with the price table and the ledger is read,
 never written.
+
+Three things can be billed: a task (``POST /api/tasks``), a pair (``POST /api/arena``) and the
+reading of pasted text (``POST /api/intake``). The text is private: a preflight reads it to price
+it and keeps only a fingerprint of it, in memory, with the token.
 """
 
 import hashlib
@@ -42,6 +46,7 @@ from fractalswarm.market.prices import PriceTable
 from fractalswarm.planning.taskspec import TaskSpec
 
 RUN_CAP_USD = 0.75  # every billed run started from the UI is capped here
+INTAKE_CAP_USD = 0.25  # one reading of pasted text: ``cli.INTAKE_RUN_CAP_USD`` (a test ties them)
 CONFIRM_WORD = "SPEND"
 TOKEN_TTL_S = 600.0
 # The phase cap counts from what was settled when the phase began (Oct 28), and the
@@ -50,9 +55,14 @@ PHASE_START_USD = 11.82
 PHASE_CAP_USD = 50.0
 HARD_STOP_USD = 61.8
 NOT_IN_DIGEST = ("backend", "run_id", "pair_id", "preflight_token", "confirm")
-PREFLIGHT = {"task": "/api/tasks/preflight", "arena": "/api/arena/preflight"}
+PREFLIGHT = {
+    "task": "/api/tasks/preflight",
+    "arena": "/api/arena/preflight",
+    "intake": "/api/intake/preflight",
+}
 PREFLIGHT_ATTEMPTS = 2  # every call twice, as the bench pre-flight prices it
 PREFLIGHT_STEP_CHARS = 2_000  # what one tool turn adds to an agent's input
+PREFLIGHT_FEEDBACK_CHARS = 600  # the parse errors a second reading of pasted text is sent
 
 
 @dataclass(frozen=True)
@@ -277,19 +287,13 @@ class Spend:
         self,
         kind: str,
         request: dict[str, Any],
-        spec: TaskSpec,
-        params: dict[str, Any],
-        crashes: int,
+        requests: list[dict[str, Any]],
         runs: int,
+        cap: float,
     ) -> dict[str, Any]:
         """Price a launch at its worst case and say whether it may go. ``request`` is the
-        parsed launch request. A token comes back only when nothing stands in the way."""
-        if spec.task != "t2_conference":
-            raise JobError(
-                422, "billed runs from the UI are for the conference task (t2_conference)"
-            )
-        cap = run_cap(request)
-        requests = t2_requests(spec, params, crashes)
+        parsed launch request, ``requests`` the LLM requests one run sends at their worst and
+        ``cap`` the cap of each run. A token comes back only when nothing stands in the way."""
         each = price(requests)
         worst = runs * min(each, cap)
         standing = self.gate.standing()
@@ -324,13 +328,17 @@ class Spend:
             raise JobError(403, reasons[0])
         if request.get("confirm") != CONFIRM_WORD:
             raise JobError(403, f"type {CONFIRM_WORD} to confirm that this run is billed")
-        cap = run_cap(request)
+        cap = cap_of(kind, request)
         issued = self.preflights.redeem(token, digest_of(kind, request))
 
         def undo() -> None:
             self.preflights.restore(token, issued)
 
-        reasons = self.gate.cap_refusals(issued.worst_case_usd, self.gate.standing())
+        try:
+            reasons = self.gate.cap_refusals(issued.worst_case_usd, self.gate.standing())
+        except BaseException:  # the ledger could not be read: nothing starts, the token is kept
+            undo()
+            raise
         if reasons:
             undo()
             raise JobError(409, reasons[0])
@@ -349,16 +357,87 @@ def run_cap(request: dict[str, Any]) -> float:
     return float(cap)
 
 
+def cap_of(kind: str, request: dict[str, Any]) -> float:
+    """The cap of each run of a launch of this kind. A reading of pasted text has no cap of its
+    own to ask for: it runs with the CLI's."""
+    return INTAKE_CAP_USD if kind == "intake" else run_cap(request)
+
+
+def preflight_t2(
+    spend: Spend,
+    kind: str,
+    request: dict[str, Any],
+    spec: TaskSpec,
+    params: dict[str, Any],
+    crashes: int,
+    runs: int,
+) -> dict[str, Any]:
+    if spec.task != "t2_conference":
+        raise JobError(422, "billed runs from the UI are for the conference task (t2_conference)")
+    cap = cap_of(kind, request)  # before the pricing: a cap that is too high is refused at once
+    return spend.preflight(kind, request, t2_requests(spec, params, crashes), runs, cap)
+
+
 def preflight_task(spend: Spend, manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
     """``POST /api/tasks/preflight``: the body of ``POST /api/tasks``."""
     request, spec = parse_request(body)
     params = check_inputs(manager, spec)
     crashes = crashes_of(request.chaos, spec.seed)
-    return spend.preflight("task", request.model_dump(mode="json"), spec, params, crashes, runs=1)
+    fields = request.model_dump(mode="json")
+    return preflight_t2(spend, "task", fields, spec, params, crashes, runs=1)
 
 
 def preflight_arena(spend: Spend, manager: JobManager, body: dict[str, Any]) -> dict[str, Any]:
     """``POST /api/arena/preflight``: the body of ``POST /api/arena``; prices both runs."""
     pair = parse_arena(manager, body)
     crashes = plan_crashes(pair.plan)
-    return spend.preflight("arena", pair.fields(), pair.spec, pair.params, crashes, runs=2)
+    return preflight_t2(spend, "arena", pair.fields(), pair.spec, pair.params, crashes, runs=2)
+
+
+# -- reading pasted text -------------------------------------------------------------------
+
+
+def intake_fields(body: dict[str, Any]) -> dict[str, Any]:
+    """What a reading of pasted text is bound to: the cleaned text, the rooms and the names
+    flag, whichever way the body spelled them. Bad text is refused here, as ``POST /api/intake``
+    would refuse it."""
+    from fractalswarm.intake import service
+
+    try:
+        segments, rooms = service.read_body(body)
+    except service.IntakeError as exc:
+        raise JobError(422, str(exc)) from None
+    return {"segments": segments, "rooms": rooms, "names": bool(body.get("names", False))}
+
+
+def intake_request_of(body: dict[str, Any]) -> dict[str, Any]:
+    """The launch request of a billed reading: its fields and the proofs the body carries."""
+    token, confirm = body.get("preflight_token"), body.get("confirm")
+    return intake_fields(body) | {
+        "preflight_token": token if isinstance(token, str) else None,
+        "confirm": confirm if isinstance(confirm, str) else None,
+    }
+
+
+def intake_requests(segments: dict[str, str]) -> list[dict[str, Any]]:
+    """The requests of one reading at its worst: the call, and the second try the actor makes
+    with the errors of the first answer (``intake/actor.py``), on the text with its addresses
+    already replaced, as the model will receive it."""
+    from fractalswarm.intake import service
+    from fractalswarm.intake.actor import MAX_ATTEMPTS
+    from fractalswarm.intake.schema import intake_request
+    from fractalswarm.intake.shape import DAYS, slot_grid
+
+    masked, _ = service.mask(segments)
+    days, slots = list(DAYS), slot_grid()
+    first = intake_request(masked, days, slots, [])
+    retry = intake_request(masked, days, slots, ["x" * PREFLIGHT_FEEDBACK_CHARS])
+    return [first, *[retry] * (MAX_ATTEMPTS - 1)]
+
+
+def preflight_intake(spend: Spend, body: dict[str, Any]) -> dict[str, Any]:
+    """``POST /api/intake/preflight``: the body of ``POST /api/intake``. Nothing is written:
+    the text is priced and fingerprinted, and only the fingerprint is kept."""
+    fields = intake_fields(body)
+    requests = intake_requests(fields["segments"])
+    return spend.preflight("intake", fields, requests, runs=1, cap=INTAKE_CAP_USD)

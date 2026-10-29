@@ -7,6 +7,7 @@ called (the fixture is autouse, so a test cannot start the real CLI by forgettin
 
 import dataclasses
 import json
+import re
 import sys
 import time
 from collections.abc import Callable
@@ -20,12 +21,15 @@ from fractalswarm.api import jobs
 from fractalswarm.api.app import create_app
 from fractalswarm.api.spend import (
     CONFIRM_WORD,
+    INTAKE_CAP_USD,
     RUN_CAP_USD,
     Preflights,
     Spend,
     SpendGate,
     digest_of,
 )
+from fractalswarm.bench.tasks.t2_conference.generator import live_sample
+from fractalswarm.cli import INTAKE_RUN_CAP_USD
 from fractalswarm.config import Settings
 from fractalswarm.market.ledger import ProjectLedger
 
@@ -246,8 +250,8 @@ def test_a_preflight_for_a_bad_request_is_refused(
 
 def test_the_preflight_needs_the_private_directory(tmp_path: Path) -> None:
     client = TestClient(create_app(tmp_path, None, tmp_path, tmp_path / "s"))
-    for path in ("/api/tasks/preflight", "/api/arena/preflight"):
-        answer = client.post(path, json={"spec": SPEC})
+    for path in ("/api/tasks/preflight", "/api/arena/preflight", "/api/intake/preflight"):
+        answer = client.post(path, json={"spec": SPEC, "talks": "x"})
         assert answer.status_code == 503 and "private directory" in answer.json()["error"]
 
 
@@ -458,3 +462,267 @@ def test_a_gate_from_the_settings_follows_the_environment(
     monkeypatch.setenv("FRACTALSWARM_ALLOW_UI_REAL", "0")
     assert SpendGate.from_settings(Settings()).allow_real is False
     assert not (tmp_path / "l.sqlite").exists()
+
+
+# -- the reading of pasted text ----------------------------------------------------------------
+#
+# What a person pastes is private: a preflight prices it and keeps a fingerprint, and a billed
+# reading is cleared by the same gate as a billed run, with its own $0.25 cap.
+
+SAMPLE = live_sample(1)
+PASTE = {key: SAMPLE[key] for key in ("conference", "talks", "notes", "rooms")}
+ADDRESS = re.compile(r"[a-z.]+@example\.org")
+
+
+def intake_billed(token: Any, **body: Any) -> dict[str, Any]:
+    fields = {"backend": "real", "preflight_token": token, "confirm": CONFIRM_WORD}
+    return PASTE | fields | body
+
+
+def intake_token(api: Api, **body: Any) -> str:
+    price = api.post("/api/intake/preflight", PASTE | body).json()
+    assert price["ok"] is True, price
+    return price["token"]
+
+
+def intakes_on_disk(api: Api) -> list[Path]:
+    return sorted(api.private.glob("intake/*"))
+
+
+def test_the_intake_cap_is_the_one_the_cli_runs_with() -> None:
+    assert INTAKE_CAP_USD == INTAKE_RUN_CAP_USD == 0.25
+
+
+def test_the_intake_preflight_prices_a_reading_and_keeps_only_a_fingerprint(api: Api) -> None:
+    answer = api.post("/api/intake/preflight", PASTE)
+    assert answer.status_code == 200, answer.text
+    price = answer.json()
+    assert price["ok"] is True and price["refusals"] == [] and price["kind"] == "intake"
+    assert price["token"] and price["confirm_word"] == "SPEND" and price["expires_in_s"] > 0
+    assert price["runs"] == 1 and price["calls_per_run"] == 2  # the reading, and its one retry
+    assert price["run_cap_usd"] == INTAKE_CAP_USD
+    assert price["worst_case_usd"] == min(price["estimate_usd_per_run"], INTAKE_CAP_USD) > 0
+    # It wrote nothing: no intake, no job, no ledger.
+    assert intakes_on_disk(api) == [] and api.get("/api/jobs").json() == []
+    assert not api.spend.gate.ledger_path.exists()
+    # And the token holds a fingerprint of the text, not the text.
+    kept = api.spend.preflights.issued.values()
+    assert kept and all(
+        set(vars(each)) == {"digest", "worst_case_usd", "expires_at"} for each in kept
+    )
+    assert PASTE["talks"][:60] not in repr(api.spend.preflights.issued)
+
+
+@pytest.mark.parametrize(
+    ("gate", "needle"),
+    [
+        ({"allow_real": False}, "FRACTALSWARM_ALLOW_UI_REAL"),
+        ({"has_key": False}, "MODEL_API_KEY"),
+        ({"phase_cap_usd": 0.1}, "phase cap"),
+        ({"project_cap_usd": 0.1}, "project cap"),
+    ],
+)
+def test_an_intake_preflight_that_cannot_pass_says_why_and_gives_no_token(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gate: dict[str, Any], needle: str
+) -> None:
+    api = make_api(tmp_path, monkeypatch, **({"phase_cap_usd": 50.0} | gate))
+    price = api.post("/api/intake/preflight", PASTE).json()
+    assert price["ok"] is False and price["token"] is None and price["expires_in_s"] is None
+    assert any(needle in reason for reason in price["refusals"]), price["refusals"]
+
+
+@pytest.mark.parametrize(
+    ("body", "needle"),
+    [
+        ({"talks": ""}, "talks is empty"),
+        ({"talks": 5}, "talks must be text"),
+        ({"talks": "x" * 200_001}, "longer than"),
+        ({"talks": "x", "notes": ["not", "text"]}, "notes must be text"),
+        ({"talks": "x", "rooms": "A"}, "rooms must be a list"),
+        ({"talks": "x", "rooms": [{"name": "A", "capacity": 0}]}, "capacity of at least 1"),
+    ],
+)
+def test_a_paste_that_could_not_be_read_is_refused_by_the_preflight(
+    api: Api, body: dict[str, Any], needle: str
+) -> None:
+    answer = api.post("/api/intake/preflight", body)
+    assert answer.status_code == 422, answer.text
+    assert needle in answer.json()["error"]
+    assert api.spend.preflights.issued == {}
+
+
+def test_a_billed_reading_starts_with_the_gate_flags_the_ledger_and_the_addresses_masked(
+    api: Api,
+) -> None:
+    token = intake_token(api)
+    answer = api.post("/api/intake", intake_billed(token))
+    assert answer.status_code == 202, answer.text
+    launched = answer.json()
+    assert launched["billed"] is True and launched["state"] == "reading" and launched["private"]
+    job = api.get(f"/api/jobs/{launched['job_id']}").json()
+    assert job["kind"] == "intake" and job["real"] is True and job["private"] is True
+    called = api.stand_in_called_with(launched["job_id"])
+    argv = called["argv"]
+    assert argv[:2] == ["intake", launched["intake_id"]] and flag(argv, "--backend") == "real"
+    assert "--confirm-real-spend" in argv and "--no-paid-retries" in argv
+    assert called["ledger"] == str(api.spend.gate.ledger_path) and called["cap"] == "150.0"
+    # What the process reads, and everything else the API keeps, holds no real address.
+    assert ADDRESS.search(PASTE["notes"]), "the sample must hold addresses"
+    for file in sorted(api.private.rglob("*")):
+        if file.is_file() and file.name != "pseudonyms.json":
+            assert not ADDRESS.search(file.read_text(encoding="utf-8")), file
+
+
+INTAKE_REFUSALS: list[tuple[str, Callable[[str], dict[str, Any]], int, str]] = [
+    ("no token", lambda token: intake_billed(None), 403, "preflight flow"),
+    ("empty token", lambda token: intake_billed(""), 403, "preflight flow"),
+    ("token that is not text", lambda token: intake_billed(["x"]), 403, "preflight flow"),
+    ("no word", lambda token: intake_billed(token, confirm=None), 403, "type SPEND"),
+    ("wrong word", lambda token: intake_billed(token, confirm="spend"), 403, "type SPEND"),
+    ("unknown token", lambda token: intake_billed("not-a-token"), 403, "unknown, used or expired"),
+    (
+        "other talks",
+        lambda token: intake_billed(token, talks=PASTE["talks"] + " +"),
+        403,
+        "different",
+    ),
+    ("other notes", lambda token: intake_billed(token, notes="changed"), 403, "different"),
+    ("other conference", lambda token: intake_billed(token, conference="Other"), 403, "different"),
+    ("other names", lambda token: intake_billed(token, names=True), 403, "different"),
+    (
+        "other rooms",
+        lambda token: intake_billed(token, rooms=[{"name": "Z", "capacity": 5}]),
+        403,
+        "different",
+    ),
+    (
+        "text that cannot be read",
+        lambda token: intake_billed(token, talks=""),
+        422,
+        "talks is empty",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("name", "make", "status", "needle"), INTAKE_REFUSALS, ids=[r[0] for r in INTAKE_REFUSALS]
+)
+def test_every_way_a_billed_reading_can_be_refused(
+    api: Api, name: str, make: Callable[[str], dict[str, Any]], status: int, needle: str
+) -> None:
+    token = intake_token(api)
+    refused = api.post("/api/intake", make(token))
+    assert refused.status_code == status, refused.text
+    assert needle in refused.json()["error"]
+    assert api.get("/api/jobs").json() == [] and intakes_on_disk(api) == []  # nothing, no text
+    # no refusal spends the token
+    assert api.post("/api/intake", intake_billed(token)).status_code == 202
+
+
+def test_the_same_text_with_other_line_endings_is_the_same_request(api: Api) -> None:
+    token = intake_token(api)
+    crlf = {key: value.replace("\n", "\r\n") for key, value in PASTE.items() if key != "rooms"}
+    assert crlf["talks"] != PASTE["talks"]
+    assert api.post("/api/intake", intake_billed(token) | crlf).status_code == 202
+
+
+def test_a_token_is_for_the_kind_of_launch_it_was_priced_for(api: Api) -> None:
+    wrong = api.post("/api/intake", intake_billed(token_for(api)))  # a run's token
+    assert wrong.status_code == 403 and "different request" in wrong.json()["error"]
+    wrong = api.post("/api/tasks", billed(intake_token(api)))  # a reading's token
+    assert wrong.status_code == 403 and "different request" in wrong.json()["error"]
+    assert api.get("/api/jobs").json() == [] and intakes_on_disk(api) == []
+
+
+def test_a_reading_token_works_once(api: Api) -> None:
+    token = intake_token(api)
+    assert api.post("/api/intake", intake_billed(token)).status_code == 202
+    again = api.post("/api/intake", intake_billed(token))
+    assert again.status_code == 403 and "unknown, used or expired" in again.json()["error"]
+    assert len(intakes_on_disk(api)) == 1
+
+
+def test_the_reading_checks_the_server_flag_at_launch_too(api: Api) -> None:
+    token = intake_token(api)
+    api.spend.gate = dataclasses.replace(api.spend.gate, allow_real=False)
+    refused = api.post("/api/intake", intake_billed(token))
+    assert refused.status_code == 403 and "FRACTALSWARM_ALLOW_UI_REAL" in refused.json()["error"]
+    assert api.get("/api/jobs").json() == [] and intakes_on_disk(api) == []
+
+
+def test_the_caps_are_checked_again_when_a_reading_starts_and_the_token_is_kept(api: Api) -> None:
+    token = intake_token(api)
+    ledger = api.spend.gate.ledger_path
+    fill_ledger(ledger, reserved=49.95)  # $0.05 of the phase cap is left; the reading may cost more
+    refused = api.post("/api/intake", intake_billed(token))
+    assert refused.status_code == 409 and "phase cap" in refused.json()["error"]
+    assert api.get("/api/jobs").json() == [] and intakes_on_disk(api) == []
+
+    ProjectLedger(ledger, 1000.0).settle("a-open", 0.0)  # that reservation came to nothing
+    assert api.post("/api/intake", intake_billed(token)).status_code == 202
+
+
+def test_only_one_billed_job_runs_at_a_time_a_reading_included(api: Api) -> None:
+    first = api.post("/api/tasks", billed(token_for(api), run_id="first-billed"))
+    assert first.status_code == 202
+    token = intake_token(api)
+    second = api.post("/api/intake", intake_billed(token))
+    assert second.status_code == 409 and "one at a time" in second.json()["error"]
+    assert intakes_on_disk(api) == []  # the text was not kept
+
+    api.post(f"/api/jobs/{first.json()['job_id']}/cancel")  # room again; the token was kept
+    assert api.post("/api/intake", intake_billed(token)).status_code == 202
+    blocked = api.post("/api/tasks", billed(token_for(api), run_id="second-billed"))
+    assert blocked.status_code == 409 and "one at a time" in blocked.json()["error"]
+
+
+def test_a_reading_that_cannot_start_gives_the_token_back_and_leaves_no_text(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    token = intake_token(api)
+    monkeypatch.setattr(jobs, "LAUNCH", [str(api.runs / "no-such-python")])
+    failed = api.post("/api/intake", intake_billed(token))
+    assert failed.status_code == 500 and api.get("/api/jobs").json() == []
+    assert intakes_on_disk(api) == []
+    monkeypatch.setattr(jobs, "LAUNCH", [sys.executable, "-c", STAND_IN])
+    assert api.post("/api/intake", intake_billed(token)).status_code == 202
+
+
+def test_a_token_is_kept_when_the_ledger_cannot_be_read_at_launch(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    token = intake_token(api)
+    standing = SpendGate.standing
+
+    def locked(self: SpendGate) -> dict[str, float]:
+        raise OSError("the ledger is locked")
+
+    monkeypatch.setattr(SpendGate, "standing", locked)
+    with pytest.raises(OSError, match="locked"):
+        api.post("/api/intake", intake_billed(token))
+    assert intakes_on_disk(api) == []
+    monkeypatch.setattr(SpendGate, "standing", standing)
+    assert api.post("/api/intake", intake_billed(token)).status_code == 202
+
+
+def test_a_fake_reading_needs_no_token_and_is_not_billed(api: Api) -> None:
+    answer = api.post("/api/intake", PASTE)
+    assert answer.status_code == 202 and answer.json()["billed"] is False
+    argv = api.stand_in_called_with(answer.json()["job_id"])["argv"]
+    assert flag(argv, "--backend") == "fake"
+    assert "--confirm-real-spend" not in argv and "--no-paid-retries" not in argv
+    with_token = api.post("/api/intake", PASTE | {"preflight_token": "x", "confirm": "SPEND"})
+    assert with_token.status_code == 202 and with_token.json()["billed"] is False
+    unknown = api.post("/api/intake", PASTE | {"backend": "bogus"})
+    assert unknown.status_code == 422 and "fake or real" in unknown.json()["error"]
+
+
+def test_an_app_without_a_gate_cannot_bill_a_reading(tmp_path: Path) -> None:
+    app = create_app(tmp_path / "runs", None, tmp_path, tmp_path, private_dir=tmp_path / "private")
+    client = TestClient(app)
+    price = client.post("/api/intake/preflight", json=PASTE).json()
+    assert price["ok"] is False and price["token"] is None
+    assert any("FRACTALSWARM_ALLOW_UI_REAL" in reason for reason in price["refusals"])
+    asked = client.post("/api/intake", json=intake_billed("anything"))
+    assert asked.status_code == 403 and client.get("/api/jobs").json() == []
+    assert not list((tmp_path / "private").glob("intake/*"))

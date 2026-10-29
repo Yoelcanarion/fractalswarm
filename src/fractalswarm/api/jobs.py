@@ -596,20 +596,31 @@ def run_args(
     return args
 
 
-def launch_intake(manager: JobManager, intake_id: str, backend: str = "fake") -> dict[str, Any]:
-    """Start the ``intake`` scenario on an intake whose ``input.json`` is written."""
+def launch_intake(
+    manager: JobManager, intake_id: str, backend: str = "fake", approval: Approval | None = None
+) -> dict[str, Any]:
+    """Start the ``intake`` scenario on an intake whose ``input.json`` is written. A reading with
+    the real model (``backend="real"``) is billed: it starts only with the ``approval`` that
+    api/spend.py gives, and runs with the CLI's cap on the ledger the approval names."""
+    billed = backend == "real"
+    if billed and approval is None:
+        raise JobError(403, "real runs need the preflight flow (POST /api/intake/preflight)")
+    args = ["intake", intake_id, "--backend", backend]
+    if billed:
+        args += ["--confirm-real-spend", "--no-paid-retries"]
     with manager.lock:
-        warnings = manager.check_launch("sim", real=backend == "real")
-        job = manager.new_job("intake", f"intake {intake_id}", "sim", backend == "real", True)
+        warnings = manager.check_launch("sim", real=billed)
+        job = manager.new_job("intake", f"intake {intake_id}", "sim", billed, True)
         try:
             manager.spawn(
                 job,
                 run_id=intake_id,
                 role="intake",
                 scenario="intake",
-                args=["intake", intake_id, "--backend", backend],
+                args=args,
                 private=True,
                 runs_dir=manager.private.intake,
+                extra_env=approval.env if approval else None,
             )
         except BaseException:
             manager.abort_launch(job)
