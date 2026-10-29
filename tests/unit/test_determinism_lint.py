@@ -29,8 +29,17 @@ LINTED_DIRS = (
     "bench/tasks/t3_report",
     "baselines",
 )
-# verify/ also holds code of other streams; lint the files the swarm's handlers call.
-LINTED_FILES = ("verify/checks.py", "verify/judge.py", "verify/cross_audit.py")
+# verify/ also holds code of other streams; lint the files the swarm's handlers call. intake/
+# also holds the API's file I/O (store, service, guard); lint the scenario's pure modules.
+LINTED_FILES = (
+    "verify/checks.py",
+    "verify/judge.py",
+    "verify/cross_audit.py",
+    "intake/actor.py",
+    "intake/shape.py",
+    "intake/truth.py",
+    "intake/pseudonym.py",
+)
 ALLOW_PRAGMA = "# determinism: allow"
 
 CLOCK_FUNCTIONS = {

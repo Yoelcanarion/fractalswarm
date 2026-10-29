@@ -102,7 +102,6 @@ def test_bench_results_fall_back_to_the_fixture(client: TestClient, dirs) -> Non
 @pytest.mark.parametrize(
     "path",
     [
-        "/api/tasks",
         "/api/runs/demo-toy/approve",
         "/api/runs/demo-toy/escalations/e1",
     ],
@@ -115,9 +114,11 @@ def test_control_endpoints_answer_501_until_wired(client: TestClient, path: str)
 
 @pytest.fixture
 def live(client: TestClient, dirs: dict[str, Path]) -> Path:
-    """A run that is still recording: its log has no end and no export yet."""
+    """A run that is still recording: its log has no end and no export yet, and its process
+    keeps touching LIVE."""
     run_dir = dirs["runs"] / "live"
     write_sqlite(run_dir / "events.sqlite", golden_events()[:10]).close()
+    (run_dir / "LIVE").write_text("1", encoding="utf-8")
     return run_dir
 
 
@@ -270,6 +271,8 @@ def test_ws_tails_a_live_sqlite_log(client: TestClient, dirs, monkeypatch) -> No
     events = golden_events()
     path = dirs["runs"] / "live" / "events.sqlite"
     write_sqlite(path, events[:10]).close()
+    assert client.get("/api/runs/live").json()["status"] == "interrupted"  # nobody records it
+    (path.parent / "LIVE").write_text("1", encoding="utf-8")  # the recording process starts
     assert client.get("/api/runs/live").json()["status"] == "running"
 
     def writer_thread() -> None:  # another "process" keeps recording (own connection)

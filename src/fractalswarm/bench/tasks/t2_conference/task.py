@@ -201,6 +201,35 @@ def normalize_track(label: str, tracks: list[dict[str, Any]]) -> str | None:
     return None
 
 
+def derived_truth(corpus: dict[str, Any], plan: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The truth a run can state without a person: structure only (``truth_mode`` "derived").
+
+    Who speaks each talk comes from the corpus, and the tracks from the root's plan (the
+    track labels when there is none). Nothing is known about the speakers' availability or the
+    audiences, so every cell is available, no preference counts and attendance is 0: the
+    checker then verifies placement, rooms, speakers and the track rule, not the constraints
+    in the emails. Same schema as the generator's truth.
+    """
+    talks = sorted(corpus["talks"], key=lambda talk: talk["id"])
+    if plan is not None:
+        track_of = {t: sub["track_id"] for sub in plan["tracks"] for t in sub["talk_ids"]}
+    else:
+        first = corpus["tracks"][0]["id"]
+        track_of = {
+            talk["id"]: normalize_track(talk["track_label"], corpus["tracks"]) or first
+            for talk in talks
+        }
+    speakers = sorted({talk["speaker_id"] for talk in talks})
+    cells = [[day, slot["index"]] for day in corpus["days"] for slot in corpus["slots"]]
+    return {
+        "track_of": dict(sorted(track_of.items())),
+        "speaker_of": {talk["id"]: talk["speaker_id"] for talk in talks},
+        "attendance": {talk["id"]: 0 for talk in talks},
+        "availability": {speaker: cells for speaker in speakers},
+        "preferences": {speaker: None for speaker in speakers},
+    }
+
+
 def _truth_slice(truth: dict[str, Any], talk_ids: list[str]) -> dict[str, Any]:
     speakers = sorted({truth["speaker_of"][talk] for talk in talk_ids})
     return {
@@ -315,7 +344,8 @@ class T2Task:
         ).model_dump()
 
     def root_children(self, goal: dict[str, Any], plan: dict[str, Any]) -> list[dict[str, Any]]:
-        corpus, truth = goal["corpus"], goal["truth"]
+        corpus = goal["corpus"]
+        truth = goal["truth"] or derived_truth(corpus, plan)  # no truth: structure only
         tracks = {track["id"]: track for track in corpus["tracks"]}
         children = []
         for sub in plan["tracks"]:
@@ -730,8 +760,13 @@ class T2Task:
     def final_report(
         self, goal: dict[str, Any], output: dict[str, Any], view: Any = None
     ) -> dict[str, Any]:
-        report = check(output["placements"], goal["corpus"], goal["truth"])
-        return {
+        truth = goal["truth"]
+        if not truth:  # a run on input nobody has checked: the same structure the squads got
+            tree = view.views.get("tree") if view is not None else None
+            record = tree.goals.get(goal["id"]) if tree is not None else None
+            truth = derived_truth(goal["corpus"], record.plan if record is not None else None)
+        report = check(output["placements"], goal["corpus"], truth)
+        result = {
             "hard_violations": len(report.hard_violations),
             "violation_counts": report.counts(),
             "violations": [v.model_dump() for v in report.hard_violations[:50]],
@@ -740,6 +775,9 @@ class T2Task:
             "expected": report.expected,
             "schedule": output["placements"],
         }
+        if "truth_mode" in goal:  # approved | given | derived: what the checker knew
+            result["truth_mode"] = goal["truth_mode"]
+        return result
 
 
 def _place_writes(goal: dict[str, Any]) -> list[str]:
