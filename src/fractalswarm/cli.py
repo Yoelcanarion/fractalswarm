@@ -917,7 +917,9 @@ def bench_verdicts(
     ] = None,
 ) -> None:
     """Judge the swarm against each rival under the pre-registered rules (bench/PREREG.md):
-    wins, ties and losses per hypothesis, the regime map, the outcome and the per-process view."""
+    wins, ties and losses per hypothesis, the regime map, the outcome and the per-process view.
+    With --prereg, also draw the regime map (regime.png and regime.json) next to honesty.json."""
+    from fractalswarm.bench.charts import regime_chart
     from fractalswarm.bench.verdicts import render_text, verdicts, write_json
 
     if json_path is not None and not prereg:
@@ -930,7 +932,8 @@ def bench_verdicts(
     if prereg:
         target = json_path or out[0] / "honesty.json"
         write_json(honesty, target)
-        typer.echo(f"\nwrote {target}")
+        drawn = regime_chart(honesty.model_dump(mode="json"), target.with_name("regime"))
+        typer.echo("\n".join(["", f"wrote {target}", *(f"      {path}" for path in drawn)]))
 
 
 def _serve(runs_dir: Path, host: str, port: int, open_run: str | None, browser: bool) -> None:

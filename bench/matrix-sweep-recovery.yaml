@@ -1,8 +1,8 @@
 # Sensitivity sweep 1 (arena spec §C.2, PREREG §5): the failure-detection time, the same for both
 # systems. The swarm's heartbeat detector declares a member dead this long after its last beat;
 # a supervisor is back this long after its crash. T2 at C3, 3 seeds, $0, sim clock.
-# 3 workflows x 2 profiles x 3 seeds x 7 settings = 126 runs. The sub-second settings make the swarm
-# beat faster, so they are the slow ones to run (about 16 s a run at 0.5 s).
+# 3 workflows x 2 profiles x 3 seeds x 6 settings = 108 runs. The 0.5 s extreme is in
+# matrix-sweep-recovery-extreme.yaml: its swarm runs take a minute each and 600 MB.
 #   uv run fractalswarm bench bench/matrix-sweep-recovery.yaml --fake
 name: sweep-recovery-ms
 workflows: [swarm, durable-max, durable]
@@ -10,7 +10,6 @@ tasks: [t2_conference]
 profiles: [C0, C3]
 seeds: [1, 2, 3]
 knobs:
-  - {recovery_ms: 500}
   - {recovery_ms: 1000}
   - {recovery_ms: 2000}
   - {recovery_ms: 2500}

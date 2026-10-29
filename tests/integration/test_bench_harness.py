@@ -340,9 +340,13 @@ def test_cli_rescore_and_verdicts_read_a_finished_matrix(tmp_path: Path) -> None
     assert "MOVED" not in done.output
     shown = runner.invoke(app, ["bench", "verdicts", str(tmp_path)])
     assert shown.exit_code == 0, shown.output
-    assert "Outcome PENDING" in shown.output and not (tmp_path / "honesty.json").exists()
+    assert "Outcome PENDING" in shown.output
+    assert not (tmp_path / "honesty.json").exists() and not (tmp_path / "regime.png").exists()
     written = runner.invoke(app, ["bench", "verdicts", str(tmp_path), "--prereg"])
     assert written.exit_code == 0 and (tmp_path / "honesty.json").is_file()
+    assert (tmp_path / "regime.png").is_file() and (tmp_path / "regime.json").is_file()
+    stamped = json.loads((tmp_path / "regime.json").read_text(encoding="utf-8"))
+    assert stamped["prereg"]["sha"] and stamped["outcome"] == "pending"
     assert runner.invoke(app, ["bench", "rescore", str(tmp_path / "cells")]).exit_code != 0
     assert runner.invoke(app, ["bench", "verdicts", str(tmp_path / "nowhere")]).exit_code != 0
     assert runner.invoke(app, ["bench", "verdicts", str(tmp_path), "--json", "x"]).exit_code != 0

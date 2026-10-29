@@ -10,8 +10,9 @@ wiped and recorded again.
 
 After the cells, the harness pairs every row with the C0 row of the same workflow, task, seed,
 agents and knobs (extra cost and time lost vs C0) and writes ``results.csv``, ``results.json``
-and the hero chart, or the scaling chart when the matrix has an ``agents`` axis. ``rescore``
-recomputes the metrics of the cells already on disk from their logs, at $0.
+and the hero chart, or the scaling chart when the matrix has an ``agents`` axis, plus the
+recovery chart when any run logged a crash. ``rescore`` recomputes the metrics of the cells
+already on disk from their logs, at $0.
 """
 
 import csv
@@ -378,19 +379,7 @@ async def run_matrix(
 
     rows = aggregate(load_results(out_dir, matrix))
     csv_path, json_path = write_results(rows, out_dir)
-    chart_paths: list[str] = []
-    if charts and rows:
-        from fractalswarm.bench.charts import hero_chart, scaling_chart
-
-        task = matrix.chart_task or matrix.tasks[0]
-        if matrix.agents:
-            task_def = get_task(task)
-            limit = task_def.parallelism if task_def else None
-            base = out_dir / f"scaling-{task}"
-            png, js = scaling_chart(rows, base, task=task, title=matrix.name, limit=limit)
-        else:
-            png, js = hero_chart(rows, out_dir / f"hero-{task}", task=task, title=matrix.name)
-        chart_paths = [str(png), str(js)]
+    chart_paths = draw_charts(matrix, rows, out_dir) if charts and rows else []
     return MatrixReport(
         ran=ran,
         skipped=skipped,
@@ -400,6 +389,38 @@ async def run_matrix(
         json_path=str(json_path),
         chart_paths=chart_paths,
     )
+
+
+def draw_charts(matrix: Matrix, rows: list[dict[str, Any]], out_dir: Path) -> list[str]:
+    """The hero chart (the scaling chart for an agents axis; neither for a knobs axis, which the
+    hero chart would average over), and the recovery chart when any run logged a crash: against
+    the coordinators killed, or against each sweep axis at the matrix's most chaotic profile."""
+    from fractalswarm.bench.charts import CHAOS_AXIS, hero_chart, recovery_chart, scaling_chart
+
+    task = matrix.chart_task or matrix.tasks[0]
+    knobs = sorted({name for point in matrix.knobs or [] for name in point})
+    drawn: list[Path] = []
+    if matrix.agents:
+        task_def = get_task(task)
+        limit = task_def.parallelism if task_def else None
+        drawn += scaling_chart(
+            rows, out_dir / f"scaling-{task}", task=task, title=matrix.name, limit=limit
+        )
+    elif not knobs:
+        drawn += hero_chart(rows, out_dir / f"hero-{task}", task=task, title=matrix.name)
+    if any(row.get("crashes") for row in rows):
+        top = max((cell.profile for cell in matrix.cells()), key=lambda p: p.coordinator_crashes)
+        for axis in knobs or ["agents" if matrix.agents else CHAOS_AXIS]:
+            suffix = "" if axis == CHAOS_AXIS else f"-{axis}"
+            drawn += recovery_chart(
+                rows,
+                out_dir / f"recovery-{task}{suffix}",
+                task=task,
+                title=matrix.name,
+                axis=axis,
+                profile=top.name,
+            )
+    return [str(path) for path in drawn]
 
 
 def load_results(out_dir: Path, matrix: Matrix | None = None) -> list[CellResult]:
