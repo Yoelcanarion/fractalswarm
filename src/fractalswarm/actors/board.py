@@ -17,6 +17,7 @@ candidates are logged (``collision.detected``, kind ``semantic``), and the owner
 common ancestor is told. The owner's ``fact.resolve`` makes the winner's value the verified fact.
 """
 
+import copy
 import json
 from typing import Any
 
@@ -264,20 +265,11 @@ def _contest(state: dict[str, Any], board: Blackboard, fact: Fact, view: View):
     stored = current.model_copy(update={"status": "disputed", "version": current.version + 1})
     board.facts[key] = stored
     board.index.set_status(key, "disputed")
-    provenance = fact.provenance
-    published = {
-        "key": key,
-        "subject": fact.subject,
-        "status": "disputed",
-        "squad": provenance.squad,
-        "agent": provenance.agent,
-        "contract": provenance.contract,
-        "version": stored.version,
-    }
-    conflict = {"key": key, "subject": fact.subject, "candidates": candidates}
-    detected = {"kind": "semantic", "goal_id": new["goal"], "holder": provenance.agent}
+    # A copy: the board keeps editing its candidates, the event must not change after it is logged.
+    conflict = {"key": key, "subject": fact.subject, "candidates": copy.deepcopy(candidates)}
+    detected = {"kind": "semantic", "goal_id": new["goal"], "holder": fact.provenance.agent}
     commands: list[Command] = [
-        Emit(type="fact.published", payload=published),
+        _fact_event(stored.model_copy(update={"provenance": fact.provenance})),
         Emit(type="collision.detected", payload=detected | {"conflicts": [conflict]}),
     ]
     goals = sorted({s["goal"] for c in candidates for s in c["by"] if s["goal"]})

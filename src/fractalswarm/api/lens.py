@@ -372,9 +372,30 @@ def _describe(event: Event) -> str:
         case "fact.published":
             return f"fact {p['key']} was published as {p['status']}"
         case "collision.detected":
+            if p["kind"] == "semantic":
+                keys = ", ".join(conflict["key"] for conflict in p["conflicts"])
+                return f"contracts published different values for {keys} ({p['holder']})"
             return f"a {p['kind']} collision was detected for {p['goal_id']} ({p['holder']})"
         case "collision.resolved":
             return f"the {p['kind']} collision for {p['goal_id']} was resolved: {p['resolution']}"
+        case "arbitration.requested":
+            return (
+                f"{p['arbiter']} asked the arbiter about {p['key']} "
+                f"(attempt {p['attempt']}, settled at {p['lca']})"
+            )
+        case "arbitration.ruled":
+            who = {"arbiter": "the arbiter", "agreement": "the contracts", "fallback": "the rule"}
+            return (
+                f"{who.get(p['by'], p['by'])} kept {p['work']} for {p['key']} "
+                f"(confidence {p['confidence']:.2f}): {p['reason']}"
+            )
+        case "fact.resolved":
+            return f"the board made the ruled value of {p['key']} the verified fact"
+        case "escalation.opened":
+            return (
+                f"{p['question']} A person may answer within {p['timeout_ms'] // 1000} s; "
+                f"otherwise {p['default']} stands (confidence {p['confidence']:.2f})"
+            )
         case "goal.completed":
             return f"{p['goal_id']} completed: {p['status']}"
         case "budget.settled":

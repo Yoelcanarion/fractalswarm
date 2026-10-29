@@ -421,7 +421,7 @@ def step(state: dict[str, Any], view: View, tools: Tools) -> list[Command]:
     for dispute in disputes.open_disputes():
         lca = lca_of(tools.parent_of, dispute.goals())
         entry = state["goals"].get(lca)
-        if entry is None or entry["phase"] == "done":
+        if entry is None:
             continue  # not ours: the LCA goal's owner (or its heir) rules
         commands += _take_up(state, view, dispute, lca, entry, tools, hooks)
     return commands
@@ -466,6 +466,8 @@ def _take_up(
     context, evidence, found = hooks.evidence(entry["goal"], dispute)
     if not found:
         return rule(*_oldest(dispute), note="the goal holds no evidence to weigh")
+    if entry["phase"] == "done":
+        return []  # an answer in the log is still read, but a finished goal pays for no new call
     number = max((call.number for call in calls), default=0) + 1
     request = arbiter_request(dispute, context, evidence, hooks.NOTE, unusable)
     requested = {
