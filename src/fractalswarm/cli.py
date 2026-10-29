@@ -3,7 +3,9 @@
 from pathlib import Path
 from typing import Annotated
 
+import click
 import typer
+from typer.core import TyperGroup
 
 from fractalswarm import __version__
 
@@ -689,10 +691,13 @@ def takeover(
     import asyncio
 
     from fractalswarm.runs import replay_run
-    from fractalswarm.verify.takeover import check_run
+    from fractalswarm.verify.takeover import check_run, is_supervisor_run
     from fractalswarm.verify.takeover_render import render_markdown, render_text
 
     run_dir = _resolve_run_dir(run)
+    if is_supervisor_run(run_dir):
+        typer.echo(f"supervisor log: use `fractalswarm recovery {run}`")
+        raise typer.Exit(2)
     replayed = asyncio.run(replay_run(run_dir)) if replay else None
     report = check_run(run_dir, replay=replayed)
     typer.echo(render_text(report))
@@ -701,6 +706,24 @@ def takeover(
     if md_path is not None:
         command = f"fractalswarm takeover {run}" + (" --replay" if replay else "")
         md_path.write_text(render_markdown(report, command) + "\n", encoding="utf-8")
+    raise typer.Exit(0 if report.ok else 1)
+
+
+@app.command()
+def recovery(
+    run: Annotated[str, typer.Argument(help="run id under runs/, or a run directory")],
+    json_path: Annotated[
+        Path | None, typer.Option("--json", help="write the full report here as JSON")
+    ] = None,
+) -> None:
+    """Print what a run's coordinator outages cost and check what a supervisor must keep
+    (read-only; exit 1 on a violation)."""
+    from fractalswarm.verify.recovery import check_run, render_text
+
+    report = check_run(_resolve_run_dir(run))
+    typer.echo(render_text(report))
+    if json_path is not None:
+        json_path.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     raise typer.Exit(0 if report.ok else 1)
 
 
@@ -741,8 +764,26 @@ def budget(
     _control(run, {"op": "budget", "level": level, "key": key, "usd": usd, "reason": reason})
 
 
-@app.command()
-def bench(
+class _BenchGroup(TyperGroup):
+    """``bench MATRIX ...`` runs a matrix, as it always did; ``rescore`` and ``verdicts`` are the
+    other commands. Anything that is not one of them (or a help flag) is a ``run``."""
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        if args and args[0] not in self.commands and args[0] not in ctx.help_option_names:
+            args = ["run", *args]
+        return super().parse_args(ctx, args)
+
+
+bench_app = typer.Typer(
+    cls=_BenchGroup,
+    no_args_is_help=True,
+    help="Benchmark matrices: run one (the default), rescore its results, or read its verdicts.",
+)
+app.add_typer(bench_app, name="bench")
+
+
+@bench_app.command("run")
+def bench_run(
     matrix: Annotated[Path, typer.Argument(help="matrix YAML, e.g. bench/matrix.yaml")],
     dry_run: Annotated[
         bool, typer.Option(help="only print the cells and the worst-case cost pre-flight")
@@ -782,16 +823,20 @@ def bench(
 
     settings = _settings()
     project_ledger = None
+    per_cell = None
     if fake:
-        from fractalswarm.bench.workflows import fake_backend
+        from fractalswarm.bench.workflows import cell_backend, fake_backend
 
-        backend_factory, clock = fake_backend, "sim"
+        backend_factory, clock, per_cell = fake_backend, "sim", cell_backend
     else:
+        from fractalswarm.bench.registry import BACKEND_KNOBS
         from fractalswarm.llm.client import OpenAIBackend
         from fractalswarm.market.ledger import ProjectLedger
 
         if not confirm_real_spend:
             raise typer.BadParameter("real runs are billed: add --confirm-real-spend (or --fake)")
+        if any(name in BACKEND_KNOBS for point in spec.knobs or [] for name in point):
+            raise typer.BadParameter(f"{', '.join(BACKEND_KNOBS)} scales the fake LLM: use --fake")
         if not plan.within_cap:
             raise typer.BadParameter("the pre-flight worst case exceeds the matrix cap")
         if settings.model_api_key is None:
@@ -814,6 +859,7 @@ def bench(
         project_ledger=project_ledger,
         secrets=settings.secret_values(),
         log=typer.echo,
+        cell_backend=per_cell,
     )
     report = asyncio.run(run_matrix(spec, out_dir, options))
     typer.echo(
@@ -824,6 +870,67 @@ def bench(
         typer.echo(f"  {path}")
     if report.failed:
         raise typer.Exit(1)
+
+
+@bench_app.command("rescore")
+def bench_rescore(
+    out: Annotated[Path, typer.Argument(help="results dir of a finished matrix")],
+) -> None:
+    """Recompute the metrics of a finished matrix from its recorded logs, at $0 (nothing runs)."""
+    from fractalswarm.bench.harness import rescore
+
+    if not (out / "cells").is_dir():
+        raise typer.BadParameter(f"{out} has no cells/ directory")
+    report = rescore(out, typer.echo)
+    typer.echo(
+        f"rescored {len(report.rescored)}, run directory gone {len(report.missing)}, "
+        f"failed {len(report.failed)}"
+    )
+    for cell in report.missing:
+        typer.echo(f"  no log to score: {cell} (its old metrics are kept)")
+    for cell, why in report.failed.items():
+        typer.echo(f"  FAILED {cell}: {why}")
+    for cell, moved in report.changed.items():
+        typer.echo(f"  MOVED {cell}: {', '.join(moved)} (a pre-arena number changed)")
+    for path in (report.csv_path, report.json_path):
+        typer.echo(f"  {path}")
+    if report.failed:
+        raise typer.Exit(1)
+
+
+@bench_app.command("verdicts")
+def bench_verdicts(
+    out: Annotated[
+        list[Path], typer.Argument(help="results dirs, or a dir that holds them (gate, sweeps)")
+    ],
+    prereg: Annotated[
+        bool,
+        typer.Option(
+            "--prereg",
+            help="write honesty.json, stamped with the hash of bench/PREREG.md "
+            "(without it the verdicts are only printed)",
+        ),
+    ] = False,
+    json_path: Annotated[
+        Path | None,
+        typer.Option("--json", help="where honesty.json goes (default: in the first dir)"),
+    ] = None,
+) -> None:
+    """Judge the swarm against each rival under the pre-registered rules (bench/PREREG.md):
+    wins, ties and losses per hypothesis, the regime map, the outcome and the per-process view."""
+    from fractalswarm.bench.verdicts import render_text, verdicts, write_json
+
+    if json_path is not None and not prereg:
+        raise typer.BadParameter("--json writes honesty.json, which needs --prereg")
+    try:
+        honesty = verdicts(out)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(render_text(honesty))
+    if prereg:
+        target = json_path or out[0] / "honesty.json"
+        write_json(honesty, target)
+        typer.echo(f"\nwrote {target}")
 
 
 def _serve(runs_dir: Path, host: str, port: int, open_run: str | None, browser: bool) -> None:

@@ -1,0 +1,20 @@
+# Sensitivity sweep 4 (arena spec §C.2, PREREG §5): coordination density. The agents' latency is
+# multiplied by 0.25, 0.5, 1 or 2 (llm/calibrate.py: RoleLatencyScale) while the coordinators'
+# own calls keep theirs, so short agent work makes coordination a larger share of the run.
+# T2 at C3, 3 seeds, $0, sim clock. 3 x 2 x 3 x 4 = 72 runs.
+#   uv run fractalswarm bench bench/matrix-sweep-density.yaml --fake
+name: sweep-agent-latency-scale
+workflows: [swarm, durable-max, durable]
+tasks: [t2_conference]
+profiles: [C0, C3]
+seeds: [1, 2, 3]
+knobs:
+  - {agent_latency_scale: 0.25}
+  - {agent_latency_scale: 0.5}
+  - {agent_latency_scale: 1}
+  - {agent_latency_scale: 2}
+contributor: false
+out_dir: results/sweeps/agent_latency_scale
+chart_task: t2_conference
+notes: >
+  A workload condition, not a rival assumption: it scopes a claim and decides no outcome.

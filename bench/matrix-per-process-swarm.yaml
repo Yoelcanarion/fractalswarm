@@ -1,0 +1,17 @@
+# The per-process failure model (arena spec §C.2, PREREG §6), swarm side: one coordinator crash on
+# a named actor at half the contracts dispatched, no other fault, on every coordinator of the tree
+# (the root o0, the track leads o1-o3, the session orchestrators o1.1-o3.2). 11 profiles x 4 seeds
+# = 44 runs. A probe whose target has nothing left to do crashes nobody and is counted as skipped.
+#   uv run fractalswarm bench bench/matrix-per-process-swarm.yaml --fake
+name: per-process-swarm
+workflows: [swarm]
+tasks: [t2_conference]
+profiles:
+  [C0, K-o0, K-o1, K-o2, K-o3, K-o1.1, K-o1.2, K-o2.1, K-o2.2, K-o3.1, K-o3.2]
+seeds: [1, 2, 3, 4]
+contributor: false
+out_dir: results/sweeps/per-process-swarm
+chart_task: t2_conference
+notes: >
+  The impact of one crash by level of the tree; bench verdicts combines it with the number of
+  coordinators at each level (1, 3 and 6) against one supervisor process.

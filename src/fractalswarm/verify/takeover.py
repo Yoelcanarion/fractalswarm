@@ -92,7 +92,38 @@ def check_run(run: Path | str, *, replay: ReplayReport | None = None) -> Takeove
     with paths.open_log() as log:
         audit = audit_log(log, expected)
         events = load_events(log)
+    if is_supervisor_log(events):
+        raise SupervisorLog("supervisor log: use `fractalswarm recovery`")
     return analyze(events, cassette=cassette, audit=audit, replay=replay)
+
+
+class SupervisorLog(ValueError):
+    """The log is a supervisor's, not a swarm's: it has ``baseline.crashed``. Its crashes are
+    not kills and nobody takes over, so this report would only invent violations; the evidence
+    for it is ``fractalswarm recovery`` (``verify/recovery.py``)."""
+
+
+def is_supervisor_log(events: Iterable[Event]) -> bool:
+    return any(event.type == "baseline.crashed" for event in events)
+
+
+def is_supervisor_run(run: Path | str) -> bool:
+    """``is_supervisor_log`` of a run directory (or an events file), before any costly step."""
+    from fractalswarm.runs import RunPaths
+
+    path = Path(run)
+    paths = RunPaths(path if path.is_dir() else path.parent)
+    with paths.open_log() as log:
+        return is_supervisor_log(load_events(log))
+
+
+def duplicates_of(events: Iterable[Event]) -> tuple[Duplicates, list[Violation]]:
+    """The duplicate-call findings alone (§7), for the readers of logs that are not swarm logs:
+    completed calls with one request, contract attempts dispatched twice, reused keys."""
+    log = sorted(events, key=lambda event: event.seq)
+    ix = _Index(log)
+    found: list[Violation] = []
+    return _duplicates(ix, _calls(ix), _estimates(log) or {}, None, found), found
 
 
 def _read_cassette(path: Path) -> list[dict[str, Any]]:

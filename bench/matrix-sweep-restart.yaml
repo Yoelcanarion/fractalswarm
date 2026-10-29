@@ -1,0 +1,19 @@
+# Sensitivity sweep 2 (arena spec §C.2, PREREG §5): the rival's restart time on top of the 5 s
+# detection, the swarm unchanged (it has no restart to wait for). 0 is the gate's best case for
+# the rival. T2 at C3, 3 seeds, $0, sim clock. 3 x 2 x 3 x 3 = 54 runs.
+#   uv run fractalswarm bench bench/matrix-sweep-restart.yaml --fake
+name: sweep-rival-restart-ms
+workflows: [swarm, durable-max, durable]
+tasks: [t2_conference]
+profiles: [C0, C3]
+seeds: [1, 2, 3]
+knobs:
+  - {rival_restart_ms: 0}
+  - {rival_restart_ms: 1000}
+  - {rival_restart_ms: 3000}
+contributor: false
+out_dir: results/sweeps/rival_restart_ms
+chart_task: t2_conference
+notes: >
+  The swarm's rows are the same at every setting; they are in the matrix so that each setting
+  has its own swarm to be compared with.
