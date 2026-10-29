@@ -1031,6 +1031,18 @@ Answers pending.
 
 Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 
+**Merges**
+- **W3 step 1, the Muse lens API** (1dc03e9, from bedf843):
+  - read-only routes `/api/runs/{id}/calls`, `/calls/{effect_id}` and `/models`; no event added;
+  - reviewed: the cassette attempts expose no headers, run ids resolve through the catalogue, the cache is bounded;
+  - checks: W3's full suite, 1097 passed and 3 skipped (PromptGuard, no safety extra in its venv), at 839e8fe; on the merged tree, ruff and format clean, the API tests (57) pass, `demo --verify` and the golden replays MATCH;
+  - no $0 reference comparison: the change is outside the paths that need one.
+
+**Supervision notes**
+- **Memory went down to 1.0 GB free at 00:53:** W3's suite, plus an unslotted probe of W1's (900 MB). W1 stopped it. Rule added: a worker script that runs several fake runs, or holds more than about 300 MB, needs a slot.
+- **`demo --verify` serves the UI and opens a browser by default** (found by W3). Workers now use `--no-serve --no-browser`.
+- **W1's probe:** the detector handles sub-second detection on the fake LLM (no false deaths, replay MATCH). Events grow like 1/heartbeat interval: 5.6K events at 5 s, 22K at 1 s, 42K at 0.5 s (1.4, 7.4 and 16.2 s of wall time per run). This is input for the sweep plan.
+
 **Spend:** no real calls.
 - Settled: $11.8194 before and after.
 - Reserved: $2.9458, all stale.
