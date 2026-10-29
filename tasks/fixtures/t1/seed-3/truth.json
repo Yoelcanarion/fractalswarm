@@ -1,0 +1,102 @@
+{
+  "Arbor Robotics": {
+    "ceo": "Chiara Alvarez",
+    "employees": "7937",
+    "founded_year": "2004",
+    "headquarters": "Valencia",
+    "industry": "precision agriculture",
+    "product": "Ion 2",
+    "revenue_musd": "972",
+    "ticker": "ARBX"
+  },
+  "Arbor Works": {
+    "ceo": "Sven Dubois",
+    "employees": "2935",
+    "founded_year": "2008",
+    "headquarters": "Utrecht",
+    "industry": "payments",
+    "product": "Beacon 8",
+    "revenue_musd": "2266",
+    "ticker": "ARBY"
+  },
+  "Brightline Systems": {
+    "ceo": "Tomas Alvarez",
+    "employees": "1446",
+    "founded_year": "2003",
+    "headquarters": "Austin",
+    "industry": "industrial robotics",
+    "product": "Harbor 4",
+    "revenue_musd": "1806",
+    "ticker": "BRIX"
+  },
+  "Cobalt Dynamics": {
+    "ceo": "Ines Ferreira",
+    "employees": "15620",
+    "founded_year": "1992",
+    "headquarters": "Denver",
+    "industry": "precision agriculture",
+    "product": "Glide 8",
+    "revenue_musd": "1928",
+    "ticker": "COBQ"
+  },
+  "Fjord Labs": {
+    "ceo": "Chiara Okafor",
+    "employees": "20945",
+    "founded_year": "2019",
+    "headquarters": "Seville",
+    "industry": "battery storage",
+    "product": "Mosaic 3",
+    "revenue_musd": "3366",
+    "ticker": "FJOZ"
+  },
+  "Kestrel Labs": {
+    "ceo": "Ada Kowalski",
+    "employees": "1953",
+    "founded_year": "2015",
+    "headquarters": "Nantes",
+    "industry": "medical imaging",
+    "product": "Prism 5",
+    "revenue_musd": "1440",
+    "ticker": "KESX"
+  },
+  "Meridian Works": {
+    "ceo": "Farid Jensen",
+    "employees": "5167",
+    "founded_year": "2016",
+    "headquarters": "Austin",
+    "industry": "plant-based foods",
+    "product": "Lattice 6",
+    "revenue_musd": "2304",
+    "ticker": "MERX"
+  },
+  "Orchard Analytics": {
+    "ceo": "Bruno Ferreira",
+    "employees": "20106",
+    "founded_year": "2001",
+    "headquarters": "Austin",
+    "industry": "satellite data",
+    "product": "Glide 4",
+    "revenue_musd": "331",
+    "ticker": "ORCX"
+  },
+  "Orchard Works": {
+    "ceo": "Elena Alvarez",
+    "employees": "18313",
+    "founded_year": "1993",
+    "headquarters": "Nantes",
+    "industry": "logistics software",
+    "product": "Prism 6",
+    "revenue_musd": "3848",
+    "ticker": "ORCQ"
+  },
+  "Pinnacle Energy": {
+    "ceo": "Greta Lindqvist",
+    "employees": "8098",
+    "founded_year": "2017",
+    "headquarters": "Turin",
+    "industry": "battery storage",
+    "product": "Delta 8",
+    "revenue_musd": "2496",
+    "ticker": "PINY"
+  }
+}
