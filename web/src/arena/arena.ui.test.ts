@@ -160,7 +160,8 @@ describe("a side", () => {
     expect(text(swarm)).toContain("s");
     expect(swarm).toContain("side--swarm");
     expect(rival).toContain("side--rival");
-    expect(text(rival)).toContain("Recovery:");
+    // a finished run waits for the server's scored report: the effect that asks does not run on the server
+    expect(text(rival)).toContain("Checking recovery");
   });
 });
 

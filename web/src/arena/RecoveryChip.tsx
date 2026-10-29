@@ -1,21 +1,46 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { foldEvents } from "../lib/reducer";
 import { useRunStore } from "../store";
-import { describeRecovery, recoveryOf } from "./recovery";
+import { fetchRecovery } from "./api";
+import { recoveryChipOf, type RecoveryChipText, type ServerRecovery } from "./recovery";
 
-/** The supervisor's counterpart of "Takeover OK": what its restarts did, counted from the run's log
- * once the run has finished. The label says it is the log's count, not a scored verdict. */
-export function RecoveryChip() {
-  const events = useRunStore((s) => s.events);
-  const live = useRunStore((s) => s.live);
-  const loading = useRunStore((s) => s.loading);
-  const chip = useMemo(() => (live || loading || events.length === 0 ? null : describeRecovery(recoveryOf(foldEvents(events)))), [events, live, loading]);
-  if (chip === null) return null;
-  const tone = chip.tone === "good" ? "badge--good badge--big" : chip.tone === "warn" ? "badge--warn badge--big" : "badge--muted";
+const TONES = { good: "badge--good badge--big", bad: "badge--bad badge--big", warn: "badge--warn badge--big", muted: "badge--muted" } as const;
+
+/** The chip as drawn: what it says, or "checking" while the server has not answered. */
+export function RecoveryBadge({ chip }: { chip: RecoveryChipText | "checking" }) {
+  if (chip === "checking") return <span className="badge badge--muted">Checking recovery…</span>;
   return (
-    <span className={`badge ${tone}`} title={chip.detail}>
+    <span className={`badge ${TONES[chip.tone]}`} title={chip.detail}>
       {chip.text}
     </span>
   );
+}
+
+/** The supervisor's counterpart of "Takeover OK": "Recovery OK ✓" once the server has read the finished log
+ * against the rules a supervisor that keeps its workers must hold to. On a server that has no such check it
+ * says what the log itself shows, and says that is the log's own count. Nothing while the run is recording. */
+export function RecoveryChip() {
+  const runId = useRunStore((s) => s.runId);
+  const events = useRunStore((s) => s.events);
+  const live = useRunStore((s) => s.live);
+  const loading = useRunStore((s) => s.loading);
+  const finished = !live && !loading && runId !== null && events.length > 0;
+
+  // The report for a run: undefined while asking, null when the server has none.
+  const [answer, setAnswer] = useState<{ runId: string; report: ServerRecovery | null }>();
+  useEffect(() => {
+    if (!finished || runId === null) return;
+    let current = true;
+    fetchRecovery(runId)
+      .catch(() => null)
+      .then((report) => current && setAnswer({ runId, report }));
+    return () => {
+      current = false;
+    };
+  }, [finished, runId]);
+
+  const asked = answer !== undefined && answer.runId === runId ? answer.report : undefined;
+  const chip = useMemo(() => (finished ? recoveryChipOf(asked, foldEvents(events)) : null), [finished, asked, events]);
+  return chip === null ? null : <RecoveryBadge chip={chip} />;
 }

@@ -4,6 +4,7 @@
 
 import { asNumber, asRecord, asString } from "../lib/generic";
 import { readOfficial, type Official } from "./official";
+import { readRecoveryReport, type ServerRecovery } from "./recovery";
 
 export interface PairListing {
   pairId: string;
@@ -63,4 +64,12 @@ export async function fetchOfficial(runId: string): Promise<Official | null> {
   const response = await fetch(`api/runs/${encodeURIComponent(runId)}/metrics`);
   if (!response.ok) return null;
   return readOfficial(await response.json().catch(() => null));
+}
+
+/** The server's scored recovery report of a finished run (verify/recovery.py), or null when it has none to
+ * give: an older server (404, 405, 501), a run that has not completed (409) or a body that is not a report. */
+export async function fetchRecovery(runId: string): Promise<ServerRecovery | null> {
+  const response = await fetch(`api/runs/${encodeURIComponent(runId)}/recovery`);
+  if (!response.ok) return null;
+  return readRecoveryReport(await response.json().catch(() => null));
 }
