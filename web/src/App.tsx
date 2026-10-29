@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { ArenaPage } from "./arena/ArenaPage";
+import { parseArenaRoute, type ArenaRoute } from "./arena/route";
 import { RunStrip } from "./components/RunStrip";
 import { StatusBadge, ThemeToggle } from "./components/ui";
 import { SPEEDS } from "./lib/playback";
@@ -34,10 +36,13 @@ const VIEW_TITLES: Record<RunView, string> = {
 
 type Route =
   | { page: "run"; runId: string | null; view: RunView; playback: Playback }
+  | { page: "arena"; arena: ArenaRoute }
   | { page: "charts" }
   | { page: "runs" };
 
 function parseHash(hash: string): Route {
+  const arena = parseArenaRoute(hash);
+  if (arena) return { page: "arena", arena };
   const [path, query = ""] = hash.replace(/^#\/?/, "").split("?");
   const parts = path.split("/");
   if (parts[0] === "charts") return { page: "charts" };
@@ -121,6 +126,9 @@ export function App() {
               )}
             </a>
           ))}
+          <a className={route.page === "arena" ? "tab tab--on" : "tab"} href="#/arena">
+            Arena
+          </a>
           <a className={route.page === "charts" ? "tab tab--on" : "tab"} href="#/charts">
             Charts
           </a>
@@ -159,6 +167,7 @@ export function App() {
         {route.page === "run" && route.view === "security" && <SecurityPage />}
         {route.page === "run" && route.view === "results" && <ResultsPage />}
         {route.page === "run" && route.view === "events" && <EventsPage />}
+        {route.page === "arena" && <ArenaPage route={route.arena} />}
         {route.page === "charts" && <ChartsPage />}
         {route.page === "runs" && <RunsPage />}
       </main>
