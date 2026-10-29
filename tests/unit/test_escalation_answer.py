@@ -379,6 +379,15 @@ def test_an_option_that_names_no_candidate_is_ignored() -> None:
     assert verdict(disputes, choice="C")[1] is None
 
 
+def test_a_candidate_the_escalation_did_not_offer_cannot_be_chosen() -> None:
+    disputes = escalated()
+    (dispute,) = disputes.disputes.values()
+    assert dispute.escalation is not None
+    dispute.escalation["options"] = ["A"]  # B is in dispute, but the person was not offered it
+    _, picked, why = verdict(disputes, choice="B")
+    assert picked is None and why == "B is not one of the options (A)"
+
+
 def test_a_second_answer_is_ignored_but_an_ignored_first_does_not_count() -> None:
     disputes = escalated()
     fumble = {"id": ESCALATION, "choice": "C", "by": HUMAN, "accepted": False, "overruled": False}
