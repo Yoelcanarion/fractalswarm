@@ -18,8 +18,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from starlette.testclient import TestClient
 
 from fractalswarm.actors import arbitration
+from fractalswarm.api.app import create_app
 from fractalswarm.bench.scoring import load_events, score_run
 from fractalswarm.bench.tasks.t2_conference.arbitration import with_dispute
 from fractalswarm.bench.workflows import bench_script, fake_backend
@@ -42,6 +44,7 @@ TRACK_KEY, TRACK_SPEAKER, TRACK_SESSION = "speaker:S04:availability", "S04", "tr
 SLOW_MS = 8_000
 HOLD_TEST_MS = 12_000
 LATE_MS = 35_000
+OPEN_MS = 200_000  # the run is over long before this arbiter answers
 
 
 class SlowArbiter:
@@ -158,6 +161,11 @@ def slow_run(out: Path) -> Path:
 @pytest.fixture(scope="module")
 def late_run(out: Path) -> Path:
     return record(out, "swarm-late", params_for(), root_script(), slow=LATE_MS)
+
+
+@pytest.fixture(scope="module")
+def open_run(out: Path) -> Path:
+    return record(out, "swarm-open", params_for(), root_script(), slow=OPEN_MS)
 
 
 @pytest.fixture(scope="module")
@@ -656,3 +664,108 @@ async def test_the_restarted_runs_replay_bit_for_bit(
     run_name: str, request: pytest.FixtureRequest
 ) -> None:
     await assert_replays(request.getfixturevalue(run_name))
+
+
+# -- the lens lists the disputes, the open ones at the end included ----------------------------
+
+
+@pytest.fixture(scope="module")
+def client(
+    out: Path, root_run: Path, quiet_run: Path, open_run: Path, heir_run: Path, doubtful_run: Path
+) -> TestClient:
+    return TestClient(create_app(out, REPO / "demo", out / "bench", Path("none")))
+
+
+def disputes_of(client: TestClient, run: Path) -> dict[str, Any]:
+    response = client.get(f"/api/runs/{run.name}/disputes")
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_a_ruled_dispute_is_listed_with_its_candidates_call_and_ruling(
+    client: TestClient, root_run: Path
+) -> None:
+    listed = disputes_of(client, root_run)
+    assert (listed["ended"], listed["count"], listed["open"]) == (True, 1, 0)
+    (dispute,) = listed["disputes"]
+    assert (dispute["key"], dispute["subject"], dispute["status"]) == (ROOT_KEY, "S02", "ruled")
+    assert dispute["lca"] == "root" and dispute["goal_id"] in {"track-hci/d1", ROOT_SESSION}
+    assert [c["label"] for c in dispute["candidates"]] == ["A", "B"]
+    assert {w for c in dispute["candidates"] for w in c["works"]} == {
+        "track-hci/d1/extract",
+        ROOT_SESSION + "/extract",
+    }
+    (call,) = dispute["calls"]
+    assert (call["attempt"], call["status"], call["cancel"]) == (1, "ok", None)
+    assert call["model"] == "muse-wonder-1.0"
+    ruling = dispute["ruling"]
+    assert ruling["by"] == "arbiter" and ruling["attempt"] == 1 and ruling["reused"] is False
+    assert ruling["winner"] in {"A", "B"} and ruling["confidence"] > 0.6
+    assert dispute["escalation"] is None and dispute["why_open"] is None
+
+
+def test_the_listed_ruling_is_the_one_in_the_log(client: TestClient, root_run: Path) -> None:
+    (dispute,) = disputes_of(client, root_run)["disputes"]
+    ruled = the_one(of(load_events(root_run), "arbitration.ruled"))
+    assert dispute["ruling"]["seq"] == ruled.seq
+    assert dispute["ruling"]["work"] == ruled.payload["work"]
+    assert dispute["ruling"]["reason"] == ruled.payload["reason"]
+    opened = the_one(collisions(load_events(root_run)))
+    assert (dispute["opened_seq"], dispute["opened_ts"]) == (opened.seq, opened.ts_virtual)
+
+
+def test_a_run_without_a_dispute_lists_none(client: TestClient, quiet_run: Path) -> None:
+    listed = disputes_of(client, quiet_run)
+    assert (listed["ended"], listed["count"], listed["open"], listed["disputes"]) == (
+        True,
+        0,
+        0,
+        [],
+    )
+
+
+def test_a_dispute_still_open_when_the_run_ends_is_listed_and_says_why(
+    client: TestClient, open_run: Path
+) -> None:
+    log = load_events(open_run)
+    assert of(log, "arbitration.ruled") == []
+    assert_valid_program(log)
+    listed = disputes_of(client, open_run)
+    assert (listed["ended"], listed["count"], listed["open"]) == (True, 1, 1)
+    (dispute,) = listed["disputes"]
+    assert dispute["status"] == "open" and dispute["ruling"] is None
+    (call,) = dispute["calls"]
+    assert call["attempt"] == 1 and call["status"] == "cancelled" and call["estimated"] is True
+    assert call["cancel"]["kind"] == "actor_stopped" and call["cancel"]["reason"] == "done"
+    assert dispute["why_open"] == (
+        "o0 finished its work before the arbiter answered; its call was cancelled"
+    )
+    assert [c["label"] for c in dispute["candidates"]] == ["A", "B"]
+
+
+def test_the_heirs_second_attempt_is_listed_after_the_first_that_died(
+    client: TestClient, heir_run: Path
+) -> None:
+    listed = disputes_of(client, heir_run)
+    assert (listed["count"], listed["open"]) == (1, 0)
+    (dispute,) = listed["disputes"]
+    first, second = dispute["calls"]
+    assert (first["attempt"], first["actor"], first["status"]) == (1, "o0", "cancelled")
+    assert first["cancel"]["kind"] == "actor_stopped" and "chaos" in first["cancel"]["detail"]
+    assert (second["attempt"], second["status"], second["cancel"]) == (2, "ok", None)
+    assert second["actor"] != "o0"
+    assert dispute["ruling"]["attempt"] == 2 and dispute["ruling"]["arbiter"] == second["actor"]
+
+
+def test_a_doubtful_ruling_lists_the_question_a_person_may_answer(
+    client: TestClient, doubtful_run: Path
+) -> None:
+    (dispute,) = disputes_of(client, doubtful_run)["disputes"]
+    assert dispute["status"] == "ruled" and dispute["ruling"]["confidence"] == 0.4
+    escalation = dispute["escalation"]
+    assert escalation["id"] == f"arbitration:{ROOT_KEY}" and escalation["options"] == ["A", "B"]
+    assert (escalation["default"], escalation["timeout_ms"]) == ("A", 60_000)
+
+
+def test_an_unknown_run_has_no_disputes(client: TestClient) -> None:
+    assert client.get("/api/runs/no-such-run/disputes").status_code == 404

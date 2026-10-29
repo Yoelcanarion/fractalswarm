@@ -20,6 +20,7 @@ from fractalswarm.actors.arbitration import (
     step,
 )
 from fractalswarm.actors.board import _tool, board_handle, board_init
+from fractalswarm.api.lens import disputes_view
 from fractalswarm.bench.tasks.t2_conference import arbitration as t2
 from fractalswarm.kernel.events import ENV, Event, validate_payload
 from fractalswarm.kernel.ids import canonical_json
@@ -1034,3 +1035,171 @@ def test_the_tools_run_without_a_board_actor_as_the_langgraph_baseline_runs_them
         assert emitted(commands, "collision.detected") == []
         assert "disputed" not in json.dumps(output)
     assert board.facts[KEY].status != "disputed"
+
+
+# -- the lens lists the disputes (api/lens.py: disputes_view) ----------------------------------
+
+
+def candidate_of(label: str, value: Any, goal: str, contract: str) -> dict[str, Any]:
+    by = {
+        "work": f"{goal}/extract",
+        "contract": contract,
+        "goal": goal,
+        "agent": f"agent-of-{contract}",
+        "squad": "s",
+        "sources": ["E02"],
+        "lamport": 5,
+    }
+    return {"label": label, "value": value, "by": [by]}
+
+
+def contested(seq: int, labels: str = "AB") -> Event:
+    pool = [
+        candidate_of("A", READ_A, "track-hci/d1", "c-hci"),
+        candidate_of("B", READ_B, "track-ai/d1", "c-ai"),
+        candidate_of("C", READ_C, "track-ai/d2", "c-ai2"),
+    ]
+    found = [c for c in pool if c["label"] in labels]
+    conflict = {"key": KEY, "subject": "S02", "candidates": found}
+    payload = {"kind": "semantic", "goal_id": "track-ai/d1", "holder": "agent-of-c-ai"}
+    return event(seq, "collision.detected", payload | {"conflicts": [conflict]}, actor="board")
+
+
+def ruled_event(seq: int, key: str = KEY) -> Event:
+    payload = {
+        "key": key,
+        "subject": "S02",
+        "winner": "B",
+        "work": "track-ai/d1/extract",
+        "contract": "c-ai",
+        "value": READ_B,
+        "reason": "the email says so",
+        "confidence": 0.9,
+        "evidence": ["E02"],
+        "attempt": 1,
+        "by": "arbiter",
+        "arbiter": "o0",
+        "lca": "root",
+        "reused": False,
+    }
+    return event(seq, "arbitration.ruled", payload)
+
+
+def row_of(attempt: int, status: str, cancel: dict[str, Any] | None = None, actor: str = "o0"):
+    return {
+        "ref": {"kind": "arbitrate", "key": KEY, "attempt": attempt},
+        "effect_id": f"eff-{attempt}",
+        "actor": actor,
+        "status": status,
+        "model": "muse-wonder-1.0",
+        "cost_usd": 0.02,
+        "estimated": cancel is not None,
+        "started_ts": 100 * attempt,
+        "ended_ts": None if status == "inflight" else 100 * attempt + 50,
+        "cancel": cancel,
+    }
+
+
+def listed(
+    rows: list[dict[str, Any]], events: list[Event], ended: bool = True, halted: Any = None
+) -> dict[str, Any]:
+    index = [event(900, "run.completed", {})] if ended else []
+    lens = SimpleNamespace(
+        rows=rows, events=index, halted=halted, entry=SimpleNamespace(id="a-run")
+    )
+    return disputes_view(lens, events)  # type: ignore[arg-type]
+
+
+STOPPED_DONE = {"kind": "actor_stopped", "reason": "done", "detail": "o0 was stopped (done)"}
+KILLED = {
+    "kind": "actor_stopped",
+    "reason": "crash",
+    "detail": "o0 was killed by chaos (kill_coordinator)",
+}
+
+
+def test_a_dispute_nobody_took_up_says_so() -> None:
+    view = listed([], [contested(10)])
+    assert (view["count"], view["open"], view["ended"]) == (1, 1, True)
+    (dispute,) = view["disputes"]
+    assert dispute["status"] == "open" and dispute["calls"] == [] and dispute["lca"] is None
+    assert dispute["why_open"].startswith("no arbitration call was made")
+
+
+def test_what_an_open_dispute_waits_for_is_read_from_its_last_call() -> None:
+    def why(*rows: dict[str, Any]) -> str:
+        return listed(list(rows), [contested(10)])["disputes"][0]["why_open"]
+
+    assert why(row_of(1, "cancelled", STOPPED_DONE)) == (
+        "o0 finished its work before the arbiter answered; its call was cancelled"
+    )
+    assert why(row_of(1, "cancelled", KILLED)) == (
+        "the arbiter's call was cancelled: o0 was killed by chaos (kill_coordinator)"
+    )
+    assert "still in flight" in why(row_of(1, "inflight"))
+    assert "ended error and no later attempt" in why(row_of(1, "error"))
+    assert "no ruling followed" in why(row_of(1, "ok"))
+    second = row_of(2, "inflight", actor="o1")
+    assert "still in flight" in why(row_of(1, "cancelled", KILLED), second)
+
+
+def test_a_ruled_dispute_lists_its_ruling_and_is_not_open() -> None:
+    view = listed([row_of(1, "ok")], [contested(10), ruled_event(40)])
+    assert (view["count"], view["open"]) == (1, 0)
+    (dispute,) = view["disputes"]
+    assert dispute["status"] == "ruled" and dispute["why_open"] is None
+    assert dispute["lca"] == "root" and dispute["opened_seq"] == 10
+    assert dispute["ruling"]["winner"] == "B" and dispute["ruling"]["seq"] == 40
+    assert dispute["ruling"]["evidence"] == ["E02"] and dispute["ruling"]["reused"] is False
+    assert [c["attempt"] for c in dispute["calls"]] == [1]
+
+
+def test_the_candidates_are_the_boards_last_word_before_the_ruling() -> None:
+    events = [contested(10, "AB"), contested(20, "ABC"), ruled_event(40), contested(50, "A")]
+    (dispute,) = listed([], events)["disputes"]
+    assert [c["label"] for c in dispute["candidates"]] == ["A", "B", "C"]
+    assert dispute["candidates"][1]["works"] == ["track-ai/d1/extract"]
+    assert dispute["candidates"][1]["sources"] == ["E02"]
+    assert dispute["opened_seq"] == 10, "one dispute, however often the board repeats itself"
+
+
+def test_a_booking_collision_and_a_ruling_for_no_dispute_are_not_listed() -> None:
+    booking = event(10, "collision.detected", {"kind": "booking", "slot": "d1/s0"}, actor="board")
+    stray = ruled_event(20, key="speaker:S99:availability")
+    assert listed([], [booking, stray]) == {
+        "run_id": "a-run",
+        "ended": True,
+        "count": 0,
+        "open": 0,
+        "disputes": [],
+    }
+
+
+def test_an_escalation_is_listed_with_its_question() -> None:
+    payload = {
+        "id": f"arbitration:{KEY}",
+        "kind": "arbitration",
+        "key": KEY,
+        "goal_id": "root",
+        "question": "Which?",
+        "options": ["A", "B"],
+        "confidence": 0.4,
+        "timeout_ms": 60_000,
+        "default": "B",
+    }
+    events = [contested(10), ruled_event(40), event(41, "escalation.opened", payload)]
+    (dispute,) = listed([], events)["disputes"]
+    assert dispute["escalation"] == {
+        "id": f"arbitration:{KEY}",
+        "options": ["A", "B"],
+        "default": "B",
+        "confidence": 0.4,
+        "timeout_ms": 60_000,
+        "ts_virtual": 410,
+    }
+
+
+def test_a_run_has_ended_when_it_completed_or_was_halted() -> None:
+    assert listed([], [], ended=True)["ended"] is True
+    assert listed([], [], ended=False)["ended"] is False
+    assert listed([], [], ended=False, halted=object())["ended"] is True
