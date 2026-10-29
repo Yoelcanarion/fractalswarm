@@ -35,12 +35,12 @@ describe.skipIf(!recorded("t2-real-c3-swarm-seed1b"))("swarm run with chaos (rea
     expect(describeTakeover(readTakeover({ ok: true, violations: [] })!, logHasTakeover(log))).toMatchObject({ tone: "good", text: "Takeover OK ✓" });
   });
 
-  it("counts the reclaim apart from the 11 heirs, as verify/takeover.py does (owner == previous is a reclaim)", () => {
+  it("counts the reclaim apart from the 11 hand-overs, as verify/takeover.py does (owner == previous is a reclaim)", () => {
     const remapped = log.filter((event) => event.type === "ownership.remapped");
     const successions = remapped.map((event) => ({ kind: event.payload.owner === event.payload.previous ? "reclaim" : "takeover" }));
     const adoptions = new Array(count(log, "tree.adopted")).fill({});
     const chip = describeTakeover(readTakeover({ ok: true, violations: [], successions, adoptions })!, true);
-    expect(chip.text).toBe("Takeover OK ✓ 11 heirs");
+    expect(chip.text).toBe("Takeover OK ✓ 11 hand-overs");
     expect(chip.detail).toContain("1 reclaim");
     expect(chip.detail).toContain("12 tree adoptions");
   });

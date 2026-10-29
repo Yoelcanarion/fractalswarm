@@ -7,6 +7,11 @@
 // chip must not call that "Takeover OK": it would claim a proof the run never exercised (a supervisor's
 // run, or a swarm run without chaos). When the report counts what it checked, a count of zero says
 // "No takeover to check"; when it does not, the log decides, by the two events the check starts from.
+//
+// The count on the chip is of hand-overs: goals that changed owner, each with its own recomputed heir. It is
+// not a count of kills or of distinct heirs (a coordinator can hold two goals, so 5 coordinator kills can be
+// 7 hand-overs). A reclaim, where a member back from a false death took its own goal back, is a succession
+// too, but no heir is compared for it: it is not a hand-over, and the hover text names it apart.
 
 import { asNumber, asRecord, asString } from "./generic";
 import type { RunEvent } from "./types";
@@ -100,13 +105,13 @@ export function describeTakeover(report: TakeoverSummary, inLog: boolean): Chip 
   }
 
   const checked = [
-    heirs > 0 ? `${plural(heirs, "heir")} recomputed from the log, none different from the one the run used.` : "",
+    heirs > 0 ? `${plural(heirs, "hand-over")}: ${heirs === 1 ? "its heir" : "the heir of each"}, recomputed from the log, is the one the run used.` : "",
     reclaims > 0 ? `${plural(reclaims, "reclaim")}: a member back from a false death took its own goal back (no heir is compared).` : "",
     adoptions > 0 ? `${plural(adoptions, "tree adoption")} checked against the log.` : "",
   ].filter(Boolean);
   return {
     tone: "good",
-    text: heirs > 0 ? `Takeover OK ✓ ${plural(heirs, "heir")}` : "Takeover OK ✓",
+    text: heirs > 0 ? `Takeover OK ✓ ${plural(heirs, "hand-over")}` : "Takeover OK ✓",
     detail: checked.length > 0 ? checked.join(" ") : "Every heir recomputed from the log is the one the run used.",
   };
 }

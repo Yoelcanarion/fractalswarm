@@ -106,7 +106,7 @@ Display values, as a pure fold. The official numbers are Python's (`/api/runs/{i
 ## Open questions
 - Answered (Oct 29): the takeover chip reads `GET api/runs/{id}/takeover`, which W2 adds (at least `ok` and `violations`).
   It is built against that, with a 404 fallback. **W2: please send the whole `TakeoverReport` if you can** (`successions`,
-  `adoptions`, `kills`): the chip then says how many heirs were recomputed. With only `ok` and `violations` it still
+  `adoptions`, `kills`): the chip then says how many hand-overs it recomputed an heir for. With only `ok` and `violations` it still
   works, deciding "No takeover to check" from the log.
 
 ## Status when the usage limit hit (Oct 29, 01:47 CET)
@@ -197,8 +197,10 @@ personal is in them (speakers and emails are the synthetic `example.org` ones).
   - needs a boolean `ok`; reads `violations`, and counts `successions`, `adoptions` and `kills` when they are lists. A
     succession of kind `takeover` is an heir; one of kind `reclaim` (`owner == previous`: a member back from a false death
     took its own goal back) is counted apart, because the check compares no heir for it (`verify/takeover.py`);
-  - "Takeover OK ✓ N heirs" when heirs were recomputed and none differ from the one the run used. The hover text adds the
-    reclaims ("1 reclaim: a member back from a false death took its own goal back (no heir is compared)");
+  - "Takeover OK ✓ N hand-overs" when an heir was recomputed for each and none differs from the one the run used (the
+    coordinator chose "hand-overs" over "heirs": 7 hand-overs beside 5 kills reads true, 7 heirs does not). The hover
+    says "N hand-overs: the heir of each, recomputed from the log, is the one the run used", then names the reclaims
+    ("1 reclaim: a member back from a false death took its own goal back (no heir is compared)") and the adoptions;
   - "No takeover to check" when no goal changed hands: the report counts zero, or, when the report does not count, the
   log has no `ownership.remapped` and no `tree.adopted` (the two events the check starts from). The real swarm run
     with chaos has 12 and 12 (11 takeovers and 1 reclaim); the central baseline has none, and `takeover.real.test.ts`
@@ -217,6 +219,19 @@ personal is in them (speakers and emails are the synthetic `example.org` ones).
 | merge check `uv run pytest -m 'not promptguard' -q` | 1271 passed, 3 deselected, 13 min 48 s, on the tree before the last web edits (they touch no Python; `test_api` re-ran after them) |
 | `uv run ruff check` | all checks passed |
 | `demo --verify --no-serve --no-browser` | `MATCH backup: 8177 events` |
+
+After the takeover chip fix and the hand-overs wording (second slot, Oct 29, 14:28-14:30 CET, foreground, no browser, no
+server):
+
+| Check | Result |
+|---|---|
+| web typecheck | clean |
+| `vitest run` | 25 files, 378 tests, all pass (373 before, plus 5 takeover tests) |
+| `npm --prefix web run build` | ok in 3.3 s: `index-D1vVofcs.js` replaces `index-8U4ZH3Bx.js`, the css is unchanged (`index-BjrwZHkT.css`), `index.html` points at the new script; `favicon.svg` restored; no absolute resource load (only the SVG namespace and documentation links inside library strings) |
+| `tests/integration/test_api.py` and `test_guard.py` | 36 + 50 = 86 passed, against the rebuilt bundle (scratch `FRACTALSWARM_*` paths) |
+| `ruff check` | all checks passed (no Python touched) |
+
+Not re-run: the full pytest and `demo --verify` (no Python and no recorded run changed since the runs above).
 
 Not run: the `$0` reference comparison (no Python was touched), the `PromptGuard` tests (deselected by the merge check).
 
@@ -245,14 +260,15 @@ any screenshot yet** (it shows nothing on a 404). It is to be shot against the r
   The merged chip said "12 heirs recomputed from the log, none different from the one the run used" for the swarm run.
   `verify/takeover.py` reports 12 successions there, 11 of kind `takeover` and 1 of kind `reclaim` (seq 11191: `o0 -> o0`
   on the root goal, recomputed heir `o1`, `ok`); the heir comparison runs for takeovers only, so the sentence was false
-  for that one. The chip now counts 11 heirs and names the reclaim apart (`readTakeover` splits on `kind`;
+  for that one. The chip now counts 11 hand-overs and names the reclaim apart (`readTakeover` splits on `kind`;
   `takeover.test.ts` and `takeover.real.test.ts` cover it). I ran `check_run` on copies of the logs (scratch dir, nothing
   under `~/.fractalswarm/runs` was opened): `t2-real-c3-swarm-seed1b` ok, 0 violations, 11 kills, 12 successions (11
-  takeover + 1 reclaim), 12 adoptions, so the chip reads "Takeover OK ✓ 11 heirs"; `t2-real-c3-central-seed1` ok, 11
+  takeover + 1 reclaim), 12 adoptions, so the chip reads "Takeover OK ✓ 11 hand-overs"; `t2-real-c3-central-seed1` ok, 11
   kills, 0 successions, 0 adoptions, so "No takeover to check (11 kills)"; `t2-real-killhalf-seed1` and `demo/backup`
-  (the same log, 8177 events) ok, 5 kills, 7 successions (all takeover), 7 adoptions, so "Takeover OK ✓ 7 heirs". **The
-  committed static build still has the old chip: it needs one rebuild.** The label counts goals handed over, not distinct
-  heirs (7 heirs for 5 coordinator kills, because a coordinator can hold two goals); the hover text says what was checked.
+  (the same log, 8177 events) ok, 5 kills, 7 successions (all takeover), 7 adoptions, so "Takeover OK ✓ 7 hand-overs".
+  The static build was rebuilt after the fix (second slot). The label first said "N heirs", which counts goals handed
+  over and not distinct heirs (7 for 5 coordinator kills, because a coordinator can hold two goals); the coordinator
+  chose "N hand-overs", and the hover text says what was checked.
 - **Against the API guard (`api/guard.py`).** A refused POST answers `{"error": ...}` (not `detail`); `api.ts` reads both,
   so the server's reason shows. `real` in `/api/capabilities` is a boolean, as the types assume. The only POSTs in
   `web/src` are `verifyRun` and `postControl`, both JSON; any new POST (W5's launch and intake) must send
@@ -342,8 +358,14 @@ the node buttons, which is the rest of the gap to Phase 1.
 
 ### Still to do (needs a slot or a later merge)
 1. A quiet window: absolute frame times, the fix measured, the three CSS toggles tried; re-shoot the lens scenes on the
-   final build, using `demo-backup` wherever a badge is visible.
-2. Rebuild the static bundle (`npm --prefix web run build`, then restore `favicon.svg`) for the chip fix of Oct 29: the
-   source has it, the committed build does not.
+   final build, using `demo-backup` wherever a badge is visible. **The app verifies a completed run as soon as it opens
+   it** (`App.tsx` calls `runVerify`), so every scene on a Phase 1 run shows MISMATCH in the run strip, clicked or not;
+   leaving Verify alone does not avoid it. `demo-backup` has no cancelled LLM call (its 10 `effect.cancelled` are not
+   model calls), so the "calls lost" scene exists only on the Phase 1 central run. Plan: the demo scenes as full frames
+   (MATCH, with the new chip "Takeover OK ✓ 7 hand-overs"), the Phase 1 scenes as clips of the lens drawer, which leave the
+   strip out. The scratch script `final.mjs` (not in git) enforces it: a shot whose region overlaps a MISMATCH badge goes
+   to `internal/` and is marked `publishable: false`.
+2. (done, second slot) The static bundle is rebuilt for the chip fix of Oct 29.
 3. W2's merge is in arena (24995b5): the chip screenshot against the real endpoint (a server on scratch dirs; the demo
-   bundle shows "Takeover OK ✓ 7 heirs" with MATCH), and a run of the Verify button against the guard.
+   bundle shows "Takeover OK ✓ 7 hand-overs" with MATCH), and a run of the Verify button against the guard. Both come
+   with the quiet window, after the coordinator's combined merge.

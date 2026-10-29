@@ -358,7 +358,7 @@ describe("the takeover chip", () => {
   };
 
   it("says Takeover OK when every heir checks out", async () => {
-    expect(await chip(async () => ({ ...counted, heirs: 6, adoptions: 5, kills: 5 }))).toBe("Takeover OK ✓ 6 heirs");
+    expect(await chip(async () => ({ ...counted, heirs: 6, adoptions: 5, kills: 5 }))).toBe("Takeover OK ✓ 6 hand-overs");
   });
 
   it("does not claim a takeover that never happened", async () => {

@@ -55,20 +55,27 @@ describe("reading a takeover report", () => {
 });
 
 describe("what the chip says", () => {
-  it("says Takeover OK with the heirs it recomputed", () => {
+  it("says Takeover OK with the hand-overs it recomputed an heir for", () => {
     const chip = describeTakeover(report({ heirs: 6, adoptions: 5, kills: 5 }), true);
     expect(chip.tone).toBe("good");
-    expect(chip.text).toBe("Takeover OK ✓ 6 heirs");
-    expect(chip.detail).toBe("6 heirs recomputed from the log, none different from the one the run used. 5 tree adoptions checked against the log.");
-    expect(describeTakeover(report({ heirs: 1 }), true).text).toBe("Takeover OK ✓ 1 heir");
+    expect(chip.text).toBe("Takeover OK ✓ 6 hand-overs");
+    expect(chip.detail).toBe("6 hand-overs: the heir of each, recomputed from the log, is the one the run used. 5 tree adoptions checked against the log.");
+    const one = describeTakeover(report({ heirs: 1 }), true);
+    expect(one.text).toBe("Takeover OK ✓ 1 hand-over");
+    expect(one.detail).toBe("1 hand-over: its heir, recomputed from the log, is the one the run used.");
+  });
+
+  it("counts goals handed over, so 5 kills can read as 7 hand-overs", () => {
+    // The kill-half demo bundle: 5 coordinator kills, 7 successions (all takeovers), 7 adoptions.
+    expect(describeTakeover(report({ heirs: 7, reclaims: 0, adoptions: 7, kills: 5 }), true).text).toBe("Takeover OK ✓ 7 hand-overs");
   });
 
   it("counts a reclaim apart from the heirs, and says what it is", () => {
     const chip = describeTakeover(report({ heirs: 11, reclaims: 1, adoptions: 12, kills: 11 }), true);
     expect(chip.tone).toBe("good");
-    expect(chip.text).toBe("Takeover OK ✓ 11 heirs");
+    expect(chip.text).toBe("Takeover OK ✓ 11 hand-overs");
     expect(chip.detail).toBe(
-      "11 heirs recomputed from the log, none different from the one the run used. " +
+      "11 hand-overs: the heir of each, recomputed from the log, is the one the run used. " +
         "1 reclaim: a member back from a false death took its own goal back (no heir is compared). " +
         "12 tree adoptions checked against the log.",
     );
