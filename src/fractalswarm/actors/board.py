@@ -286,6 +286,9 @@ def _resolve(state: dict[str, Any], board: Blackboard, body: dict[str, Any], vie
     dispute = state["disputes"].get(key)
     if dispute is None:
         return []  # a second order for a ruling already applied
+    ruling = arbitration.ruling_of(view, key)
+    if ruling is None or ruling["contract"] != body["contract"]:
+        return []  # the order is not what the log says was ruled
     winner = next(
         (
             c

@@ -310,6 +310,14 @@ def work_of(view: View, contract: str) -> tuple[str, str] | None:
     return disputes.work_of(contract) if disputes is not None else None
 
 
+def ruling_of(view: View, key: str) -> dict[str, Any] | None:
+    """The ruling the log holds for a key: the only one the board applies. An order for a
+    ruling that never made it into the log (its owner was fenced out) is ignored."""
+    disputes = view.views.get("disputes")
+    dispute = disputes.get(key) if disputes is not None else None
+    return dispute.ruling if dispute is not None else None
+
+
 # -- the candidates (the board's side of a dispute) ---------------------------------------
 
 

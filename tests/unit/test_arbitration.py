@@ -795,6 +795,9 @@ def publish(state: dict[str, Any], view: View, contract: str, value: Any, key: s
     }
     msg = {"topic": "tool", "body": body, "to": "board"}
     _, commands = board_handle(state, event(1, "msg.sent", msg, actor=f"agent-of-{contract}"), view)
+    for command in commands:  # what the board emits is in the log, and so in the view
+        if isinstance(command, Emit) and command.type == "collision.detected":
+            view.views["disputes"].apply(event(2, command.type, command.payload, actor="board"))
     return commands
 
 
@@ -885,7 +888,15 @@ def test_a_disputed_key_is_not_promoted_by_its_contract() -> None:
     assert commands == [] and state["board"].facts[KEY].status == "disputed"
 
 
-def resolve(state: dict[str, Any], view: View, contract: str, by: str = "o0"):
+def ruled(view: View, contract: str) -> None:
+    """The log says this contract won."""
+    payload = {"key": KEY, "winner": "?", "contract": contract, "value": None}
+    view.views["disputes"].apply(event(5, "arbitration.ruled", payload))
+
+
+def resolve(state: dict[str, Any], view: View, contract: str, by: str = "o0", logged: bool = True):
+    if logged:
+        ruled(view, contract)
     body = {"key": KEY, "contract": contract, "by": by}
     msg = {"topic": "fact.resolve", "body": body, "to": "board"}
     return board_handle(state, event(3, "msg.sent", msg, actor=by), view)[1]
@@ -978,3 +989,24 @@ def test_a_temporal_collision_keeps_its_old_sentence() -> None:
     payload = {"kind": "temporal", "goal_id": "track-ai/d1", "holder": "o2.1", "conflicts": []}
     found = describe(event(1, "collision.detected", payload, "board"))
     assert found == "a temporal collision was detected for track-ai/d1 (o2.1)"
+
+
+def test_an_order_the_log_does_not_back_is_ignored() -> None:
+    state, view = board_with_works()
+    publish(state, view, "c-hci", READ_A)
+    publish(state, view, "c-ai", READ_B)
+    assert resolve(state, view, "c-ai", logged=False) == [], "no ruling in the log: fenced out"
+    assert state["board"].facts[KEY].status == "disputed" and KEY in state["disputes"]
+
+
+def test_an_order_for_another_winner_than_the_logged_one_is_ignored() -> None:
+    state, view = board_with_works()
+    publish(state, view, "c-hci", READ_A)
+    publish(state, view, "c-ai", READ_B)
+    ruled(view, "c-hci")
+    body = {"key": KEY, "contract": "c-ai", "by": "o1"}
+    msg = {"topic": "fact.resolve", "body": body, "to": "board"}
+    assert board_handle(state, event(3, "msg.sent", msg, actor="o1"), view)[1] == []
+    assert state["board"].facts[KEY].status == "disputed"
+    assert emitted(resolve(state, view, "c-hci"), "fact.resolved")
+    assert state["board"].facts[KEY].value == READ_A
