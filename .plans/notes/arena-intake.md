@@ -18,7 +18,7 @@ reference for everything W2 built. It is updated at each merge point.
 | Real intake from the UI (`POST /api/intake/preflight`, the same gate; coordinator's Q1) | done |
 | `LIVE` marker for `resume.py` and `baselines/langgraph_teams.py` (coordinator's Q2) | done |
 | API hardening (`api/guard.py`: Host allowlist, JSON-only POST, WebSocket origin; `serve` loopback-only with real spend on) | done |
-| 7. Live control (`control.injected`, a kill at a progress point, plan approve / replan, the API routes) | done, tested; see "Live control (step 7)" below. `merge_ready` pending the slot for the full suite and the references |
+| 7. Live control (`control.injected`, a kill at a progress point, plan approve / replan, the API routes) | done, tested, `merge_ready` sent (Oct 29); see "Live control (step 7)" below |
 
 ## Deviations and decisions
 
@@ -135,6 +135,14 @@ Recorded at `cf5b8ce` (arena `c2b5e08` merged) with `scripts/refs/record_refs.ps
 `C:\Users\yogar\.fractalswarm\refs\arena-c2b5e08`: **43 of 43 runs identical** (same event count, same event
 bodies, and the same heads). `demo --verify --no-serve --no-browser` gives MATCH. The steps add no event type
 and change no event payload; a run launched without a chaos-plan file or a barrier is the run it was.
+
+## $0 references (third merge point, step 7)
+
+Recorded at `0b1e6d7` (arena `52db68e` merged, so W3 step 3 included; the source is the same at the final commit,
+only tests were added after) with `scripts/refs/record_refs.ps1`, compared with
+`C:\Users\yogar\.fractalswarm\refs\arena-c2b5e08`: **43 of 43 runs identical** (same event count, same event
+bodies, the same heads). `demo --verify --no-serve --no-browser` gives MATCH (backup, 8177 events). Step 7 adds one
+event type and a drain between several inbox requests; a run launched without `live_control` never gets either.
 
 ## Open questions for the coordinator
 
@@ -611,5 +619,17 @@ the plan waits on after its restart; a run resumed on and before the approval), 
 route, every refusal, the pairs, the shapes), `test_live_control_e2e.py` (a real subprocess run launched, killed and
 approved over HTTP, then `verify` and a fresh-process replay MATCH). Mutation-checked: removing the replay branch,
 the `live_control` gates, the plan-hash check or the goal broadcast fails the tests that name them.
+
+Delivery of a control: `tests/unit/test_kernel_scheduler.py` (a control goes to the actor it names or to every live
+one, `goal:<id>` to every live one, a stopped or unknown actor gets nothing, a halted run records and delivers
+nothing) and, in `test_live_control.py`, an `answer` for the arbiter is recorded as sent, changes nothing else and
+replays.
+
+Results at `0b1e6d7` (the merge of arena `52db68e`; the machine was shared with W1's checks): the whole suite
+`pytest -m "not promptguard"` in six foreground chunks, **1640 passed**: `tests/unit` 813 (25 s), integration files
+a-c 279 (5m00s), d-k 133 (39 s), l 119 (3m22s), m-r 107 (4m31s), s-z 186 (1m20s), and the three schema tests
+(`test_schemas_meet_the_strict_mode_rules[AbstractReading|EmailReading|IntakeOutput]`) that exist only when the
+integration files are collected before `tests/unit/test_planning.py`, as in a whole-suite run, run apart. The three
+tests of the delivery commit (`c55a833`) pass: 1643. `ruff check` and `ruff format --check` clean (246 files).
 
 None of these calls the API. Live-clock tests and anything that starts several runs run only in a slot.
