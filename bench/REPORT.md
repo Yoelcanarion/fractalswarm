@@ -152,7 +152,7 @@ each a chain of three contracts: extract, place, blurb) and **T1** the extractio
 | Per-process probes | **68 cells**, T2, seeds 1–4: the swarm at C0 and at ten single-crash probes `K-<target>` (44 cells), and the three supervisors at C0 and `K-o0` (24 cells). |
 | Seeds | Gate and per-process probes: 1–4. Sweeps: 1–3. The default settings (5 s detection, no extra restart, 1× latency, 12 agents) are in the gate and in four of the sweeps (`recovery_ms` 5 s, `rival_restart_ms` 0, latency 1×, 12 agents), so the same cells are read twice, with different seeds: the locality ratios at T2 C3 against durable-max (cdt / blast / idle) are 0.37 / 0.29 / 0.47 at the gate (4 seeds) and 0.48 / 0.32 / 0.62 in the sweeps (seeds 1–3, identical in all four). |
 | Rules | `bench/PREREG.md`, written before the first gate run and applied mechanically by `fractalswarm bench verdicts --prereg`; SHA `25d4a75919b3`. Ratio of the seed means, win, tie and loss are defined in §4. |
-| Verdicts | Run over everything at commit `3e723a8` with a clean tree: `bench/results/honesty.json` (every comparison, losses and ties included), `verdicts.txt`, `regime.png`, `regime.json`. The gate alone gives `bench/results/rivals-gate/` the same files, where the outcome reads PENDING because it has no sweeps. |
+| Verdicts | Run over everything at commit `48601df` with a clean tree: `bench/results/honesty.json` (every comparison, losses and ties included), `verdicts.txt`, `regime.png`, `regime.json`. The gate alone gives `bench/results/rivals-gate/` the same files, where the outcome reads PENDING because it has no sweeps. |
 | Files | Each results directory holds `cells/`, `results.csv`, `results.json` and the charts. The run bundles (`runs/`, about 5 GB) are not committed; each row names its run directory, and `fractalswarm replay <run_dir> --verify` rebuilds a run bit for bit. The matrices are deterministic: the default cells recur in four sweeps and are identical in all four. |
 | Cost of the runs | About 29 minutes of compute on one core in all (table below); peak working set 145 MB for the gate and up to 730 MB for the 0.5 s detection sweep. |
 
@@ -631,7 +631,7 @@ the swarm's cells are the same.
 
 PREREG §7 derives the outcome mechanically. **Outcome A** needs locality against `durable-max` to hold on
 T2 at C2 and C3 of the gate *and* at every point of the plausible region; anything else is **outcome B**.
-The tool (`fractalswarm bench verdicts … --prereg`, commit `3e723a8`) derives **B**. The deciding points,
+The tool (`fractalswarm bench verdicts … --prereg`, commit `48601df`) derives **B**. The deciding points,
 in PREREG's order, with the ratios of the seed means (descriptive):
 
 | Point (T2, C3 unless a gate row) | Setting | Locality (PREREG) | cdt | blast | idle |
