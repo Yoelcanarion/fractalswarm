@@ -171,7 +171,9 @@ def _fact_event(fact: Fact) -> Emit:
     return Emit(type="fact.published", payload=payload)
 
 
-def _tool(board: Blackboard, body: dict[str, Any], view: View, state: dict[str, Any]):
+def _tool(board: Blackboard, body: dict[str, Any], view: View, state: dict[str, Any] | None = None):
+    """The board's tools. ``state`` is the board actor's; the LangGraph baseline, which runs the
+    tools without an actor, passes none, and so has no disputes."""
     name, squad = body["name"], body["squad"]
     try:
         args = TOOL_ARGS[name].model_validate(body["args"])
@@ -209,7 +211,11 @@ def _tool(board: Blackboard, body: dict[str, Any], view: View, state: dict[str, 
             ),
             lamport=view.lamport,
         )
-        if state["arbitration"] and (contested := _contest(state, board, fact, view)) is not None:
+        if (
+            state is not None
+            and state["arbitration"]
+            and (contested := _contest(state, board, fact, view)) is not None
+        ):
             return contested
         stored = board.publish(fact)
         if stored.status != "draft" or stored.provenance.contract != body["contract"]:

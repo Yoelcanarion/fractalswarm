@@ -19,12 +19,12 @@ from fractalswarm.actors.arbitration import (
     read_ruling,
     step,
 )
-from fractalswarm.actors.board import board_handle, board_init
+from fractalswarm.actors.board import _tool, board_handle, board_init
 from fractalswarm.bench.tasks.t2_conference import arbitration as t2
 from fractalswarm.kernel.events import ENV, Event, validate_payload
 from fractalswarm.kernel.ids import canonical_json
 from fractalswarm.kernel.scheduler import Emit, Send, StartEffect, View
-from fractalswarm.memory.blackboard import Fact, Provenance
+from fractalswarm.memory.blackboard import Blackboard, Fact, Provenance
 from fractalswarm.planning.planner import read_blocks
 
 KEY = "speaker:S02:availability"
@@ -1010,3 +1010,27 @@ def test_an_order_for_another_winner_than_the_logged_one_is_ignored() -> None:
     assert state["board"].facts[KEY].status == "disputed"
     assert emitted(resolve(state, view, "c-hci"), "fact.resolved")
     assert state["board"].facts[KEY].value == READ_A
+
+
+def test_the_tools_run_without_a_board_actor_as_the_langgraph_baseline_runs_them() -> None:
+    """The baseline calls ``_tool(board, body, view)`` on a bare Blackboard: no disputes."""
+    _, view = candidates_view()
+    board = Blackboard()
+    for contract, value in (("c-hci", READ_A), ("c-ai", READ_B)):
+        body = {
+            "name": "memory.publish_fact",
+            "squad": f"squad-of-{contract}",
+            "contract": contract,
+            "agent": f"agent-of-{contract}",
+            "call_id": f"call-{contract}",
+            "args": {
+                "key": KEY,
+                "subject": "S02",
+                "value_json": json.dumps(value),
+                "sources": ["E02"],
+            },
+        }
+        output, commands = _tool(board, body, view)
+        assert emitted(commands, "collision.detected") == []
+        assert "disputed" not in json.dumps(output)
+    assert board.facts[KEY].status != "disputed"
