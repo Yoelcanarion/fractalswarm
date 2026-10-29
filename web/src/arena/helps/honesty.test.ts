@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { looksLikeHonesty, parseHonesty, rivalOrder } from "./honesty";
+import { parseHonesty, rivalOrder } from "./honesty";
 import { honestySample, parsedSample } from "./testing";
 
 type Raw = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -22,9 +22,38 @@ describe("reading honesty.json", () => {
       ["t2_conference", "C3", "ties"],
     ]);
     expect(h.prereg).toEqual({ path: "bench/PREREG.md", sha: "25d4a75919b3" });
-    expect(h.code.commit.startsWith("3e723a8")).toBe(true);
+    expect(h.code.commit).toMatch(/^[0-9a-f]{40}$/);
     expect(h.code.dirty).toBe(false);
     expect(h.tally).toEqual({ win: 163, tie: 249, loss: 68, na: 0 });
+  });
+
+  it("reads the per-rival totals and locality counts the file gives", () => {
+    const h = parsedSample();
+    expect(h.tallyByRival).toEqual({
+      "durable-max": { win: 42, tie: 141, loss: 33, na: 0 },
+      durable: { win: 91, tie: 98, loss: 27, na: 0 },
+      central: { win: 30, tie: 10, loss: 8, na: 0 },
+    });
+    expect(h.localityByRival).toEqual({
+      "durable-max": { holds: 7, ties: 18, fails: 2, na: 0 },
+      durable: { holds: 18, ties: 8, fails: 1, na: 0 },
+      central: { holds: 2, ties: 4, fails: 0, na: 0 },
+    });
+  });
+
+  it("agrees with itself on the per-rival keys: they are the hypotheses and the regime points, counted", () => {
+    const h = parsedSample();
+    const hypotheses = h.hypotheses.filter((x) => x.id.startsWith("H"));
+    for (const [rival, total] of Object.entries(h.tallyByRival)) {
+      const sum = (column: "win" | "tie" | "loss" | "na") => hypotheses.reduce((n, x) => n + (x.tally[rival]?.[column] ?? 0), 0);
+      expect(total, rival).toEqual({ win: sum("win"), tie: sum("tie"), loss: sum("loss"), na: sum("na") });
+    }
+    for (const [rival, counts] of Object.entries(h.localityByRival)) {
+      const of = (locality: string) => h.regimes.filter((r) => r.rival === rival && r.locality === locality).length;
+      expect(counts, rival).toEqual({ holds: of("holds"), ties: of("ties"), fails: of("fails"), na: of("n/a") });
+    }
+    const overall = Object.values(h.tallyByRival).reduce((t, x) => ({ win: t.win + x.win, tie: t.tie + x.tie, loss: t.loss + x.loss, na: t.na + x.na }), { win: 0, tie: 0, loss: 0, na: 0 });
+    expect(overall).toEqual(h.tally);
   });
 
   it("agrees with itself: every hypothesis tally is its comparisons, counted", () => {
@@ -55,12 +84,6 @@ describe("reading honesty.json", () => {
     expect(rivalOrder({ ...h, outcome: { ...h.outcome, against: "durable" } })).toEqual(["durable", "durable-max", "central"]);
   });
 
-  it("tells honesty.json from a response that wraps it", () => {
-    expect(looksLikeHonesty(honestySample())).toBe(true);
-    expect(looksLikeHonesty({ source: "x", data: honestySample() })).toBe(false);
-    expect(looksLikeHonesty(null)).toBe(false);
-    expect(looksLikeHonesty("honesty")).toBe(false);
-  });
 });
 
 describe("a file the panel cannot read", () => {
@@ -111,6 +134,34 @@ describe("a file the panel cannot read", () => {
     expect(parsed.ok).toBe(true);
     raw.regimes[0].locality = "n/a";
     expect(parseHonesty(raw).ok).toBe(true);
+  });
+
+  it("is refused at a count that is not a whole number, instead of reading it as 0 (a loss would vanish)", () => {
+    const wrong = (change: (raw: Raw) => void): string => {
+      const raw = clone();
+      change(raw);
+      return reason(raw);
+    };
+    expect(wrong((raw) => (raw.hypotheses[0].tally["durable-max"].loss = "many"))).toContain('hypotheses[0].tally.durable-max.loss: expected a count, got "many"');
+    expect(wrong((raw) => (raw.hypotheses[0].tally["durable-max"].loss = null))).toContain("hypotheses[0].tally.durable-max.loss: expected a count, got null");
+    expect(wrong((raw) => (raw.hypotheses[0].tally["durable-max"].win = -1))).toContain("expected a count, got -1");
+    expect(wrong((raw) => (raw.tally.loss = 1.5))).toContain("tally.loss: expected a count, got 1.5");
+    expect(wrong((raw) => delete raw.tally.loss)).toContain("tally.loss: expected a count, got nothing");
+    expect(wrong((raw) => (raw.false_deaths[0].remaps_max = "4"))).toContain("false_deaths[0].remaps_max: expected a count");
+  });
+
+  it("takes a file without the per-rival keys, as the files before them are, and refuses one with them malformed", () => {
+    const old = clone();
+    delete old.tally_by_rival;
+    delete old.locality_by_rival;
+    const parsed = parseHonesty(old);
+    expect(parsed.ok && [parsed.honesty.tallyByRival, parsed.honesty.localityByRival]).toEqual([{}, {}]);
+    const broken = clone();
+    broken.tally_by_rival["durable-max"].loss = "33";
+    expect(reason(broken)).toContain("tally_by_rival.durable-max.loss: expected a count");
+    const lost = clone();
+    delete lost.locality_by_rival.central.fails;
+    expect(reason(lost)).toContain("locality_by_rival.central.fails: expected a count");
   });
 
   it("copes with a ratio the bench could not compute (the rival had none)", () => {

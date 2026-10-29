@@ -52,12 +52,19 @@ describe("the losses", () => {
     expect(html).toContain("H5 Unnecessary reassignments against the ideal durable supervisor: 20 losses, list them");
   });
 
-  it("are not hidden behind a total: the panel adds nothing up", () => {
+  it("are in the file's own total for each rival, which the table shows as the file gives it", () => {
     const html = render();
+    expect(plainText(html)).toContain("All H1 to H6");
+    for (const total of [33, 27, 8]) expect(occurrences(html, `aria-label="${total} losses"`), `${total} losses`).toBe(1);
+  });
+
+  it("are not added up by the panel: a file without totals gets none, whatever its rows would sum to", () => {
+    const h = { ...parsedSample(), tallyByRival: {}, localityByRival: {} };
+    const html = render({ honesty: h });
     const text = plainText(html);
+    expect(text).not.toContain("All H1 to H6");
     for (const total of [33, 27, 8]) expect(html).not.toContain(`aria-label="${total} losses"`);
-    expect(text).not.toMatch(/\bAll\b.*H1 to H6/);
-    expect(text).not.toMatch(/locality holds at \d+ of \d+/);
+    expect(text).not.toMatch(/locality holds at \d/);
     expect(text).not.toMatch(/\d+ of \d+ swarm settings/);
   });
 
@@ -87,8 +94,8 @@ describe("the failure model", () => {
     const h = parsedSample();
     const html = render();
     const mapRows = regimeRows(h, h.outcome.against).length;
-    // the outcome, the map's head and the table's head, then a tag on each map row and each hypothesis
-    expect(occurrences(html, 'data-model="crash"')).toBe(3 + mapRows + h.hypotheses.length);
+    // the outcome, the map's head and the table's head, then a tag on each map row, each hypothesis and the total
+    expect(occurrences(html, 'data-model="crash"')).toBe(3 + mapRows + h.hypotheses.length + 1);
     expect(occurrences(html, 'data-model="process"')).toBe(1);
   });
 
@@ -122,11 +129,16 @@ describe("the per-process section", () => {
 
 describe("the rival the map and the per-process view are read against", () => {
   it("starts on the one the outcome is read against", () => {
-    expect(plainText(render())).toContain("Against the ideal durable supervisor: at each setting the swarm's recovery stays local (holds), ties or fails.");
+    expect(plainText(render())).toContain("Against the ideal durable supervisor: locality holds at 7 settings, ties at 18 and fails at 2.");
+  });
+
+  it("says no count when the file gives none", () => {
+    const h = { ...parsedSample(), localityByRival: {} };
+    expect(plainText(render({ honesty: h }))).toContain("Against the ideal durable supervisor: at each setting the swarm's recovery stays local (holds), ties or fails.");
   });
 
   it("starts on the one asked for, and ignores one the file does not have", () => {
-    expect(plainText(render({ rival: "central" }))).toContain(`Against the ${systemName("central")}: at each setting`);
+    expect(plainText(render({ rival: "central" }))).toContain(`Against the ${systemName("central")}: locality holds at 2 settings, ties at 4 and fails at 0.`);
     expect(occurrences(render({ rival: "central" }), 'class="map__row"')).toBe(2);
     expect(plainText(render({ rival: "nobody" }))).toBe(plainText(render()));
   });

@@ -28,6 +28,14 @@ export interface Tally {
   na: number;
 }
 
+/** The locality verdicts over a rival's regime points; `na` counts the points with no verdict. */
+export interface LocalityTally {
+  holds: number;
+  ties: number;
+  fails: number;
+  na: number;
+}
+
 export interface Hypothesis {
   id: string;
   name: string;
@@ -133,8 +141,12 @@ export interface Honesty {
   regimes: RegimePoint[];
   perProcess: PerProcess[];
   falseDeaths: FalseDeath[];
-  /** Over hypotheses H1 to H6; stall time is reported next to them and not counted. */
+  /** Over hypotheses H1 to H6 and every rival; stall time is reported next to them and not counted. */
   tally: Tally;
+  /** The same, per rival (they sum to `tally`). Empty in a file that predates it: then the panel has no per-rival total to show. */
+  tallyByRival: Record<string, Tally>;
+  /** The locality of the regime points, per rival. Empty in a file that predates it. */
+  localityByRival: Record<string, LocalityTally>;
 }
 
 export type Parsed = { ok: true; honesty: Honesty } | { ok: false; reason: string };
@@ -166,14 +178,25 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[], where: s
   return allowed.includes(value as T) ? (value as T) : fail(where, `unexpected "${String(value)}"`);
 }
 
-const count = (value: unknown): number => {
-  const n = asNumber(value);
-  return n === null || n < 0 ? 0 : Math.trunc(n);
-};
+/** A count is a whole number, never quietly 0: a loss that read as 0 would be a loss hidden. */
+function count(value: unknown, where: string): number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : fail(where, `expected a count, got ${JSON.stringify(value) ?? "nothing"}`);
+}
 
 function tally(value: unknown, where: string): Tally {
   const r = record(value, where);
-  return { win: count(r.win), tie: count(r.tie), loss: count(r.loss), na: count(r.na) };
+  return { win: count(r.win, `${where}.win`), tie: count(r.tie, `${where}.tie`), loss: count(r.loss, `${where}.loss`), na: count(r.na, `${where}.na`) };
+}
+
+function localityTally(value: unknown, where: string): LocalityTally {
+  const r = record(value, where);
+  return { holds: count(r.holds, `${where}.holds`), ties: count(r.ties, `${where}.ties`), fails: count(r.fails, `${where}.fails`), na: count(r.na, `${where}.na`) };
+}
+
+/** A key the file may lack (older files do): absent is empty, present must be well formed. */
+function byRival<T>(value: unknown, where: string, read: (v: unknown, where: string) => T): Record<string, T> {
+  if (value === undefined) return {};
+  return Object.fromEntries(Object.entries(record(value, where)).map(([rival, v]) => [rival, read(v, `${where}.${rival}`)]));
 }
 
 const ratios = (r: Record<string, unknown>): Ratios => ({ cdt: asNumber(r.cdt_ratio), blast: asNumber(r.blast_ratio), idle: asNumber(r.idle_ratio) });
@@ -201,7 +224,7 @@ function perProcess(value: unknown, where: string): PerProcess {
     ) as PerProcess["reading"],
     levels: list(r.swarm_levels ?? [], `${where}.swarm_levels`).map((level, i) => {
       const l = record(level, `${where}.swarm_levels[${i}]`);
-      return { level: count(l.level), count: count(l.count) };
+      return { level: count(l.level, `${where}.swarm_levels[${i}].level`), count: count(l.count, `${where}.swarm_levels[${i}].count`) };
     }),
   };
 }
@@ -300,12 +323,14 @@ function read(raw: unknown): Honesty {
         task: text(f.task, `${where}.task`),
         profile: text(f.profile, `${where}.profile`),
         workflow: text(f.workflow, `${where}.workflow`),
-        runs: count(f.runs),
+        runs: count(f.runs, `${where}.runs`),
         remapsMean: asNumber(f.remaps_mean) ?? 0,
-        remapsMax: count(f.remaps_max),
+        remapsMax: count(f.remaps_max, `${where}.remaps_max`),
       };
     }),
     tally: tally(root.tally, "tally"),
+    tallyByRival: byRival(root.tally_by_rival, "tally_by_rival", tally),
+    localityByRival: byRival(root.locality_by_rival, "locality_by_rival", localityTally),
   };
 }
 
@@ -318,10 +343,6 @@ export function parseHonesty(raw: unknown): Parsed {
     throw error;
   }
 }
-
-/** Does this look like honesty.json (so a response that wraps it as `{data}` can be told from one that is it)? */
-export const looksLikeHonesty = (raw: unknown): boolean =>
-  typeof raw === "object" && raw !== null && "schema_version" in raw && "hypotheses" in raw && "regimes" in raw;
 
 /** The rivals in the order the panel shows them: the one the outcome is read against, then the strongest first. */
 export function rivalOrder(honesty: Honesty): string[] {

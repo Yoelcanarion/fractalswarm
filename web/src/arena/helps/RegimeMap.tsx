@@ -5,7 +5,7 @@ import { systemName } from "../assumptions";
 import type { Honesty, Locality } from "./honesty";
 import { fmt, LOCALITY_WORD } from "./labels";
 import { Model } from "./Model";
-import { RATIO_NAMES, regimeRows, type MapCell } from "./regime";
+import { localityLine, RATIO_NAMES, regimeRows, type MapCell } from "./regime";
 
 /** A locality as a class suffix: "n/a" cannot be one. */
 const slug = (locality: Locality): string => (locality === "n/a" ? "na" : locality);
@@ -64,6 +64,7 @@ export interface RegimeMapProps {
 export function RegimeMap({ honesty, rival }: RegimeMapProps) {
   const rows = useMemo(() => regimeRows(honesty, rival), [honesty, rival]);
   const cut = honesty.rules.ratio.cdt_s?.ratio;
+  const localities = honesty.localityByRival[rival];
   return (
     <section className="map" data-helps="map" aria-label="Regime map">
       <header className="helps__section-head">
@@ -72,7 +73,7 @@ export function RegimeMap({ honesty, rival }: RegimeMapProps) {
           <Model kind="crash" />
         </div>
         <p className="helps__sub">
-          Against the {systemName(rival)}: at each setting the swarm's recovery stays local (holds), ties or fails. One assumption changes along each row.
+          Against the {systemName(rival)}: {localities ? `${localityLine(localities)}.` : "at each setting the swarm's recovery stays local (holds), ties or fails."} One assumption changes along each row.
         </p>
       </header>
       {rows.length === 0 ? (

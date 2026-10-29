@@ -28,8 +28,8 @@ describe("the wins, ties and losses table", () => {
     for (const row of rows) for (const cell of row.cells) expect(cell.tally).toBe(h.hypotheses.find((x) => x.id === row.id)?.tally[cell.rival]);
   });
 
-  it("reads a sample that is the bench's own: the hypotheses add up to the overall tally the file prints", () => {
-    // a check on the data, not on the panel: the panel shows no total
+  it("reads a sample that is the bench's own: the hypotheses add up to the totals the file prints", () => {
+    // a check on the data, not on the panel: the panel shows the file's totals and adds nothing up itself
     const h = parsedSample();
     const sum = (rival?: string): Tally => {
       const t = { ...EMPTY_TALLY };
@@ -45,9 +45,7 @@ describe("the wins, ties and losses table", () => {
       return t;
     };
     expect(sum()).toEqual(h.tally);
-    expect(sum("durable-max")).toEqual({ win: 42, tie: 141, loss: 33, na: 0 });
-    expect(sum("durable")).toEqual({ win: 91, tie: 98, loss: 27, na: 0 });
-    expect(sum("central")).toEqual({ win: 30, tie: 10, loss: 8, na: 0 });
+    for (const rival of RIVALS) expect(sum(rival), rival).toEqual(h.tallyByRival[rival]);
   });
 
   it("counts every comparison the file has: no result goes missing from a cell", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { rivalOrder } from "./honesty";
-import { regimeRows } from "./regime";
+import { localityLine, regimeRows } from "./regime";
 import { parsedSample } from "./testing";
 
 const rows = (rival: string) => regimeRows(parsedSample(), rival);
@@ -67,6 +67,12 @@ describe("the regime map", () => {
     // the sample's figures: the ideal durable supervisor holds at 7 settings, ties at 18, fails at 2
     const count = (locality: string) => drawn("durable-max").filter((l) => l === locality).length;
     expect([count("holds"), count("ties"), count("fails")]).toEqual([7, 18, 2]);
+  });
+
+  it("says the file's count of a rival's localities in words, and adds nothing up", () => {
+    expect(localityLine({ holds: 7, ties: 18, fails: 2, na: 0 })).toBe("locality holds at 7 settings, ties at 18 and fails at 2");
+    expect(localityLine({ holds: 1, ties: 0, fails: 0, na: 0 })).toBe("locality holds at 1 setting, ties at 0 and fails at 0");
+    expect(localityLine({ holds: 2, ties: 4, fails: 0, na: 3 })).toBe("locality holds at 2 settings, ties at 4 and fails at 0; 3 have no verdict");
   });
 
   it("draws only the gate against a rival that was not swept", () => {

@@ -428,6 +428,11 @@
   color: var(--text-secondary);
 }
 
+.tally__row--total th,
+.tally__row--total td {
+  border-top: 2px solid var(--border-strong);
+}
+
 .tcell {
   display: grid;
   gap: 5px;
@@ -511,6 +516,25 @@
 .list__close:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* The totals are not buttons: no outline, a little larger. */
+.tcell__counts--total .count {
+  border-color: transparent;
+  font-size: var(--fs-lead);
+  cursor: default;
+}
+
+.tcell__counts--total .count--win {
+  color: var(--ok-text);
+}
+
+.tcell__counts--total .count--loss {
+  color: var(--danger-text);
+}
+
+.tcell__counts--total .count--tie {
+  color: var(--text-secondary);
 }
 
 .tally__note {

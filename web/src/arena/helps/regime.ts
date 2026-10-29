@@ -4,8 +4,8 @@
 // a strip per sweep with one cell per setting, as bench/results/regime.png draws it: not a grid, because
 // two assumptions are never varied together.
 
-import type { Honesty, Ratios, RegimePoint } from "./honesty";
-import { crashesText, settingLabel, taskName } from "./labels";
+import type { Honesty, LocalityTally, Ratios, RegimePoint } from "./honesty";
+import { countText, crashesText, settingLabel, taskName } from "./labels";
 import { crashModel } from "./models";
 
 interface AxisInfo {
@@ -87,6 +87,12 @@ export function regimeRows(honesty: Honesty, rival: string): MapRow[] {
   });
   rows.sort((a, b) => axisRank(a.axis) - axisRank(b.axis) || Number(b.task === decidingTask) - Number(a.task === decidingTask) || a.task.localeCompare(b.task));
   return rows.map(({ id, title, detail, model, cells }) => ({ id, title, detail, model, cells }));
+}
+
+/** The file's own count of a rival's localities in words; nothing is added up here. */
+export function localityLine(t: LocalityTally): string {
+  const line = `locality holds at ${countText(t.holds, "setting", "settings")}, ties at ${t.ties} and fails at ${t.fails}`;
+  return t.na > 0 ? `${line}; ${t.na} have no verdict` : line;
 }
 
 export const RATIO_NAMES: { key: keyof Ratios; label: string }[] = [

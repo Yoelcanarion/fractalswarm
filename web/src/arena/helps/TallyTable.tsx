@@ -77,6 +77,27 @@ function Counts({ cell, hypothesis, name, open, onOpen }: CountsProps) {
   );
 }
 
+/** A rival's total over H1 to H6, as the file gives it: not buttons, only the three counts over their bar. */
+function Totals({ tally }: { tally: Tally }) {
+  return (
+    <div className="tcell">
+      <div className="tcell__bar" aria-hidden>
+        {SEGMENTS.map((which) => (
+          <i key={which} className={`seg seg--${which}`} style={{ flexGrow: tally[which] }} />
+        ))}
+      </div>
+      <div className="tcell__counts tcell__counts--total">
+        {SEGMENTS.map((which) => (
+          <span key={which} className={`count count--${which}`} aria-label={countText(tally[which], WORDS[which].one, WORDS[which].many)}>
+            {tally[which]}
+          </span>
+        ))}
+        {tally.na > 0 && <span className="count count--na">{tally.na} n/a</span>}
+      </div>
+    </div>
+  );
+}
+
 export interface TallyTableProps {
   honesty: Honesty;
   rivals: readonly string[];
@@ -90,6 +111,8 @@ export interface TallyTableProps {
 export function TallyTable({ honesty, rivals, against, open, onOpen }: TallyTableProps) {
   const rows = useMemo(() => tallyRows(honesty, rivals), [honesty, rivals]);
   const deaths = useMemo(() => falseDeathNote(honesty), [honesty]);
+  const totals = honesty.tallyByRival;
+  const hasTotals = rivals.some((rival) => totals[rival] !== undefined);
   const heads = (
     <>
       <th scope="col" className="tally__row-head">
@@ -137,6 +160,24 @@ export function TallyTable({ honesty, rivals, against, open, onOpen }: TallyTabl
               ))}
             </tr>
           ))}
+          {hasTotals && (
+            <tr className="tally__row tally__row--total">
+              <th scope="row" className="tally__row-head">
+                <span className="tally__name">
+                  <b>All</b> H1 to H6
+                </span>
+                <span className="tally__expected">Stall time is reported above and not counted.</span>
+                <span className="tally__model">
+                  <Model kind="crash" />
+                </span>
+              </th>
+              {rivals.map((rival) => (
+                <td key={rival} className={rival === against ? "tally__col--against" : undefined}>
+                  {totals[rival] ? <Totals tally={totals[rival]} /> : "—"}
+                </td>
+              ))}
+            </tr>
+          )}
         </tbody>
       </table>
       {open && <ComparisonList honesty={honesty} open={open} onClose={() => onOpen(null)} />}
