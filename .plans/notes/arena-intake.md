@@ -67,6 +67,10 @@ reference for everything W2 built. It is updated at each merge point.
     was redeemed (caps checked again at launch, another billed job running, the process could not start,
     the ledger could not be read) leaves it usable, so a person is not sent back to the preflight for
     a failure that was not theirs.
+14. **`serve` and `demo` refuse to start with `FRACTALSWARM_ALLOW_UI_REAL` on and a `--host` that is not
+    loopback** (`SpendGate.refuse_exposed`, exit 2 before any server or browser starts). The token and the word
+    SPEND protect against a person's slip, not against a stranger: the API hands out both, so a server that
+    can spend must not be reachable from the network. Not in the brief.
 
 ## Replay safety
 

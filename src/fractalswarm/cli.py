@@ -876,12 +876,16 @@ def _serve(runs_dir: Path, host: str, port: int, open_run: str | None, browser: 
     from fractalswarm.api.app import create_app
     from fractalswarm.api.spend import Spend
 
+    settings = _settings()
+    spend = Spend.from_settings(settings)
+    try:
+        spend.gate.refuse_exposed(host)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--host") from None
     url = f"http://{host}:{port}/" + (f"#/run/{open_run}" if open_run else "")
     typer.echo(f"FractalSwarm UI on {url}  (Ctrl+C to stop)")
     if browser:
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
-    settings = _settings()
-    spend = Spend.from_settings(settings)
     if spend.gate.allow_real:
         typer.echo(
             "real runs from the UI are ON (FRACTALSWARM_ALLOW_UI_REAL): a billed run "

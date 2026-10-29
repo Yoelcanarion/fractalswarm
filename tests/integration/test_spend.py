@@ -726,3 +726,33 @@ def test_an_app_without_a_gate_cannot_bill_a_reading(tmp_path: Path) -> None:
     asked = client.post("/api/intake", json=intake_billed("anything"))
     assert asked.status_code == 403 and client.get("/api/jobs").json() == []
     assert not list((tmp_path / "private").glob("intake/*"))
+
+
+# -- who can reach a server that spends --------------------------------------------------------
+
+
+def test_a_server_that_can_spend_listens_on_loopback_only(tmp_path: Path) -> None:
+    spending = SpendGate(tmp_path / "ledger.sqlite", 150.0, allow_real=True)
+    for host in ("127.0.0.1", "localhost", "::1"):
+        spending.refuse_exposed(host)
+    for host in ("0.0.0.0", "192.168.1.20", "::"):
+        with pytest.raises(ValueError, match="loopback"):
+            spending.refuse_exposed(host)
+    SpendGate.locked(tmp_path / "none.sqlite").refuse_exposed("0.0.0.0")  # nothing to spend
+
+
+@pytest.mark.parametrize("command", ["serve", "demo"])
+def test_the_cli_will_not_serve_a_spending_gate_to_the_network(
+    command: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from typer.testing import CliRunner
+
+    from fractalswarm.cli import app
+
+    def never(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("a server was started")
+
+    monkeypatch.setattr("uvicorn.run", never)
+    monkeypatch.setenv("FRACTALSWARM_ALLOW_UI_REAL", "1")
+    refused = CliRunner().invoke(app, [command, "--host", "0.0.0.0"])
+    assert refused.exit_code == 2 and not isinstance(refused.exception, AssertionError)

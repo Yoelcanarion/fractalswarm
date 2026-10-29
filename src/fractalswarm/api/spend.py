@@ -16,8 +16,8 @@ one failed:
 
 The processes then run with ``--confirm-real-spend --no-paid-retries`` (a request that may
 have been billed is never sent twice) and the run cap, on the shared ledger. Nothing here
-calls the model: the preflight prices requests with the price table and the ledger is read,
-never written.
+calls the model or reserves anything: the preflight prices requests with the price table and
+only reads the ledger (it does not even open one that does not exist yet).
 
 Three things can be billed: a task (``POST /api/tasks``), a pair (``POST /api/arena``) and the
 reading of pasted text (``POST /api/intake``). The text is private: a preflight reads it to price
@@ -54,6 +54,7 @@ TOKEN_TTL_S = 600.0
 PHASE_START_USD = 11.82
 PHASE_CAP_USD = 50.0
 HARD_STOP_USD = 61.8
+LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 NOT_IN_DIGEST = ("backend", "run_id", "pair_id", "preflight_token", "confirm")
 PREFLIGHT = {
     "task": "/api/tasks/preflight",
@@ -90,6 +91,15 @@ class SpendGate:
     def locked(cls, ledger_path: Path) -> "SpendGate":
         """No billed launch at all: what an app gets when it is not given a gate."""
         return cls(ledger_path=ledger_path, project_cap_usd=0.0, allow_real=False, has_key=False)
+
+    def refuse_exposed(self, host: str) -> None:
+        """Raise ``ValueError`` if this gate would spend for whoever can reach ``host``. The
+        token and the word are for a person's slip, not for a stranger: the API hands out both."""
+        if self.allow_real and host not in LOOPBACK_HOSTS:
+            raise ValueError(
+                f"FRACTALSWARM_ALLOW_UI_REAL is on, so the server must listen on a loopback "
+                f"address (not {host}): anyone who can reach it could start a billed run"
+            )
 
     def standing(self) -> dict[str, float]:
         """Settled and reserved spend in the ledger now. A ledger that does not exist yet holds
