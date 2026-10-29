@@ -93,7 +93,7 @@ class TaskSpec(BaseModel):
     max_steps: int = Field(default=8, ge=1)
     max_attempts: int = Field(default=6, ge=1)
     contributor_opt_in: bool = False
-    auto_approve: bool = True  # bench mode; the plan-approval UI comes later
+    auto_approve: bool = True  # false: a run launched with live_control waits for a person
     channel_breakers: bool = False  # per-pair and per-topic bus breakers (spec §8); opt-in
     cross_audit: bool = False  # a sibling audits sampled contracts (spec §11.3)
     feasibility_report: bool = False  # emit the feasibility report at plan approval (§12)

@@ -163,6 +163,14 @@ def run(
     feasibility_report: Annotated[
         bool, typer.Option(help="record the feasibility report at plan approval (spec §12)")
     ] = False,
+    live_control: Annotated[
+        bool,
+        typer.Option(
+            help="take a person's controls while the run goes (the API sets it): a kill at a "
+            "progress point, and the plan held for approval if the TaskSpec says "
+            "auto_approve: false"
+        ),
+    ] = False,
 ) -> None:
     """Run a task (fake LLM by default) into runs/<run_id>."""
     import asyncio
@@ -210,6 +218,8 @@ def run(
         params["cross_audit"] = True
     if feasibility_report:
         params["feasibility_report"] = True
+    if live_control:
+        params["live_control"] = True
     if chaos_plan is not None:
         params |= chaos_plan_params(chaos_plan)
     elif chaos == "kill-half":

@@ -4,7 +4,11 @@ REST under ``/api``; the event stream is a WebSocket (``api/ws.py``); everything
 the web app from ``api/static/``. The UI is a pure projection of the event stream, so it
 needs only the read endpoints to show a live run or a replay. The kill switch (``halt``) and the
 budget shock (``budget``) drop a request into the live run's control inbox, the same file
-``fractalswarm halt`` and ``budget`` write.
+``fractalswarm halt`` and ``budget`` write. So do a person's controls (``api/controls.py``): a
+kill at a progress point (``/chaos``), a plan approved or sent back (``/approve``) and the answer
+to an escalation (``/escalations/{eid}``); each also has a pair-level form
+(``/api/pairs/{id}/chaos``, ``/approve``) that gives both runs the same control. They need a run
+launched by the API (``live_control``): any other run answers 409.
 
 Launching: ``POST /api/tasks`` starts a run as a job (``api/jobs.py``: one subprocess per run),
 ``GET /api/jobs`` lists them and ``POST /api/jobs/{id}/cancel`` stops one. The live input flow is
@@ -15,9 +19,8 @@ answer 503. ``POST /api/arena`` starts a pair of runs on one input under one cha
 A billed run (``backend: real``), pair or reading of pasted text is refused unless it carries the
 token of a preflight (``POST /api/tasks/preflight``, ``/api/arena/preflight``,
 ``/api/intake/preflight``) and the word SPEND, and the server was started with
-``FRACTALSWARM_ALLOW_UI_REAL`` (``api/spend.py``). The remaining control endpoints
-(plan approval, chaos, escalations) answer 501 until the runtime behind them lands;
-``GET /api/capabilities`` says which controls are real.
+``FRACTALSWARM_ALLOW_UI_REAL`` (``api/spend.py``). ``GET /api/capabilities`` says which
+controls are real.
 A finished run also has ``/metrics`` (the official numbers) and ``/takeover`` (what its log
 proves about the coordinator kills).
 
@@ -45,6 +48,14 @@ from starlette.staticfiles import StaticFiles
 
 from fractalswarm.api import arena, jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
+from fractalswarm.api.controls import (
+    TOKEN,
+    ControlError,
+    answer_control,
+    approve_control,
+    chaos_controls,
+    inbox_request,
+)
 from fractalswarm.api.guard import ApiGuard
 from fractalswarm.api.jobs import JobError, JobManager
 from fractalswarm.api.lens import lens_routes
@@ -67,7 +78,6 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 # The first file found wins; bench/charts.py writes one of these.
 HERO_FILES = ("hero_chart.json", "hero.json", "charts.json")
-CHAOS_KINDS = ("kill_half", "kill_coordinator", "kill_agent", "api_storm", "net_fault")
 BUDGET_LEVELS = ("contract", "squad", "run", "project")
 MAX_PAGE = 5000
 
@@ -101,11 +111,14 @@ def create_app(
         assert spending is not None
         return spending
 
-    def entry(request: Request) -> RunEntry:
+    def entry_of(run_id: str) -> RunEntry:
         try:
-            return catalog.get(request.path_params["run_id"])
+            return catalog.get(run_id)
         except KeyError:
-            raise HTTPException(404, f"no run {request.path_params['run_id']!r}") from None
+            raise HTTPException(404, f"no run {run_id!r}") from None
+
+    def entry(request: Request) -> RunEntry:
+        return entry_of(request.path_params["run_id"])
 
     async def list_runs(request: Request) -> JSONResponse:
         return JSONResponse([catalog.listing(run) for run in catalog.entries()])
@@ -165,16 +178,16 @@ def create_app(
         return JSONResponse(takeovers[key])
 
     async def capabilities(request: Request) -> JSONResponse:
-        """Which controls this server really does. A control that is ``false`` answers 501
-        (``not_wired``), or 503 without a private directory. ``real`` says a billed launch can
-        pass the gate (the server flag is on and there is a key): without it a preflight comes
-        back with no token."""
+        """Which controls this server really does. ``chaos`` and ``approve`` act on a live run
+        that was launched by the API; any other run answers 409. ``tasks`` needs a private
+        directory (503 without one). ``real`` says a billed launch can pass the gate (the server
+        flag is on and there is a key): without it a preflight comes back with no token."""
         gate = spending.gate if spending is not None else None
         return JSONResponse(
             {
                 "tasks": private is not None,  # POST /api/tasks, /api/intake and /api/arena
-                "chaos": False,
-                "approve": False,
+                "chaos": True,  # a kill at a progress point, on a run the API launched
+                "approve": True,  # a plan held for a person (auto_approve: false)
                 "budget": True,
                 "halt": True,
                 "real": gate is not None and gate.allow_real and gate.has_key,
@@ -198,40 +211,130 @@ def create_app(
         data = json.loads(fixture.read_text(encoding="utf-8"))
         return JSONResponse({"source": "fixture", "fixture": True, "data": data})
 
-    def not_wired(what: str, lands: str):
-        async def endpoint(request: Request) -> JSONResponse:
-            body = await _json_body(request)
-            if what == "chaos":
-                kind = body.get("kind")
-                if kind not in CHAOS_KINDS:
-                    raise HTTPException(422, f"chaos kind must be one of {', '.join(CHAOS_KINDS)}")
-            if "run_id" in request.path_params:
-                entry(request)
-            return JSONResponse(
-                {
-                    "error": "not_implemented",
-                    "endpoint": what,
-                    "detail": f"{what} is not wired yet: it lands with {lands}.",
-                    "request": body,
-                },
-                status_code=501,
-            )
-
-        return endpoint
-
-    def control_inbox(request: Request) -> Any:
+    def inbox_of(run_id: str) -> Any:
         """The control inbox of a run that is still recording. A finished run (its log is
         exported) and a bundled recording are history: there is nothing left to control. Nor is
         there for an interrupted run, whose process died: nobody would read the request."""
         from fractalswarm.runs import RunPaths
 
-        run = entry(request)
+        run = entry_of(run_id)
         status = catalog.status(run, catalog.last(run))
         if run.jsonl.exists() or status in ("completed", "halted"):
             raise HTTPException(409, f"run {run.id!r} is a recording, not a live run")
         if status != "running":
             raise HTTPException(409, f"run {run.id!r} is {status}: no process is recording it")
         return RunPaths(run.path)
+
+    def control_inbox(request: Request) -> Any:
+        return inbox_of(request.path_params["run_id"])
+
+    def live_inbox(run_id: str) -> tuple[Any, dict[str, Any]]:
+        """The inbox of a live run launched to take a person's controls (``live_control``, which
+        the API sets and a CLI run lacks), with the params it started with."""
+        inbox = inbox_of(run_id)
+        first = catalog.read(entry_of(run_id), 1, 1)
+        started = first[0]["payload"] if first and first[0]["type"] == "run.started" else {}
+        params = started.get("params") or {}
+        if not params.get("live_control"):
+            raise HTTPException(
+                409, f"run {run_id!r} was not launched to take controls: start it from the API"
+            )
+        return inbox, params
+
+    def send(inbox: Any, controls: list[dict[str, Any]]) -> None:
+        for found in controls:
+            inbox.request_control(inbox_request(found))
+
+    def valid(make: Any, *args: Any) -> Any:
+        try:
+            return make(*args)
+        except ControlError as exc:
+            raise HTTPException(exc.status, str(exc)) from None
+
+    def waits_for_approval(run_id: str, params: dict[str, Any]) -> None:
+        if (params.get("spec") or {}).get("auto_approve", True) is not False:
+            raise HTTPException(409, f"run {run_id!r} does not wait for approval (auto_approve)")
+
+    def pair_runs(pair_id: str) -> list[str]:
+        try:
+            pair = arena.get_pair(need_private()[1], pair_id)
+        except JobError as exc:
+            raise job_error(exc) from None
+        return [pair["left"]["run_id"], pair["right"]["run_id"]]
+
+    def to_pair(pair_id: str, controls: list[dict[str, Any]], needs: Any = None) -> JSONResponse:
+        """The same controls to both runs of a pair: each one's own monkey or owner acts. A run
+        that cannot take them (finished, or not live) is skipped and named; none that can: 409."""
+        answered: dict[str, str] = {}
+        for run_id in pair_runs(pair_id):
+            try:
+                inbox, params = live_inbox(run_id)
+                if needs is not None:
+                    needs(run_id, params)
+            except HTTPException as exc:
+                answered[run_id] = f"skipped: {exc.detail}"
+                continue
+            send(inbox, controls)
+            answered[run_id] = "requested"
+        if "requested" not in answered.values():
+            raise HTTPException(409, "; ".join(f"{run}: {why}" for run, why in answered.items()))
+        return JSONResponse({"ok": True, "detail": "controls requested", "runs": answered})
+
+    async def chaos_run(request: Request) -> JSONResponse:
+        """A kill at a progress point (``api/controls.py``): ``{"kind", "at"?, "target"?}``."""
+        controls = valid(chaos_controls, await _json_body(request))
+        inbox, _ = live_inbox(request.path_params["run_id"])
+        send(inbox, controls)
+        return JSONResponse({"ok": True, "detail": f"{len(controls)} chaos action(s) requested"})
+
+    async def chaos_pair(request: Request) -> JSONResponse:
+        controls = valid(chaos_controls, await _json_body(request))
+        return to_pair(request.path_params["pair_id"], controls)
+
+    async def approve_run(request: Request) -> JSONResponse:
+        """The answer to a plan the run holds for a person: ``{"goal_id"?, "approve", "reason"?}``;
+        ``approve: false`` sends the plan back to its planner with ``reason`` as feedback."""
+        found = valid(approve_control, await _json_body(request))
+        run_id = request.path_params["run_id"]
+        inbox, params = live_inbox(run_id)
+        waits_for_approval(run_id, params)
+        send(inbox, [found])
+        return JSONResponse({"ok": True, "detail": f"{found['op']} requested for {found['to']}"})
+
+    async def approve_pair(request: Request) -> JSONResponse:
+        found = valid(approve_control, await _json_body(request))
+        return to_pair(request.path_params["pair_id"], [found], waits_for_approval)
+
+    def escalation_goal(run: RunEntry, eid: str) -> str | None:
+        """The goal an escalation was opened for, from the log: the ``escalation.*`` event that
+        carries ``eid`` (as ``eid``, ``escalation_id`` or ``id``) names it in ``goal_id``."""
+        seq = 1
+        while page := catalog.read(run, seq, MAX_PAGE):
+            for event in page:
+                payload = event["payload"]
+                named = (payload.get("eid"), payload.get("escalation_id"), payload.get("id"))
+                if event["type"].startswith("escalation.") and eid in named:
+                    goal = payload.get("goal_id") or payload.get("goal")
+                    if isinstance(goal, str):
+                        return goal
+            seq = page[-1]["seq"] + 1
+        return None
+
+    async def answer_escalation(request: Request) -> JSONResponse:
+        """What a person decided for an escalation that waits for one: ``{"choice"}``. The goal
+        is the escalation's own, read from the log (``goal_id`` in the body says it if the log
+        does not)."""
+        body = await _json_body(request)
+        run_id, eid = request.path_params["run_id"], request.path_params["eid"]
+        if not TOKEN.fullmatch(eid):
+            raise HTTPException(422, "the escalation id is not valid")
+        inbox, _ = live_inbox(run_id)
+        goal = body.get("goal_id") or escalation_goal(entry_of(run_id), eid)
+        if not isinstance(goal, str):
+            raise HTTPException(404, f"no escalation {eid!r} in run {run_id!r}")
+        found = valid(answer_control, eid, goal, body)
+        send(inbox, [found])
+        return JSONResponse({"ok": True, "detail": f"answer to {eid} requested for {found['to']}"})
 
     async def halt_run(request: Request) -> JSONResponse:
         """The kill switch: the run records ``run.halted`` and stops everything."""
@@ -507,23 +610,13 @@ def create_app(
         Route("/api/intake/sample", intake_sample),
         Route("/api/intake/{intake_id}", get_intake),
         Route("/api/intake/{intake_id}/approve", approve_intake, methods=["POST"]),
-        Route(
-            "/api/runs/{run_id}/approve",
-            not_wired("approve", "the Day 4 T2 slice (plan approval)"),
-            methods=["POST"],
-        ),
-        Route(
-            "/api/runs/{run_id}/chaos",
-            not_wired("chaos", "the Day 5 chaos injector and takeover"),
-            methods=["POST"],
-        ),
+        Route("/api/runs/{run_id}/approve", approve_run, methods=["POST"]),
+        Route("/api/runs/{run_id}/chaos", chaos_run, methods=["POST"]),
+        Route("/api/pairs/{pair_id}/approve", approve_pair, methods=["POST"]),
+        Route("/api/pairs/{pair_id}/chaos", chaos_pair, methods=["POST"]),
         Route("/api/runs/{run_id}/budget", shock_budget, methods=["POST"]),
         Route("/api/runs/{run_id}/halt", halt_run, methods=["POST"]),
-        Route(
-            "/api/runs/{run_id}/escalations/{eid}",
-            not_wired("escalations", "the replanning ladder (step 5, human)"),
-            methods=["POST"],
-        ),
+        Route("/api/runs/{run_id}/escalations/{eid}", answer_escalation, methods=["POST"]),
     ]
     if (static_dir / "index.html").is_file():
         routes.append(Mount("/", StaticFiles(directory=static_dir, html=True)))
