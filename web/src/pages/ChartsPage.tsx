@@ -13,11 +13,12 @@ import {
 } from "recharts";
 
 import { benchResults } from "../lib/api";
+import { axis, GRID, LEGEND_STYLE, TOOLTIP_CURSOR, TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from "../lib/chart";
+import { useFirstDraw } from "../lib/chartMotion";
 import { chartRows, normalizeHero, type HeroData, type HeroPoint } from "../lib/hero";
 import { SERIES } from "../lib/layout";
 
-const AXIS = { stroke: "#5c5b56", tick: { fill: "#c3c2b7", fontSize: 14 } };
-const GRID = "#2c2c2a";
+const AXIS = axis(14);
 
 function colorFor(hero: HeroData, id: string): string {
   return SERIES[hero.series.findIndex((s) => s.id === id) % SERIES.length];
@@ -34,6 +35,7 @@ interface PanelProps {
 
 function MetricPanel({ hero, metric, title, unit, height = 340, percent }: PanelProps) {
   const rows = useMemo(() => chartRows(hero, metric), [hero, metric]);
+  const draw = useFirstDraw();
   const format = (v: number) => (percent ? `${Math.round(v * 100)}%` : `${v}${unit}`);
   return (
     <section className="panel chart">
@@ -44,12 +46,12 @@ function MetricPanel({ hero, metric, title, unit, height = 340, percent }: Panel
           <XAxis dataKey="label" {...AXIS} />
           <YAxis {...AXIS} tickFormatter={format} width={64} domain={percent ? [0, 1] : [0, "auto"]} />
           <Tooltip
-            contentStyle={{ background: "#1f1f1d", border: "1px solid #3a3936", borderRadius: 8 }}
-            labelStyle={{ color: "#f0efec" }}
+            contentStyle={TOOLTIP_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
             formatter={(value) => (typeof value === "number" ? format(Number(value.toFixed(2))) : String(value))}
             labelFormatter={(label) => `coordinators killed: ${label}`}
           />
-          <Legend wrapperStyle={{ color: "#c3c2b7", fontSize: 14 }} />
+          <Legend wrapperStyle={LEGEND_STYLE} />
           {hero.series.map((s) => (
             <Line
               key={s.id}
@@ -57,9 +59,9 @@ function MetricPanel({ hero, metric, title, unit, height = 340, percent }: Panel
               name={s.label}
               stroke={colorFor(hero, s.id)}
               strokeWidth={s.id === "swarm" ? 3.5 : 2}
-              dot={{ r: 4, strokeWidth: 2, fill: "#1a1a19" }}
+              dot={{ r: 4, strokeWidth: 2, fill: "var(--surface-1)" }}
               activeDot={{ r: 6 }}
-              isAnimationActive={false}
+              {...draw}
               connectNulls
             />
           ))}
@@ -71,6 +73,7 @@ function MetricPanel({ hero, metric, title, unit, height = 340, percent }: Panel
 
 function TokensPanel({ hero }: { hero: HeroData }) {
   const rows = useMemo(() => chartRows(hero, "coordinationTokens"), [hero]);
+  const draw = useFirstDraw();
   return (
     <section className="panel chart">
       <header className="panel__title">Coordination tokens per run</header>
@@ -79,10 +82,10 @@ function TokensPanel({ hero }: { hero: HeroData }) {
           <CartesianGrid stroke={GRID} vertical={false} />
           <XAxis dataKey="label" {...AXIS} />
           <YAxis {...AXIS} width={64} />
-          <Tooltip contentStyle={{ background: "#1f1f1d", border: "1px solid #3a3936", borderRadius: 8 }} cursor={{ fill: "#ffffff10" }} />
-          <Legend wrapperStyle={{ color: "#c3c2b7", fontSize: 14 }} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} cursor={TOOLTIP_CURSOR} />
+          <Legend wrapperStyle={LEGEND_STYLE} />
           {hero.series.map((s) => (
-            <Bar key={s.id} dataKey={s.id} name={s.label} fill={colorFor(hero, s.id)} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+            <Bar key={s.id} dataKey={s.id} name={s.label} fill={colorFor(hero, s.id)} radius={[4, 4, 0, 0]} {...draw} />
           ))}
         </BarChart>
       </ResponsiveContainer>

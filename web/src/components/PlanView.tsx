@@ -5,6 +5,7 @@ import { runCap } from "../lib/economy";
 import { digest } from "../lib/generic";
 import { planStatus, rootProposal, tracksOf, type PlanStatus } from "../lib/plan";
 import type { ViewState } from "../lib/reducer";
+import { ControlButton, useControlState } from "./ControlButton";
 import { KeyValues } from "./KeyValues";
 import { Card, GenericRows, money, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
 
@@ -36,7 +37,10 @@ export function PlanView({ runId, view, live }: Props) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ControlResult | null>(null);
   const [reason, setReason] = useState("");
-  const decidable = status === "awaiting" && live && !busy;
+  const approveControl = useControlState("approve");
+  // Waiting for a human is the plan's own state; whether the run is live and the server takes the
+  // decision is the control's (its tooltip says so).
+  const decidable = status === "awaiting" && !busy;
 
   const decide = async (approve: boolean) => {
     if (!proposal) return;
@@ -68,13 +72,13 @@ export function PlanView({ runId, view, live }: Props) {
                 : "the root proposes a plan first (plan.proposed)"}
           </div>
           <div className="plan__buttons">
-            <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="reason (optional)" aria-label="reason" disabled={!decidable} />
-            <button className="btn" disabled={!decidable} onClick={() => void decide(true)}>
+            <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="reason (optional)" aria-label="reason" disabled={!decidable || !approveControl.enabled} />
+            <ControlButton control="approve" className="btn" disabled={!decidable} onClick={() => void decide(true)}>
               Approve plan
-            </button>
-            <button className="btn btn--danger" disabled={!decidable} onClick={() => void decide(false)}>
+            </ControlButton>
+            <ControlButton control="approve" className="btn btn--danger" disabled={!decidable} onClick={() => void decide(false)}>
               Reject
-            </button>
+            </ControlButton>
           </div>
         </div>
         <div className="pstats">

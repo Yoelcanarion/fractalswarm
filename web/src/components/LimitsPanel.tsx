@@ -1,5 +1,7 @@
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
+import { TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from "../lib/chart";
+import { useFirstDraw } from "../lib/chartMotion";
 import { compact } from "../lib/generic";
 import { remainingShare, requestsPerMinute, type ModelLimits, type Quota } from "../lib/limits";
 import type { ViewState } from "../lib/reducer";
@@ -29,6 +31,21 @@ function QuotaMeter({ quota }: { quota: Quota }) {
   );
 }
 
+// Its own component so that the chart animates the first time it appears, not on every tick.
+function RateChart({ history }: { history: { t: number; rpm: number }[] }) {
+  const draw = useFirstDraw();
+  return (
+    <ResponsiveContainer width="100%" height={52}>
+      <AreaChart data={history} margin={{ top: 2, right: 4, bottom: 0, left: 0 }}>
+        <XAxis dataKey="t" type="number" domain={[0, "dataMax"]} hide />
+        <YAxis hide domain={[0, "auto"]} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} labelFormatter={(t) => `t = ${Number(t).toFixed(1)} s`} formatter={(v) => [String(v), "requests / min"]} />
+        <Area dataKey="rpm" stroke="var(--own-3)" fill="var(--own-3)" fillOpacity={0.25} strokeWidth={2} {...draw} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function LimitsPanel({ view }: { view: ViewState }) {
   const { limits } = view.panels;
   const names = [...limits.order, ...limits.quotaOrder.filter((name) => !limits.models[name])];
@@ -49,14 +66,7 @@ export function LimitsPanel({ view }: { view: ViewState }) {
       {history.length > 1 && (
         <>
           <Subhead hint={`requests in the last 60 s · most in flight at once: ${limits.peakInflight}`}>Request rate</Subhead>
-          <ResponsiveContainer width="100%" height={52}>
-            <AreaChart data={history} margin={{ top: 2, right: 4, bottom: 0, left: 0 }}>
-              <XAxis dataKey="t" type="number" domain={[0, "dataMax"]} hide />
-              <YAxis hide domain={[0, "auto"]} />
-              <Tooltip contentStyle={{ background: "#1f1f1d", border: "1px solid #3a3936", borderRadius: 8 }} labelFormatter={(t) => `t = ${Number(t).toFixed(1)} s`} formatter={(v) => [String(v), "requests / min"]} />
-              <Area dataKey="rpm" stroke="#199e70" fill="#199e70" fillOpacity={0.25} strokeWidth={2} isAnimationActive={false} />
-            </AreaChart>
-          </ResponsiveContainer>
+          <RateChart history={history} />
         </>
       )}
 

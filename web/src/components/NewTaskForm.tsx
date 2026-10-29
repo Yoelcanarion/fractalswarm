@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 
 import { postControl, type ControlResult } from "../lib/api";
 import { buildTaskSpec, defaultForm, KNOWN_TASKS, toYaml, type TaskForm } from "../lib/taskspec";
+import { ControlButton } from "./ControlButton";
 
 /** The New task form (spec §16 item 6, MVI). It builds a TaskSpec; "Submit for planning" posts it to
  * /api/tasks, which answers 501 until the runtime starts runs from the API. Until then the YAML below
@@ -116,9 +117,9 @@ export function NewTaskForm() {
       )}
 
       <div className="newtask__buttons">
-        <button className="btn btn--on" disabled={!built.spec || busy} onClick={() => void submit()}>
+        <ControlButton control="tasks" className="btn btn--on" disabled={!built.spec || busy} onClick={() => void submit()}>
           Submit for planning
-        </button>
+        </ControlButton>
         <button className="btn" disabled={!built.spec} onClick={() => void copy()}>
           {copied ? "Copied" : "Copy YAML"}
         </button>

@@ -1,9 +1,9 @@
-import { useRun } from "../store";
+import { useRunStore } from "../store";
 
 export function VerifyBadge() {
-  const verify = useRun((s) => s.verify);
-  const live = useRun((s) => s.live);
-  const runVerify = useRun((s) => s.runVerify);
+  const verify = useRunStore((s) => s.verify);
+  const live = useRunStore((s) => s.live);
+  const runVerify = useRunStore((s) => s.runVerify);
 
   if (live) return <span className="badge badge--muted">verify after the run ends</span>;
   switch (verify.state) {
