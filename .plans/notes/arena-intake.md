@@ -11,9 +11,13 @@ reference for everything W2 built. It is updated at each merge point.
 | 2. Job manager and launch API (`api/jobs.py`, `/api/tasks`, `/api/jobs*`, `/api/runs/{id}/metrics`) | done |
 | 3. Inline input and truth modes (`TaskInputs.inline`/`intake`, `params.input`, `derived_truth`, `truth_mode`) | done |
 | 4. Intake (scenario, schema, shape, fake, approval, endpoints) | done |
-| 5. Arena launch (`--chaos-plan`, `--start-barrier`, `POST /api/arena`, `GET /api/pairs`) | not started (second merge) |
-| 6. Real spend from the UI (preflight, token, "SPEND") | not started (second merge) |
-| 7. Live control (kernel) | only with the coordinator's OK |
+| Converter `corpus_and_truth` (approved input → corpus, truth), for W3's ablation | done, in arena since `92b8337` |
+| `GET /api/runs/{id}/takeover`, `GET /api/capabilities` | done |
+| 5. Arena launch (`--chaos-plan`, `--start-barrier`, `POST /api/arena`, `GET /api/pairs`) | done; the live-clock tests wait for a slot |
+| 6. Real spend from the UI (preflight, token, "SPEND") | done |
+| Real intake from the UI (`POST /api/intake/preflight`, the same gate; coordinator's Q1) | done |
+| `LIVE` marker for `resume.py` and `baselines/langgraph_teams.py` (coordinator's Q2) | done |
+| 7. Live control (kernel) | only with the coordinator's OK (asked at the second merge point) |
 
 ## Deviations and decisions
 
@@ -43,6 +47,26 @@ reference for everything W2 built. It is updated at each merge point.
    run against `taskkill` and failed once under load (the run answered the halt before it was killed). The
    test now drops the halt request (`RunPaths.request_control` patched out), so the kill is the only way
    out; it passed 5 of 5 runs.
+8. **`--start-barrier` is a directory, not a file.** `fractalswarm run --start-barrier DIR` writes
+   `DIR/<run_id>.ready` after it has loaded what it needs (firewall warm, input read) and before
+   `record_run`, then waits for `DIR/go` (180 s, then exit 1). A file cannot say which of two
+   processes is ready; the launcher (`api/arena.py::release_when_ready`) writes `go` once both
+   `.ready` files exist, or stops the pair if one process died or neither came in 120 s.
+9. **Extra route `POST /api/arena/preflight`** (the brief names `/api/tasks/preflight` only): a pair
+   has its own request and costs two runs, so it has its own token. A token is bound to the kind of
+   launch (`task`, `arena`, `intake`) and to its fields, so a run's token does not clear a pair.
+10. **The arena's plan and rival come from W1.** The default plan is `bench/profiles.half_the_brains_plan(seed)`
+    (parsed with `parse_plan`, which rejects an action kind the chaos engine does not run) and the default
+    rival is `durable-max`; `central`, `single`, `pipeline` and `durable` can be asked for. A plan with
+    `kill_coordinator` actions turns `membership` on in the run's params, because only the swarm uses it
+    and it is what makes the swarm answer a kill (the rivals ignore it).
+11. **Edits outside the brief, all approved by the coordinator** (see the next section).
+12. **`POST /api/intake` with an unknown `backend` answers 422** (it was a 403 for anything but `fake`).
+    `real` answers 403 without a valid token and starts a billed reading with one (see "Real spend").
+13. **A token is given back when its launch starts nothing** (`Approval.undo`): a refusal after the token
+    was redeemed (caps checked again at launch, another billed job running, the process could not start,
+    the ledger could not be read) leaves it usable, so a person is not sent back to the preflight for
+    a failure that was not theirs.
 
 ## Replay safety
 
@@ -57,11 +81,17 @@ reference for everything W2 built. It is updated at each merge point.
   with no I/O (the firewall scan and the LLM call are effects). Not covered by the determinism lint
   today; see the open questions.
 
-## Out-of-brief edit
+## Out-of-brief edits
 
-`tests/unit/test_determinism_lint.py` (the coordinator approved it): it now lists the pure modules of the
-intake scenario (`intake/actor.py`, `shape.py`, `truth.py`, `pseudonym.py`). That is the only file edited
-outside the brief's list.
+All approved by the coordinator.
+
+- `tests/unit/test_determinism_lint.py`: it now lists the pure modules of the intake scenario
+  (`intake/actor.py`, `shape.py`, `truth.py`, `pseudonym.py`).
+- `src/fractalswarm/resume.py` and `src/fractalswarm/baselines/langgraph_teams.py` (W1's files): the
+  `LiveMarker` around the driver, three lines each (`with LiveMarker(paths.live):`). A resumed run and the
+  LangGraph baseline showed as `interrupted` in the catalog while they ran, and so could not be halted
+  from the API. `tests/integration/test_run_status.py` pins both (the marker is there for every call each
+  runner sends, and gone at the end; the tests fail without the three lines).
 
 ## $0 references (first merge point)
 
@@ -73,11 +103,14 @@ seq 1, so heads differ). `demo --verify --no-serve --no-browser` gives MATCH.
 
 ## Open questions for the coordinator
 
-1. **`LIVE` for other runners.** `LiveMarker` wraps `record_run` only. A runner that records a run
-   without `record_run` (`resume.py`, `baselines/langgraph_teams.py`) shows `interrupted` in the
-   catalog while it runs, and so cannot be halted from the API. The fix is three lines:
-   `with LiveMarker(paths.live):` around the run. W1 owns those files; the durable modes go through
-   `record_run` and are not affected.
+1. **Step 7, live control: do you want it?** It adds the ENV event `control.injected{op, body, to}` to the
+   kernel (`Runtime.inject`, `apply_control`, a branch in replay's `_advance`), chaos at a progress point (so
+   the arena's kill button hits both runs at the same point) and approval when `auto_approve` is false.
+   It is the one change that touches `kernel/` and `comms/chaos.py`, so it needs its own reference diff, and
+   it is dropped if it is not merged by Sat Oct 31, 20:00 (scheduled plans chosen before the launch are the
+   fallback, and they work today: `POST /api/arena` takes a full ChaosPlan). Until then
+   `GET /api/capabilities` says `chaos` and `approve` are `false` and those routes answer 501.
+2. **`LIVE` for the other runners is done** (deviation 11, your Q2). Closed.
 
 ## Private directory layout
 
@@ -110,14 +143,15 @@ used, already done), 422 (bad request), 429 (too many jobs), 503 (no private dir
 ```jsonc
 {
   "spec": { /* a TaskSpec as in tasks/examples/*.yaml, as JSON: goal, task, inputs, seed, scaling... */ },
-  "scenario": "swarm",        // swarm | central | single | pipeline          (default swarm)
+  "scenario": "swarm",        // swarm | central | single | pipeline | durable-max | durable   (default swarm)
   "chaos": "C0",              // C0 | C1 | C2 | C3 | kill-half                  (default C0)
   "clock": "sim",             // sim | live                                     (default sim)
   "speed": 1.0,               // live clock speed-up, 0 < speed <= 1000
-  "backend": "fake",          // real → 403 until the preflight flow (step 6)
+  "backend": "fake",          // real → billed: needs preflight_token and confirm (see "Real spend")
   "run_id": "my-run",         // optional; default ui-<yyyymmdd-hhmmss>-<4 hex>
-  "budget_usd": 2.0,          // optional run cap
-  "cross_audit": false, "feasibility_report": false
+  "budget_usd": 2.0,          // optional run cap (a billed run: at most 0.75)
+  "cross_audit": false, "feasibility_report": false,
+  "preflight_token": null, "confirm": null       // billed runs only
 }
 ```
 
@@ -189,6 +223,120 @@ It works on a running run too (the log is read read-only). `valid` is the task c
 `GET /api/runs` and `GET /api/runs/{id}` are unchanged, plus private runs listed with `"private": true`
 and `status` in `completed | halted | running | interrupted | empty`.
 
+### What this server can do, and what a finished run proves
+
+`GET /api/capabilities` → `{ "tasks": true, "chaos": false, "approve": false, "budget": true, "halt": true }`.
+A control that is `false` answers 501 (`tasks` is false, and the launch routes answer 503, when the API
+has no private directory). The run catalogue's `status` is one of `running | completed | halted |
+interrupted | empty`.
+
+`GET /api/runs/{id}/takeover` → 200 (`verify/takeover.py::check_run`, recomputed from the finished log,
+never from what an actor said about itself; cached per run and head hash). 409 until the run ended, 404
+for an unknown run.
+
+```jsonc
+{ "run_id", "events", "head",
+  "ok": true,                                     // false iff violations is not empty
+  "violations": [ { "check", "kind", "seq", "detail" } ],
+  "kills": [ { "fault", "target", "progress", "seq", "ts_virtual", "remaining_work", "stopped_seq",
+               "cancelled_effects", "events_after_stop", "completions_after_stop", ... } ],
+  "verdicts": [...], "successions": [...], "chains": { "root": ["o0", "o4", ...], ... },
+  "adoptions": [...], "orphan_results": [...],
+  "fencing": { "fenced", "owner_writes_checked", "owner_writes_unchecked" },
+  "lost_work": { "contracts": [...], "goals": [...], "task": {...} },
+  "duplicates": { "llm_started", "llm_paid", "llm_failed", "groups", "cancelled", ... } }
+```
+
+For `demo/backup`: `ok` true, no violations, 5 kills, 8177 events.
+
+### Arena: a swarm and a rival on one input
+
+`POST /api/arena` → **202**. Two subprocesses (`fractalswarm run`), one per system, with the same
+TaskSpec, seed, approved input and ChaosPlan file, so their `run.started` events differ only in the
+scenario (a test pins it). The manifest is `<private>/pairs/<pair_id>.json`.
+
+```jsonc
+{ "spec": { /* a TaskSpec, as in POST /api/tasks */ },
+  "rival": "durable-max",        // durable-max (default) | durable | central | single | pipeline
+  "chaos": "half-the-brains",    // half-the-brains (default: W1's five coordinator kills) | C0 | C1 | C2 | C3
+  "chaos_plan": { /* a full ChaosPlan: profile, seed, actions[{at, kind, target}], net, api_fault_rate */ },
+                                  // wins over "chaos"; kinds: kill_coordinator | kill_agents | partition
+  "clock": "sim",                // sim | live; on live the two processes park at a start barrier until
+                                  // both are ready, so the clocks start together
+  "speed": 1.0, "backend": "fake", "pair_id": "demo-1", "budget_usd": null,
+  "preflight_token": null, "confirm": null }       // a billed pair only
+```
+
+→ `{ "pair_id", "job_id", "left": "<pair_id>-swarm", "right": "<pair_id>-<rival>", "state", "private",
+"billed", "warnings", "pair": <a Pair, below>, "job": <a Job> }`. The runs are ordinary runs
+(`/api/runs/{left}`, `/events`, `/verify`, `/metrics`, `/takeover`); `left` is always the swarm. The job's
+`kind` is `arena` and its `pair_id` is set, with both runs in `runs` (roles `left`, `right`). Cancelling the job
+halts both (before the barrier is released: kills both parked processes). Refusals: 422 for a bad rival,
+plan or spec (the message names the field), 409 for a used pair id or a live-clock job already running,
+403 for a billed pair without a valid token.
+
+`GET /api/pairs` → list of Pairs, newest first. `GET /api/pairs/{pair_id}` → one (404 if unknown).
+
+```jsonc
+// Pair
+{ "pair_id", "created_at", "job_id", "label": "swarm vs durable-max, half-the-brains, seed 1",
+  "seed", "clock", "speed", "private", "rival", "billed",
+  "chaos": { "name": "half-the-brains", "actions": 5 },
+  "input": null,                          // or the params.input of live input: {source, sha256, truth_mode}
+  "left":  { "run_id", "scenario": "swarm", "dir", "private", "status": "running" | ... },
+  "right": { "run_id", "scenario": "durable-max", "dir", "private", "status": ... },
+  "state": "starting" | "running" | "completed" | "failed" | "interrupted" | "cancelled",
+  "warnings": [] }
+```
+
+### Real spend from the UI (`api/spend.py`)
+
+Three things can be billed from the UI: a run (`POST /api/tasks`), a pair (`POST /api/arena`) and the
+reading of pasted text (`POST /api/intake`), each with `backend: "real"`. All three pass the same gate, and
+all are **off** unless the server was started with `FRACTALSWARM_ALLOW_UI_REAL=1` (and has `MODEL_API_KEY`):
+
+1. `POST /api/tasks/preflight`, `POST /api/arena/preflight` or `POST /api/intake/preflight` takes the body of
+   the launch it prices. It writes nothing, calls nothing and never creates the ledger. It returns **200**:
+
+   ```jsonc
+   { "ok": true, "token": "…" | null, "expires_in_s": 600 | null, "confirm_word": "SPEND",
+     "kind": "task" | "arena" | "intake", "runs": 1 | 2,
+     "calls_per_run": 320,                    // the requests one run sends at their worst
+     "estimate_usd_per_run": 8.24,            // those requests priced at their worst case
+     "run_cap_usd": 0.75,                     // 0.25 for a reading
+     "worst_case_usd": 0.75,                  // runs × min(estimate, cap): what the launch will reserve
+     "standing": { "settled_usd", "reserved_usd", "committed_usd", "project_cap_usd",
+                   "project_remaining_usd", "phase_start_usd", "phase_cap_usd", "phase_spent_usd",
+                   "phase_remaining_usd" },   // from the ledger now
+     "refusals": [ "why it cannot go; empty when ok" ] }
+   ```
+
+   A token comes back only when `refusals` is empty. 422 for a request that is not valid (the launch
+   would refuse it too), 409 for an intake without an approved input. For a conference task on the fixture
+   `seed-1`: 320 calls, $8.24 per run uncapped, so $0.75; a pair $1.50 (560 calls per run with five kills);
+   the reading of a 7 000-character paste $0.156.
+2. The launch carries `"backend": "real"`, `"preflight_token": "<token>"` and `"confirm": "SPEND"`, with
+   **the same body** as the preflight (the token is bound to the kind of launch and to every field that
+   decides what runs or what it costs: spec, scenario, chaos or plan, clock, speed, cap, the pasted text;
+   not to `run_id`/`pair_id`). A token works **once** and expires after 10 minutes (kept in memory: a
+   restart voids it).
+3. Refusals, in the order they are checked: **403** no token ("real runs need the preflight flow"); **403**
+   the server flag is off or there is no key; **403** the word is not `SPEND`; **422** a cap above $0.75;
+   **403** the token is unknown, used or expired, or was issued for a different request; **409** the worst
+   case no longer fits under the project cap or the phase cap, counted from the ledger now (settled plus open
+   reservations); **409** another billed job is running ("one at a time"). A refusal after the token was
+   redeemed gives it back.
+4. The processes run with `--confirm-real-spend --no-paid-retries` (a request that may have been billed is
+   never sent twice; only 429 and 503 are retried), the run cap (`--budget-usd`, at most 0.75; the reading
+   runs with the CLI's 0.25), and `FRACTALSWARM_LEDGER_PATH`/`FRACTALSWARM_PROJECT_CAP_USD` of the server, so
+   every request reserves its worst case in the project ledger before it is sent and settles after. The
+   phase cap counts from the $11.82 settled at the start of the phase (Oct 28) up to $50, and never past the
+   hard stop of $61.8.
+
+Billed runs are for the conference task. The job has `"real": true`; `GET /api/jobs` shows it.
+The pasted text of a reading is private data: the preflight keeps only a fingerprint of the cleaned text,
+the rooms and the names flag, and a reading that starts nothing leaves no text behind.
+
 ### Live input
 
 `GET /api/intake/sample?seed=1` → `{conference, talks, notes, rooms}`: synthetic text in the generator's
@@ -202,10 +350,12 @@ wording (12 talks, 9 speakers), to try the flow at $0. The answer key is not sen
   "conference": "...",         // optional: a name or a line about it
   "rooms": [{"name": "Hall A", "capacity": 200}],   // optional; default: the generator's four rooms
   "names": false,              // true: speakers' names become "Speaker NN" in what the agents read
-  "backend": "fake" }          // real → 403 until the preflight flow (step 6)
+  "backend": "fake",           // real → billed: needs preflight_token and confirm (see "Real spend")
+  "preflight_token": null, "confirm": null }     // a billed reading only
 ```
-→ `{ "intake_id", "job_id", "state": "reading", "private": true, "warnings": [] }`. Pasted text is
-limited to 200 000 characters per box; email addresses are pseudonymized on arrival.
+→ `{ "intake_id", "job_id", "state": "reading", "private": true, "billed": false, "warnings": [] }`. Pasted
+text is limited to 200 000 characters per box; email addresses are pseudonymized on arrival. An unknown
+`backend` is a 422.
 
 `GET /api/intake/{id}` → the state:
 
@@ -280,6 +430,13 @@ the generator's 9 slots, the person's rooms or the generator's. Editing a row an
 - `reference` is keyed by the same ids as `corpus.emails[].speaker_id` and `corpus.talks[].id`, so the
   ablation can score a parser against it per note (exact cells, Jaccard, preference, attendance ±10%).
   A speaker without a stated constraint has no `reference.availability` entry and the full grid in `truth`.
+- **The converter** (`intake/truth.py`): `corpus_and_truth(approved: dict) -> tuple[corpus, truth]` is pure.
+  It takes the content of `approved.json` and returns deep copies of its `corpus` and `truth`, the pair a
+  run records in `params`. It raises `ValueError("not an approved input: it lacks corpus, truth or
+  sha256")` for anything else and `ValueError("it changed after it was approved")` when `input_sha256`
+  of the pair is not the recorded `sha256`. `run_params` uses it, so a run and an ablation read the same
+  pair; `bench/tasks/t2_conference/ablation.cases_from_corpus(corpus, truth)` takes it as is
+  (`tests/integration/test_intake_flow.py` runs both).
 - Runs on it record `params.input = {source: "intake", sha256, truth_mode: "approved"}`, `params.contributor = false`,
   and `task.result.report.truth_mode = "approved"`.
 - Truth modes: **approved** (a person reviewed Muse's reading), **given** (`inline.truth` sent by the caller),
@@ -305,4 +462,18 @@ the intake over HTTP), `test_intake_flow.py` (reading == what the text was writt
 central on one approved input with identical params, derived/given modes, no real address in any log,
 Contributor off even when asked, tamper detection, the firewall refusal, retry then fail),
 `test_bundle_guard.py`, `tests/unit/test_intake_shape.py` (hypothesis), `test_intake_pseudonym.py`,
-`test_run_status.py` (LIVE, killed subprocess), `test_api.py` (501 list updated).
+`test_run_status.py` (LIVE, killed subprocess, and the marker of a resumed run and of the LangGraph baseline),
+`test_api.py` (501 list, capabilities, takeover).
+
+Second merge: `test_arena.py` (the chaos-plan file is the same run as the profile it holds, a bad plan never
+starts, the start barrier, a pair on one input with identical `run.started` apart from the scenario and both
+runs replaying MATCH, the default rival and plan, a pair on live input stays private, every refusal; on the live
+clock: a pair behind a barrier, one live job at a time, cancelling before and after the start, a process that
+dies before the barrier); `test_spend.py` (the preflight and the gate for runs, pairs and readings: every way a
+billed launch is refused, single use, expiry, the caps again at launch, one billed job at a time, the token
+given back, the flags the processes get; every process is a stand-in and the ledger a temp file;
+with the gate bypassed 16 of the reading's tests fail); `test_intake_real.py` (the CLI's real path against a
+stub of the Meta API: the worst case is reserved before the request and settled after, the $0.25 cap, a 500 is
+not resent with `--no-paid-retries` and a 429 is, no spend flag or no key is refused).
+
+None of these calls the API. Live-clock tests and anything that starts several runs run only in a slot.
