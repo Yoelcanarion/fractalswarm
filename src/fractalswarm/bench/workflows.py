@@ -3,13 +3,16 @@
 baseline ``langgraph`` (T2 only).
 
 Every workflow runs the scenario code of ``actors/swarm.py`` on the same task instance, so at
-C0 they make the same LLM calls. Under chaos they get the same plan (``build_plan`` with the
-cell's profile and seed: the same crash points, agent kills and network faults) and API
-faults from the same seed. The swarm runs with membership on at every profile, C0 included,
-so its C0 twin is the same system. The baselines are crashed by signal and restart 5 s
-later with their completed work kept (``actors/orchestrator.py``). ``langgraph`` runs the same
-chaos plan on LangGraph teams under the same supervisor semantics
-(``baselines/langgraph_teams.py``).
+C0 they make the same LLM calls on T1, with the same cost and makespan; on T2 they nearly do:
+on the four rivals-gate seeds the swarm takes 3.5-5.0 s longer, and on two of them it makes
+3-4 more calls (one more re-dispatch of a ``place`` contract; the cause is not traced to the
+end). Under chaos they get the same plan (``build_plan`` with the cell's profile and seed: the
+same crash points, agent kills and network faults) and API faults from the same seed, though
+not the same draws on the same calls: the draw is keyed by the effect id, which differs
+between workflows. The swarm runs with membership on at every profile, C0 included, so its C0
+twin is the same system. The baselines are crashed by signal and restart 5 s later with their
+completed work kept (``actors/orchestrator.py``). ``langgraph`` runs the same chaos plan on
+LangGraph teams under the same supervisor semantics (``baselines/langgraph_teams.py``).
 
 A cell's seed picks the task instance (``tasks/fixtures/<t2|t1>/seed-<n>``, generated when
 missing), the run's seed and the chaos seed. A cell's ``agents`` (the scaling sweep) picks the
