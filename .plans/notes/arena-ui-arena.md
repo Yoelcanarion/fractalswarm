@@ -1,7 +1,8 @@
 # W5 `ui-arena` — notes
 
-Branch `Yoelcanarion/arena-ui-arena` (from the arena tip `52db68e`). This file is the coordinator's reference
-for what W5 built and which shapes it relies on. It is updated at each merge point.
+Branch `Yoelcanarion/arena-ui-arena` (from the arena tip `52db68e`; arena `b66098b` merged in on the coordinator's
+word). This file is the coordinator's reference for what W5 built and which shapes it relies on. It is updated at
+each merge point.
 
 ## Status
 
@@ -9,9 +10,9 @@ for what W5 built and which shapes it relies on. It is updated at each merge poi
 |---|---|
 | 1. Arena `#/arena/<left>/<right>` (two stores on one clock, shared timeline, counters, caption, picker) | built and committed; looked at in a browser once on scratch pairs; the static build and `demo --verify` wait for a slot |
 | 1b. Supervisor recovery chip on W1's `GET /api/runs/{id}/recovery` | done, tested on real report JSON |
-| 2. "Where it helps" panel `#/helps` on `GET /api/bench/honesty` | done, tested; a browser look at the final version waits for a slot |
-| 3. Intake and review UI | not started |
-| 4. Ablation view | not started |
+| 2. "Where it helps" panel `#/helps` on `GET /api/bench/honesty` | done, follows `docs/claims.md` after the gate, tested; a browser look at the final version waits for a slot |
+| 3. Intake and review UI `#/new` | built and committed (`web/src/intake`); tested on real W2 bodies; **not yet seen in a browser** |
+| 4. Ablation view `#/ablation` | built and committed (`web/src/ablation`); tested on real W3 bodies; **not yet seen in a browser** |
 | 5. Director mode `#/director/<scene>` | not started |
 | 6. `scripts/record_scenes.*` | not started |
 
@@ -44,10 +45,12 @@ Reads `GET /api/bench/honesty` (W1's route, `bench/results/honesty.json` as comm
 - **No bundled fallback and no "Sample data" chip** (coordinator, msg_e0f80ba4c62f): a 404 is a plain empty state
   that names the file and the command that writes it; a failed request, or a file this panel cannot read, says so
   with the reason. The 360 KB `fixtures/honesty.sample.json` is a vitest fixture only; the app does not import it.
+  It is W1's regenerated file at 48601df (with the per-rival keys); re-sync it when 38bad89 is in arena.
 - **Every number comes from the file; the panel adds nothing up.** The per-rival "All H1 to H6" row and the
   "locality holds at 7 settings, ties at 18 and fails at 2" line are shown from `tally_by_rival` and
-  `locality_by_rival` (W1, 48601df), and only when the file has them. Counts that are not whole numbers are
-  refused with their path (a loss that read as 0 would be a loss hidden; the real file has none).
+  `locality_by_rival` (W1, 48601df), and only when the file has them. The committed file in arena (code 3e723a8)
+  does not have them yet, so the panel shows no totals until W1's 38bad89 merges. Counts that are not whole numbers
+  are refused with their path (a loss that read as 0 would be a loss hidden; the real file has none).
 - **Axes are named as `bench/PREREG.md` §5 names the assumption each checks:** Failure detection, Restart or
   failover time, Fast external restart, Coordination density, Width; the default point is "the gate".
 - **Every row names its failure model** (`models.ts`): a "Per crash" tag on the outcome, the head of the map, each
@@ -59,12 +62,100 @@ Reads `GET /api/bench/honesty` (W1's route, `bench/results/honesty.json` as comm
   outline marks the cells that decide the outcome (the gate's default settings and the plausible region).
 - **Losses are not hidden:** each count is a button that lists the settings behind it; the per-process loss on time
   to recover is drawn as a loss in its own section.
-- **Claims** come from `claims.ts`, held to `docs/claims.md` by `claims.test.ts` (same words; `placeholder` exactly
-  while the table says "pending"). R1 to R3 are pending until the gate, so they are drawn as "Placeholder wording,
-  pending the decision gate". When the gate flips a status in `docs/claims.md`, that test fails until `claims.ts`
-  follows: flip `placeholder` there.
+- **Claims follow `docs/claims.md`** (`claims.ts` is generated from its cells; `claims.test.ts` holds the two
+  together, so a status the file changes fails the test until `claims.ts` is regenerated). After the gate (Oct 29):
+  R1 "not claimed (outcome B)", R2 "allowed at $0; the real rows are to be added", R3 "allowed, always with R2".
+  The strip shows a claim only when the file allows it: it quotes R2 with R3 next to it, never R1 while it is not
+  claimed, and for an outcome with no allowed headline it says "No headline claim is allowed for outcome X
+  (docs/claims.md)". A claim still `pending` is drawn as "Placeholder wording, pending the decision gate".
+  **My addition, say if it should come out:** each shown claim carries "Status in docs/claims.md: <the file's note>"
+  (so R2 reads "allowed at $0 …; the real rows are to be added"). Every number R3 quotes was checked against
+  `honesty.json` (0.279/0.191, 13.197/5.713, per-process 0.902, false deaths 1.25/2.25).
 - **Static definitions that are not in the file** stay and are cited to PREREG: the crash plans (C1/C2/C3 = 1/3/5
-  crashes, §6). Asked in msg_07bbfb0f3326; say if they should come out.
+  crashes, §6). The coordinator said both defaults are right (msg_be3029d7a885).
+
+## The intake page `#/new` (tab "New task (live)")
+
+`web/src/intake/*`; the address names the reading, `#/new/<intake id>`, so a reload or a link lands on it.
+
+- **The phases are the server's states** (`flow.ts`): the form; reading (`GET /api/intake/{id}` polled every 1 s, and
+  asked again every 2 s up to 20 times when the server cannot be reached); review (`proposed`); approved; stopped
+  (`refused` with the firewall's reason, `failed` with the schema errors, `interrupted`), each with a way back to the
+  form with the text still there. A state the server gave about another reading is ignored.
+- **Strict reading of the proposal** (`proposal.ts`): exactly the fields of `intake/proposal.py`, whose rows are all
+  `extra="forbid"`, so the page never sends a field the server does not know; a wrong field is refused by its path.
+- **Highlighting** (`highlight.ts`): finds each quoted sentence with the server's own test (`present()`: spacing and
+  case aside). The sample repeats sentences (the "Track: HCC track" line sits under nine of twelve submissions, a
+  speaker's preference sentence under seven of nine), so each is placed at the occurrence nearest its row's abstract
+  or email; a mark is never put on another row's text. A sentence not found in the text gets a dashed chip with "?"
+  and the pane says "Muse reworded it": nothing is marked in a wrong place. The row that is picked also shows its
+  abstract or email; the one sentence picked stands out.
+- **Provenance** (`provenance.ts`): Muse, Edited by you (with "Muse read …" for the fields changed), Added by you.
+  `diffProposal` mirrors the server's `diff`; two tests hold it to the server's own `edits` for a simple and a mixed
+  set of edits (`fixtures/approve.*.json`). Rows taken out are listed with "Put back". An added row takes an id no row
+  of the reading has ever had. A speaker who still has a talk cannot be taken out. A speaker's availability cannot be
+  emptied (the server reads an empty list as "nothing stated").
+- **Approval blocks only on what the server refuses too** (`validate.ts`, limits held to `intake/shape.py` by a test):
+  fewer than 8 titled talks, a talk with no speaker or track, a speaker with no name. More than 15 talks, a track
+  with fewer than 2 talks, a talk with no title and a speaker with no talk are advice (the server rebalances and
+  warns). Muse's own `warnings` are shown ("Muse's notes"); its `errors` are not, because the server recomputes them.
+- **Approve sends the person's proposal**, not `{}`, so the server's `edits` list is exact; 409 (already approved)
+  refetches and shows the approved state. After approval `GET /api/intake/{id}` still returns *Muse's* proposal, so
+  the page keeps its own working copy; a page reopened on an approved reading shows Muse's rows with the server's
+  edits list above and says so (open item: there is no endpoint for the approved version).
+- **The run panel** opens on the arena pair against `durable-max`, "half the brains", the simulated clock and the
+  practice LLM (free). Bodies: pair `{spec, rival, chaos, clock, speed?, backend}`, one run `{spec, scenario, chaos,
+  clock, speed?, backend}`, spec `{goal: "Program the live conference", task: "t2_conference", inputs: {intake: id},
+  seed: "1"}`. After the launch the page goes to `#/arena/<left>/<right>` or `#/run/<id>`.
+- **Real spend** is W2's two steps. Muse (billed) is offered only where `GET /api/capabilities` says `real`. A
+  preflight (`/api/intake/preflight`, `/api/arena/preflight`, `/api/tasks/preflight`) is priced for the exact body;
+  the page shows the worst case, the caps, and any refusal, and only then the word, which must equal the server's
+  `confirm_word` exactly. The token is tied to the canonical body (a changed setting means check again), expires,
+  and is spent after one launch. **Every launch goes through `requestFor`** (`launch.ts`), which decides from the body
+  itself: a body that does not plainly say `backend: "fake"` leaves only through an open gate, with its token and word.
+- **Private text** stays in memory for as long as the page is open (leaving for another tab does not lose it; a reload
+  or "Clear" does). `ui.test` reads the sources and refuses `localStorage`/`sessionStorage`/`indexedDB`/cookies,
+  `innerHTML`, and any `fetch` outside `api.ts` (every POST sends `Content-Type: application/json`).
+- **Fixtures** (`intake/fixtures`): real bodies, captured at $0 with a TestClient, the fake reader and scratch
+  runs/ledger/private dirs; no real backend was built. The preflight bodies in tests are written from `api/spend.py`
+  (a real preflight needs the server flag and a key).
+- **Not covered by a test:** the click handlers and effects of `IntakeFlow` (polling timers, the approve and launch
+  sequences) run only in a browser; their decisions are in pure functions that are tested and mutation-checked.
+
+## The ablation `#/ablation` (tab "Ablation")
+
+`web/src/ablation/*`, on W3's `GET /api/ablation/{run_id}` (poll until the status is not `running`) and
+`POST /api/ablation`.
+
+- **Headline** "parser N of M · Muse K of M" from `result.parser`/`result.muse`; the server's sentence is its tooltip.
+  Before the result exists the line is the notes scored so far, labelled "So far" (counted from the notes, the only
+  number the page tallies itself; a test checks that it ends where the server's tallies do).
+- **The caveats the result says apply** (`applies: true`) sit under the headline in the server's words, with a
+  short label (Generated notes / The reference / Practice backend). None are shown before the result. On a $0 run the
+  `fake` caveat says the practice Muse is the parser itself, so the two agree by construction.
+- **By kind** (emails: understood, cells exact, preference, mean Jaccard; abstracts: understood, mean error) and the
+  split both / only Muse / only the parser / neither, from `result` and `result.agreement`; the definitions are
+  tooltips.
+- **Per note:** the note as text (untrusted: never markup), the approved reading, and each reader's reading with a
+  ✓/✗ plus words, the parts it has wrong struck through (`compare` cuts the reading's words at "; " and checks each
+  part against the approved reading), the parts it lacks listed, and how it scored. The notes in `result.differences`
+  are marked; filters by who understood or where they differ (disabled until the result is there).
+- **A run that did not finish** says so: running (with progress), halted, failed (with the error), interrupted, or
+  cut by its deadline (`result.complete: false`); there is no result then.
+- **The launcher** (`#/ablation`) starts the generator's notes on the practice backend at no cost
+  (`emails`/`abstracts` 0 to 200, not both 0, `seed`) and lists the ablations on record (`GET /api/runs`, those whose
+  scenario is the ablation's). It never sends `backend: "real"` (the route answers 501; the coordinator starts a
+  billed run from the CLI, then the page reads it by id) and it takes no free text: W3 notes that the route does not
+  keep live input private. An ablation of live notes waits for W2's `source: "approved"`.
+- **`docs/claims.md` has no ablation claim**, so the view states the numbers and the caveats and claims nothing.
+- **Fixtures** (`ablation/fixtures`): `ablation.sample.json` is W3's hand-written approved sample with the Muse they
+  *script* per note (recorded with their own test helpers, read through the real route): it shows the view with a
+  difference and measures nothing. `ablation.generator.json` is the generator's 16 notes through `POST /api/ablation`
+  on the fake backend (parser = Muse by construction). `ablation.running.json` is a real mid-run read (6 of 16);
+  `ablation.interrupted.json` is the sample's log cut after three notes and read through the route; plus the error
+  bodies and the runs listing.
+- The API caller is shared with the intake page (`caller` in `intake/api.ts`, and the strict readers in
+  `intake/strict.ts`).
 
 ## Shapes I rely on
 
@@ -77,15 +168,25 @@ Reads `GET /api/bench/honesty` (W1's route, `bench/results/honesty.json` as comm
   (404, 405, 501, 409) gets the log's own count, labelled as that. `fixtures/recovery.*.json` are real output of
   W1's `check_run` over my scratch runs.
 - `GET /api/bench/honesty` (W1, fb7df39): the committed file; 404 when missing. `schema_version` 1.
+- W2's intake API (api/jobs.py, api/spend.py, intake/service.py): `GET /api/capabilities` `{tasks, chaos, approve,
+  budget, halt, real}`; `GET /api/intake/sample?seed=1`; `POST /api/intake` (202 `{intake_id, job_id, state, private,
+  billed, warnings}`); `GET /api/intake/{id}` (`state` reading | proposed | approved | refused | failed |
+  interrupted, `texts`, `proposal`, `scans`, `refused`, `failed`, `approved`); `POST /api/intake/{id}/approve` `{proposal}`
+  (422 when it still has errors, 409 when already approved); `POST /api/tasks` and `POST /api/arena` (bodies above);
+  the three `…/preflight` routes share one body (`ok, token, expires_in_s, confirm_word, kind, runs, calls_per_run,
+  estimate_usd_per_run, run_cap_usd, worst_case_usd, standing, refusals`). Every POST must be JSON (415 otherwise).
+- W3's ablation API: see the notes `arena-meta.md` ("Endpoint shapes (for W5)"); I read only the fields I show.
 - The Vite dev proxy in `web/vite.config.ts` is hardcoded to `127.0.0.1:8765`. For a second stack I used an
   untracked scratch config (not committed). An env override in `vite.config.ts` would be a one-line change for W4.
 
 ## Collisions found and resolved
 
 W4's `styles.css` is global and already has `.chip` (a pill button), `.cell` (a schedule grid cell) and `.mark`
-(a timeline tick). My board chips are `coord`, the panel's cells `rcell` and its shapes `locality`; the arena
-timeline reuses W4's `.mark`, `.btn`, `.speeds`, `.badge`, `.empty` and `.stat` on purpose. `assumptions.ts` gained
-an exported `systemName(system)`.
+(a timeline tick); `lens.css` has `.source` and `.run*`; `styles.css` has `.grid` and `.run*`. My board chips are
+`coord`, the panel's cells `rcell` and its shapes `locality`; the intake page's source pane is `srcpane*`, its
+availability grid `avail*`, its run panel `runit*`; the ablation's classes are all `abl*`. The arena timeline reuses
+W4's `.mark`, `.btn`, `.speeds`, `.badge`, `.empty` and `.stat` on purpose. `assumptions.ts` gained an exported
+`systemName(system)`. A script over the CSS checks every class of the intake and ablation pages against the others.
 
 ## Open items
 
@@ -93,14 +194,28 @@ an exported `systemName(system)`.
    `ownership.remapped`; the lens and tree may show the wrong root after a takeover. Not touched (not my file).
 2. The "Talks placed" meter on a board stays at 0 until the final integration, so it only moves at the very end.
    It could count contracts completed instead; I left it until the video needs it.
-3. The panel's look at its final version (the failure-model tags in the map heads, the totals row) has not been
-   seen in a browser; it needs a slot and a server that has `GET /api/bench/honesty` (W1's branch, or a scratch merge).
-4. Merge point 1 needs, after RELEASE and a slot: `npm run build` copied into `src/fractalswarm/api/static/` (stale
-   assets removed), `demo --verify --no-serve --no-browser`, and the $0 reference comparison.
+3. **W4's `components/NewTaskForm.tsx` posts the bare TaskSpec to `/api/tasks`**, but W2's `TaskRequest` needs
+   `{spec: {...}, scenario, chaos, clock, backend, …}` with `extra="forbid"`, so its "Submit for planning" gets a 422.
+   Not touched (not my file); the intake page posts the right shape.
+4. W1's 38bad89 (`tally_by_rival`, `locality_by_rival` in `honesty.json`) is not in arena yet; the panel shows no
+   totals until it is. Re-sync `fixtures/honesty.sample.json` then.
+5. **Nothing of the panel's final layout, the intake page or the ablation has been seen in a browser.** Merge point 1
+   needs, after RELEASE and a slot: `npm run build` copied into `src/fractalswarm/api/static/` (stale assets removed),
+   `demo --verify --no-serve --no-browser`, the $0 reference comparison, and screenshots at 1920×1080.
+6. After approval the server returns Muse's proposal, not the approved one. A reopened page shows Muse's rows plus the
+   edits list. An endpoint (or the approved proposal in `GET /api/intake/{id}`) would let it show what was approved.
+7. The status note under each claim in the panel ("Status in docs/claims.md: …") is my addition; it can come out.
+8. The static `GET /api/ablation` caveat labels (Generated notes / The reference / Practice backend) are mine; the
+   text next to them is the server's.
 
 ## Tests
 
 `npm --prefix web test` runs vitest in node: the pure modules, and the components drawn on the server
 (`renderToStaticMarkup`). The panel's tests run over the bench's own `honesty.json`; the recovery tests over real
-`check_run` output. Mutation-checked: flipping a claim's placeholder, hiding the loss counts, dropping the row
-model and toning down the per-process loss each fail tests (reverted).
+`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At 0156eaa the whole
+web suite is 53 files, 776 tests, green; `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
+claim's placeholder, hiding the loss counts, dropping the row model, toning down the per-process loss); the intake
+page (20 mutants: a billed launch without the gate, a wrong or lower-case word, a stale or expired token, the approval
+not blocked, frozen inputs editable, a wrong provenance, browser storage, a sentence marked that is not in the text,
+…); the ablation view (17 mutants: a swapped headline, caveats hidden or not filtered, a flipped mark, the split read
+wrong, a lacking part not said, the real backend sent, a note as markup, …). Every one was caught.
