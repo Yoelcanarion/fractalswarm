@@ -30,9 +30,14 @@ every advantage we can implement fairly; nothing here is a straw man.
   | Its own plan and judge calls, which a process death really loses (the swarm lost 1) | 5 |
   | Chaos agent kills, which hit every workflow (the swarm lost 2) | 3 |
 
-  Its restart also re-dispatched 22 contracts whose results were already in the log. Its cost
-  in that run ($0.601, against $0.501 for the swarm at C3 and $0.454 at C0) is therefore mostly
-  a design artifact, not evidence against a well-built supervisor.
+  Its restarts then re-dispatched 22 contracts that the crashes had cancelled (`lost in a
+  crash`) and adopted nothing from the log: the bench counts 42 calls in that run as paid
+  twice, about $0.22 of its $0.601. That is more than the whole gap to the swarm in that run
+  ($0.501 at C3, $0.454 at C0), which is therefore mostly a design artifact, not evidence
+  against a well-built supervisor. (From the recorded log: `fractalswarm recovery
+  t2-real-c3-central-seed1` shows the 5 own calls cancelled, the 34 workers stopped and the 42
+  calls paid twice; the 19 and the 3 are the 22 cancelled worker calls grouped by the stop that
+  cancelled each.)
 - **`single`, `pipeline`, `langgraph`:** secondary rows.
 
 ### What we grant the rival
@@ -42,9 +47,10 @@ sensitivity sweep (§4) checks that the conclusion does not hinge on them.
 
 | Assumption | Value in the main runs | Why | Checked by |
 |---|---|---|---|
-| Failure detection | 5 s, the same as the swarm's heartbeats | Same detector for both | Sweep {0.5, 1, 2, 5, 10 s}, symmetric |
+| Failure detection | 5 s, the same as the swarm's heartbeats | Same detector for both | Sweep {1, 2, 2.5, 5, 10 s}, symmetric; 0.5 s and 20 s as reported extremes |
 | Restart or failover | 0 s after detection (an ideal hot standby) | Best case for the rival | Sweep {0, 1, 3 s} |
-| Detection asymmetry | None | A process manager can see a crash at once, while heartbeats can't | "Fast external restart": rival at 0.5–1 s, swarm at 5 s |
+| Detection asymmetry | None | A process manager can see a crash at once, while heartbeats can't | "Fast external restart": rival at 0.5 s and 1 s, swarm at 5 s |
+| False deaths | The simulated supervisors have no detector and no bus, so they are never declared dead by mistake; the swarm's detector can declare a live coordinator dead when its heartbeats are dropped, delayed or cut off | An advantage granted to the rival (`bench/PREREG.md` §5); it stays | The false deaths are counted at every setting (§4) |
 | Workers | Survive the crash; results kept and adopted from the log | A well-built system runs workers apart | — |
 | The rival's own LLM calls | `durable-max`: survive. `durable`: lost | Two variants bound the realistic range | Both rows |
 | Shared state | The same durable log as the swarm | Same storage for both | — |
