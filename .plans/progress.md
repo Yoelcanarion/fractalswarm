@@ -932,7 +932,7 @@ uv run fractalswarm run tasks/examples/t2-conference.yaml --backend real --confi
 | Its own plan and judge calls | 5 |
 | Chaos agent kills | 3 |
 
-Its restart re-dispatched 22 contracts, because `TreeView` never registers central goals. **So the old cost gap is mostly a design artifact.** New rivals:
+Its restart re-dispatched the work its stopped workers had lost: 21 of its 23 re-dispatches follow a "lost in a crash" rejection. **So the old cost gap comes mostly from the baseline's in-process design.** *(Corrected Thu Oct 29: this line said the restart re-dispatched 22 contracts because `TreeView` never registers central goals; the log does not show that. See the Phase 2 entry of Oct 29.)* New rivals:
 - **`durable-max`:** workers survive, and its own calls are durable;
 - **`durable`:** realistic, so its own in-flight calls are lost.
 
@@ -1063,6 +1063,13 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
   - `rival_recovery_ms` 0.5 s joins the plausible region, since spec §A defines the fast external restart as rival at 0.5–1 s;
   - §5 states the network profile of the sweeps, and that only the swarm's detector can declare false deaths there (an advantage granted to the rival).
   - Accepted as a deviation: the gate uses seeds 1–4, not the spec's 1–3, which is stricter because every seed must agree.
+  - Amended in place before any run (e74a1b2, its new §9 records both changes). From the first gate run on, it changes only by appended, dated amendments.
+- **Correction of the forensic finding** (arena spec §0, the Day 10 entry, `bench/REPORT.md` §1). W1 found it while reading the old central C3 run (`t2-real-c3-central-seed1`), and I checked it on the log:
+  - its 41 dispatches of 18 pieces of work hold 23 re-dispatches: 21 follow a "lost in a crash" rejection, and 2 are of one contract (`track-data/d2/place`) re-dispatched after its result was logged;
+  - so the claim "re-dispatched 22 contracts whose results were already in the log" was wrong. The cost gap comes from the in-process design: a crash stops its workers, and their work is paid again;
+  - the arena spec and the Day 10 entry are corrected in place, with a dated note. W1 corrected the REPORT sentence on its branch; it reaches arena with W1's merge.
+- **`docs/claims.md`** skeleton (5c2158a), a day early: the rules, the system claims, the gate claims, what is not claimed. Nothing in the comparison section may be quoted before the gate.
+- **W2's API guard** (cf5b8ce on arena-intake), asked for in review because the spend gate makes the server worth attacking: a Host allowlist (against DNS rebinding), JSON-only POSTs (against cross-site simple requests), and an Origin check on the events WebSocket. 50 new tests. The UI's Verify POST needs a JSON header; W4 fixes it, and W4 merges before W2.
 
 **Supervision notes**
 - **Memory went down to 1.0 GB free at 00:53:** W3's suite, plus an unslotted probe of W1's (900 MB). W1 stopped it. Rule added: a worker script that runs several fake runs, or holds more than about 300 MB, needs a slot.
