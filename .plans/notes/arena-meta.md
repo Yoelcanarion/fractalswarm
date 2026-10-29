@@ -7,7 +7,8 @@ Owner of: `api/lens.py`, the ablation, Wonder arbitration. Only the coordinator 
 |---|---|
 | 1. Muse lens API (merge point 1) | **done**, see below |
 | 2. Ablation (merge point 2, own commit) | **done and merged** into arena at 9140dce (my 73a33fe); see "Step 2" below |
-| 3. Wonder arbitration (merge point 2, own commit) | **built, tested at $0, merge_ready**; suite green, references 43/43; see "Step 3" below |
+| 3. Wonder arbitration (merge point 2, own commit) | **done and merged** into arena (24995b5); see "Step 3" below |
+| 4. The answer path of `escalation.opened` | **built, tested at $0, merge_ready**; suite 1924 passed, references 43/43; see "Step 4" below |
 
 ---
 
@@ -456,3 +457,8 @@ Two new event types; no field added to an existing payload. The handler branch i
 - **Contracts already placed keep their value** (as agreed): after an overruling, a session that placed before the answer still carries the ruled value (in the overrule run `track-hci/d1`'s place has the misread one). In this fake the misreading changes no placement (0 hard violations, 48 of 48 placed, soft score 0.8333 whichever way the dispute goes, answered or not), so a run cannot show an effect on the program; the log shows the values.
 - **`ESCALATION_TIMEOUT_MS` stays a constant** (60 s). No test patches it, so a fresh-process replay emits the same payloads.
 - Claims: nothing beyond "no supervisor needed": the heir and the restarted coordinator both judge the answer.
+
+### $0 reference comparison
+- **Suite** at `8d94433` (`pytest -m 'not promptguard'`, in chunks because of the 10-minute limit): unit 1052; integration 871 (`test_[a-c]*` 289, `[d-k]` 169, `l` 120, `[m-r]` 107, `[s-z]` 186); and the one test that exists only in a whole-suite collection, `test_planning.py::test_schemas_meet_the_strict_mode_rules[IntakeOutput]` (`pytest tests/integration/test_intake_flow.py tests/unit/test_planning.py -k strict_mode_rules`: 13 passed) — 1924 passed, 3 promptguard deselected, 0 failed. `collect-only` of the whole suite says 1924/1927. `ruff check` and `ruff format --check` clean. Before the suite, the touched areas ran alone: `test_arbitration.py` (integration) 44, `test_determinism_lint.py` 28.
+- **References:** 43 of 43 runs identical to `~/.fractalswarm/refs/arena-c2b5e08` by `compare_refs.py` (the 11 CLI runs and the 32-cell fake matrix; event counts and hash-chain heads equal), recorded with `scripts/refs/record_refs.ps1` in scratch dirs. A run without an answer logs what it logged before.
+- `fractalswarm demo --verify --no-serve --no-browser` (scratch dirs): MATCH, 8177 events.
