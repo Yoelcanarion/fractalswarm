@@ -33,6 +33,7 @@ from starlette.staticfiles import StaticFiles
 from fractalswarm.api import jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
 from fractalswarm.api.jobs import JobError, JobManager
+from fractalswarm.api.lens import lens_routes
 from fractalswarm.api.ws import stream_events
 from fractalswarm.config import CONFIG_DIR
 from fractalswarm.intake import service
@@ -355,6 +356,7 @@ def create_app(
         WebSocketRoute("/api/runs/{run_id}/events", websocket),
         Route("/api/runs/{run_id}/verify", verify_run, methods=["POST"]),
         Route("/api/runs/{run_id}/feasibility", feasibility),
+        *lens_routes(catalog),
         Route("/api/bench/results", bench_results),
         Route("/api/runs/{run_id}/metrics", run_metrics),
         Route("/api/tasks", launch_task, methods=["POST"]),

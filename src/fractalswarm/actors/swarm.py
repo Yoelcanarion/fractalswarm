@@ -15,6 +15,15 @@
 same chaos: one orchestrator plans every level and leads every squad, under the best-case
 supervisor. The monkey crashes it by signal (``chaos.crash``) instead of stopping it.
 ``single`` and ``pipeline`` are the same process with one worker (``actors/orchestrator.py``).
+``durable-max`` and ``durable`` are the arena's rivals (``baselines/durable.py``): the same
+process, but a crash stops no worker; what they and the board send meanwhile is adopted from
+the log at the restart. Under ``durable`` the coordinator's own calls in flight are lost, under
+``durable-max`` they are not.
+
+Sweeps set three more ``params`` (bench/matrix-*.yaml), all absent from a default run:
+``recovery_ms`` (a member is declared dead, and a supervisor is back, this long after the
+crash), ``rival_recovery_ms`` (the same for the supervisors only) and ``rival_restart_ms``
+(more time to come back, on top of the detection, for the supervisors only).
 """
 
 from dataclasses import dataclass
@@ -26,9 +35,12 @@ from fractalswarm.actors.board import BOARD, board_handle, board_init
 from fractalswarm.actors.orchestrator import (
     CENTRAL_MODES,
     TASKS,
+    heartbeat_interval_ms,
     orchestrator_handle,
     orchestrator_init,
 )
+from fractalswarm.baselines.durable import DURABLE_MODES, OwnEffectsView
+from fractalswarm.bench.profiles import RESTART_DELAY_MS
 from fractalswarm.comms.chaos import (
     CHAOS,
     CHAOS_MONKEY,
@@ -73,7 +85,7 @@ def expected_contracts(task: str, corpus: dict[str, Any]) -> int:
 
 @dataclass(frozen=True)
 class SwarmScenario:
-    mode: str = "swarm"  # swarm | central | single | pipeline
+    mode: str = "swarm"  # swarm | central | single | pipeline | durable-max | durable
     kinds = {
         "board": ActorKind(board_init, board_handle),
         "orchestrator": ActorKind(orchestrator_init, orchestrator_handle),
@@ -83,7 +95,7 @@ class SwarmScenario:
     }
 
     def reducers(self) -> list[Any]:
-        return [
+        views = [
             MembersView(),
             ProgressView(T2_PROGRESS),
             ActorsView(),
@@ -95,6 +107,9 @@ class SwarmScenario:
             RunConfigView(),
             MarketView(),
         ]
+        if self.mode in DURABLE_MODES:  # the rivals read their own calls back from the log
+            views.append(OwnEffectsView())
+        return views
 
     def boot(self, params: dict[str, Any]) -> list[Command]:
         spec = params["spec"]
@@ -147,6 +162,7 @@ class SwarmScenario:
             args["market"] = market
         if autoscale is not None:
             args["autoscale"] = autoscale
+        args |= self.sweep_knobs(params)
         commands: list[Command] = [Spawn(actor_id=BOARD, kind="board", args={})]
         if args["relay"] is not None:
             commands.append(Spawn(actor_id=NET, kind=NET, args={}))
@@ -162,8 +178,29 @@ class SwarmScenario:
             commands.append(Spawn(actor_id=CHAOS, kind=CHAOS, args=monkey))
         return commands
 
+    def sweep_knobs(self, params: dict[str, Any]) -> dict[str, Any]:
+        """The root's args for a sweep's times (see the module docstring); none when unset, so
+        a default run records the args it always did. The swarm's detection scales the
+        heartbeat interval; a supervisor's restart is its detection plus its restart time."""
+        recovery = params.get("recovery_ms")
+        if self.mode not in CENTRAL_MODES:
+            if recovery is None:
+                return {}
+            heartbeat_interval_ms(int(recovery))  # refused at the start, not mid-run
+            return {"detect_ms": int(recovery)}
+        detection = params.get("rival_recovery_ms", recovery)
+        restart = params.get("rival_restart_ms")
+        if detection is None and restart is None:
+            return {}
+        delay = RESTART_DELAY_MS if detection is None else int(detection)
+        if delay < 0 or int(restart or 0) < 0:
+            raise ValueError(f"a restart time cannot be negative: {delay} + {restart or 0} ms")
+        return {"restart_ms": delay + int(restart or 0)}
+
 
 SWARM = SwarmScenario()
 CENTRAL = SwarmScenario(mode="central")
 SINGLE = SwarmScenario(mode="single")
 PIPELINE = SwarmScenario(mode="pipeline")
+DURABLE_MAX = SwarmScenario(mode="durable-max")
+DURABLE = SwarmScenario(mode="durable")

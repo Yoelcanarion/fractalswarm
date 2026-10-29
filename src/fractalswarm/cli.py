@@ -116,7 +116,11 @@ def run(
     ] = False,
     run_id: Annotated[str | None, typer.Option(help="default: a timestamped id")] = None,
     scenario: Annotated[
-        str, typer.Option(help="swarm | central | single | pipeline (the last three: baselines)")
+        str,
+        typer.Option(
+            help="swarm | central | single | pipeline | durable-max | durable "
+            "(all but the swarm: baselines)"
+        ),
     ] = "swarm",
     chaos: Annotated[
         str, typer.Option(help="C0-C3, or kill-half: the root, two track leads, two sessions")
@@ -157,8 +161,10 @@ def run(
     from fractalswarm.runs import record_run
     from fractalswarm.safety.firewall import Firewall, HeuristicBackend, default_backend
 
-    if scenario not in ("swarm", "central", "single", "pipeline"):
-        raise typer.BadParameter("--scenario must be swarm, central, single or pipeline")
+    if scenario not in ("swarm", "central", "single", "pipeline", "durable-max", "durable"):
+        raise typer.BadParameter(
+            "--scenario must be swarm, central, single, pipeline, durable-max or durable"
+        )
     firewall = firewall or ("auto" if backend == "real" else "heuristic")
     if firewall not in ("auto", "heuristic"):
         raise typer.BadParameter("--firewall must be auto or heuristic")

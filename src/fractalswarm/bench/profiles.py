@@ -4,6 +4,8 @@ The harness only names a profile and hands it to the workflow; injecting the fau
 chaos layer's job, the same for every workflow.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict
 
 # Coordinator crashes happen at these fractions of contracts dispatched, in this order.
@@ -71,3 +73,19 @@ def profile(name: str) -> ChaosProfile:
         return PROFILES[name]
     except KeyError:
         raise ValueError(f"unknown chaos profile {name!r} (known: {sorted(PROFILES)})") from None
+
+
+def half_the_brains_plan(seed: str = "0") -> dict[str, Any]:
+    """The arena's failure plan (arena spec §D), as the JSON of a ``ChaosPlan``
+    (``comms/chaos.py``, which imports this module, so the plan is plain data here).
+
+    Five coordinator crashes at the shared crash points, and nothing else: no agent kills, no
+    network or API faults, so a pair isolates coordinator recovery. The first crash names
+    ``o0``, the root, in both systems. The rest name nobody: the swarm's targeting rule picks
+    the coordinator with the most work left (a track lead, mostly), and a supervisor has only
+    ``o0`` to lose. A name that is not a candidate is skipped, which is why ``kill-half``
+    (explicit names of the swarm's coordinators) crashes a supervisor once, not five times.
+    """
+    actions: list[dict[str, Any]] = [{"at": at, "kind": "kill_coordinator"} for at in CRASH_POINTS]
+    actions[0]["target"] = "o0"
+    return {"profile": "half-the-brains", "seed": seed, "actions": actions}
