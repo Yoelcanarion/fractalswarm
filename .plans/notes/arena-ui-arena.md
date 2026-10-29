@@ -264,6 +264,19 @@ without screenshots.
    `rootHolder`), so `$root` after a takeover is the heir, not o0.
 6. Every scene must last the seconds the video script gives it (a test pins them); a retime of the script is a change of
    `duration_ms` and of the waits together.
+7. Before the slot, without a browser: `scenes.real.test.ts` plays every scene on the demo's real log (the committed
+   `demo/backup`, with the lens rows of `lib/fixtures/lens-demo-backup.json`). It pins the five outages (o0 at 44.5 s,
+   o2.1 55.4, o1 56.7, o3.2 65.9, o2 76.9; the log ends at 118.6 s), the actors the scenes name (`$crashed:1` o0, `$heir:1`
+   o1, `$crashed:2` o2.1, `$heir:2` o2.2, `$root` the heir once it has taken over), that every actor a scene points at is in
+   the log (the fake page puts any target somewhere, so only this test sees a missing one), s4's two picks and that
+   every take runs all its steps with no warning. For the final pair, the same context from its logs in a throwaway
+   test (crashes, calls, end) gives the fake replay's log and the playhead every 2 s of each scene: the pair-dependent
+   numbers can be set before the slot and the slot only confirms them. What the real shape shows already: s4 plays at
+   10x for 3.5 s, so it stops at 35 s of the replay, 6 s before the first Spark call of purpose work (41.2 s; Wonder's
+   root plan is at 3.4 s to 18.0 s), and opens that call from the lens anyway; and s6 plays at 6x for 12 s from
+   `crash:1+5s` to about 126 s, past the swarm's end but short of a rival that runs longer (a central baseline of the c3
+   plan ends at 170 s), where it warns "the replay did not reach the moment in time" and goes on: the speed of that step
+   is the number to set (about 10x for 170 s).
 
 ## Shapes I rely on
 
@@ -349,8 +362,9 @@ W4's `.mark`, `.btn`, `.speeds`, `.badge`, `.empty` and `.stat` on purpose. `ass
 
 `npm --prefix web test` runs vitest in node: the pure modules, and the components drawn on the server
 (`renderToStaticMarkup`). The panel's tests run over the bench's own `honesty.json`; the recovery tests over real
-`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At MP2 (the branch with arena merged in, W4's ea40fa0) the whole web suite is 72 files and 1136 tests, green on one
-worker in 21 s (the arena's are 203 in 17 files, the director's 189 in 9). `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
+`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At MP2 (the branch with arena merged in, W4's ea40fa0) the whole web suite was 72 files and 1136 tests, green on one
+worker in 21 s (the arena's are 203 in 17 files, the director's 189 in 9); `scenes.real.test.ts` (13 tests, the scenes on the
+demo's real log, 6 hand mutants all caught) came after that count. `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
 claim's placeholder, hiding the loss counts, dropping the row model, toning down the per-process loss); the intake
 page (20 mutants: a billed launch without the gate, a wrong or lower-case word, a stale or expired token, the approval
 not blocked, frozen inputs editable, a wrong provenance, browser storage, a sentence marked that is not in the text,
