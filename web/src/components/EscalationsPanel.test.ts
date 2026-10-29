@@ -76,3 +76,32 @@ describe("the Escalations panel", () => {
     expect(out).not.toContain("needs a human");
   });
 });
+
+// The buttons that let a person answer (AnswerBox): only on a run, and only while the escalation waits.
+describe("the Escalations panel, answering", () => {
+  const answerButtons = (s: Stream, runId?: string): string[] => {
+    const html = renderToStaticMarkup(createElement(EscalationsPanel, { view: foldEvents(s.events), runId }));
+    const group = /<div class="answer__choices"[^>]*>(.*?)<\/div>/.exec(html)?.[1] ?? "";
+    return [...group.matchAll(/<button[^>]*>(.*?)<\/button>/g)].map((m) => m[1]);
+  };
+
+  it("offers a button per option while the escalation waits, and marks the ruling that stands", () => {
+    expect(answerButtons(base().at(20_000).emit("msg.sent", "o0", { to: "o1", topic: "later" }), "r1")).toEqual(["A", "B (ruled)"]);
+  });
+
+  it("offers none to a view with no run behind it", () => {
+    expect(answerButtons(base().at(20_000).emit("msg.sent", "o0", { to: "o1", topic: "later" }))).toEqual([]);
+  });
+
+  it("keeps offering them after an answer the owner ignored: the escalation still waits", () => {
+    const s = base().at(20_000).emit("escalation.answered", "o0", { id: ID, choice: "C", by: "human", accepted: false, overruled: false, reason: "C is not one of the options (A, B)" });
+    expect(answerButtons(s, "r1")).toEqual(["A", "B (ruled)"]);
+  });
+
+  it("takes them away once an answer was accepted, the window passed, or the run ended", () => {
+    const accepted = base().at(20_000).emit("escalation.answered", "o0", { id: ID, choice: "A", by: "human", accepted: true, overruled: true, reason: "" });
+    expect(answerButtons(accepted, "r1")).toEqual([]);
+    expect(answerButtons(base().at(70_001).emit("msg.sent", "o0", { to: "o1", topic: "later" }), "r1")).toEqual([]);
+    expect(answerButtons(base().at(40_000).emit("run.completed", "@kernel", { status: "ok" }), "r1")).toEqual([]);
+  });
+});

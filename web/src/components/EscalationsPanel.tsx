@@ -1,5 +1,6 @@
 import { escalationState, timeLeftMs, type EscalationState, type HumanEscalation, type Rejection, type Step, type TrailStatus } from "../lib/escalations";
 import type { ViewState } from "../lib/reducer";
+import { AnswerBox } from "./AnswerBox";
 import { Card, GenericRows, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
 
 const STEP: Record<Step, string> = { retry: "retry", reassign: "reassign", lost: "agent lost" };
@@ -48,7 +49,8 @@ function runsOf(rejections: Rejection[]): { first: Rejection; count: number }[] 
   return runs;
 }
 
-export function EscalationsPanel({ view }: { view: ViewState }) {
+/** ``runId`` lets a person answer a waiting escalation; without it (a view with no run behind it) the panel only shows. */
+export function EscalationsPanel({ view, runId }: { view: ViewState; runId?: string }) {
   const { escalations } = view.panels;
   const { steps } = escalations;
   const trails = escalations.order.map((key) => escalations.trails[key]).sort((a, b) => b.lastSeq - a.lastSeq);
@@ -84,6 +86,7 @@ export function EscalationsPanel({ view }: { view: ViewState }) {
                 ignored answer <b className="mono">{answer.choice}</b> at t = {virtualSeconds(answer.ts)}: {answer.reason || "the owner did not accept it"}
               </div>
             ))}
+          {runId && <AnswerBox runId={runId} item={item} waiting={state === "waiting"} />}
         </div>
       ))}
 

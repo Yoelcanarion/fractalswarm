@@ -16,6 +16,7 @@ Branch `Yoelcanarion/arena-ui-core`. Web only: no Python was touched.
 | 8 Proof surfaces | done: timeline marks, replay badge, takeover chip (against `GET api/runs/{id}/takeover`, 404 fallback) |
 | 9 Muse lens | done: drawer, Muse meter, fixtures from two recorded runs (W3's API is merged) |
 | Build, screenshots, checks | done (see Checks and Screenshots) |
+| Answer buttons (Escalations panel) | in the source and tested; not in the bundle yet, not seen in a real browser yet (see Answer buttons) |
 | Frame times, absolute | done in the quiet window of Oct 29 (19:23-19:27 CET): see Frame times; the 60 fps budget is not met |
 
 ## For W5: what to build on
@@ -459,7 +460,7 @@ the run's **virtual** time (`ViewState.lastTs`), never the wall clock. The Escal
 while the window is open (with the options, the ruled label and the time left), "confirmed", "overruled (a person chose A over B)",
 "expired (nobody answered in time; B stands)", "closed (the run ended before anyone answered)", and each ignored answer with its
 reason. The "5 · human" count is the escalations that are waiting. Tests: `escalations.test.ts` (fold and selectors),
-`EscalationsPanel.test.ts` (render). No answer buttons yet.
+`EscalationsPanel.test.ts` (render). The answer buttons came after (see Answer buttons).
 
 **Counters against W1's metrics (f39f0e2).** See "Arena counters" above: the fold no longer counts an agent that a crash stopped as
 idle, and `arena.parity.test.ts` pins the four logs beside the scored numbers.
@@ -482,6 +483,35 @@ Submit to a 202 with `{spec, backend: "fake"}`, the link to the run, the job end
 `pw/live.mjs` (a fake-LLM run launched through the API with `auto_approve` off, driven through the UI: the two 422 reasons, Approve
 with the hash, Kill half, Verify replay after the run ends; then a second run whose root is killed while it holds the plan, to see
 the heir's new hash reach the approval). All three ran in the window; results below.
+
+### Answer buttons (Escalations panel; the coordinator's second light item)
+For each human escalation that **waits** (`escalationState === "waiting"`, at the virtual time the log has reached) the panel shows
+a button per option (`item.options`; the ruled label reads "B (ruled)"). It does so only on a run page: `EscalationsPanel` takes the
+`runId` from `PanelsPage`, and a view with no run behind it only shows. With no options there is a line saying so, not a guess.
+
+A click sends `POST api/runs/{id}/escalations/{eid}` with `{choice}` and nothing else (`answerEscalation`, through `postControl`; the
+server reads the goal from its log). The line under the buttons (`AnswerStatus`, `role="status"`) is the server's own words, as
+`postControl` reads them: 200 "answer to {eid} requested for {goal}"; 409 "run '{id}' was not launched to take controls: start it from
+the API"; 422 "choice is required: what the person decided" / "the escalation id is not valid"; 404 "no escalation '{eid}' in run
+'{id}'". A refusal is drawn like the chaos panel's (`chaos__result--bad`).
+
+The server only *requests* the answer: the goal's owner takes it or ignores it on its next turn, and the verdict is the
+`escalation.answered {accepted, overruled, reason}` in the log. So after a 200 the box **reads the verdict back** from
+`GET api/runs/{id}/disputes` (`fetchDisputes` and `lib/disputes.ts`) at 0.4, 1.4, 3.4 and 7.4 s, and says "accepted: A overrules B",
+"accepted: B confirms B" or "not accepted: {the owner's reason, as it logged it}"; "no verdict in the log yet" if none arrives. Only an
+answer newer than the last one the panel had seen when the person clicked (`seq`) counts, and only the escalation that was answered.
+A server that has no `disputes` view (404) or does not answer ends the reading without a verdict, not with an error. Buttons stay
+disabled while an answer is in flight, so a verdict is never read for the wrong click; once the escalation closes (an accepted
+answer, the window passed, the run ended) the buttons go and the line stays, to say how the last answer went.
+
+Tests: `disputes.test.ts` (reading the view; the verdict wording; `sendAnswer` against a stand-in server: a refusal reads nothing back,
+a 200 finds its verdict at the right look, an ignored answer gives its reason, another escalation's answers are not mixed in, it
+gives up, 404, the caller gone), `AnswerBox.test.ts` (buttons, ruled mark, no options, nothing once closed; the status line for a
+pending request, each verdict and the 409/422/404 refusals), `EscalationsPanel.test.ts` (buttons only with a `runId`, only while it
+waits, still there after an ignored answer), `api.test.ts` (route and body with the ids escaped; the refusal words verbatim;
+`fetchDisputes`).
+**Not yet done:** the buttons are not in the bundle (the last build predates them), and no real browser has clicked them. That needs
+a fake-LLM run with a waiting arbitration escalation (`arbitration: true`) on a server with scratch dirs, so it goes with the next build slot.
 
 ### The quiet window (Oct 29: GO 19:21; my session was down 19:30-20:07 on a network error; finished 20:15)
 One build, a server on scratch dirs on port 8794, one headless Chromium at a time, fake backend only ($0), nothing written to

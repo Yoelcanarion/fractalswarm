@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchCapabilities, fetchTakeover, launchTask, postControl, verifyRun } from "./api";
+import { answerEscalation, fetchCapabilities, fetchDisputes, fetchTakeover, launchTask, postControl, verifyRun } from "./api";
 import { buildTaskSpec, defaultForm, taskLaunchBody } from "./taskspec";
 
 const reply = (status: number, body: unknown = {}) =>
@@ -70,6 +70,57 @@ describe("a control the server takes or refuses", () => {
   it("reads FastAPI's own list of problems when it refused the body before the API's handler saw it", async () => {
     server(422, { detail: [{ type: "missing", loc: ["body", "spec"], msg: "Field required" }, { loc: [], msg: "second" }, { oops: true }] });
     await expect(postControl("api/tasks", {})).resolves.toEqual({ ok: false, status: 422, detail: "spec: Field required; second" });
+  });
+});
+
+// api/app.py `answer_escalation`: the goal is the escalation's own, read from the log; the server only *requests* the answer.
+describe("a person's answer to an escalation", () => {
+  const ID = "arbitration:speaker:S02:availability";
+
+  it("posts the choice as JSON to the escalation's own route, with both ids escaped", async () => {
+    const detail = `answer to ${ID} requested for goal:track-ai/d1`;
+    const calls = server(200, { ok: true, detail });
+    await expect(answerEscalation("run 1", ID, "A")).resolves.toEqual({ ok: true, status: 200, detail });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe("api/runs/run%201/escalations/arbitration%3Aspeaker%3AS02%3Aavailability");
+    expect(calls[0].init).toMatchObject({ method: "POST", body: JSON.stringify({ choice: "A" }), headers: { "Content-Type": "application/json" } });
+  });
+
+  it.each([
+    [409, "run 'r1' was not launched to take controls: start it from the API"],
+    [422, "choice is required: what the person decided"],
+    [422, "the escalation id is not valid"],
+    [404, `no escalation '${ID}' in run 'r1'`],
+  ])("shows the server's reason for a refusal (%i) exactly as it words it", async (status, reason) => {
+    server(status, { error: reason });
+    await expect(answerEscalation("r1", ID, "A")).resolves.toEqual({ ok: false, status, detail: reason });
+  });
+});
+
+// api/lens.py `disputes_view`: where each escalation of a run stands and the answers it got.
+describe("the escalations as the server reads them from the log", () => {
+  it("reads the escalation and the verdicts on its answers", async () => {
+    const calls = server(200, {
+      run_id: "r1",
+      disputes: [
+        {
+          key: "speaker:S02:availability",
+          ruling: { winner: "B" },
+          escalation: { id: "e1", state: "overruled", answers: [{ choice: "A", by: "human", accepted: true, overruled: true, reason: "", seq: 900 }] },
+        },
+      ],
+    });
+    await expect(fetchDisputes("run 1")).resolves.toEqual([
+      { id: "e1", state: "overruled", ruled: "B", answers: [{ seq: 900, choice: "A", by: "human", accepted: true, overruled: true, reason: "" }] },
+    ]);
+    expect(calls[0].url).toBe("api/runs/run%201/disputes");
+  });
+
+  it("is null for a server that does not offer them (404), and fails on any other error", async () => {
+    server(404, { error: "no such view" });
+    await expect(fetchDisputes("r1")).resolves.toBeNull();
+    server(500, { error: "boom" });
+    await expect(fetchDisputes("r1")).rejects.toThrow("boom");
   });
 });
 

@@ -1,6 +1,7 @@
 // The HTTP and WebSocket client for the FractalSwarm API (src/fractalswarm/api).
 
 import { DEFAULT_CAPABILITIES, parseCapabilities, type Capabilities } from "./controls";
+import { readDisputes, type DisputeEscalation } from "./disputes";
 import { readCallDetail, readCalls, readMeter, type CallDetail, type CallsResponse, type Meter } from "./lens";
 import { readTakeover, type TakeoverSummary } from "./takeover";
 import type { TaskLaunch } from "./taskspec";
@@ -123,6 +124,19 @@ function reasonOf(payload: Record<string, unknown>, fallback: string): string {
 export async function postControl(path: string, body: unknown): Promise<ControlResult> {
   const { response, payload } = await postJson(path, body);
   return { ok: response.ok, status: response.status, detail: reasonOf(payload, response.statusText) };
+}
+
+/** What a person decided for an escalation that waits for one (`POST api/runs/{id}/escalations/{eid}`). The server only
+ * *requests* the answer: the goal's owner takes it or ignores it, and the verdict lands in the log (`fetchDisputes`). A refusal
+ * is the server's own words: 409 for a run that was not launched to take controls, 422 for a choice or id it cannot take. */
+export const answerEscalation = (runId: string, escalationId: string, choice: string) =>
+  postControl(`api/runs/${encodeURIComponent(runId)}/escalations/${encodeURIComponent(escalationId)}`, { choice });
+
+/** The escalations of a run as the server reads them from its log. Null when the server does not offer them (404). */
+export async function fetchDisputes(runId: string): Promise<DisputeEscalation[] | null> {
+  const response = await fetch(runUrl(runId, "disputes"));
+  if (response.status === 404) return null;
+  return readDisputes(await json<unknown>(response));
 }
 
 export interface LaunchResult extends ControlResult {
