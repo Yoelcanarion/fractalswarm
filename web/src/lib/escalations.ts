@@ -7,10 +7,20 @@
 //   plan.rejected      {goal_id, attempt, errors}                        a planner's reply failed its schema
 //   goal.completed     {goal_id, owner, status, gaps}                    partial or failed: explicit gaps
 //
-// Step 5 (a human decides) arrives as an ``escalation.*`` family: ``escalation.raised`` opens one,
-// ``escalation.resolved`` closes it, and each is keyed by its ``eid`` (the id that
-// ``POST /runs/{id}/escalations/{eid}`` answers). Unknown ``escalation.*`` and ``replan.*`` types
-// show as generic rows.
+// Step 5 (a human decides) arrives as an ``escalation.*`` family, keyed by an id (the one that
+// ``POST /api/runs/{id}/escalations/{eid}`` answers). Wonder's arbitration (actors/arbitration.py, W3)
+// writes the real ones:
+//
+//   escalation.opened    {id, goal_id, question, options, default, confidence, timeout_ms}   a person may overrule
+//                        the ruling that was applied at once, until ``ts_virtual + timeout_ms``
+//   escalation.answered  {id, choice, by: "human", accepted, overruled, reason}              the owner's verdict on
+//                        an answer. It closes the escalation only when ``accepted``: an ignored answer (not an
+//                        option, a second one, too late, an unknown id) is logged with ``accepted: false`` and
+//                        leaves it open
+//
+// ``escalation.raised`` and ``escalation.resolved`` (the shape the panel was built on) open and close one too.
+// The time a person has left is ``deadlineTs - nowTs`` in the run's virtual time, never the wall clock: a fake
+// run lasts seconds and a replay can be dragged. Unknown ``escalation.*`` and ``replan.*`` types show as generic rows.
 
 import { claimedBy } from "./families";
 import {
@@ -63,16 +73,30 @@ export interface GoalGap {
   ts: number;
 }
 
+/** One answer the log judged, in the order it was logged. */
+export interface HumanAnswer {
+  seq: number;
+  ts: number;
+  choice: string;
+  accepted: boolean;
+  overruled: boolean; // the choice was not the ruled label
+  reason: string; // why an ignored answer was ignored
+}
+
 export interface HumanEscalation {
   id: string;
   seq: number;
   ts: number;
   actor: string;
   goalId: string;
-  text: string; // why a human is needed: the event's reason, else a digest of its payload
-  status: "open" | "resolved";
+  text: string; // the question a person is asked, else the event's reason, else a digest of its payload
+  status: "open" | "resolved"; // resolved: an accepted answer, or an ``escalation.resolved``
   resolvedSeq?: number;
   resolution?: string;
+  options: string[]; // the labels a person may answer with
+  fallback?: string; // the label that stands when nobody answers: the ruling
+  deadlineTs?: number; // the virtual time up to which a person may answer: ``ts + timeout_ms``
+  answers: HumanAnswer[]; // every answer the log judged; an ignored one leaves the escalation as it was
 }
 
 export interface EscalationsState {
@@ -96,7 +120,8 @@ export const emptyEscalations = (): EscalationsState => ({
 });
 
 const REJECTIONS_KEPT = 50;
-const RAISED = new Set(["raised", "opened", "open", "created", "requested", "needed"]);
+const ANSWERS_KEPT = 20;
+const RAISED =new Set(["raised", "opened", "open", "created", "requested", "needed"]);
 const DONE = new Set(["resolved", "closed", "answered", "decided", "dismissed"]);
 const ESCALATION_TYPES: ReadonlySet<string> = new Set([
   "contract.rejected",
@@ -158,29 +183,51 @@ function foldTrail(state: EscalationsState, event: RunEvent): EscalationsState {
   };
 }
 
+const close = (h: HumanEscalation, event: RunEvent, resolution: string): HumanEscalation =>
+  h.status === "resolved" ? h : { ...h, status: "resolved", resolvedSeq: event.seq, resolution };
+
 function foldHuman(state: EscalationsState, event: RunEvent): EscalationsState {
   const p = event.payload;
   const suffix = event.type.slice("escalation.".length);
   const id = asString(p.eid ?? p.escalation_id ?? p.id, String(event.seq));
   if (RAISED.has(suffix)) {
+    const timeout = asNumber(p.timeout_ms);
     const entry: HumanEscalation = {
       id,
       seq: event.seq,
       ts: event.ts_virtual,
       actor: event.actor,
       goalId: asString(p.goal_id),
-      text: asString(p.reason ?? p.message ?? p.summary ?? p.detail) || genericEntry(event).text,
+      text: asString(p.question ?? p.reason ?? p.message ?? p.summary ?? p.detail) || genericEntry(event).text,
       status: "open",
+      options: asStrings(p.options),
+      fallback: asString(p.default) || undefined,
+      deadlineTs: timeout === null ? undefined : event.ts_virtual + timeout,
+      answers: [],
     };
     return { ...state, human: [...state.human.filter((h) => h.id !== id), entry] };
   }
-  if (DONE.has(suffix)) {
+  if (suffix === "answered") {
+    // The owner's verdict on an answer. Only an accepted one decides; an ignored one is kept for the panel to say why.
+    const answer: HumanAnswer = {
+      seq: event.seq,
+      ts: event.ts_virtual,
+      choice: asString(p.choice),
+      accepted: p.accepted !== false,
+      overruled: p.overruled === true,
+      reason: asString(p.reason),
+    };
     return {
       ...state,
-      human: state.human.map((h) =>
-        h.id === id ? { ...h, status: "resolved" as const, resolvedSeq: event.seq, resolution: asString(p.decision ?? p.resolution ?? p.choice, suffix) } : h,
-      ),
+      human: state.human.map((h) => {
+        if (h.id !== id) return h;
+        const next = { ...h, answers: appendCapped(h.answers, answer, ANSWERS_KEPT) };
+        return answer.accepted ? close(next, event, answer.choice || suffix) : next;
+      }),
     };
+  }
+  if (DONE.has(suffix)) {
+    return { ...state, human: state.human.map((h) => (h.id === id ? close(h, event, asString(p.decision ?? p.resolution ?? p.choice, suffix)) : h)) };
   }
   return { ...state, other: appendCapped(state.other, genericEntry(event), GENERIC_CAP) };
 }
@@ -223,3 +270,23 @@ export function foldEscalations(state: EscalationsState, event: RunEvent): Escal
 }
 
 export const openEscalations = (state: EscalationsState): HumanEscalation[] => state.human.filter((h) => h.status === "open");
+
+/** Where a human escalation stands (the ``escalation.state`` of GET /disputes, read from the log alone):
+ * ``waiting`` while a person can still answer; ``answered`` or ``overruled`` once an answer was accepted (the
+ * ruled label confirmed, or another one chosen); ``expired`` when the run's time passed the window with no
+ * accepted answer; ``closed`` when the run ended inside it, or an ``escalation.resolved`` closed it. */
+export type EscalationState = "waiting" | "answered" | "overruled" | "expired" | "closed";
+
+/** ``nowTs`` is the virtual time the log has reached (``ViewState.lastTs``), ``ended`` that the run is over. */
+export function escalationState(h: HumanEscalation, nowTs: number, ended: boolean): EscalationState {
+  const accepted = h.answers.find((a) => a.accepted);
+  if (accepted) return accepted.overruled ? "overruled" : "answered";
+  if (h.status === "resolved") return "closed";
+  if (h.deadlineTs !== undefined && nowTs > h.deadlineTs) return "expired";
+  return ended ? "closed" : "waiting";
+}
+
+/** What a person has left to answer, in virtual ms: ``deadlineTs - nowTs``, never the wall clock. Null for an
+ * escalation with no window. */
+export const timeLeftMs = (h: HumanEscalation, nowTs: number): number | null =>
+  h.deadlineTs === undefined ? null : Math.max(0, h.deadlineTs - nowTs);

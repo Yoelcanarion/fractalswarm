@@ -21,7 +21,7 @@ export function PanelsPage() {
         <BreakersPanel view={view} />
         <MemoryPanel view={view} />
         <CollisionsPanel view={view} />
-        <EscalationsPanel view={view} />
+        <EscalationsPanel view={view} runId={runId ?? undefined} />
       </div>
     </RunFrame>
   );

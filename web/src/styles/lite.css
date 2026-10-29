@@ -1,0 +1,22 @@
+/* Lite motion (lib/lite.ts): off unless <html data-lite="..."> names a part, which ?lite=all or
+   ?lite=anim,filter,shadow does. Each part drops one effect that costs style work on every frame at a high playback
+   speed. They change how something is dressed, not what is shown. The selectors out-rank the rules they switch off,
+   so none of this needs !important. */
+
+/* anim: the lit edges stop moving their dashes (React Flow animates stroke-dashoffset on the main thread) */
+:root[data-lite~="anim"] .react-flow__edge.animated path {
+  animation: none;
+}
+
+/* filter: a talking edge keeps its colour and width, and loses the drop-shadow glow that follows --now */
+:root[data-lite~="filter"] .edge--talking .react-flow__edge-path {
+  filter: none;
+}
+
+/* shadow: the rings around the nodes (and the colour easing of their state changes) are not drawn */
+:root[data-lite~="shadow"] .actor,
+:root[data-lite~="shadow"] .actor--adopted,
+:root[data-lite~="shadow"] .actor--restarted {
+  box-shadow: none;
+  transition: none;
+}

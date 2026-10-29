@@ -1,5 +1,6 @@
-import { openEscalations, type Rejection, type Step, type TrailStatus } from "../lib/escalations";
+import { escalationState, timeLeftMs, type EscalationState, type HumanEscalation, type Rejection, type Step, type TrailStatus } from "../lib/escalations";
 import type { ViewState } from "../lib/reducer";
+import { AnswerBox } from "./AnswerBox";
 import { Card, GenericRows, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
 
 const STEP: Record<Step, string> = { retry: "retry", reassign: "reassign", lost: "agent lost" };
@@ -8,6 +9,34 @@ const STATUS: Record<TrailStatus, { label: string; tone: "good" | "warn" | "bad"
   recovered: { label: "recovered", tone: "good" },
   failed: { label: "gave up", tone: "bad" },
 };
+const HUMAN: Record<EscalationState, { label: string; tone: "good" | "warn" | "bad" | "muted" }> = {
+  waiting: { label: "needs a human", tone: "bad" },
+  answered: { label: "confirmed", tone: "good" },
+  overruled: { label: "overruled", tone: "warn" },
+  expired: { label: "expired", tone: "muted" },
+  closed: { label: "closed", tone: "muted" },
+};
+
+/** What a human escalation says about itself, by where it stands at the virtual time the log has reached. */
+function humanLine(item: HumanEscalation, state: EscalationState, nowTs: number): string {
+  const accepted = item.answers.find((a) => a.accepted);
+  const stands = item.fallback ?? "the ruling";
+  switch (state) {
+    case "answered":
+      return `a person confirmed ${accepted?.choice || stands}`;
+    case "overruled":
+      return `a person chose ${accepted?.choice} over ${stands}`;
+    case "expired":
+      return `nobody answered in time; ${stands} stands`;
+    case "closed":
+      return item.resolution ? `closed: ${item.resolution}` : `the run ended before anyone answered; ${stands} stands`;
+    case "waiting": {
+      const left = timeLeftMs(item, nowTs);
+      const options = item.options.length > 0 ? ` · options ${item.options.join(", ")}${item.fallback ? ` (ruled: ${item.fallback})` : ""}` : "";
+      return `raised by ${item.actor}: ${item.text}${options}${left === null ? "" : ` · ${virtualSeconds(left)} left`}`;
+    }
+  }
+}
 
 /** Consecutive rejections at the same step and stage read as one chip: "reassign ×5". */
 function runsOf(rejections: Rejection[]): { first: Rejection; count: number }[] {
@@ -20,11 +49,14 @@ function runsOf(rejections: Rejection[]): { first: Rejection; count: number }[] 
   return runs;
 }
 
-export function EscalationsPanel({ view }: { view: ViewState }) {
+/** ``runId`` lets a person answer a waiting escalation; without it (a view with no run behind it) the panel only shows. */
+export function EscalationsPanel({ view, runId }: { view: ViewState; runId?: string }) {
   const { escalations } = view.panels;
   const { steps } = escalations;
   const trails = escalations.order.map((key) => escalations.trails[key]).sort((a, b) => b.lastSeq - a.lastSeq);
-  const waiting = openEscalations(escalations);
+  // Where each one stands is read at the virtual time the log has reached, so dragging the scrubber moves it.
+  const humans = escalations.human.map((item) => ({ item, state: escalationState(item, view.lastTs, view.completed) }));
+  const waiting = humans.filter((h) => h.state === "waiting");
 
   return (
     <Card
@@ -41,19 +73,22 @@ export function EscalationsPanel({ view }: { view: ViewState }) {
         <PStat label="5 · human" value={waiting.length} tone={waiting.length > 0 ? "bad" : ""} title="open escalations waiting for a decision" />
       </div>
 
-      {waiting.map((item) => (
-        <div key={item.id} className="pevent pevent--bad">
-          <Pill tone="bad">needs a human</Pill> <b className="mono">{item.id}</b>
-          {item.goalId ? <> · {item.goalId}</> : null} · t = {virtualSeconds(item.ts)} · raised by {item.actor}: {item.text}
+      {humans.map(({ item, state }) => (
+        <div key={item.id}>
+          <div className={state === "waiting" ? "pevent pevent--bad" : "pevent"}>
+            <Pill tone={HUMAN[state].tone}>{HUMAN[state].label}</Pill> <b className="mono">{item.id}</b>
+            {item.goalId ? <> · {item.goalId}</> : null} · t = {virtualSeconds(item.ts)} · {humanLine(item, state, view.lastTs)}
+          </div>
+          {item.answers
+            .filter((answer) => !answer.accepted)
+            .map((answer) => (
+              <div key={answer.seq} className="pevent pevent--warn">
+                ignored answer <b className="mono">{answer.choice}</b> at t = {virtualSeconds(answer.ts)}: {answer.reason || "the owner did not accept it"}
+              </div>
+            ))}
+          {runId && <AnswerBox runId={runId} item={item} waiting={state === "waiting"} />}
         </div>
       ))}
-      {escalations.human
-        .filter((item) => item.status === "resolved")
-        .map((item) => (
-          <div key={item.id} className="pevent">
-            <Pill tone="good">decided</Pill> <b className="mono">{item.id}</b> {item.resolution}
-          </div>
-        ))}
 
       {trails.length === 0 ? (
         <Nothing>No contract needed the ladder: every one was verified at its first attempt.</Nothing>

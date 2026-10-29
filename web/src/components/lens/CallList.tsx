@@ -83,21 +83,21 @@ export function CallList({ calls, selected, playhead, showActor = false, filtera
             <li key={call.effect_id}>
               <button
                 type="button"
-                className="crow"
+                className="lcrow"
                 aria-current={call.effect_id === selected ? "true" : undefined}
                 data-tone={state.tone}
                 onClick={() => onSelect(call.effect_id)}
               >
                 <ModelBadge model={call.model ?? "unknown"} />
-                <span className="crow__what">
-                  <span className="crow__title">{title}</span>
-                  <span className="crow__where mono">
+                <span className="lcrow__what">
+                  <span className="lcrow__title">{title}</span>
+                  <span className="lcrow__where mono">
                     {showActor && `${call.actor} · `}
                     {where}
                   </span>
                 </span>
-                <span className="crow__state">{state.label}</span>
-                <span className="crow__cost mono">{done ? formatUsd(call.cost_usd) : "…"}</span>
+                <span className="lcrow__state">{state.label}</span>
+                <span className="lcrow__cost mono">{done ? formatUsd(call.cost_usd) : "…"}</span>
               </button>
             </li>
           );

@@ -1,0 +1,241 @@
+import { describe, expect, it } from "vitest";
+
+import { foldEvents } from "./reducer";
+import { emptyRecorded, isRecoveryEvent, record, recordedEvents, recoveryAt } from "./recovery";
+import { Stream } from "./testing";
+
+/** A supervised run: root o0 with two agents. */
+function run(scenario = "central"): Stream {
+  const s = new Stream().emit("run.started", "@kernel", { seed: "0", scenario, params: {}, clock: "sim" });
+  s.spawn("o0", "orchestrator", null).spawn("o0.a1", "agent", "o0").spawn("o0.a2", "agent", "o0");
+  return s;
+}
+
+const created = (s: Stream, goal: string, cid: string, dependsOn: string[] = []) =>
+  s.emit("contract.created", "o0", { owner: "o0", contract: { id: cid, goal_id: goal, depends_on: dependsOn, assignee: "o0.a1" } });
+const dispatched = (s: Stream, goal: string, cid: string, attempt: number, key: string) =>
+  s.emit("contract.dispatched", "o0", { goal_id: goal, contract_id: cid, attempt, assignee: "o0.a1", idem_key: key, work: `${goal}/${cid}` });
+const verified = (s: Stream, goal: string, cid: string, attempt: number) =>
+  s.emit("contract.verified", "o0", { goal_id: goal, contract_id: cid, attempt, work: `${goal}/${cid}` });
+const resultSent = (s: Stream, goal: string, cid: string, attempt: number) =>
+  s.emit("msg.sent", "o0.a1", { to: "o0", topic: "contract.result", body: { goal_id: goal, contract_id: cid, attempt, agent: "o0.a1" } });
+const completed = (s: Stream, goal: string, cid: string, attempt: number) =>
+  s.emit("contract.completed", "o0", { goal_id: goal, contract_id: cid, attempt, agent: "o0.a1", status: "ok" });
+
+const asked = (s: Stream, actor: string, id: string, tag: string, request: Record<string, unknown> = { prompt: id }) =>
+  s.emit("effect.started", actor, { kind: "llm", effect_id: id, tag, request });
+const answered = (s: Stream, id: string, tag: string, status = "ok") =>
+  s.emit("effect.completed", "@env", { kind: "llm", effect_id: id, tag, status });
+const cancelled = (s: Stream, actor: string, id: string, tag: string) =>
+  s.emit("effect.cancelled", actor, { kind: "llm", effect_id: id, tag });
+
+const at = (s: Stream, nowMs = s.ts) => recoveryAt(foldEvents(s.events).arena.recorded, nowMs);
+
+describe("coordinator-dependency time", () => {
+  /** Goal g1 (owned by o0) has a contract c1, created at 1 s and sent out at `sentAt`; o0 is down from 10 s to 15 s. */
+  function crashed(sentAt: number): Stream {
+    const s = run();
+    created(s.at(1000), "g1", "c1");
+    s.at(10_000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 0, lost: [], restart_in_ms: 5000 });
+    s.at(15_000).emit("baseline.restarted", "o0", { coordinator: "o0", crash: 1, redo: [] });
+    dispatched(s.at(sentAt), "g1", "c1", 1, "k1");
+    return s;
+  }
+
+  it("is the time a contract's work waited inside the outage of the coordinator that owned its goal", () => {
+    // Ready at 1 s, sent at 16 s: the wait [1 s, 16 s] holds the whole outage [10 s, 15 s].
+    expect(at(crashed(16_000))).toMatchObject({ dependencyMs: 5000, blockedMs: 15_000 });
+  });
+
+  it("counts only the part of a wait that lies inside the outage", () => {
+    expect(at(crashed(12_000))).toMatchObject({ dependencyMs: 2000, blockedMs: 11_000 });
+  });
+
+  it("is nothing for a wait that ended before the coordinator went down", () => {
+    expect(at(crashed(9000))).toMatchObject({ dependencyMs: 0, blockedMs: 8000 });
+  });
+
+  it("counts a wait only once it has ended: an outage that is still going has cost nothing yet", () => {
+    const s = run();
+    created(s.at(1000), "g1", "c1");
+    s.at(10_000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 0, lost: [], restart_in_ms: 5000 });
+    expect(at(s, 14_000)).toMatchObject({ dependencyMs: 0, blockedMs: 0 });
+  });
+
+  it("does not count work waiting on another coordinator's goals", () => {
+    const s = run();
+    s.spawn("o1", "orchestrator", "o0");
+    s.at(500).emit("goal.opened", "o1", { goal_id: "g2", owner: "o1", parent: null, level: 1, goal: "elsewhere" });
+    created(s.at(1000), "g2", "c1");
+    s.at(10_000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 0, lost: [], restart_in_ms: 5000 });
+    s.at(15_000).emit("baseline.restarted", "o0", { coordinator: "o0", crash: 1, redo: [] });
+    dispatched(s.at(16_000), "g2", "c1", 1, "k1");
+    expect(at(s)).toMatchObject({ dependencyMs: 0, blockedMs: 15_000 });
+  });
+
+  it("measures a result waiting to be taken in, from the agent's result to the coordinator's completion", () => {
+    const s = run();
+    created(s.at(1000), "g1", "c1");
+    dispatched(s.at(1000), "g1", "c1", 1, "k1");
+    s.at(10_000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 1, lost: [], restart_in_ms: 5000 });
+    resultSent(s.at(12_000), "g1", "c1", 1); // the agent finished while its coordinator was down
+    s.at(15_000).emit("baseline.restarted", "o0", { coordinator: "o0", crash: 1, redo: [] });
+    completed(s.at(15_500), "g1", "c1", 1);
+    // result [12 s, 15.5 s] inside the outage [10 s, 15 s]: 3 s; the dispatch wait is zero-length.
+    expect(at(s)).toMatchObject({ dependencyMs: 3000, blockedMs: 3500 });
+  });
+
+  it("swarm: an outage ends at the first takeover of each goal, so each goal waits a different time", () => {
+    const s = run("swarm");
+    s.spawn("o1", "orchestrator", "o0");
+    s.at(1000).emit("ownership.assigned", "o0", { key: "g1", owner: "o0", group: "o0" });
+    s.emit("ownership.assigned", "o0", { key: "g2", owner: "o0", group: "o0" });
+    for (const goal of ["g1", "g2"]) {
+      created(s.at(2000), goal, "c1");
+      dispatched(s.at(3000), goal, "c1", 1, `k-${goal}`);
+    }
+    s.at(50_000).emit("chaos.injected", "@chaos", { fault: "kill_coordinator", target: "o0", detail: {} });
+    resultSent(s.at(49_000 + 1500), "g1", "c1", 1); // sent 0.5 s into the outage, taken in at 53 s
+    resultSent(s.at(50_500), "g2", "c1", 1);
+    s.at(52_300).emit("ownership.remapped", "o1", { key: "g1", owner: "o1", previous: "o0", works: [] });
+    s.at(52_900).emit("ownership.remapped", "o1", { key: "g2", owner: "o1", previous: "o0", works: [] });
+    completed(s.at(53_000), "g1", "c1", 1);
+    completed(s.at(53_100), "g2", "c1", 1);
+    // g1: result [50.5 s, 53 s] inside the outage [50 s, 52.3 s] = 1.8 s; g2: [50.5 s, 53.1 s] inside [50 s, 52.9 s] = 2.4 s.
+    expect(at(s).dependencyMs).toBe(1800 + 2400);
+  });
+
+  it("an outage that is still open ends at the playhead, so a wait that closes later is only counted so far", () => {
+    const s = run("swarm");
+    s.at(1000).emit("ownership.assigned", "o0", { key: "g1", owner: "o0", group: "o0" });
+    created(s.at(2000), "g1", "c1");
+    dispatched(s.at(3000), "g1", "c1", 1, "k1");
+    s.at(50_000).emit("chaos.injected", "@chaos", { fault: "kill_coordinator", target: "o0", detail: {} });
+    resultSent(s.at(51_000), "g1", "c1", 1);
+    completed(s.at(60_000), "g1", "c1", 1); // nobody took the goal over: the log goes on with o0's own completion
+    expect(at(s, 60_000).dependencyMs).toBe(9000);
+  });
+});
+
+describe("duplicated work", () => {
+  const dup = (s: Stream) => at(s).duplicatedCalls;
+
+  it("counts the calls of an attempt that a later attempt of its contract replaced, once that attempt is verified", () => {
+    const s = run();
+    created(s, "g1", "c1");
+    dispatched(s, "g1", "c1", 1, "k1");
+    asked(s, "o0.a1", "e1", "k1:1");
+    answered(s, "e1", "k1:1");
+    expect(dup(s)).toBe(0); // nothing replaced it
+    dispatched(s, "g1", "c1", 2, "k2");
+    asked(s, "o0.a2", "e2", "k2:1");
+    answered(s, "e2", "k2:1");
+    expect(dup(s)).toBe(0); // the contract is not settled: neither attempt is wasted yet
+    verified(s, "g1", "c1", 2);
+    expect(dup(s)).toBe(1); // attempt 1's call paid for work that attempt 2 did again
+  });
+
+  it("counts every call of the replaced attempt, including one that was cancelled", () => {
+    const s = run();
+    dispatched(s, "g1", "c1", 1, "k1");
+    asked(s, "o0.a1", "e1", "k1:1");
+    answered(s, "e1", "k1:1");
+    asked(s, "o0.a1", "e2", "k1:2");
+    cancelled(s, "o0.a1", "e2", "k1:2");
+    dispatched(s, "g1", "c1", 2, "k2");
+    asked(s, "o0.a2", "e3", "k2:1");
+    answered(s, "e3", "k2:1");
+    verified(s, "g1", "c1", 2);
+    expect(dup(s)).toBe(2);
+  });
+
+  it("does not count a failed call, which cost nothing", () => {
+    const s = run();
+    dispatched(s, "g1", "c1", 1, "k1");
+    asked(s, "o0.a1", "e1", "k1:1");
+    answered(s, "e1", "k1:1", "error");
+    dispatched(s, "g1", "c1", 2, "k2");
+    verified(s, "g1", "c1", 2);
+    expect(dup(s)).toBe(0);
+  });
+
+  it("counts an own call (plan, judge, scan) that was asked again, once the second one has completed", () => {
+    const s = run();
+    asked(s, "o0", "p1", "plan|g1|0");
+    cancelled(s, "o0", "p1", "plan|g1|0"); // the crash took it
+    asked(s, "o0", "p2", "plan|g1|0", { prompt: "p1" });
+    expect(dup(s)).toBe(0); // asked again, not answered yet
+    answered(s, "p2", "plan|g1|0");
+    expect(dup(s)).toBe(1);
+  });
+
+  it("counts a completed call whose request was already paid for, but not a failed one", () => {
+    const s = run();
+    asked(s, "o0.a1", "e1", "t1", { prompt: "x" });
+    asked(s, "o0.a2", "e2", "t2", { prompt: "x" });
+    asked(s, "o0.a2", "e3", "t3", { prompt: "x" });
+    answered(s, "e1", "t1");
+    expect(dup(s)).toBe(0);
+    answered(s, "e2", "t2", "error");
+    expect(dup(s)).toBe(0);
+    answered(s, "e3", "t3", "incomplete");
+    expect(dup(s)).toBe(1);
+  });
+
+  it("does not tell two requests apart by the order of their keys", () => {
+    const s = run();
+    asked(s, "o0.a1", "e1", "t1", { a: 1, b: { c: 2, d: [3] } });
+    asked(s, "o0.a2", "e2", "t2", { b: { d: [3], c: 2 }, a: 1 });
+    answered(s, "e1", "t1");
+    answered(s, "e2", "t2");
+    expect(dup(s)).toBe(1);
+  });
+});
+
+describe("the recorded events", () => {
+  it("keeps what the figures read and drops the rest", () => {
+    const s = run();
+    s.emit("effect.started", "o0", { kind: "timer", effect_id: "t1", tag: "member.tick" });
+    s.emit("effect.started", "o0", { kind: "firewall", effect_id: "f1", tag: "scan|g1|x" });
+    s.emit("effect.started", "o0", { kind: "firewall", effect_id: "f2", tag: "other" });
+    s.emit("msg.sent", "o0", { to: "o1", topic: "heartbeat", body: {} });
+    s.emit("msg.sent", "o0.a1", { to: "o0", topic: "book.result", body: { goal_id: "g", contract_id: "c", attempt: 0 } });
+    const kept = s.events.filter(isRecoveryEvent).map((e) => `${e.type}:${String(e.payload.effect_id ?? e.payload.topic ?? e.payload.actor_id ?? "")}`);
+    expect(kept).toEqual(["run.started:", "actor.spawned:o0", "actor.spawned:o0.a1", "actor.spawned:o0.a2", "effect.started:f1", "msg.sent:book.result"]);
+  });
+
+  it("is persistent: a view keeps its own events when the fold goes on", () => {
+    const s = run();
+    let rows = emptyRecorded();
+    const seen: number[] = [];
+    const views: (typeof rows)[] = [];
+    for (let i = 0; i < 150; i++) {
+      s.emit("contract.dispatched", "o0", { goal_id: "g", contract_id: `c${i}`, attempt: 0, assignee: "o0.a1", idem_key: `k${i}` });
+      rows = record(rows, s.events[s.events.length - 1]);
+      views.push(rows);
+      seen.push(recordedEvents(rows).length);
+    }
+    expect(seen).toEqual(Array.from({ length: 150 }, (_, i) => i + 1));
+    expect(recordedEvents(views[10])).toHaveLength(11); // unchanged by the 139 events after it
+    expect(recordedEvents(views[70])).toHaveLength(71); // across a chunk boundary
+  });
+
+  it("is the same whether folded whole or resumed from a snapshot", () => {
+    const s = crashedWithWait();
+    const half = s.events.length >> 1;
+    const whole = foldEvents(s.events);
+    const resumed = foldEvents(s.events.slice(half), foldEvents(s.events.slice(0, half)));
+    expect(recoveryAt(resumed.arena.recorded, 30_000)).toEqual(recoveryAt(whole.arena.recorded, 30_000));
+  });
+});
+
+function crashedWithWait(): Stream {
+  const s = run();
+  created(s.at(1000), "g1", "c1");
+  s.at(10_000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 0, lost: [], restart_in_ms: 5000 });
+  s.at(15_000).emit("baseline.restarted", "o0", { coordinator: "o0", crash: 1, redo: [] });
+  dispatched(s.at(16_000), "g1", "c1", 1, "k1");
+  asked(s, "o0.a1", "e1", "k1:1");
+  answered(s, "e1", "k1:1");
+  return s;
+}

@@ -1,8 +1,7 @@
 // Which controls a person can use right now, and why not when they cannot.
 //
-// A control acts on a live run, and only where the server really does it: today chaos, approve and
-// new task answer 501 (api/app.py `not_wired`), so their buttons must not look usable. Two things
-// decide it:
+// A control acts on a live run, and only where the server really does it: a server that predates a
+// control does not have it, so its button must not look usable. Two things decide it:
 //
 //   - the run's status in the catalog (`running` is live; a recording, a halted or an interrupted
 //     run is not), and

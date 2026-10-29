@@ -9,14 +9,15 @@ Branch `Yoelcanarion/arena-ui-core`. Web only: no Python was touched.
 | 1 Tokens and theme | done |
 | 2 Fonts and icons, offline | done (bundle not yet checked for network use: needs a build slot) |
 | 3 Store factory, shared clock, fixed step | done |
-| 4 Reducer additions | done, checked against `takeover.analyze` on 3 real runs |
+| 4 Reducer additions | done, checked against `takeover.analyze` on 3 real runs and against W1's `bench/recovery.py` on 4 (see Arena counters) |
 | 5 Motion | done; frame times measured, relative numbers only, the 60 fps budget is not met (see Frame times) |
 | 6 Controls state | done |
 | 7 Shared components | done: `Stat`, `ModelBadge`, `Card`, `Skeleton`, `Tooltip`, `ThemeToggle` |
 | 8 Proof surfaces | done: timeline marks, replay badge, takeover chip (against `GET api/runs/{id}/takeover`, 404 fallback) |
 | 9 Muse lens | done: drawer, Muse meter, fixtures from two recorded runs (W3's API is merged) |
 | Build, screenshots, checks | done (see Checks and Screenshots) |
-| Frame times, absolute | pending a quiet window |
+| Answer buttons (Escalations panel) | done: in the bundle, and clicked in a real browser on a real server (see The GO window) |
+| Frame times, absolute | done in the quiet window of Oct 29 (19:23-19:27 CET): see Frame times; the 60 fps budget is not met |
 
 ## For W5: what to build on
 
@@ -77,26 +78,49 @@ Nothing here adds a field to an event payload; every read is tolerant of a missi
 The W1 and W3 shapes are the ones in their briefs. If they change, tell me and I adjust the readers.
 
 ### Arena counters (`arenaCounters(view, nowMs)`)
-Display values, as a pure fold. The official numbers are Python's (`/api/runs/{id}/metrics`).
+Display values, as a pure fold. The official numbers are Python's (`/api/runs/{id}/metrics`). Two of the counters are ports of the
+scored definitions (`lib/recovery.ts`, Oct 29 evening) and end on the scored number, to the millisecond; the others approximate, and
+the table says which.
 
 | Counter | Definition |
 |---|---|
 | `coordinatorCrashes` | one per `kill_coordinator` fault, or per `baseline.crashed` that no fault explains |
 | `coordinatorDownMs` | per crash a window: a supervisor's crash → restart; the swarm's kill → last `ownership.remapped`/`tree.adopted`/`member.dead` for the victim. An open window grows with `nowMs` |
-| `idleAgentMs`, `idleAgentsNow` | agents that are alive (or stopped by the crash and waiting for the restart), have no LLM call in flight, and answer to a coordinator that is killed or restarting. A member the detector declared dead with no kill (a false death) does not count. Approximates "idle agent-seconds", which also needs a blocked contract |
+| `idleAgentMs`, `idleAgentsNow` | agents that are **alive**, have no LLM call in flight, and answer to a coordinator that is killed or restarting. An agent that a crash stopped is gone (the supervisor's restart respawns it and its work is redone), not idle: since Oct 29 evening it no longer counts, because `bench/recovery.py` scores the central and the pipeline baseline 0.0. A member the detector declared dead with no kill (a false death) does not count. Approximates "idle agent-seconds", which also needs the agent's session to have work waiting on the coordinator |
 | `redispatches` | `contract.dispatched` of work rejected as `lost`, or of an `idem_key` sent before |
-| `duplicatedCalls` | LLM calls cancelled and then redone (same request again, or the agent's contract dispatched again), plus completed calls whose request was already paid for |
+| `duplicatedCalls` | **the scored `dup_calls`** (`lib/recovery.ts`, a port of `_fates`): a call of an attempt that a later attempt of its contract replaced (once that one is verified), an own call (`plan\|`, `judge\|`, `scan\|`) asked again once the later one has completed, and a completed call whose request was already paid for. A failed call (`error`, `refused`) is never one |
+| `dependencyMs` | **the scored coordinator-dependency time `cdt_s`** (a port of `_items`, `_outages`, `_Owners` and the run-level overlap): the contract-time that work spent waiting (dispatch, result, judge, booking, plan, a lost own call) while the coordinator that owned its goal was down. "So far" is the scored analysis of the log up to the playhead, so it moves when a wait *ends*, not while it goes on |
 | `costUsd`, `hardViolations` | `budget.settled` summed; the schedule check once it lands |
 
-**Check against Python (`verify/takeover.py::analyze` on copies of three recorded runs):** equal on every run.
+**Superseded check (`verify/takeover.py::analyze`, the first version of the duplicated-calls counter):** the fold was equal to it on three
+recorded runs (duplicated calls 27 / 5 / 3 for central, pipeline, swarm). That is an older and narrower definition than the one
+`bench/recovery.py` scores (42 / 5 / 13), so the counter now follows the scored one (below). `arena.real.test.ts` keeps the headline
+numbers of each run and skips itself where the runs are not on disk.
 
-| Run | crashes | duplicated calls | contracts dispatched again |
-|---|---|---|---|
-| `t2-real-c3-central-seed1` | 5 / 5 | 27 / 27 (5 by request + 22 by contract) | 22 / 22 |
-| `tmp-pipeline-c3` | 5 / 5 | 5 / 5 | 5 / 5 |
-| `t2-real-c3-swarm-seed1b` | 5 / 5 | 3 / 3 | 2 / 2 |
+**Check against W1's scored metrics (`bench/recovery.py::analyze`, what `/api/runs/{id}/metrics` serves as `recovery`), on four
+logs, `arena.parity.test.ts` with `lib/fixtures/recovery-official.json`.** The scoreboard shows the fold while a run plays and the
+scored number once it ended, so where they differ a figure jumps at the last event:
 
-`arena.real.test.ts` keeps these numbers and skips itself where the runs are not on disk. The parity test against W1's metrics waits for W1's fixture.
+| Counter | demo-backup (swarm, committed) | central | swarm-c3 | pipeline-c3 | Verdict |
+|---|---|---|---|---|---|
+| crashes | 5 / 5 | 5 / 5 | 5 / 5 | 5 / 5 | equal |
+| outage windows (crash outages) | identical to the ms | identical | identical | identical | equal |
+| contracts sent again / `lost_redispatches` | 0 / 0 | 22 / 22 | 2 / 2 | 5 / 5 | equal |
+| idle agent-seconds / `idle_agent_s` | 14.08 / 9.44 | 0 / 0 | 26.56 / 26.56 | 0 / 0 | equal, except the demo, where the fold is above: the scored one also needs the session to have work waiting. (Before the fix of the evening it said 170.7 for central and 25.0 for pipeline: it counted the agents the crash stopped.) |
+| duplicated calls / `dup_calls` | 11 / 11 | 42 / 42 | 13 / 13 | 5 / 5 | **equal** since the port (it was 0 / 27 / 3 / 5: the old fold had no notion of work redone after a rejected verdict or of an attempt a later one replaced) |
+| `dependencyMs` / `cdt_s` (coordinator-dependency time) | 4.719 / 4.719 | 135.587 / 135.587 | 26.564 / 26.564 | 99.0 / 99.0 | **equal** since the port, to the millisecond |
+| waits it is made of / `blocked_total_s` | 5.532 / 5.532 | 135.587 / 135.587 | 28.797 / 28.797 | 985.582 / 985.582 | equal |
+| outage window (`coordinatorDownMs`) / `cdt_s` | 23.67 / 4.72 | 25.11 / 135.59 | 30.85 / 26.56 | 25.00 / 99.00 | **not the same quantity**, and the test says so: the window is the length of the outage, `cdt_s` is contract-seconds of waiting inside it. A row named "Coordinator-dependency time" must read `dependencyMs`; `coordinatorDownMs` is the outage length |
+| every prefix of the log, 413 of them | equal | equal | equal | equal | `analyze()` run in Python on `events[:k]` (k at every 5 %, and just after each crash, restart, chaos fault, takeover and completed goal) against `recoveryAt` after the first k events; the fixture holds the Python numbers |
+
+So: crashes, outage windows, re-dispatches, duplicated work and coordinator-dependency time are what the scoring says at every event
+of the four logs; the one counter that still differs is the idle agent-seconds of the demo (above the scored figure, which needs the
+session to have work waiting). W5's `rows.ts` can now feed the "Coordinator-dependency time" row from `counters.dependencyMs` instead of
+`coordinatorDownMs` (their row is named for what it shows until they do).
+
+Cost (`recoveryAt`, 14,047-event swarm log, 2,257 of them kept): the fold adds about 1 ms per 200 events (it keeps the few events the
+figures read, as a persistent list); the first read after a change takes 7 ms, a repeat read 0.03-0.15 ms; folding 200 events and
+reading the counters again takes 1.7 ms.
 
 ## Deviations
 - Statuses: `"restarting"` is a new `ActorStatus`; `Counters` shows "down" (killed, dead or restarting) instead of "killed / dead".
@@ -306,10 +330,34 @@ any screenshot yet** (it shows nothing on a 404). It is to be shot against the r
   `lib/api.test.ts` covers these.
 - The schedule grid's clock scope writes `--now` only while a ruling mark fades (see frame times).
 
-### Frame times (`t2-real-c3-swarm-seed1b`, 14,047 events, 20x): **absolute numbers pending a quiet window**
-Everything below was measured between about 13:15 and 13:40 CET. Yoel opened the UI at 13:13, so the machine was not quiet
-(his browser, a second server, under 2 GB free). Read these as **relative** numbers; the absolute ones are to be taken
-again when the coordinator says the machine is quiet.
+### Frame times (`t2-real-c3-swarm-seed1b`, 14,047 events, 20x)
+
+**The quiet window of Oct 29, 19:23-19:27 CET (the numbers to quote).** Same harness as below (`pw/compare.mjs`, not in git):
+Playwright Chromium 130, headless 1920x1080, software rendering (SwiftShader), a generic `requestAnimationFrame` logger, the seven
+variants taken in turns, one warm-up pass, three counted rounds; nothing else of mine was running. Medians (per round in brackets);
+style and script are % of wall time:
+
+| Variant | fps | p95 frame | style | script |
+|---|---|---|---|---|
+| Phase 1 UI (`before`) | 44.3 (44.2 / 44.3 / 45.9) | 33.4 ms | 31 | 28 |
+| Phase 2, before the clock fix (`old`) | 33.3 (31.7 / 33.3 / 34.1) | 50.0 ms | 40 | 27 |
+| Phase 2, this build (`new`) | 37.3 (36.3 / 38.3 / 37.3) | 33.4 ms | 33 | 30 |
+| `new` with `?lite=all` | 39.6 (37.3 / 39.6 / 40.5) | 33.4 ms | 31 | 32 |
+| `new` with `?lite=anim` | 36.7 (36.4 / 36.7 / 38.3) | 33.4 ms | 33 | 30 |
+| `new` with `?lite=filter` | 37.4 (37.4 / 36.6 / 39.6) | 33.4 ms | 33 | 30 |
+| `new` with `?lite=shadow` | 40.5 (38.2 / 40.5 / 43.1) | 33.4 ms | 31 | 30 |
+
+Reading: **the clock fix is real** (33.3 -> 37.3 fps; p95 50 -> 33.4 ms; frames over 34 ms in round 1: 21 of 220 -> 9 of 252).
+**Of the three lite parts only `shadow` moves the number** (about +3 fps, up to 43 in round 3); `anim` and `filter` alone are inside
+the round-to-round spread (about +/-1.5 fps). All three together are no better than `shadow` alone. **The 60 fps budget is not met**
+(software rendering; the main thread is busy 96-100 % of the wall time in every variant), and the Phase 1 UI is still about 7 fps
+faster than this build: the gap is the extra DOM per frame (run strip, lens buttons, node buttons) and the style recalculation it
+causes. `lite_check.mjs` confirmed beforehand that each `?lite` part changes the computed style it names (`animation-name`
+`dashdraw` -> `none`; `filter` `drop-shadow(...)` -> `none`; `box-shadow` of the 4 px ring -> `none`; all three together). Whether
+`shadow` is worth the loss of the takeover rings is for the coordinator; nothing turns it on.
+
+**The first measurement (Oct 29, 13:15-13:40 CET; superseded by the one above).** Yoel opened the UI at 13:13, so the machine was
+not quiet (his browser, a second server, under 2 GB free). Those are **relative** numbers, kept for how they were found:
 
 Harness (not in git; `scratchpad\pw\compare.mjs`): Playwright Chromium 130, headless, 1920x1080, software rendering
 (SwiftShader), a generic `requestAnimationFrame` logger injected into both builds, the browser's own CPU counters, the
@@ -340,13 +388,9 @@ tested). The tree's scope still writes every frame; switching it off changed not
 `--now` only on the elements that fade, and dropped it: an element React creates while the clock is paused (after a seek)
 would never get it and would stay fully lit, whereas an inherited value is always right.
 
-**The fix itself is not measured yet** (the run that would have measured it was cut by the release request), and the
-screenshots predate it. Expected: back to the "grid switched off" row, about 24 fps, still **below Phase 1 (31 fps in the same
-harness) and far below the 60 fps of the brief**. So the budget is **not met**, and it was not met by the Phase 1 UI either.
-Suspects not yet tested, with toggles ready in `compare.mjs` (`new-noanim`, `new-nofilter`, `new-noshadow`): the animated
-edges (React Flow animates `stroke-dashoffset` on the main thread; at 20x they are lit almost all the time), the
-`drop-shadow` filter on talking edges, the card shadows; and the extra DOM per frame of the run strip, the lens buttons and
-the node buttons, which is the rest of the gap to Phase 1.
+**The fix itself was measured in the window** (the table at the top): `old` 33.3 -> `new` 37.3 fps. The suspects (the animated
+edges, the `drop-shadow` filter on talking edges, the card shadows) were tried as the product's `?lite` switch: only the shadows
+matter. The rest of the gap to Phase 1 is the extra DOM per frame of the run strip, the lens buttons and the node buttons.
 
 ### Deviations (this part)
 - `VerifyBadge` moved from the top bar into the run strip (same component, same behaviour).
@@ -356,8 +400,211 @@ the node buttons, which is the rest of the gap to Phase 1.
   stop per node.
 - The 60 fps budget of step 5 is not met (see above); reported, not hidden.
 
+### Lite motion switch (in the bundle since the build of the Oct 29 evening window)
+The coordinator asked for the three CSS toggles as one switch, so the quiet window needs one build. `lib/lite.ts` and
+`styles/lite.css`: `?lite=all`, or `?lite=anim,filter,shadow`, in the query string or in the hash query, sets
+`<html data-lite="...">`. It is off by default and changes nothing without the attribute. Parts:
+- `anim`: the dashed-line animation of the lit edges (React Flow moves `stroke-dashoffset` on the main thread);
+- `filter`: the `drop-shadow` glow of a talking edge (the edge keeps its colour and width);
+- `shadow`: the `box-shadow` rings of the nodes and the colour easing of their state changes.
+
+The rules out-rank the ones they switch off by specificity (no `!important`), and a page can flip the parts while it
+runs by setting the attribute. `lite.test.ts` keeps the part list and the CSS in step (every part has a rule, every rule
+is keyed on a part). **A trade, not a free win:** with `shadow` the adopted and restarted rings, the cue for a takeover,
+are not drawn, and with `anim` the lit edges keep their dashes but stop moving. Whether any part is worth it, and
+whether it should switch on by itself at a high speed, is for the measurements and the coordinator; nothing turns it on.
+Measured in the window: only `shadow` moves the frame rate (about +3 fps); see Frame times.
+
+### Since the resume (Oct 29 evening; arena merged into this branch at f0ee8bb, from afcf732)
+No plan by days any more (Yoel): each item as soon as its inputs exist.
+
+**Live control in the UI (518653e).** W2's routes answer 200 for `kill_half`, `kill_agent` and an approval, 422 for `api_storm`
+and `net_fault`, 409 for a run that cannot take controls; every refusal is `{"error": reason}`, which `postControl` already
+read into `detail`. So:
+- the dead "Not wired yet" text is gone from the chaos panel, the plan view, the run controls and the new-task form (none of
+  those routes answers 501 now; the only 501 left is W3's real-ablation route, which no component of mine calls), and the
+  comments that said "answers 501" say what the routes do;
+- a refused chaos kind shows the server's own words ("api_storm cannot be injected into a running run: it is part of the chaos
+  plan a run starts with; live kinds are kill_half, kill_coordinator, kill_agent"), not a copy of them in the UI;
+- an approval or a rejection is built by `approveBody(proposal, approve, reason)` (`lib/plan.ts`): it names the plan on screen by
+  its `plan_hash`. That is the `plan_hash` of the latest `plan.proposed` for the goal (the fold keeps the latest), which the
+  runtime logs as the scope token and compares with the control's (`actors/orchestrator.py`, the plan hold), so when the root dies
+  holding the plan and its heir proposes another, a click on the old one cannot approve the new one. A rejection carries its
+  reason (the planner's feedback); an approval carries none. A plan with no hash (an older log) is sent without one;
+- `kill_half` no longer sends `profile: "C3"` (the server ignores it);
+- tests: `approveBody` (plan.test.ts, including the heir's new hash) and `postControl` against W2's real refusal texts (api.test.ts).
+Not done, not asked: an answer UI for an escalation (`POST /api/runs/{id}/escalations/{eid}` with `{choice}`): no component of mine
+posts it (the panel now shows the window, the options and the verdicts; see "Escalations" below).
+
+**The New task form (33cf10b), found by W5.** `POST /api/tasks` takes `{spec, scenario?, chaos?, clock?, speed?, backend?, run_id?,
+budget_usd?, ...}` with extra keys forbidden (`api/jobs.py` `TaskRequest`), and the form posted the bare TaskSpec, so every launch
+was a 422 (`spec: Field required`). Now it posts `{spec, backend: "fake"}` (`taskLaunchBody`, `lib/taskspec.ts`: the type allows no
+other backend, so a billed run cannot start from this form; scenario, chaos and clock are the server's defaults: swarm, C0, the
+simulated clock). The answer is `launchTask` (`lib/api.ts`): the run it started, linked (`#/run/<id>`, or `/plan` when the form
+asked for a person's approval), the warnings of the launch, or the server's own reason for a refusal (409 used run id, 422 spec or
+input, 429 at 8 active jobs, 503 without a private directory; FastAPI's own list of problems is read too). The default form now
+carries `fixture: tasks/fixtures/t2/seed-1` (the server refuses a conference task with no input), and a conference task with none
+is told so by the form before the request. Removed: the "Or upload a TaskSpec YAML" box, which posted `{yaml}` (the Day 7 fallback
+for a server that parses YAML text; none does, so it could only 422), and the stale hint under the YAML. Checked against the real
+`parse_request` on eight shapes of the form (default, manual approval, autoscale, contributor, t3 report, poison, generate_seed,
+seed 4): all accepted wrapped, all refused bare. Tests: `taskspec.test.ts`, `api.test.ts` (the 202 of the API reference, each
+refusal), `NewTaskForm.test.ts` (render of the answer).
+
+**Escalations (5df8812), found by W3.** `foldHuman` closed an escalation on every `escalation.answered`; W3's answer path logs a
+verdict for each answer, and an ignored one (not an option, a second one, too late, an unknown id) has `accepted: false` and leaves
+the escalation open. It now closes only on an accepted answer (an answer with no `accepted` field still closes: the shape the panel
+was built on), keeps the ignored ones with their `reason`, and reads what `escalation.opened` carries (`question`, `options`,
+`default`, `timeout_ms`). `escalationState(h, nowTs, ended)` gives `waiting | answered | overruled | expired | closed` the way
+`GET /disputes` does (an answer given at the last millisecond of the window is in time), and `timeLeftMs` is `deadline - nowTs` in
+the run's **virtual** time (`ViewState.lastTs`), never the wall clock. The Escalations panel says which, and why: "needs a human" only
+while the window is open (with the options, the ruled label and the time left), "confirmed", "overruled (a person chose A over B)",
+"expired (nobody answered in time; B stands)", "closed (the run ended before anyone answered)", and each ignored answer with its
+reason. The "5 · human" count is the escalations that are waiting. Tests: `escalations.test.ts` (fold and selectors),
+`EscalationsPanel.test.ts` (render). The answer buttons came after (see Answer buttons).
+
+**Counters against W1's metrics (f39f0e2).** See "Arena counters" above: the fold no longer counts an agent that a crash stopped as
+idle, and `arena.parity.test.ts` pins the four logs beside the scored numbers.
+
+**`rootHolder` (849f9ea), found by W5.** The reducer gave `duties: ["root"]` to every actor spawned with no parent: `board`,
+`net` and `chaos` too, which every run spawns that way, so `rootHolder` answered `chaos` even on a run that never lost its root,
+and a real root takeover (an `ownership.remapped` of the key `root` with no `duties`) never moved it: the ROOT tag of the tree
+was never on the real root. Now `rootHolder` is the owner of the `root` key (it stays with a dead owner until its heir takes over),
+else the root actor (the parentless actor that is not infrastructure); infrastructure never gets the duty; the heir of a root
+remap gets `root` in its `duties`. `ViewState` keeps its shape. Checked on three real logs: `demo/backup` (committed; o0 -> o1 ->
+o2 -> o3 at events 4538, 5722, 6856, and no other change), `t2-real-c3-swarm-seed1b` (one remap, o0 -> o0, a reclaim) and
+`t2-real-c3-central-seed1` (no remaps); W5's `rootOf` (arena/board.ts) gives the same answer as `rootHolder` at every event of
+the three, so it works unchanged before and after the merge. `rootHolder.test.ts` (13 tests; 11 fail on the old reducer).
+Visible: the ROOT tag now shows on o0 and follows the heirs. W5 was told (msg_5c7e799aa147).
+
+**Prepared for the window (scratch, not in git):** `pw/proof.mjs` (chip against the real `/takeover`, the badge against the
+real `/verify` behind the guard including a bare POST that must get 415, and the ROOT tag at events 10, 4537, 4538, 5722, 6856
+and the end of `demo-backup`), `pw/form.mjs` (the New task form on the real server: the default inputs, the missing-input message,
+Submit to a 202 with `{spec, backend: "fake"}`, the link to the run, the job ending, Replay verified on the run it left) and
+`pw/live.mjs` (a fake-LLM run launched through the API with `auto_approve` off, driven through the UI: the two 422 reasons, Approve
+with the hash, Kill half, Verify replay after the run ends; then a second run whose root is killed while it holds the plan, to see
+the heir's new hash reach the approval). All three ran in the window; results below.
+
+### Answer buttons (Escalations panel; the coordinator's second light item)
+For each human escalation that **waits** (`escalationState === "waiting"`, at the virtual time the log has reached) the panel shows
+a button per option (`item.options`; the ruled label reads "B (ruled)"). It does so only on a run page: `EscalationsPanel` takes the
+`runId` from `PanelsPage`, and a view with no run behind it only shows. With no options there is a line saying so, not a guess.
+
+A click sends `POST api/runs/{id}/escalations/{eid}` with `{choice}` and nothing else (`answerEscalation`, through `postControl`; the
+server reads the goal from its log). The line under the buttons (`AnswerStatus`, `role="status"`) is the server's own words, as
+`postControl` reads them: 200 "answer to {eid} requested for {goal}"; 409 "run '{id}' was not launched to take controls: start it from
+the API"; 422 "choice is required: what the person decided" / "the escalation id is not valid"; 404 "no escalation '{eid}' in run
+'{id}'". A refusal is drawn like the chaos panel's (`chaos__result--bad`).
+
+The server only *requests* the answer: the goal's owner takes it or ignores it on its next turn, and the verdict is the
+`escalation.answered {accepted, overruled, reason}` in the log. So after a 200 the box **reads the verdict back** from
+`GET api/runs/{id}/disputes` (`fetchDisputes` and `lib/disputes.ts`) at 0.4, 1.4, 3.4 and 7.4 s, and says "accepted: A overrules B",
+"accepted: B confirms B" or "not accepted: {the owner's reason, as it logged it}"; "no verdict in the log yet" if none arrives. Only an
+answer newer than the last one the panel had seen when the person clicked (`seq`) counts, and only the escalation that was answered.
+If the live stream brings the verdict before the poll does (or after it gave up), the box shows the one in the page's own copy of the
+log (`withLoggedVerdict`), so it never says "no verdict" under a row that already reads "overruled".
+A server that has no `disputes` view (404) or does not answer ends the reading without a verdict, not with an error. Buttons stay
+disabled while an answer is in flight, so a verdict is never read for the wrong click; once the escalation closes (an accepted
+answer, the window passed, the run ended) the buttons go and the line stays, to say how the last answer went.
+
+Tests: `disputes.test.ts` (reading the view; the verdict wording; `sendAnswer` against a stand-in server: a refusal reads nothing back,
+a 200 finds its verdict at the right look, an ignored answer gives its reason, another escalation's answers are not mixed in, it
+gives up, 404, the caller gone), `AnswerBox.test.ts` (buttons, ruled mark, no options, nothing once closed; the status line for a
+pending request, each verdict and the 409/422/404 refusals), `EscalationsPanel.test.ts` (buttons only with a `runId`, only while it
+waits, still there after an ignored answer), `api.test.ts` (route and body with the ids escaped; the refusal words verbatim;
+`fetchDisputes`).
+Checked in a real browser on a real server in the GO window of Oct 29 evening (see The GO window): a 200, the owner's verdict read
+back, a 409 in the server's words.
+
+### The quiet window (Oct 29: GO 19:21; my session was down 19:30-20:07 on a network error; finished 20:15)
+One build, a server on scratch dirs on port 8794, one headless Chromium at a time, fake backend only ($0), nothing written to
+the repo but these notes and the bundle. The server and every browser were stopped at 20:15; the 7 fake-LLM jobs of the window
+had all ended (one cancelled by me).
+
+| Script | Result |
+|---|---|
+| `npm --prefix web run build` | 4.6 s at tree `46c524e`; `index-CKgXM_1N.js` 1,015 kB (310 kB gzip), `index-Cnh2QwWT.css` 69 kB; `favicon.svg` restored. The answer buttons are not in it |
+| `lite_check.mjs` | each `?lite` part changes the computed style it names (see Frame times) |
+| `final.mjs` | 6 shots, all publishable (no MISMATCH badge), 0 errors: `final-demo-end`, `final-demo-lens-facts`, `final-demo-lens-facts-light`, `final-demo-lens-inflight` (1920x1080), `final-clip-actor`, `final-clip-cancelled` (720x827 clips of the lens drawer) |
+| `compare.mjs` | the table at the top of Frame times |
+| `proof.mjs` | 15 of 15: the takeover chip says "Takeover OK ✓ 7 hand-overs" against the real `GET /takeover` (5 kills, 7 takeovers, 0 violations); the app's own `POST /verify` is JSON and gets 200, a bare POST gets 415; the ROOT tag sits on one node at every step and moves o0 -> o1 -> o2 -> o3 at events 4538, 5722, 6856 of 8177 |
+| `form.mjs` | 15 of 15: the default input `fixture: tasks/fixtures/t2/seed-1`; no YAML upload; Submit waits for a goal; the missing-input message; `POST /api/tasks` gets 202 with exactly `{spec, backend: "fake"}`; the answer links the run; the job completes (6,698 events); the link opens the run and Replay verified; near its end the tree shows 22 actors |
+| `live.mjs` | 14 of 14 (run 1: 10, run 2: 4): `api_storm` and `net_fault` show the server's own 422 words; Approve sends `plan_hash` and gets 200 ("approved by human"); Kill half = 5 chaos actions; Verify replay gets 200 and ends in Replay verified; the log holds one `approve` and five `chaos` controls. Run 2: o3 takes the `root` key (`ownership.remapped`, seq 1643, 24.4 s) and proposes the plan again (seq 1854, 31.1 s); the plan page shows it awaiting approval and the approval names its hash |
+
+Shots, all in the scratchpad (not in git): `win-final/` (the 6 above), `win-proof/` (`proof-runstrip-demo` 1920x53,
+`proof-root-at-4538`, `proof-root-at-end`), `win-form3/` (`form-input-missing`, `form-started`, `form-run-opened`), `win-live2/`
+(`live-1-plan-awaiting`, `live-1-chaos-422`, `live-1-plan-approved`, `live-1-chaos-kill-half`, `live-1-verified`,
+`live-2-plan-heir`, `live-2-plan-approved`).
+
+Found in the window:
+- **Script bugs of mine, not app bugs** (fixed in the scratch scripts): `form.mjs` expected nodes at event 0 (a finished run opens
+  paused at its first event, where the tree is still empty: "Waiting for the first actor to spawn") and navigated by hash alone,
+  which does not re-read `?at=`; `live.mjs` expected the heir's plan to carry another hash.
+- **The heir's plan has the same hash as the first one on a fake run** (`scope-1b3d2f26e494...` both times): the fake planner is
+  deterministic. So "the approval names the heir's plan, not the first" cannot be told apart by hash on a fake run; what the run
+  shows is that the heir proposes again after the takeover and holds again, and the approval names the hash of the latest
+  `plan.proposed`. A real planner that answers differently would make the two hashes differ.
+- A run launched from the New task form opens, from its link, at event 0 with an empty tree until Play (or `?at=`). That is how every
+  finished run opens; mentioned because the form's answer says "Started run ...", and a fast fake run is finished by the time it is clicked.
+- My first `live.mjs` left its second job running (waiting for approval for ever) after the script failed; I cancelled it
+  (`POST /api/jobs/{id}/cancel`) and the script now cancels a job it leaves behind.
+
+### The GO window (Oct 29 evening, 21:26-21:37 CET): build, tests, references, the answer buttons on a real server
+**Merge first.** arena `a6db325` (W5 MP1, W1's matrix, notes) is merged into this branch (`5d9c80b`). Only the static bundle conflicted
+(two builds of the same sources, two hashes); it was arena's until the rebuild below. `web/src` merged clean.
+
+| Step | Result |
+|---|---|
+| Build at tree `3a14838` (21:26) | vite 2.9 s, 6.5 s with `tsc`. `index-B9ApM25o.js` 1,205 kB (368 kB gzip), `index-CJ0yU3pF.css` 113 kB (22 kB gzip): W5's arena views are in it, which is the growth from 1,015 kB. `favicon.svg` restored |
+| tsc, vitest (one worker) | clean; 71 files / 1,122 tests |
+| `tests/integration/test_api.py` + `test_guard.py`, `ruff check` | 87 passed (10 s); all checks passed |
+| `demo --verify --no-serve --no-browser` | MATCH, 8,177 events, head `b052b4bc33cf` |
+| `$0` references vs `arena-c2b5e08` (`record_refs.ps1` then `compare_refs.py`, 2.5 min) | **43 of 43 runs have identical event bodies** (11 runs + 32 bench cells) |
+| The buttons on a real server (`pw/answer.mjs` and `esc/escalate.py`, scratch; 8794, one browser) | 15 of 15, below |
+| A second build (21:36), after the `lcrow` fix below | vite 0.8 s, 2.4 s with `tsc`: `index-CuucwkCz.js` 1,205 kB, `index-DDb34IoW.css` 113 kB. This is the bundle in the tree. vitest 72 files / 1,126 tests |
+
+**The answer buttons, clicked.** No recorded run holds an escalation, and a live one needs the scripted backend of
+`tests/integration/test_escalation_answer.py` (a forced dispute on S02, an arbiter that rules with confidence 0.4, the blurbs 50 s
+late so the run outlasts the time to answer). `esc/escalate.py` (scratch, not in git) records that run on the live clock (speed 2) into
+the scratch runs dir, once with `live_control` on and once off; the server finds it like any run. Fake LLM only, $0.
+- **Run A (takes controls; the ruling is B).** The panel shows "needs a human ... options A, B (ruled: B) · 58.5 s left" and the
+  buttons "A" and "B (ruled)". A click on A sends `POST /api/runs/{id}/escalations/arbitration%3Aspeaker%3AS02%3Aavailability` with
+  `{"choice":"A"}` and gets 200; the line reads "A: answer to arbitration:speaker:S02:availability requested for goal:root · asking
+  the server how the owner took it…", then "· accepted: A overrules B". The poll of `GET /disputes` came 451 ms after the request
+  (200). The row reads "overruled ... a person chose A over B", the buttons are gone, the line stays. The log holds one answer:
+  accepted, overruled, by human, reason "overrules B with A". No console error, page error or 404.
+- **Run B (not launched to take controls).** The same click gets 409 and the line is the server's own words: "A: run 'ui-ans-b-...' was
+  not launched to take controls: start it from the API". Nothing is read back from `/disputes` (0 requests in 6 s), and the buttons
+  stay, enabled: the escalation still waits. The browser logs its own "Failed to load resource ... 409" line, nothing else.
+- My first pass said 14 of 15: the script counted the `/disputes` requests at the instant the verdict showed, but the stream had
+  brought the verdict before the poll's first look at +0.4 s (the fallback of `withLoggedVerdict`: the box shows the verdict in the
+  page's own copy of the log). The look still comes; the script now waits for it. Not an app fault.
+- Shots (scratch): `win-answer2/answer-a-waiting`, `answer-a-verdict`, `answer-b-refused` (1920x1080).
+
+**Found by the click: two stylesheets, one class name.** The screenshot of the Panels page showed the Collisions card with a
+collision key wrapped one character per line. The Muse lens's call rows (`components/lens/CallList.tsx`, `styles/lens.css`) and the
+Collisions panel's rows (`components/CollisionsPanel.tsx`, `styles.css`) were both `crow`; the lens's `display: grid` won, so a
+collision row laid out as a call row (the key in a zero-width track). It has been so since step 9 and no check looked at a collision
+row. Measured on the real page: the row was 366 px tall with the key 0 px wide; after the rename it is 99 px tall, the key one line.
+The lens rows are `lcrow` now (CSS, `CallList.tsx`, my scratch scripts). `styles/classnames.test.ts` keeps the lens's class names to
+itself: no class the lens's stylesheet starts a rule with may also start a rule in another stylesheet, except `run`, `timeline` and
+`actor`, which the lens adds a property or two to on purpose (a positioning context, a minimum height, a pointer; none of them is a
+property the base rule sets). The six lens shots were taken again after the rename (`win-final2/`, 0 errors, publishable): the drawer
+is pixel-identical to the earlier one by eye. Shot of the card: `win-crow/collisions-card.png`.
+
+### Plan for the quiet window (kept for the record; done above)
+1. `npm --prefix web run build` (about 4 s), restore `favicon.svg`.
+2. `lite_check.mjs` (scratch, not in git): opens the swarm run where edges are lit and reads the computed
+   `animation-name`, `filter` and `box-shadow` with and without each part, so a lite number is known to come from a switch
+   that changed something.
+3. `final.mjs`: the lens re-shoot (demo scenes as full frames, Phase 1 scenes as drawer clips, MISMATCH checked by the script).
+4. `compare.mjs`, variants taken in turns: `before` (Phase 1 UI), `old` (before the clock fix), `new` (this build),
+   `new-lite`, `new-lite-anim`, `new-lite-filter`, `new-lite-shadow` (the product switch in the same build), and the
+   injected-CSS variants as a cross-check. 3 counted rounds after one warm-up: about 10 minutes for 7 variants.
+5. `proof.mjs` (chip, Verify against the 415 guard, ROOT tag), `form.mjs` (the New task form end to end), then `live.mjs`
+   (the chaos panel and the approve flow on fake-LLM runs launched through the API), each on a server with scratch dirs.
+
 ### Still to do (needs a slot or a later merge)
-1. A quiet window: absolute frame times, the fix measured, the three CSS toggles tried; re-shoot the lens scenes on the
+1. (done in the window of Oct 29, see above) A quiet window: absolute frame times, the fix measured, the three CSS toggles tried; the lens scenes re-shot on the
    final build, using `demo-backup` wherever a badge is visible. **The app verifies a completed run as soon as it opens
    it** (`App.tsx` calls `runVerify`), so every scene on a Phase 1 run shows MISMATCH in the run strip, clicked or not;
    leaving Verify alone does not avoid it. `demo-backup` has no cancelled LLM call (its 10 `effect.cancelled` are not
@@ -365,7 +612,8 @@ the node buttons, which is the rest of the gap to Phase 1.
    (MATCH, with the new chip "Takeover OK ✓ 7 hand-overs"), the Phase 1 scenes as clips of the lens drawer, which leave the
    strip out. The scratch script `final.mjs` (not in git) enforces it: a shot whose region overlaps a MISMATCH badge goes
    to `internal/` and is marked `publishable: false`.
-2. (done, second slot) The static bundle is rebuilt for the chip fix of Oct 29.
-3. W2's merge is in arena (24995b5): the chip screenshot against the real endpoint (a server on scratch dirs; the demo
-   bundle shows "Takeover OK ✓ 7 hand-overs" with MATCH), and a run of the Verify button against the guard. Both come
-   with the quiet window, after the coordinator's combined merge.
+2. (done) The static bundle was rebuilt in the window (tree `46c524e`): the chip fix, the lite switch, the New task form, the
+   escalations panel and the dup/cdt port; and again in the GO window of the evening (arena merged, the answer buttons, the
+   `lcrow` fix: see The GO window).
+3. (done in the window) W2's merge is in arena (24995b5): the chip against the real endpoint ("Takeover OK ✓ 7 hand-overs" with
+   MATCH) and the Verify button against the guard (JSON 200, bare 415).
