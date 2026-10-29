@@ -20,6 +20,9 @@ export const REGIONS = {
   rival: region(ARENA, ".side--rival"),
   "swarm-head": region(ARENA, ".side--swarm .side__head"),
   "rival-head": region(ARENA, ".side--rival .side__head"),
+  // the verdict chip of each side: the takeover chip, and the supervisor's recovery chip
+  "swarm-proof": region(ARENA, ".side--swarm .side__proof"),
+  "rival-proof": region(ARENA, ".side--rival .side__proof"),
   heads: region(ARENA, ".side__head"),
   "swarm-board": region(ARENA, ".side--swarm .side__board"),
   "rival-board": region(ARENA, ".side--rival .side__board"),
@@ -31,7 +34,8 @@ export const REGIONS = {
   scoreboard: region(ARENA, ".score"),
   assumptions: region(ARENA, ".arena__assumptions"),
   // the run page
-  tree: region(RUN, ".run__tree"),
+  // the nodes themselves, not the panel they sit in: a camera on it fills the frame with the tree
+  tree: region(RUN, ".run__tree .react-flow__node"),
   schedule: region(RUN, ".run__grid"),
   meter: region(RUN, ".meter"),
   proof: region(RUN, ".runstrip__proof"),

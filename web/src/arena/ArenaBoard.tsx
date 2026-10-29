@@ -4,7 +4,8 @@ import { ADOPTION_LIFE_MS, fadeLife, glowVars, ringVars } from "../lib/decay";
 import type { Point } from "../lib/glide";
 import { colorOf } from "../lib/layout";
 import { useRunStore } from "../store";
-import { busyAgents, CHIP_H, CHIP_W, chipState, DOT, dotState, layoutBoard, rootOf, TEAM_PAD, type Box } from "./board";
+import { rootHolder } from "../lib/reducer";
+import { busyAgents, CHIP_H, CHIP_W, chipState, DOT, dotState, layoutBoard, TEAM_PAD, type Box } from "./board";
 import { useBoardPlaces } from "./useBoardMotion";
 
 const owner = (color: string): CSSProperties => ({ "--owner": color }) as CSSProperties;
@@ -40,7 +41,7 @@ export const ArenaBoard = memo(function ArenaBoard({ frame, label, rootLabel }: 
   const layout = useMemo(() => layoutBoard(view), [view]);
   const places = useBoardPlaces(layout);
   const busy = useMemo(() => busyAgents(view), [view]);
-  const root = rootOf(view);
+  const root = rootHolder(view);
   const at = (id: string): Point => places.get(id) ?? { x: 0, y: 0 };
   const colour = (id: string): string => colorOf(view, id);
 

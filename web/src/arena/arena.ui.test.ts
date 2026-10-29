@@ -18,7 +18,7 @@ import { readOfficial } from "./official";
 import { PairPicker } from "./PairPicker";
 import { Scoreboard } from "./Scoreboard";
 import { createPairSession } from "./session";
-import { call, crash, kill, restart, rivalStream, swarmStream, takeOver } from "./testing";
+import { call, crash, kill, ready, restart, rivalStream, sent, swarmStream, takeOver } from "./testing";
 
 const idle: FrameScheduler = { request: () => 1, cancel: () => undefined };
 
@@ -48,17 +48,22 @@ function api(logs: Record<string, RunEvent[]>): RunApi {
   };
 }
 
-/** A pair opened on a clock, at ``atMs``. The swarm lost o1 (adopted by o2); the rival lost its supervisor. */
+/** A pair opened on a clock, at ``atMs``. The swarm lost o1 (adopted by o2); the rival lost its supervisor. Each had a
+ * contract ready at 9 s that only went out at 15 s. */
 async function opened(atMs: number) {
   const swarm = swarmStream();
   call(swarm, "o2.a1", "e1");
+  ready(swarm, "g1", "o1", 9_000);
   kill(swarm, "o1", 10_000);
   takeOver(swarm, "o1", "o2", 14_000, 15_000);
+  sent(swarm, "g1", "o2", 15_000, "o2.a1");
   swarm.at(60_000).emit("run.completed", "@kernel");
   const rival = rivalStream(undefined, 4, { recovery_ms: 5000 });
   call(rival, "o0.a1", "e1");
+  ready(rival, "g1", "o0", 9_000);
   crash(rival, "o0", 10_000, 5000);
   restart(rival, "o0", 15_000);
+  sent(rival, "g1", "o0", 15_000, "o0.a1");
   rival.at(70_000).emit("run.completed", "@kernel");
   const session = createPairSession({ api: api({ s: swarm.events, r: rival.events }), clock: { scheduler: idle } });
   await session.open("s", "r", { atMs, speed: null, play: false });
@@ -180,9 +185,10 @@ describe("the scoreboard", () => {
     expect(count(html, "Rival")).toBe(7);
   });
 
-  it("counts the down time from the log while the pair plays", async () => {
-    const t = text(score(await opened(12_000)));
-    expect(t).toMatch(/Coordinator-dependency time .*? 2\.0 s Swarm 2\.0 s Rival/);
+  it("counts the coordinator-dependency time from the log as the metrics score it, while the pair plays", async () => {
+    // a wait counts when it ends: the contracts go out at 15 s, after 5 s of the coordinator being down
+    expect(text(score(await opened(12_000)))).toMatch(/Coordinator-dependency time .*? 0\.0 s Swarm 0\.0 s Rival/);
+    expect(text(score(await opened(16_000)))).toMatch(/Coordinator-dependency time .*? 5\.0 s Swarm 5\.0 s Rival/);
   });
 
   it("marks a number the metrics scored", async () => {

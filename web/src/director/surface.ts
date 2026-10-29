@@ -96,8 +96,22 @@ export function createDomSurface(parts: SurfaceParts): Surface {
     return boundsOf(elements.map((element) => rectOf(element.getBoundingClientRect())), rectOf(frame.getBoundingClientRect()), parts.scale());
   }
 
+  /** The hover text of the target: the first `title` on the elements or under them. It is the page's own wording. */
+  function titleOf(target: Target): string | null {
+    for (const element of elementsOf(target)) {
+      const carrier = element.hasAttribute("title") ? element : element.querySelector("[title]");
+      const words = carrier?.getAttribute("title")?.trim();
+      if (words) return words;
+    }
+    return null;
+  }
+
   return {
     screenRect,
+    titleOf,
+    // the layout size of what the camera moves (the stage and any band above it), which a transform does not change; a
+    // stage that overflows its frame is as tall as its content
+    bounds: () => ({ w: camera.offsetWidth, h: Math.max(camera.offsetHeight, camera.scrollHeight) }),
     contentRect(target) {
       const screen = screenRect(target);
       return screen === null ? null : contentRect(screen, applied);

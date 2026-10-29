@@ -8,6 +8,7 @@
 //   wait                       the program stops for some milliseconds of the take, or until the replay reaches a moment
 //   camera                     fit a node, a subtree or a panel, zoom, pan; or go home. Eased, and it does not stop the program
 //   highlight                  a ring around a node, a counter or a panel, for some milliseconds
+//   tooltip                    the hover text an element carries (its `title`), drawn next to it for some milliseconds
 //   caption                    a lower third, or a brief overlay, for some milliseconds
 //   lens                       open a call of the Muse lens, or close it
 //   panel                      show or hide a part of the page
@@ -59,6 +60,7 @@ export type Step =
   | { do: "wait"; ms: number | null; until: TimeExpr | null; timeoutMs: number | null }
   | { do: "camera"; fit: Target | null; zoom: number | null; pan: { x: number; y: number } | null; pad: number; ms: number; ease: Ease }
   | { do: "highlight"; target: Target; ms: number }
+  | { do: "tooltip"; target: Target; ms: number }
   | { do: "caption"; text: string; kicker: string | null; ms: number; style: "lower" | "overlay" }
   | { do: "lens"; open: string | null }
   | { do: "panel"; name: PanelName; show: boolean };
@@ -113,7 +115,7 @@ function readTarget(raw: unknown, where: string): Target {
 
 function readStep(raw: unknown, where: string): Step {
   const r = record(raw, where);
-  const kind = oneOf(r.do, ["seek", "play", "pause", "speed", "wait", "camera", "highlight", "caption", "lens", "panel"] as const, `${where}.do`);
+  const kind = oneOf(r.do, ["seek", "play", "pause", "speed", "wait", "camera", "highlight", "tooltip", "caption", "lens", "panel"] as const, `${where}.do`);
   switch (kind) {
     case "seek":
       known(r, ["do", "to"], where);
@@ -166,8 +168,10 @@ function readStep(raw: unknown, where: string): Step {
       };
     }
     case "highlight":
+    case "tooltip":
+      // A tooltip has no words of its own: it shows the ones the page carries, so a scene never retypes the UI.
       known(r, ["do", "target", "ms"], where);
-      return { do: "highlight", target: readTarget(r.target, `${where}.target`), ms: milliseconds(r.ms, `${where}.ms`, 200, 60_000) };
+      return { do: kind, target: readTarget(r.target, `${where}.target`), ms: milliseconds(r.ms, `${where}.ms`, 200, 60_000) };
     case "caption": {
       known(r, ["do", "text", "kicker", "ms", "style"], where);
       const words = text(r.text, `${where}.text`);
@@ -247,7 +251,7 @@ function check(scene: Scene): void {
       waits += step.ms ?? 0;
     }
     if (step.do === "camera" && step.fit !== null) targetOk(step.fit, `${where(i)}.fit`);
-    if (step.do === "highlight") targetOk(step.target, `${where(i)}.target`);
+    if (step.do === "highlight" || step.do === "tooltip") targetOk(step.target, `${where(i)}.target`);
     if (step.do === "panel" && !panels.includes(step.name)) bad(`${where(i)}.name`, `the ${stage} stage has no "${step.name}" to show or hide${panels.length > 0 ? ` (it has ${panels.join(", ")})` : ""}`);
   });
   for (const name of Object.keys(scene.panels)) if (!panels.includes(name)) bad(`scene.panels.${name}`, `the ${stage} stage has no "${name}" to show or hide`);

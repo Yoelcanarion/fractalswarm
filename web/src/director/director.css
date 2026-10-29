@@ -50,6 +50,21 @@ html.dir-on body {
   overflow: visible;
 }
 
+/* An arena as tall as its content runs past the frame, and its timeline with it: in a take it has the frame's height and the
+   boards shrink to fit (the sides share the row, each board is scaled to the room it has). */
+.dir__stage--fit .arena {
+  height: 100%;
+  min-height: 0;
+}
+
+.dir__stage--fit .arena__stage {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.dir__stage--fit .side {
+  min-height: 0;
+}
+
 .dir__stage--flow .content {
   flex: 1 0 auto;
 }
@@ -111,6 +126,23 @@ html.dir-on body {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 28px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
+/* The hover text of an element, drawn where a pointer would show it (a take has no pointer). The words are the page's own. */
+.dir__tip {
+  position: absolute;
+  width: max-content;
+  max-width: 760px;
+  margin: 0;
+  padding: 10px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-overlay);
+  color: var(--text-primary);
+  font-size: var(--fs-title);
+  font-weight: 500;
+  line-height: var(--lh-body);
+}
+
 .dir__note {
   position: absolute;
   top: 12px;
@@ -129,6 +161,27 @@ html.dir-on body {
 .dir[data-stage="arena"] .dir__note {
   left: 24px;
   right: auto;
+}
+
+/* The run page has no empty corner: its strip is full, and the verify badge is at the right end of it. The stage starts under
+   a band that is the note's. */
+.dir[data-stage="run"] {
+  --dir-band: 36px;
+}
+
+.dir[data-stage="run"] .dir__camera {
+  padding-top: var(--dir-band);
+}
+
+/* The stage's own minimum is the whole frame (.dir__stage.app): without this reset it stays that tall under the band, and the
+   run page's timeline runs 36 px out of the bottom of the frame. */
+.dir[data-stage="run"] .dir__stage--fit {
+  height: calc(1080px - var(--dir-band));
+  min-height: 0;
+}
+
+.dir[data-stage="run"] .dir__note {
+  top: 3px;
 }
 
 .dir__lower {

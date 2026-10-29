@@ -59,8 +59,22 @@ export function ringOpacity(ring: Ring, t: number): number {
 
 export const liveRings = (rings: readonly Ring[], t: number): Ring[] => rings.filter((ring) => t < ring.to);
 
+/** A tooltip is asked for like a ring: a target and a time. Its words are read off the page each frame. */
+export type Tip = Ring;
+
+export const tipOpacity = (tip: Tip, t: number): number => envelope(t, tip.from, tip.to, FADE_MS);
+
 export interface Placed {
   ring: Ring;
   rect: Rect;
+  opacity: number;
+}
+
+export interface PlacedTip {
+  tip: Tip;
+  /** The target, where it is on screen now. */
+  rect: Rect;
+  /** The target's hover text, as the page words it. */
+  text: string;
   opacity: number;
 }

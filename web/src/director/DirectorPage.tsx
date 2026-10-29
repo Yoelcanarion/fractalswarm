@@ -17,7 +17,7 @@ import { missingSources, resolveSources, type Sources } from "./sources";
 import { createArenaStage, createRunStage, noteProblems, replayNote, type StageController } from "./stages";
 import { AblationStageView, ArenaStageView, HelpsStageView, RunStageView, TitleStageView } from "./StageViews";
 import { createDomSurface } from "./surface";
-import { createTake, type Take } from "./take";
+import { createTake, TIP_WAIT_POLLS, tooltipTargets, type Take } from "./take";
 
 /** What a recorder reads and drives. The getters are live. */
 export interface DirectorApi {
@@ -256,6 +256,8 @@ function Frame({ scene, sources, hold, hud }: FrameProps) {
     let trouble: string | null = null;
     let words: string | null = null;
     let noted: string[] = [];
+    let tipPolls = 0;
+    const tips = tooltipTargets(scene);
 
     const check = (): void => {
       const said = controller?.problem() ?? null;
@@ -268,6 +270,8 @@ function Frame({ scene, sources, hold, hud }: FrameProps) {
       if (controller !== null && !controller.loaded()) return;
       if (!REQUIRED[scene.stage].every((css) => stage.querySelector(css) !== null)) return;
       if (document.fonts.status !== "loaded") return;
+      // a verdict chip says nothing until its check has returned: the take waits for it, up to a limit, and warns if it never did
+      if (tips.some((target) => surface.titleOf(target) === null) && (tipPolls += 1) <= TIP_WAIT_POLLS) return;
       clearInterval(poll);
       ready = true;
       words = scene.replayNote && controller !== null ? replayNote(controller.costs(), sources.real) : null;

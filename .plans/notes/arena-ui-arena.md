@@ -33,10 +33,11 @@ from the code:
   playhead with W4's `Stat`; a ✓ marks a number that `GET /api/runs/{id}/metrics` has scored, which is where the
   count ends up. The caption under the strip says so.
 - **The assumptions caption is always visible** (`assumptions.ts`, from the run params of both logs).
-- **The root tag** is on whoever holds the `root` key (`rootOf` in board.ts). The reducer's `rootHolder` also
-  counts the `board` and `net` actors (spawned without a parent, like the root), and a real root takeover is an
-  `ownership.remapped` of the key `root` with no `duties`, so it picked the wrong chip. `rootOf` reads the key and
-  ignores the infrastructure actors. W4's lens and tree may have the same gap (open item below).
+- **The root tag** is on whoever holds the `root` key: the reducer's `rootHolder` (W4's, lib/reducer.ts). Until W4's
+  merge on Oct 29 (ea40fa0) it counted the `board` and `net` actors (spawned without a parent, like the root) and
+  ignored a real root takeover, which is an `ownership.remapped` of the key `root` with no `duties`, so the arena had
+  its own `rootOf`; W4 fixed the reducer, my function and its callers (the board, the director's `$root`) are gone and
+  my tests of the tag now run on `rootHolder`.
 
 ## The panel `#/helps`
 
@@ -164,8 +165,9 @@ except `s2-intake`, which is recorded live). `#/director` lists them with what e
 logical 1920×1080 box with no app chrome, scaled to the window (scale 1 at exactly 1920×1080).
 
 - **Steps:** `seek`, `play`, `pause`, `speed`, `wait` (a time, or `until` an anchor), `camera` (fit a region, an actor
-  or a subtree, with padding and easing), `highlight`, `caption` (lower third or overlay statement), `lens` (open or
-  close a call), `panel` (show or hide). Moments are anchors read from the log (`crash:N`, `recovered:N`,
+  or a subtree, with padding and easing), `highlight`, `tooltip` (the hover text an element carries, drawn next to
+  it: it has no words of its own, so a scene never retypes the UI), `caption` (lower third or overlay statement),
+  `lens` (open or close a call), `panel` (show or hide). Moments are anchors read from the log (`crash:N`, `recovered:N`,
   `call:NAME`, `end`, with an offset like `crash:2-3s`); actors are ids, `$root`, `$crashed:N`, `$heir:N`.
 - **A take is a count of frames of 1/60 s**, not a wall clock: the take's clock is W4's fixed-step clock, so the same
   scene shows the same moment of the run on the same frame, on any machine. A pre-roll of 45 frames lets what animates
@@ -187,14 +189,46 @@ their whole script and stop on their last frame; the title card, the helps and a
 look right. Found on that look, fixed the same day: the replay note sat over the arena's assumptions caption (it now
 takes the empty left of the arena's top bar: `.dir[data-stage="arena"] .dir__note`), and a highlight right after a
 `lens open` raised a false "target not on the page" because React had not drawn the drawer yet (a ring now gets
-`RING_GRACE_MS` = 500 ms, and still warns if its target is missing after that or when its time is up). Seen and **not
-yet fixed** (the director's next merge point, MP2):
+`RING_GRACE_MS` = 500 ms, and still warns if its target is missing after that or when its time is up).
 
-1. the arena at 1080 is about 60 px taller than the frame, so its timeline is cut at the bottom: the stage needs a
-   definite height (a `grid-template-rows: minmax(0, 1fr)` on the sides in director mode) or a camera that fits all of it;
-2. a camera fit near the edge of the stage shows black beyond it: the camera needs clamping to the stage;
-3. `s5`'s `tree` region is the whole panel; it should hug the nodes (the tree is small inside a large panel);
-4. on the run page the note still sits over the end of the "Takeover OK" chip by a few pixels.
+MP2 (commit e5a7fed; written while the machine was held for the paid blocks, so **not yet looked at in a browser**: the
+slot for that is queued behind the second paid block):
+
+1. the arena had the frame's height but its content ran about 60 px past it, so its timeline was cut: in a take the
+   arena now has the frame's height and its boards shrink to fit (`.dir__stage--fit .arena`, a one-row grid, `min-height: 0`);
+2. the camera is kept inside the stage (`within`, camera.ts; the stage's size is the camera element's layout size), so a
+   fit near an edge shows no black; a view larger than the stage is centred;
+3. the `tree` region is the nodes, not the panel, so a camera on it fills the frame with the tree (s5's pad of 0.02 may
+   need to grow if the tree re-lays out after an adoption: look at it on the final pair);
+4. on the run page the note covered the **verify badge** at the right end of the strip, not only a few pixels of the
+   takeover chip as first thought: the run stage now starts under a 36 px band that holds the note;
+   the first look in a browser (below) found that the stage's own minimum height is the whole frame, so under the band it
+   was still 1080 px and the page's timeline ran 36 px out of the bottom: the run stage resets it;
+5. the `tooltip` step, used by s8 on both proof chips (`swarm-proof`, `rival-proof`); the coordinator's answer to the
+   question about the hover was yes, with exactly the title words, which is why the words are read off the page.
+6. a verdict chip has no hover text until its check has come back, and on a long log that is not at once: the page does
+   not start a take whose tooltips point at a chip that says nothing yet. It waits for the text, up to 30 s after
+   everything else is ready (`TIP_WAIT_POLLS`), and then starts anyway: the take warns "has no hover text" and the
+   recorder flags it in the sidecar.
+
+First look at the MP2 sources in a browser (Oct 29, 21:27, slot, fake pair `t2-swarm-killhalf` / `t2-central-killhalf`, a
+sample of s1, s4, s5, s6 and s8, no flag in any sidecar): the arena fits the frame with its timeline (s1, s6, s8); the
+camera stays inside the stage (s8's rival head, at the right edge); both tooltips of s8 are drawn under their chips with
+the chips' own words, the swarm's ("6 hand-overs: the heir of each, recomputed from the log, is the one the run used.")
+and the rival's (the recovery report's three checks); s5's tree fills the frame at pad 0.02 with 38 px left and right,
+the heir and the root rings land on the right nodes; the note sits in the run page's band and covers nothing. One
+thing was wrong and is fixed in the sources, to be seen again: the run stage's minimum height (above).
+
+Second and third look (Oct 29, 21:40 and 21:52, the same fake pair): after the min-height reset the run page fits under the note's band with its
+whole timeline (s4, s5 at the home camera); the flow stages (s3, s7) and the title card (s9) are right under the camera clamp
+(it only keeps the camera inside the stage; a pan the scene asks for within the stage is not touched); and, on the bundle built
+from the merged sources (arena at ea40fa0 in, 0da4bfb), s1, s6, s8, s4 and s5 show the arena counters on W4's fold: at 73 s of
+the fake pair the dependency row reads 5.0 s for the swarm and 25.0 s for the rival (contract-seconds, the scored definition;
+it was 5.0 and 5.0 as the outage length), duplicated work 0 and 6 calls. `demo --verify --no-serve --no-browser`: MATCH, backup,
+8177 events, head b052b4bc33cfe1b54c7b6ceb2872de26. No flag in any sidecar of any of the three slots.
+
+Rule from the coordinator (Oct 29): `real` is flipped to `true` in `sources.json` in the same commit that points
+it at the final real pair, when the run ids are handed over; never before, and never by hand in a take.
 
 Every scene's timings, `crash:N` indexes and call picks are first drafts, to be tuned on the final pair.
 
@@ -211,6 +245,38 @@ quick look at the choreography. `--dry` runs the frames without screenshots; `--
 a sample; `--real` declares the runs real. A take with a page error, a scene warning or a script longer than its scene
 is flagged and, with `--strict`, fails. Measured on this machine: 1920 frames of an arena scene take about 20 s
 without screenshots.
+
+### Tuning the scenes on the final pair (what I do when the coordinator hands me its run ids)
+
+1. In one commit: `web/src/director/sources.json` gets `swarm`, `rival`, `run` (the swarm's unless another) and, only for a
+   real pair, `"real": true` (the coordinator's rule); `ablation` when W3's real ablation is on record.
+2. A SLOT, the scratch server on 8791 with the fake LLM and a dummy key (it only replays; it never calls a model), and
+   `node scripts/record_scenes.mjs all --every 60 --no-encode` (a frame a second of each scene, about 5 minutes).
+3. Read each sidecar's `flags` first: a scene warning names the step (`step 7: the run has no "crash:2"` means the pair
+   has one crash fewer than the scene assumes), a script shorter or longer than its scene says the waits no longer fit.
+   Then look at the frames: s1 (the first crash on both sides at the same second, nothing covering the assumptions
+   caption), s5 (`$crashed:N` and `$heir:N` are the coordinators of the real pair, the camera on the tree), s6 (the
+   rival's caption always on, the counters moving), s8 (the tooltip's words are the chip's, the badge is not covered).
+4. What is tuned lives in the scene JSON only: `crash:N` indexes, the `-Ns` offsets around them, the `wait` lengths, the
+   `calls` picks of s4 (`model`, `purpose`, `role`), the camera paddings. The code does not change for a pair; if it
+   has to, that is a bug in the director, and it gets a test.
+5. A real pair has its root dying first, a practice pair may not: the arena's `root` tag follows the heirs (W4's
+   `rootHolder`), so `$root` after a takeover is the heir, not o0.
+6. Every scene must last the seconds the video script gives it (a test pins them); a retime of the script is a change of
+   `duration_ms` and of the waits together.
+7. Before the slot, without a browser: `scenes.real.test.ts` plays every scene on the demo's real log (the committed
+   `demo/backup`, with the lens rows of `lib/fixtures/lens-demo-backup.json`). It pins the five outages (o0 at 44.5 s,
+   o2.1 55.4, o1 56.7, o3.2 65.9, o2 76.9; the log ends at 118.6 s), the actors the scenes name (`$crashed:1` o0, `$heir:1`
+   o1, `$crashed:2` o2.1, `$heir:2` o2.2, `$root` the heir once it has taken over), that every actor a scene points at is in
+   the log (the fake page puts any target somewhere, so only this test sees a missing one), s4's two picks and that
+   every take runs all its steps with no warning. For the final pair, the same context from its logs in a throwaway
+   test (crashes, calls, end) gives the fake replay's log and the playhead every 2 s of each scene: the pair-dependent
+   numbers can be set before the slot and the slot only confirms them. What the real shape shows already: s4 plays at
+   10x for 3.5 s, so it stops at 35 s of the replay, 6 s before the first Spark call of purpose work (41.2 s; Wonder's
+   root plan is at 3.4 s to 18.0 s), and opens that call from the lens anyway; and s6 plays at 6x for 12 s from
+   `crash:1+5s` to about 126 s, past the swarm's end but short of a rival that runs longer (a central baseline of the c3
+   plan ends at 170 s), where it warns "the replay did not reach the moment in time" and goes on: the speed of that step
+   is the number to set (about 10x for 170 s).
 
 ## Shapes I rely on
 
@@ -245,8 +311,7 @@ W4's `.mark`, `.btn`, `.speeds`, `.badge`, `.empty` and `.stat` on purpose. `ass
 
 ## Open items
 
-1. W4's `rootHolder` (lib/reducer.ts) counts `board` and `net` as root holders and ignores the `root` key of an
-   `ownership.remapped`; the lens and tree may show the wrong root after a takeover. Not touched (not my file).
+1. (Closed Oct 29: W4's merge fixed `rootHolder`; the arena uses it.)
 2. The "Talks placed" meter on a board stays at 0 until the final integration, so it only moves at the very end.
    It could count contracts completed instead; I left it until the video needs it.
 3. **W4's `components/NewTaskForm.tsx` posts the bare TaskSpec to `/api/tasks`**, but W2's `TaskRequest` needs
@@ -270,26 +335,43 @@ W4's `.mark`, `.btn`, `.speeds`, `.badge`, `.empty` and `.stat` on purpose. `ass
 7. The status note under each claim in the panel ("Status in docs/claims.md: …") is my addition; it can come out.
 8. The static `GET /api/ablation` caveat labels (Generated notes / The reference / Practice backend) are mine; the
    text next to them is the server's.
-9. **ffmpeg is not on this machine** and the coordinator said not to install it without Yoel's OK. The recorder keeps the
+9. **ffmpeg is not on this machine** and installing it waits for Yoel's OK (coordinator, Oct 29). The recorder keeps the
    PNG sequences (`video/clips/<scene>/f00001.png`, 60 fps) and prints the exact mp4 command; Playwright's bundled
    ffmpeg is VP8-only, so it does not help.
 10. `docs/video-script.md` s8 mentions hovering a takeover chip ("the heir of each, recomputed from the log, is the one
-    the run used"). That text is a native `title` tooltip, which a headless screenshot does not draw. If the scene needs
-    it, a `tooltip` step that draws the same text as a popover is a small addition; say if you want it.
-11. The recorder is a browser: it needs a SLOT (the MP1 GO covered one browser, and I used it for the screenshots and
-    for a sparse sample of every scene). A full recording of all eight scenes is about 5 minutes of one browser.
+    the run used"). That text is a native `title`, which a headless screenshot does not draw: the director's `tooltip`
+    step draws it (answered yes by the coordinator).
+11. The recorder is a browser: every run of it needs a SLOT (the MP1 GO covered one browser, and I used it for the
+    screenshots and for a sparse sample of every scene). A full recording of all eight scenes is about 5 minutes of
+    one browser. The final pair comes after the handler freeze, which may be the night of Oct 29, not Nov 2.
 12. The server refuses `backend: real` without an approval gate, and I additionally ran my scratch server with a dummy
     `MODEL_API_KEY` and an empty `HF_TOKEN`; no real call was possible from any of my runs.
+13. (Done Oct 29, after W4's merge ea40fa0 was merged into this branch.) W4 had told me that the live "Coordinator-dependency
+    time" was the outage length and not the scored `cdt_s`, and the live "Duplicated work" undercounted `dup_calls`; it
+    ported W1's definitions into the fold (`lib/recovery.ts`, parity test on four real logs and 413 prefixes). The
+    coordinator's answer was: no liveNotes for those two rows. Now: the "dependency" row reads `counters.dependencyMs`
+    (it was `coordinatorDownMs`), the "duplicated" row already read `duplicatedCalls`, which is the scored count now; the
+    two definitions read like W1's ("contract-seconds, added up over the contracts that waited"; the three ways a call is
+    duplicated). The live figure moves when a wait ends, not while it goes on, as the scored one is defined; so the three
+    tests that expected the down time to grow got a fixture with a contract that waits (`ready`, `sent` in
+    `arena/testing.ts`), and the open-outage test now reads the "time to recover" row, which does grow. The live idle
+    agent-seconds no longer counts an agent a crash stopped (a worker `killed` with reason `crash`): the "idle" row is as
+    before. A change of the dependency figure on a real pair (not only on logs of W4's four) is for the headline runs to show.
 
 ## Tests
 
 `npm --prefix web test` runs vitest in node: the pure modules, and the components drawn on the server
 (`renderToStaticMarkup`). The panel's tests run over the bench's own `honesty.json`; the recovery tests over real
-`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At the MP1 commit the
-whole web suite is 62 files, 956 tests, green (the director's are 180 of them); `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
+`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At MP2 (the branch with arena merged in, W4's ea40fa0) the whole web suite was 72 files and 1136 tests, green on one
+worker in 21 s (the arena's are 203 in 17 files, the director's 189 in 9); `scenes.real.test.ts` (13 tests, the scenes on the
+demo's real log, 6 hand mutants all caught) came after that count. `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
 claim's placeholder, hiding the loss counts, dropping the row model, toning down the per-process loss); the intake
 page (20 mutants: a billed launch without the gate, a wrong or lower-case word, a stale or expired token, the approval
 not blocked, frozen inputs editable, a wrong provenance, browser storage, a sentence marked that is not in the text,
 …); the ablation view (17 mutants: a swapped headline, caveats hidden or not filtered, a flipped mark, the split read
 wrong, a lacking part not said, the real backend sent, a note as markup, …). Every one was caught.
-The director's rules are not mutation-checked yet (MP2).
+The director (54 mutants, vitest only: the waits and their timeouts, the moments and their offsets, which actor a scene
+means, the camera's maths and its clamp, the overlay's fades, the take's frames and warnings, the driver's phases, the
+note and the sources, the targets, the drawn tooltip): a first, interrupted pass found a padding test that only
+covered the limiting side (the width of a wide rectangle and the height of a tall one are pinned now); the full pass
+caught 53 of the 54, and the survivor, a seek past the end of the run, is now a test. Every mutant is caught.

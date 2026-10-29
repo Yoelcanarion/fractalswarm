@@ -13,10 +13,10 @@ import {
   outagesNow,
   pad,
   PITCH,
-  rootOf,
   teamSize,
   type Box,
 } from "./board";
+import { rootHolder } from "../lib/reducer";
 import { call, CENTRAL_SCENARIO, crash, kill, remapRoot, restart, rivalStream, swarmStream, takeOver, withInfra } from "./testing";
 
 const overlaps = (a: Box, b: Box): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -172,30 +172,30 @@ describe("the outages a board reports", () => {
 describe("who holds the root", () => {
   it("is the root coordinator, not the infrastructure actors that are spawned without a parent too", () => {
     const s = withInfra(swarmStream());
-    expect(rootOf(foldEvents(s.events))).toBe("o0");
+    expect(rootHolder(foldEvents(s.events))).toBe("o0");
     kill(s, "o0", 10_000);
     // o0 is dead and nobody has taken the root yet: the tag stays on o0, never on the board or the network
-    expect(rootOf(foldEvents(s.events))).toBe("o0");
+    expect(rootHolder(foldEvents(s.events))).toBe("o0");
   });
 
   it("moves to the coordinator the log gives the root key to", () => {
     const s = withInfra(swarmStream());
     kill(s, "o0", 10_000);
     remapRoot(s, "o0", "o1", 15_000);
-    expect(rootOf(foldEvents(s.events))).toBe("o1");
+    expect(rootHolder(foldEvents(s.events))).toBe("o1");
   });
 
   it("follows the duties of an adoption when the log says it that way", () => {
     const s = withInfra(swarmStream());
     takeOver(s, "o0", "o2", 10_000, 12_000);
-    expect(rootOf(foldEvents(s.events))).toBe("o2");
+    expect(rootHolder(foldEvents(s.events))).toBe("o2");
   });
 
   it("is the supervisor of a rival", () => {
-    expect(rootOf(foldEvents(withInfra(rivalStream()).events))).toBe("o0");
+    expect(rootHolder(foldEvents(withInfra(rivalStream()).events))).toBe("o0");
   });
 
   it("is nobody in an empty run", () => {
-    expect(rootOf(foldEvents([]))).toBeNull();
+    expect(rootHolder(foldEvents([]))).toBeNull();
   });
 });

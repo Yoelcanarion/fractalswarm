@@ -54,6 +54,16 @@ export function fit(rect: Rect, pad: number, minSide = 160): Camera {
   return lookAt({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 }, zoom);
 }
 
+/** ``camera`` kept inside a stage of ``stage`` px, so the clip never shows what is beyond its edges. A view larger than
+ * the stage (zoomed out past it) is centred on it. */
+export function within(camera: Camera, stage: { w: number; h: number }): Camera {
+  const w = FRAME_W / camera.zoom;
+  const h = FRAME_H / camera.zoom;
+  const x = w >= stage.w ? (stage.w - w) / 2 : clamp(camera.x, 0, stage.w - w);
+  const y = h >= stage.h ? (stage.h - h) / 2 : clamp(camera.y, 0, stage.h - h);
+  return { ...camera, x, y };
+}
+
 /** ``camera`` looking at the same centre at an absolute ``zoom``. */
 export const zoomedTo = (camera: Camera, zoom: number): Camera => lookAt(centreOf(camera), clamp(zoom, MIN_ZOOM, MAX_ZOOM));
 

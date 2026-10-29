@@ -4,7 +4,7 @@ import { arenaCounters } from "../lib/arena";
 import { foldEvents } from "../lib/reducer";
 import { readOfficial, type Official } from "./official";
 import { isSettled, ROW_DEFS, scoreRows, type SideNumbers } from "./rows";
-import { call, crash, kill, restart, rivalStream, swarmStream, takeOver } from "./testing";
+import { call, crash, kill, ready, restart, rivalStream, sent, swarmStream, takeOver } from "./testing";
 
 /** One side at ``nowMs``: the view folds the events that have happened by then, as the store's does. */
 function side(events: ReturnType<typeof swarmStream>["events"], nowMs: number, over: Partial<SideNumbers> = {}): SideNumbers {
@@ -12,14 +12,19 @@ function side(events: ReturnType<typeof swarmStream>["events"], nowMs: number, o
   return { counters: arenaCounters(view, nowMs), windows: view.arena.windows, nowMs, finished: false, official: null, ...over };
 }
 
-/** A swarm that lost o1 for 5 s and a supervisor that was down for 5 s. */
+/** A swarm that lost o1 for 5 s and a supervisor that was down for 5 s, each with a contract that was ready at 9 s and
+ * only went out at 15 s: it waited on the coordinator that was down for 5 s of that. */
 function pair() {
   const swarm = swarmStream();
+  ready(swarm, "g1", "o1", 9_000);
   kill(swarm, "o1", 10_000);
   takeOver(swarm, "o1", "o2", 14_000, 15_000);
+  sent(swarm, "g1", "o2", 15_000, "o2.a1");
   const rival = rivalStream(undefined, 4);
+  ready(rival, "g1", "o0", 9_000);
   crash(rival, "o0", 10_000, 5000);
   restart(rival, "o0", 15_000);
+  sent(rival, "g1", "o0", 15_000, "o0.a1");
   return { swarm: swarm.events, rival: rival.events };
 }
 
@@ -40,7 +45,7 @@ describe("the scoreboard rows", () => {
     const { swarm, rival } = pair();
     const rows = scoreRows(side(swarm, 15_000), side(rival, 15_000));
     const dependency = rows.find((r) => r.id === "dependency")!;
-    expect(dependency.left).toEqual({ value: 5, source: "live" }); // 10 s to 15 s: kill to the last takeover event
+    expect(dependency.left).toEqual({ value: 5, source: "live" }); // the wait of 9 s to 15 s, over the 10 s to 15 s it was down
     expect(dependency.right).toEqual({ value: 5, source: "live" });
     expect(rows.every((r) => r.left.source === "live" && r.right.source === "live")).toBe(true);
   });
@@ -48,10 +53,21 @@ describe("the scoreboard rows", () => {
   it("lets an open outage grow with the playhead", () => {
     const rival = rivalStream(undefined, 4);
     crash(rival, "o0", 10_000, 5000);
-    const at = (ms: number) => scoreRows(side(rival.events, ms), side(rival.events, ms)).find((r) => r.id === "dependency")!.right.value;
+    const at = (ms: number) => scoreRows(side(rival.events, ms), side(rival.events, ms)).find((r) => r.id === "recover")!.right.value;
     expect(at(10_000)).toBe(0);
     expect(at(12_500)).toBe(2.5);
     expect(at(14_000)).toBe(4);
+  });
+
+  it("counts the dependency time as the metrics score it: a wait counts once it has ended", () => {
+    const { swarm, rival } = pair();
+    const at = (ms: number) => {
+      const row = scoreRows(side(swarm, ms), side(rival, ms)).find((r) => r.id === "dependency")!;
+      return [row.left.value, row.right.value];
+    };
+    expect(at(12_000)).toEqual([0, 0]); // the outage is open and the contract still waits: no interval yet
+    expect(at(14_999)).toEqual([0, 0]);
+    expect(at(15_000)).toEqual([5, 5]); // the contract goes out: 10 s to 15 s of its wait was spent with the owner down
   });
 
   it("counts idle agent-seconds from the agents that wait on a coordinator that is out", () => {

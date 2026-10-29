@@ -58,6 +58,15 @@ export function restart(s: Stream, coordinator: string, at: number, respawn: str
 export const call = (s: Stream, actor: string, id: string): Stream =>
   s.emit("effect.started", actor, { kind: "llm", effect_id: id, tag: id, request: { id } });
 
+/** A contract of ``goal`` becomes ready at ``at``: from then it waits for whoever owns the goal to send it. The scored
+ * coordinator-dependency time is the part of such a wait that the owner spent down (lib/recovery.ts). */
+export const ready = (s: Stream, goal: string, owner: string, at: number, id = "c1"): Stream =>
+  s.at(at).emit("contract.created", owner, { contract: { goal_id: goal, id, depends_on: [] }, owner });
+
+/** The owner of ``goal`` sends the contract it had ready, to ``assignee``, at ``at``: the wait ends. */
+export const sent = (s: Stream, goal: string, owner: string, at: number, assignee: string, id = "c1"): Stream =>
+  s.at(at).emit("contract.dispatched", owner, { goal_id: goal, contract_id: id, attempt: 0, assignee, idem_key: `${goal}/${id}/0` });
+
 /** The infrastructure actors of a real run: the board and the network are spawned without a parent, like the root. */
 export function withInfra(s: Stream): Stream {
   return s.spawn("board", "board", null).spawn("net", "net", null);

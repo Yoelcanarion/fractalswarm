@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { REPO_ROOT } from "../lib/testing";
 import { missingSources } from "./sources";
 import { SCENE_FILES, SOURCES } from "./scenes";
-import { createTake } from "./take";
+import { createTake, tooltipTargets } from "./take";
 import { fakeReplay, fakeSurface } from "./testing";
 import type { Scene } from "./script";
 import type { TimeContext } from "./time";
@@ -106,11 +106,34 @@ const context: TimeContext = {
   ]),
 };
 
+/** The tooltips of a scene: each says where it points and never what it says. */
+describe("the tooltip steps of the scenes", () => {
+  it("s8 shows the hover text of both proofs, and has no words of its own", () => {
+    const scene = scenes.find((s) => s.id === "s8-proof")!;
+    const tips = scene.steps.filter((step) => step.do === "tooltip");
+    expect(tips.map((step) => step.do === "tooltip" && step.target)).toEqual([
+      { kind: "region", region: "swarm-proof" },
+      { kind: "region", region: "rival-proof" },
+    ]);
+    for (const step of tips) expect(Object.keys(step).sort()).toEqual(["do", "ms", "target"]);
+  });
+
+  it("are the ones the page waits for the hover text of before it starts the take, and only those", () => {
+    expect(tooltipTargets(scenes.find((s) => s.id === "s8-proof")!)).toEqual([
+      { kind: "region", region: "swarm-proof" },
+      { kind: "region", region: "rival-proof" },
+    ]);
+    // a highlight points at things too; it needs no words from them
+    expect(scenes.some((s) => s.steps.some((step) => step.do === "highlight"))).toBe(true);
+    for (const scene of scenes.filter((s) => s.id !== "s8-proof")) expect(tooltipTargets(scene)).toEqual([]);
+  });
+});
+
 describe("each scene played on a run of that shape", () => {
   for (const scene of scenes) {
     it(`${scene.id}: runs every step inside its duration, with nothing asked of the page that is not there`, () => {
       const replay = fakeReplay(60_000);
-      const take = createTake(scene, scene.stage === "arena" || scene.stage === "run" ? replay : null, fakeSurface({}, context, { x: 300, y: 200, w: 400, h: 200 }));
+      const take = createTake(scene, scene.stage === "arena" || scene.stage === "run" ? replay : null, fakeSurface({}, context, { x: 300, y: 200, w: 400, h: 200 }, "the hover text of the page"));
       for (let i = 0; i < take.frames; i++) take.tick();
       const state = take.state.getState();
       expect(state.warnings).toEqual([]);

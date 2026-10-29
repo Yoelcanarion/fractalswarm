@@ -7,9 +7,13 @@
     { "do": "seek", "to": "end" },
     { "do": "camera", "fit": { "region": "swarm-head" }, "pad": 0.35, "ms": 1200 },
     { "do": "highlight", "target": { "region": "swarm-head" }, "ms": 3800 },
-    { "do": "wait", "ms": 4000 },
+    { "do": "wait", "ms": 1400 },
+    { "do": "tooltip", "target": { "region": "swarm-proof" }, "ms": 2400 },
+    { "do": "wait", "ms": 2600 },
     { "do": "camera", "fit": { "region": "rival-head" }, "pad": 0.35, "ms": 1200 },
     { "do": "highlight", "target": { "region": "rival-head" }, "ms": 3200 },
-    { "do": "wait", "ms": 3400 }
+    { "do": "wait", "ms": 1400 },
+    { "do": "tooltip", "target": { "region": "rival-proof" }, "ms": 1800 },
+    { "do": "wait", "ms": 2000 }
   ]
 }

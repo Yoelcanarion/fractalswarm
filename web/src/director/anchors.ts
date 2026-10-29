@@ -2,8 +2,7 @@
 // names, see time.ts), and who a scene means by "the coordinator that crashed first" or "its heir".
 
 import { laneOf } from "../arena/bands";
-import { rootOf } from "../arena/board";
-import type { ViewState } from "../lib/reducer";
+import { rootHolder, type ViewState } from "../lib/reducer";
 import type { RunEvent } from "../lib/types";
 
 export interface Crash {
@@ -34,7 +33,7 @@ export interface ActorContext {
 /** The actor a scene names: an id as it is; `$root`, whoever holds the root duties at this moment of the replay;
  * `$crashed:N`, the coordinator of the Nth outage; `$heir:N`, the one that took over its work. Null when the run has none. */
 export function resolveActor(ref: string, context: ActorContext): string | null {
-  if (ref === "$root") return rootOf(context.view);
+  if (ref === "$root") return rootHolder(context.view);
   const match = REF.exec(ref);
   if (!match) return ref;
   const crash = nth(context.crashes, Number(match[2]));
