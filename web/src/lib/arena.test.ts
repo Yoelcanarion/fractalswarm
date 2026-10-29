@@ -229,46 +229,30 @@ describe("arena counters", () => {
     expect(at(foldEvents(s.events), 0).redispatches).toBe(2);
   });
 
-  it("counts a call whose request was cancelled before as duplicated", () => {
-    const s = supervised();
-    llm(s, "o0.a1", "e1", { role: "agent", prompt: "place talk 7" });
-    s.emit("effect.cancelled", "o0.a1", { effect_id: "e1", kind: "llm" });
-    llm(s, "o0.a1", "e2", { role: "agent", prompt: "place talk 8" });
-    expect(at(foldEvents(s.events), 0).duplicatedCalls).toBe(0);
-    llm(s, "o0.a2", "e3", { role: "agent", prompt: "place talk 7" }); // the cancelled work, again
-    expect(at(foldEvents(s.events), 0).duplicatedCalls).toBe(1);
-    llm(s, "o0.a2", "e4", { role: "agent", prompt: "place talk 7" }); // a third call is not a second duplicate of the cancelled one
-    expect(at(foldEvents(s.events), 0).duplicatedCalls).toBe(1);
-  });
-
-  it("counts an agent's cancelled call as redone when its contract is dispatched again", () => {
+  it("counts the calls of an attempt that a later attempt replaced as duplicated, once that attempt is verified", () => {
     const s = supervised();
     const dispatch = (attempt: number, key: string) =>
       s.emit("contract.dispatched", "o0", { goal_id: "g1", contract_id: "c1", attempt, assignee: "o0.a1", idem_key: key, work: "w" });
+    const done = (id: string, tag: string) => s.emit("effect.completed", "@env", { effect_id: id, kind: "llm", tag, status: "ok", result: { cost_usd: 0.01 } });
     dispatch(1, "c-aaa");
     llm(s, "o0.a1", "e1", { role: "agent", contract: "c-aaa" }, "c-aaa:1");
-    s.emit("effect.cancelled", "o0.a1", { effect_id: "e1", kind: "llm" });
-    expect(at(foldEvents(s.events), 0).duplicatedCalls).toBe(0); // cancelled, nothing redone yet
+    s.emit("effect.cancelled", "o0.a1", { effect_id: "e1", kind: "llm", tag: "c-aaa:1" });
     s.emit("contract.rejected", "o0", { goal_id: "g1", contract_id: "c1", attempt: 1, stage: "lost", reasons: [] });
     dispatch(2, "c-bbb");
-    let v = foldEvents(s.events);
-    expect(at(v, 0)).toMatchObject({ duplicatedCalls: 1, redispatches: 1 });
-    // The redone call has another request (a new attempt), and nothing is counted twice.
     llm(s, "o0.a2", "e2", { role: "agent", contract: "c-bbb" }, "c-bbb:1");
-    v = foldEvents(s.events);
-    expect(at(v, 0).duplicatedCalls).toBe(1);
+    done("e2", "c-bbb:1");
+    expect(at(foldEvents(s.events), 0)).toMatchObject({ duplicatedCalls: 0, redispatches: 1 }); // the contract is not settled yet
+    s.emit("contract.verified", "o0", { goal_id: "g1", contract_id: "c1", attempt: 2, work: "w" });
+    expect(at(foldEvents(s.events), 0)).toMatchObject({ duplicatedCalls: 1, redispatches: 1 });
   });
 
-  it("counts a cancelled call once even when both its request and its contract come back", () => {
+  it("counts an own call that was asked again as duplicated once the second has completed", () => {
     const s = supervised();
-    const dispatch = (key: string) =>
-      s.emit("contract.dispatched", "o0", { goal_id: "g1", contract_id: "c1", attempt: 1, assignee: "o0.a1", idem_key: key, work: "w" });
-    dispatch("c-aaa");
-    llm(s, "o0.a1", "e1", { role: "agent", prompt: "same" }, "c-aaa:1");
-    s.emit("effect.cancelled", "o0.a1", { effect_id: "e1", kind: "llm" });
-    llm(s, "o0.a2", "e2", { role: "agent", prompt: "same" }); // the same request again
-    expect(at(foldEvents(s.events), 0).duplicatedCalls).toBe(1);
-    dispatch("c-aaa"); // and the same attempt sent again
+    llm(s, "o0", "p1", { role: "plan", goal: "g1" }, "plan|g1|0");
+    s.emit("effect.cancelled", "o0", { effect_id: "p1", kind: "llm", tag: "plan|g1|0" });
+    llm(s, "o0", "p2", { role: "plan", goal: "g1", again: true }, "plan|g1|0");
+    expect(at(foldEvents(s.events), 0).duplicatedCalls).toBe(0); // asked again, no answer yet
+    s.emit("effect.completed", "@env", { effect_id: "p2", kind: "llm", tag: "plan|g1|0", status: "ok", result: { cost_usd: 0.01 } });
     expect(at(foldEvents(s.events), 0).duplicatedCalls).toBe(1);
   });
 

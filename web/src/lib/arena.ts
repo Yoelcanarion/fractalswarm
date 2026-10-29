@@ -3,7 +3,9 @@
 // These are DISPLAY values, built from what the log shows event by event so a scrubber can drag
 // them through a run. The official numbers (time to recover, coordinator-dependency time, wasted
 // dollars) are scored by the Python metrics and served by the API; the claims in the video come
-// from those. Where a display value approximates a metric, the comment says which.
+// from those. Where a display value approximates a metric, the comment says which; the two that
+// are ports of the scored definitions (lib/recovery.ts) end on the scored number, to the
+// millisecond (arena.parity.test.ts).
 //
 //   coordinator crashes   chaos.injected kill_coordinator, or a baseline.crashed with none before it
 //   coordinator down-time per crash, one window: a supervisor's baseline.crashed -> baseline.restarted;
@@ -17,15 +19,19 @@
 //                         is equal or higher (tests: arena.parity.test.ts)
 //   re-dispatches         contract.dispatched of work that was rejected as lost, or of an idem_key that
 //                         went out before
-//   duplicated calls      LLM calls cancelled and then redone, plus completed calls whose request is one
-//                         already paid for. "Redone" is the same request starting again (a plan, a
-//                         judge) or, for an agent's call, its contract dispatched again. Approximates
-//                         takeover.py's CancelledCall.redone / work_dispatched_again and Duplicates.groups
+//   duplicated calls      the scored "Duplicated work" (bench/recovery.py dup_calls), by the same
+//                         rules on the events so far: a call of an attempt that a later attempt of
+//                         its contract replaced, an own call (plan, judge, scan) asked again, or a
+//                         completed call whose request was already paid for (lib/recovery.ts)
+//   dependency time       the scored "coordinator-dependency time" (cdt_s): the contract-time that
+//                         work spent waiting while the coordinator that owned its goal was down
+//                         (lib/recovery.ts). The window a coordinator was down is `coordinatorDownMs`
 //   hard violations       the final schedule check, once task.result lands
 //   cost so far           budget.settled, summed (Counters.spentUsd)
 
 import { asString, asStrings } from "./generic";
 import type { ActorNode, ViewState } from "./reducer";
+import { emptyRecorded, isRecoveryEvent, record, recoveryAt, type Recorded } from "./recovery";
 import type { RunEvent } from "./types";
 
 export interface OutageWindow {
@@ -33,12 +39,6 @@ export interface OutageWindow {
   since: number;
   until: number | null; // null while the coordinator is still down
   source: "chaos" | "supervisor"; // who reported it: a chaos kill (swarm) or a baseline.crashed
-}
-
-/** A cancelled call that has not been redone yet. */
-interface Cancelled {
-  key: string; // fingerprint of its request
-  work: string | null; // an agent's call: the contract (goal/contract) it served
 }
 
 export interface ArenaState {
@@ -49,12 +49,7 @@ export interface ArenaState {
   redispatches: number;
   lostWork: Record<string, true>; // work rejected as lost and not sent again yet
   dispatchedKeys: Record<string, true>;
-  attemptWork: Record<string, string>; // contract idem_key -> work
-  duplicatedCalls: number;
-  cancelled: Record<string, Cancelled>; // by effect id, until redone
-  cancelledByRequest: Record<string, string[]>; // fingerprint -> effect ids
-  cancelledByWork: Record<string, string[]>; // work -> effect ids
-  paidRequests: Record<string, true>;
+  recorded: Recorded; // the events the scored figures read (lib/recovery.ts)
 }
 
 export const emptyArena = (): ArenaState => ({
@@ -65,12 +60,7 @@ export const emptyArena = (): ArenaState => ({
   redispatches: 0,
   lostWork: {},
   dispatchedKeys: {},
-  attemptWork: {},
-  duplicatedCalls: 0,
-  cancelled: {},
-  cancelledByRequest: {},
-  cancelledByWork: {},
-  paidRequests: {},
+  recorded: emptyRecorded(),
 });
 
 /** The counters as the arena shows them. */
@@ -78,6 +68,7 @@ export interface ArenaCounters {
   costUsd: number;
   coordinatorCrashes: number;
   coordinatorDownMs: number;
+  dependencyMs: number; // the scored coordinator-dependency time, on the log so far
   idleAgentMs: number;
   idleAgentsNow: number;
   redispatches: number;
@@ -104,7 +95,6 @@ const isLeaf = (actor: ActorNode): boolean => actor.kind === "agent" || actor.ki
 // A coordinator that is really out: killed, or crashed and restarting. One the detector declared
 // dead with no kill (a false death) may still be working, so its agents are not waiting.
 const DOWN: ReadonlySet<string> = new Set(["restarting", "killed"]);
-const PAID: ReadonlySet<string> = new Set(["ok", "incomplete"]); // takeover.py PAID: a completion with these was billed
 
 /** An agent that is waiting on its coordinator rather than finished or gone: alive. One that finished,
  * was killed by chaos, or was stopped by the coordinator's crash (the restart respawns it and its work
@@ -176,34 +166,12 @@ function windowsFor(state: ArenaState, event: RunEvent): OutageWindow[] {
   }
 }
 
-/** Calls cancelled earlier that this event redoes: count each once and forget it. */
-function settleRedone(state: ArenaState, index: "cancelledByRequest" | "cancelledByWork", key: string): ArenaState {
-  const ids = state[index][key];
-  if (!ids) return state;
-  const cancelled = { ...state.cancelled };
-  let redone = 0;
-  for (const id of ids) {
-    if (cancelled[id]) {
-      delete cancelled[id];
-      redone += 1;
-    }
-  }
-  const rest = { ...state[index] };
-  delete rest[key];
-  return { ...state, cancelled, [index]: rest, duplicatedCalls: state.duplicatedCalls + redone };
-}
-
-const withId = (index: Record<string, string[]>, key: string, id: string): Record<string, string[]> => ({
-  ...index,
-  [key]: [...(index[key] ?? []), id],
-});
-
-/** Fold one event. ``before`` is the view before the event, ``after`` the view after the tree
- * and panels have folded it. */
-export function foldArena(state: ArenaState, event: RunEvent, before: ViewState, after: ViewState): ArenaState {
+/** Fold one event. ``after`` is the view after the tree and panels have folded it. */
+export function foldArena(state: ArenaState, event: RunEvent, after: ViewState): ArenaState {
   const p = event.payload;
   const ts = event.ts_virtual;
   let next = state;
+  if (isRecoveryEvent(event)) next = { ...next, recorded: record(next.recorded, event) };
 
   // Idle agent-time accrues over the stretch since the previous event, at the count it left.
   if (state.idleNow > 0 && ts > state.lastTs) {
@@ -227,36 +195,8 @@ export function foldArena(state: ArenaState, event: RunEvent, before: ViewState,
         ...next,
         lostWork,
         dispatchedKeys: sent ? { ...next.dispatchedKeys, [sent]: true } : next.dispatchedKeys,
-        attemptWork: sent ? { ...next.attemptWork, [sent]: work } : next.attemptWork,
         redispatches: next.redispatches + (again ? 1 : 0),
       };
-      next = settleRedone(next, "cancelledByWork", work);
-      break;
-    }
-    case "effect.cancelled": {
-      const id = asString(p.effect_id);
-      const call = before.inflight[id];
-      if (!call) break;
-      const work = next.attemptWork[call.tag.split(":", 1)[0]] ?? null;
-      next = {
-        ...next,
-        cancelled: { ...next.cancelled, [id]: { key: call.key, work } },
-        cancelledByRequest: withId(next.cancelledByRequest, call.key, id),
-        cancelledByWork: work === null ? next.cancelledByWork : withId(next.cancelledByWork, work, id),
-      };
-      break;
-    }
-    case "effect.started": {
-      const call = after.inflight[asString(p.effect_id)];
-      if (call) next = settleRedone(next, "cancelledByRequest", call.key);
-      break;
-    }
-    case "effect.completed": {
-      const call = before.inflight[asString(p.effect_id)];
-      if (!call || !PAID.has(asString(p.status))) break;
-      next = next.paidRequests[call.key]
-        ? { ...next, duplicatedCalls: next.duplicatedCalls + 1 }
-        : { ...next, paidRequests: { ...next.paidRequests, [call.key]: true } };
       break;
     }
   }
@@ -270,16 +210,18 @@ export function foldArena(state: ArenaState, event: RunEvent, before: ViewState,
  * playhead, which is why the time is passed in. */
 export function arenaCounters(view: ViewState, nowMs: number): ArenaCounters {
   const { arena } = view;
+  const recovery = recoveryAt(arena.recorded, nowMs);
   const down = arena.windows.reduce((sum, w) => sum + Math.max(0, (w.until ?? nowMs) - w.since), 0);
   const idle = arena.idleAgentMs + (arena.idleNow > 0 ? arena.idleNow * Math.max(0, nowMs - arena.lastTs) : 0);
   return {
     costUsd: view.counters.spentUsd,
     coordinatorCrashes: arena.windows.length,
     coordinatorDownMs: down,
+    dependencyMs: recovery.dependencyMs,
     idleAgentMs: idle,
     idleAgentsNow: arena.idleNow,
     redispatches: arena.redispatches,
-    duplicatedCalls: arena.duplicatedCalls,
+    duplicatedCalls: recovery.duplicatedCalls,
     hardViolations: view.schedule.hardViolations,
   };
 }
