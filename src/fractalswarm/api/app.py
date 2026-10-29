@@ -20,18 +20,24 @@ token of a preflight (``POST /api/tasks/preflight``, ``/api/arena/preflight``,
 ``GET /api/capabilities`` says which controls are real.
 A finished run also has ``/metrics`` (the official numbers) and ``/takeover`` (what its log
 proves about the coordinator kills).
+
+Every request, the WebSocket included, passes ``api/guard.py`` first: a ``Host`` that is not
+loopback or the address ``serve`` was given gets 400, a POST that is not ``application/json``
+gets 415, and a WebSocket from another origin is refused.
 """
 
 import asyncio
 import json
 import math
 import shutil
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 import anyio
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
+from starlette.middleware import Middleware
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 from starlette.routing import Mount, Route, WebSocketRoute
@@ -39,6 +45,7 @@ from starlette.staticfiles import StaticFiles
 
 from fractalswarm.api import arena, jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
+from fractalswarm.api.guard import ApiGuard
 from fractalswarm.api.jobs import JobError, JobManager
 from fractalswarm.api.lens import lens_routes
 from fractalswarm.api.spend import (
@@ -72,7 +79,10 @@ def create_app(
     static_dir: Path = STATIC_DIR,
     private_dir: Path | None = None,
     spend: Spend | None = None,
+    allowed_hosts: Iterable[str] = (),
 ) -> Starlette:
+    """``allowed_hosts`` are the names a request may use besides loopback: ``serve`` passes the
+    address it listens on."""
     catalog = Catalog(runs_dir, demo_dir, private_dir)
     private = PrivateDir(private_dir) if private_dir is not None else None
     manager = JobManager(private, runs_dir, catalog) if private is not None else None
@@ -519,7 +529,11 @@ def create_app(
         routes.append(Mount("/", StaticFiles(directory=static_dir, html=True)))
     else:
         routes.append(Route("/", ui))
-    return Starlette(routes=routes, exception_handlers={HTTPException: http_error})
+    return Starlette(
+        routes=routes,
+        exception_handlers={HTTPException: http_error},
+        middleware=[Middleware(ApiGuard, hosts=tuple(allowed_hosts))],
+    )
 
 
 def _int_param(

@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any
 
 from fractalswarm.api.arena import parse_arena
+from fractalswarm.api.guard import LOOPBACK_HOSTS
 from fractalswarm.api.jobs import Approval, JobError, JobManager, check_inputs, parse_request
 from fractalswarm.bench.profiles import CRASH_POINTS
 from fractalswarm.comms.chaos import ChaosPlan, build_plan
@@ -54,7 +55,6 @@ TOKEN_TTL_S = 600.0
 PHASE_START_USD = 11.82
 PHASE_CAP_USD = 50.0
 HARD_STOP_USD = 61.8
-LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 NOT_IN_DIGEST = ("backend", "run_id", "pair_id", "preflight_token", "confirm")
 PREFLIGHT = {
     "task": "/api/tasks/preflight",
@@ -94,7 +94,8 @@ class SpendGate:
 
     def refuse_exposed(self, host: str) -> None:
         """Raise ``ValueError`` if this gate would spend for whoever can reach ``host``. The
-        token and the word are for a person's slip, not for a stranger: the API hands out both."""
+        token and the word are for a person's slip, not for a stranger: the API hands out both.
+        ``api/guard.py`` keeps a web page out of a loopback server; this keeps the network out."""
         if self.allow_real and host not in LOOPBACK_HOSTS:
             raise ValueError(
                 f"FRACTALSWARM_ALLOW_UI_REAL is on, so the server must listen on a loopback "

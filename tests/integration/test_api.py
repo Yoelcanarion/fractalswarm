@@ -24,6 +24,7 @@ from fractalswarm.runs import RunPaths, record_run
 REPO = Path(__file__).resolve().parents[2]
 GOLDEN = REPO / "tests" / "golden"
 TOY_HEAD = (GOLDEN / "toy" / "HEAD").read_text(encoding="utf-8").strip()
+AS_JSON = {"Content-Type": "application/json"}  # what the UI sends on every POST
 
 
 @pytest.fixture
@@ -80,14 +81,14 @@ def test_events_are_paged_by_seq(client: TestClient) -> None:
 
 
 def test_verify_replays_the_bundle(client: TestClient) -> None:
-    report = client.post("/api/runs/demo-toy/verify").json()
+    report = client.post("/api/runs/demo-toy/verify", json={}).json()
     assert report["ok"] and report["replayed_head"] == TOY_HEAD and report["bundle_head_ok"]
 
 
 def test_verify_reports_a_tampered_bundle(client: TestClient, dirs: dict[str, Path]) -> None:
     log = dirs["demo"] / "toy" / "events.jsonl"
     log.write_text(log.read_text(encoding="utf-8").replace("worker-a-r1", "worker-a-rX"))
-    report = client.post("/api/runs/demo-toy/verify").json()
+    report = client.post("/api/runs/demo-toy/verify", json={}).json()
     assert not report["ok"] and report["first_divergence"] is not None
 
 
@@ -264,12 +265,13 @@ def test_budget_shock_validates_its_body(client: TestClient, live: Path, body: d
 def test_budget_shock_refuses_numbers_that_are_not_finite(
     client: TestClient, live: Path, raw: bytes
 ) -> None:
-    assert client.post("/api/runs/live/budget", content=raw).status_code == 422
+    assert client.post("/api/runs/live/budget", content=raw, headers=AS_JSON).status_code == 422
     assert not (live / "control").exists()
 
 
 def test_halt_and_budget_need_a_json_object(client: TestClient, live: Path) -> None:
-    assert client.post("/api/runs/live/halt", content=b"{nope").status_code == 422
+    halted = client.post("/api/runs/live/halt", content=b"{nope", headers=AS_JSON)
+    assert halted.status_code == 422
     assert client.post("/api/runs/live/budget", json=[1]).status_code == 422
     assert not (live / "control").exists()
 

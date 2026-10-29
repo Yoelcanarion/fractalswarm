@@ -96,6 +96,11 @@ All approved by the coordinator.
   LangGraph baseline showed as `interrupted` in the catalog while they ran, and so could not be halted
   from the API. `tests/integration/test_run_status.py` pins both (the marker is there for every call each
   runner sends, and gone at the end; the tests fail without the three lines).
+- `tests/conftest.py` (new): `TestClient` defaults to `http://127.0.0.1` and joins WebSocket paths onto its base
+  URL, because the API now refuses `Host: testserver` (the guard above).
+- Five existing tests send what the UI sends, a JSON content type on a POST that had none:
+  `tests/integration/test_api.py` (verify twice, and the two raw-body tests), `test_ablation.py` (the `{nope`
+  body) and `test_launch_api.py` (two calls). No assertion changed.
 
 ## $0 references (first merge point)
 
@@ -137,8 +142,36 @@ bytes of every log.
 
 ## API reference (all JSON; errors are `{"error": "<reason>"}`)
 
-Status codes used: 200, 202 (accepted, started), 403 (refused by policy), 404, 409 (conflict: busy,
-used, already done), 422 (bad request), 429 (too many jobs), 503 (no private dir).
+Status codes used: 200, 202 (accepted, started), 400 (a `Host` that is not ours), 403 (refused by policy),
+404, 409 (conflict: busy, used, already done), 415 (a POST that is not JSON), 422 (bad request), 429 (too many
+jobs), 503 (no private dir).
+
+### Who may call it (`api/guard.py`, for W4 and W5)
+
+**The UI sends `Content-Type: application/json` on every POST, even when it has no body (send `body: "{}"`).**
+Without it the answer is 415 before the route runs. Today `web/src/lib/api.ts` `verifyRun` (line 39,
+`fetch(".../verify", { method: "POST" })`) sends none, so the Verify button gets 415 until it adds the header
+(`postControl` already does). The built bundle in `api/static/` needs a rebuild after that.
+
+One middleware sits in front of every route (the UI files and the WebSocket too), so a route added later is
+covered without doing anything:
+
+| Check | Answer | Closes |
+|---|---|---|
+| `Host` must be `127.0.0.1`, `localhost`, `::1` (any port) or the `--host` that `serve` or `demo` was given | 400 `invalid host header` | DNS rebinding: a page on a name that re-resolves to 127.0.0.1 is same-origin with the API |
+| every POST must have the media type `application/json` (parameters such as `; charset=utf-8` are fine) | 415 | a cross-site form or `text/plain` POST, which needs no CORS preflight |
+| a WebSocket handshake with an `Origin` must come from this server's own origin (`Origin` = `http://` + the `Host` it was reached by); no `Origin` at all (a CLI client) is allowed | closed before accept, code 1008 | a cross-site page opening the events socket of a private run |
+
+- The Vite dev server (`npm run dev`, proxy to 8765, no `changeOrigin`) keeps working: it passes `Host` and
+  `Origin` through unchanged, both `localhost:5173`. Reach the UI by `localhost` or `127.0.0.1`; any other name
+  needs `serve --host <that name>`.
+- `serve --host 0.0.0.0` allows only the literal `0.0.0.0` besides loopback: a LAN client is refused unless
+  `--host` is the address it uses. With `FRACTALSWARM_ALLOW_UI_REAL` on, a non-loopback `--host` is refused
+  outright (deviation 14).
+- Tests: Starlette's `TestClient` says `Host: testserver`, which the API refuses. `tests/conftest.py` makes
+  `TestClient(app)` talk to `http://127.0.0.1` and joins a WebSocket path onto that base URL (Starlette joins
+  it onto `ws://testserver`). A test of the guard itself passes `headers={"Host": ...}`. A POST in a test
+  needs `json=` (or a JSON `Content-Type` header), as it does in the UI.
 
 ### Jobs
 

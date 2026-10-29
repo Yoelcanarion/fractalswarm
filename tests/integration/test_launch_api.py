@@ -143,7 +143,7 @@ def test_a_run_id_can_be_used_once(api: Api) -> None:
 def test_without_a_private_dir_the_launch_endpoints_say_so(tmp_path: Path) -> None:
     client = TestClient(create_app(tmp_path, None, tmp_path, tmp_path / "s"))
     for method, path in (("post", "/api/tasks"), ("get", "/api/jobs"), ("post", "/api/intake")):
-        answer = getattr(client, method)(path)
+        answer = client.request(method.upper(), path, json={} if method == "post" else None)
         assert answer.status_code == 503 and "private directory" in answer.json()["error"]
 
 
@@ -287,7 +287,7 @@ def test_a_restarted_api_still_lists_and_cancels_a_running_job(api: Api, tmp_pat
     assert seen["state"] == "running" and seen["runs"][0]["exit_code"] is None
     assert [j["id"] for j in second.get("/api/jobs").json()] == [job_id]
 
-    cancelled = second.post(f"/api/jobs/{job_id}/cancel")  # it holds no process handle
+    cancelled = second.post(f"/api/jobs/{job_id}/cancel", json={})  # it holds no process handle
     assert cancelled.status_code == 200 and cancelled.json()["state"] == "cancelled"
     assert api.get("/api/runs/ui-restart").json()["status"] == "halted"
     api.wait(

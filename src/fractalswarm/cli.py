@@ -891,7 +891,9 @@ def _serve(runs_dir: Path, host: str, port: int, open_run: str | None, browser: 
             "real runs from the UI are ON (FRACTALSWARM_ALLOW_UI_REAL): a billed run "
             "needs a preflight token and the word SPEND"
         )
-    app_ = create_app(runs_dir, private_dir=settings.private_dir, spend=spend)
+    app_ = create_app(
+        runs_dir, private_dir=settings.private_dir, spend=spend, allowed_hosts=(host,)
+    )
     uvicorn.run(app_, host=host, port=port, log_level="warning")
 
 
