@@ -1054,6 +1054,15 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
   - design tokens and the store factory W5 builds on, plus steps 5, 6 and 8 (motion, controls with a capabilities fallback, timeline marks);
   - web only; four new dependencies, all pinned (fontsource Inter and JetBrains Mono, lucide-react, motion); no `innerHTML`, `eval` or external URL;
   - checks: typecheck clean, vitest 266 passed, build ok; the API tests (115) pass and `demo --verify` MATCHes on the new static build (4ce9463, self-hosted fonts, stale assets removed).
+- **W2 steps 1–4** (c2b5e08, from ce5bc4a): run status from a LIVE file, the job manager and its routes, inline input with pseudonyms and truth modes, the Muse intake scenario (`POST/GET /api/intake`):
+  - reviewed: the clock reads and random ids are in `intake/store.py` (API file I/O), outside the handlers; the scenario's pure modules are in the determinism lint; pasted text is firewall-scanned and only ever in untrusted blocks; the private dir is outside the repo; `allow_ui_real` is off by default; no secrets;
+  - one new role, `intake`, in `config/roles.yaml`, so `run.started` of every new run gains one key, `config.llm.roles.roles.intake`. Accepted, like the supervisor role in Phase 0: the 43 references keep their event counts and differ only there (checked run by run). In Contributor-mode bench runs that unused role shows `contributor_ok: true`, because `contributor_mode()` flags every Spark role; intake and inline runs force Contributor off;
+  - checks on the merged arena: full suite 1274 passed with PromptGuard, ruff clean, `demo --verify` and the golden replays MATCH;
+  - **new shared references** recorded at c2b5e08: `~/.fractalswarm/refs/arena-c2b5e08` (read-only). Workers compare against them once their branch has merged arena at c2b5e08 or later.
+- **W1's `bench/PREREG.md`** (7028087), committed before any gate run, reviewed. Asked for two changes before the first run:
+  - `rival_recovery_ms` 0.5 s joins the plausible region, since spec §A defines the fast external restart as rival at 0.5–1 s;
+  - §5 states the network profile of the sweeps, and that only the swarm's detector can declare false deaths there (an advantage granted to the rival).
+  - Accepted as a deviation: the gate uses seeds 1–4, not the spec's 1–3, which is stricter because every seed must agree.
 
 **Supervision notes**
 - **Memory went down to 1.0 GB free at 00:53:** W3's suite, plus an unslotted probe of W1's (900 MB). W1 stopped it. Rule added: a worker script that runs several fake runs, or holds more than about 300 MB, needs a slot.
