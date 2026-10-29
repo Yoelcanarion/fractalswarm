@@ -1,4 +1,6 @@
 // The event envelope as the API sends it (spec §5.1; src/fractalswarm/kernel/events.py).
+import type { RunStatus } from "./controls";
+
 export interface RunEvent {
   seq: number;
   run_id: string;
@@ -25,7 +27,8 @@ export interface RunListing {
   clock: string | null;
   events: number;
   duration_ms: number;
-  status: "completed" | "running" | "empty";
+  /** The catalog's status; servers that predate `halted` and `interrupted` never send them. */
+  status: RunStatus;
   head: string | null;
 }
 

@@ -1,21 +1,7 @@
 /* Dark-first, sized to read on a 1080p screen recording. */
 :root {
-  color-scheme: dark;
-  --bg: #121211;
-  --surface-1: #1a1a19;
-  --surface-2: #222220;
-  --border: #33322f;
-  --text-primary: #f0efec;
-  --text-secondary: #c3c2b7;
-  --text-muted: #8d8c85;
-  --accent: #3987e5;
-  --good: #2fb37a;
-  --warn: #c98500;
-  --bad: #e66767;
-  --radius: 10px;
-  --mono: "JetBrains Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
-  font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
-  font-size: 15px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
 }
 
 * {
@@ -35,13 +21,13 @@ body {
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
 code,
 .mono {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: 0.92em;
 }
 
@@ -69,7 +55,7 @@ code,
 
 .brand {
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--fs-title);
   color: var(--text-primary);
   letter-spacing: 0.2px;
   display: flex;
@@ -88,7 +74,7 @@ code,
 
 .tab {
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   color: var(--text-secondary);
   font-weight: 500;
 }
@@ -98,8 +84,14 @@ code,
   color: var(--text-primary);
 }
 
-.topbar__run {
+.topbar__right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar__run {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -111,7 +103,7 @@ textarea {
   background: var(--surface-2);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   padding: 6px 10px;
   font: inherit;
 }
@@ -122,8 +114,8 @@ textarea {
   align-items: center;
   gap: 6px;
   padding: 5px 12px;
-  border-radius: 999px;
-  font-size: 13px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-body);
   font-weight: 600;
   border: 1px solid var(--border);
   background: var(--surface-2);
@@ -132,39 +124,39 @@ textarea {
 }
 
 .badge--big {
-  font-size: 15px;
+  font-size: var(--fs-base);
   padding: 7px 16px;
 }
 
 .badge--good {
-  color: #d8f5e7;
-  background: #13402c;
-  border-color: #23744f;
+  color: var(--ok-ink);
+  background: var(--ok-bg-strong);
+  border-color: var(--ok-border);
 }
 
 .badge--bad {
-  color: #ffe1e1;
-  background: #4a1b1b;
-  border-color: #8f3434;
+  color: var(--danger-ink);
+  background: var(--danger-bg-strong);
+  border-color: var(--danger-border);
 }
 
 .badge--warn {
-  color: #ffeccc;
-  background: #43310b;
-  border-color: #7a5a14;
+  color: var(--warn-ink);
+  background: var(--warn-bg-strong);
+  border-color: var(--warn-border);
 }
 
 .badge--live {
-  color: #ffe1e1;
-  background: #4a1b1b;
-  border-color: #8f3434;
+  color: var(--danger-ink);
+  background: var(--danger-bg-strong);
+  border-color: var(--danger-border);
   animation: pulse 1.6s ease-in-out infinite;
 }
 
 .badge--button {
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 
@@ -172,15 +164,11 @@ textarea {
   font: inherit;
   font-weight: 600;
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text-primary);
   cursor: pointer;
-}
-
-.btn:hover:not(:disabled) {
-  border-color: #55544f;
 }
 
 .btn:disabled {
@@ -194,19 +182,19 @@ textarea {
 }
 
 .btn--danger {
-  background: #8f2626;
-  border-color: #b73a3a;
+  background: var(--danger-solid);
+  border-color: var(--danger-solid-border);
 }
 
 .btn--danger:hover:not(:disabled) {
-  background: #a82d2d;
-  border-color: #d04848;
+  background: var(--danger-solid-hover);
+  border-color: var(--danger-solid-border-hover);
 }
 
 .btn--big {
   width: 100%;
   padding: 14px;
-  font-size: 18px;
+  font-size: var(--fs-lead);
 }
 
 .btn--seg {
@@ -217,7 +205,7 @@ textarea {
 .btn--play {
   width: 48px;
   height: 44px;
-  font-size: 16px;
+  font-size: var(--fs-lead);
 }
 
 /* ---- layout ---- */
@@ -230,7 +218,7 @@ textarea {
 .panel {
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-3);
   padding: 14px;
   min-height: 0;
 }
@@ -240,7 +228,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-secondary);
@@ -262,7 +250,7 @@ textarea {
 }
 
 .empty--bad {
-  color: var(--bad);
+  color: var(--danger);
 }
 
 .run {
@@ -293,7 +281,7 @@ textarea {
 .run__canvas {
   flex: 1;
   min-height: 300px;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   overflow: hidden;
 }
 
@@ -318,36 +306,36 @@ textarea {
 .stat {
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-3);
   padding: 8px 16px;
   min-width: 110px;
 }
 
 .stat__value {
-  font-size: 24px;
+  font-size: var(--fs-stat);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .stat__label {
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .stat--hero {
-  border-color: #23744f;
-  background: #112a1f;
+  border-color: var(--ok-border);
+  background: var(--ok-bg);
 }
 
 .stat--hero .stat__value {
-  color: #6fe0a8;
-  font-size: 30px;
+  color: var(--ok-text);
+  font-size: var(--fs-hero);
 }
 
 .stat--bad .stat__value {
-  color: var(--bad);
+  color: var(--danger);
 }
 
 /* ---- tree graph ---- */
@@ -355,8 +343,22 @@ textarea {
   background: var(--surface-1);
 }
 
-.react-flow__node {
-  transition: transform 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
+/* A clock scope only carries --now, the virtual time in ms, which the clock writes on it every
+   frame (components/ClockScope.tsx). It makes no box of its own. */
+.clock-scope {
+  display: contents;
+}
+
+/* What fades with virtual time (lib/decay.ts): an element sets its own --born and --life, and
+   --glow is 1 at --born and 0 after --life. Without --born there is no glow.
+   Nodes move in JS, not by a CSS transition (components/useTreeMotion.ts): a transition would move
+   the box and leave React Flow's edge behind. */
+.actor,
+.cell,
+.react-flow__edge-path,
+.react-flow__edge-text,
+.react-flow__edge-textbg {
+  --glow: clamp(0, calc(1 - (var(--now, 0) - var(--born, -1000000)) / var(--life, 1)), 1);
 }
 
 .react-flow__edge-path {
@@ -364,8 +366,8 @@ textarea {
 }
 
 .edge--talking .react-flow__edge-path {
-  stroke-width: 3.5;
-  filter: drop-shadow(0 0 4px currentColor);
+  stroke-width: calc(2.5px + 1px * var(--glow));
+  filter: drop-shadow(0 0 calc(4px * var(--glow)) currentColor);
 }
 
 .edge--adopted .react-flow__edge-path {
@@ -374,7 +376,7 @@ textarea {
 }
 
 .edge--down .react-flow__edge-path {
-  stroke: #4a4945 !important;
+  stroke: var(--border-strong) !important;
   stroke-dasharray: 3 5;
 }
 
@@ -383,28 +385,34 @@ textarea {
   stroke-width: 2;
 }
 
+.edge--message .react-flow__edge-path,
+.edge--message .react-flow__edge-text,
+.edge--message .react-flow__edge-textbg {
+  opacity: var(--glow);
+}
+
 .react-flow__edge-textbg {
   fill: var(--surface-2);
 }
 
 .react-flow__edge-text {
   fill: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-label);
 }
 
 .actor {
   position: relative;
   width: 150px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-3);
   background: var(--surface-2);
   border: 2px solid var(--owner);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--owner) 14%, transparent);
   text-align: center;
+  /* box-shadow and opacity follow --now frame by frame, so they must not ease on top of it */
   transition:
-    border-color 600ms,
-    box-shadow 600ms,
-    opacity 600ms;
+    border-color var(--dur-slow) var(--ease-standard),
+    background-color var(--dur-slow) var(--ease-standard);
 }
 
 .actor--leaf {
@@ -414,18 +422,18 @@ textarea {
 
 .actor__id {
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--fs-base);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .actor--leaf .actor__id {
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .actor__meta {
-  font-size: 11px;
+  font-size: var(--fs-label);
   color: var(--text-muted);
   display: flex;
   gap: 4px;
@@ -437,16 +445,16 @@ textarea {
   top: -11px;
   right: -8px;
   padding: 1px 7px;
-  border-radius: 999px;
-  font-size: 11px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-label);
   font-weight: 800;
   background: var(--text-primary);
-  color: #111;
+  color: var(--text-inverse);
 }
 
 .actor__adopted {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: var(--fs-label);
   color: var(--owner);
   font-weight: 600;
 }
@@ -461,12 +469,49 @@ textarea {
 }
 
 .actor--adopted {
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--owner) 40%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--owner) calc(var(--glow) * 40%), transparent);
+}
+
+.actor--restarted {
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) calc(var(--glow) * 55%), transparent);
+}
+
+.actor--restarting {
+  border-color: var(--warn);
+  background: var(--warn-bg);
+  box-shadow: none;
+}
+
+.actor--restarting .actor__id,
+.actor--restarting .actor__meta {
+  opacity: 0.6;
+}
+
+.actor__state {
+  margin-top: 4px;
+  font-size: var(--fs-label);
+  font-weight: 700;
+  color: var(--warn-text);
+}
+
+/* The ring fills over the crash-to-restart virtual time: --since and --dur are set on it
+   (lib/decay.ts ringVars) and --now comes from the tree. */
+.actor__ring {
+  --fill: clamp(0, calc((var(--now, 0) - var(--since, 0)) / max(var(--dur, 1), 1)), 1);
+  position: absolute;
+  top: -14px;
+  left: -14px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: conic-gradient(var(--warn) calc(var(--fill) * 360deg), var(--warn-border) 0);
+  -webkit-mask: radial-gradient(circle, transparent 50%, black 52%);
+  mask: radial-gradient(circle, transparent 50%, black 52%);
 }
 
 .actor--down {
-  border-color: var(--bad);
-  background: #2a1616;
+  border-color: var(--danger);
+  background: var(--danger-bg);
   box-shadow: none;
 }
 
@@ -480,10 +525,10 @@ textarea {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 44px;
+  font-size: var(--fs-display);
   font-weight: 800;
-  color: var(--bad);
-  text-shadow: 0 0 10px #000;
+  color: var(--danger);
+  text-shadow: var(--text-halo);
   animation: pop 400ms cubic-bezier(0.2, 1.6, 0.4, 1);
   pointer-events: none;
 }
@@ -513,7 +558,7 @@ textarea {
 }
 
 .grid__table th {
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: var(--text-muted);
   font-weight: 600;
   text-align: center;
@@ -531,10 +576,10 @@ textarea {
 .cell {
   position: relative;
   height: 42px;
-  border-radius: 6px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
   border: 1px dashed var(--border);
-  font-size: 11px;
+  font-size: var(--fs-label);
   padding: 3px 5px;
   overflow: hidden;
   vertical-align: top;
@@ -544,7 +589,12 @@ textarea {
 .cell--filled {
   border: 1px solid var(--squad);
   background: color-mix(in srgb, var(--squad) 34%, var(--surface-2));
-  animation: fill-in 500ms ease-out;
+}
+
+/* Only a placement that lands while the run plays animates; one that was already there when the
+   view jumped (a seek, opening a run) just shows. ScheduleGrid sets the class on a new element. */
+.cell--new {
+  animation: fill-in 320ms var(--ease-out);
 }
 
 .cell__talk {
@@ -556,17 +606,22 @@ textarea {
 }
 
 .cell--collision {
-  border-color: var(--bad);
+  border-color: var(--danger);
   animation: collide 0.5s ease-in-out infinite alternate;
 }
 
-.cell--resolved {
-  box-shadow: inset 0 0 0 2px var(--text-primary);
+/* The arbiter's ruling is marked on the cell and fades with virtual time (--glow, see decay.ts). */
+.cell--ruled {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text-primary) calc(var(--glow) * 100%), transparent);
+}
+
+.cell__tag--ruling {
+  opacity: var(--glow);
 }
 
 .cell__tag {
   display: block;
-  font-size: 10px;
+  font-size: var(--fs-label);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -574,7 +629,7 @@ textarea {
 }
 
 .cell__tag--bad {
-  color: #ffd3d3;
+  color: var(--danger-text);
   font-weight: 700;
 }
 
@@ -582,7 +637,7 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
 }
 
@@ -595,7 +650,7 @@ textarea {
 .legend__item i {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: var(--radius-1);
   display: inline-block;
 }
 
@@ -616,9 +671,9 @@ textarea {
 }
 
 .chaos__result {
-  font-size: 13px;
+  font-size: var(--fs-body);
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
   color: var(--text-secondary);
 }
@@ -630,7 +685,7 @@ textarea {
 .chaos__log {
   margin: 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
 }
 
@@ -644,7 +699,7 @@ textarea {
 
 .feed__filter {
   width: 150px;
-  font-size: 12px;
+  font-size: var(--fs-label);
   padding: 4px 8px;
 }
 
@@ -661,8 +716,8 @@ textarea {
   grid-template-columns: 36px 1fr;
   column-gap: 8px;
   padding: 5px 4px;
-  border-bottom: 1px solid #262624;
-  font-size: 12.5px;
+  border-bottom: 1px solid var(--divider);
+  font-size: var(--fs-body);
 }
 
 .feed__seq {
@@ -686,11 +741,11 @@ textarea {
 }
 
 .feed__row--bad .feed__type {
-  color: var(--bad);
+  color: var(--danger);
 }
 
 .feed__row--good .feed__type {
-  color: #6fe0a8;
+  color: var(--ok-text);
 }
 
 /* ---- timeline ---- */
@@ -701,7 +756,7 @@ textarea {
   padding: 10px 14px;
   background: var(--surface-1);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-3);
   flex-shrink: 0;
 }
 
@@ -710,45 +765,127 @@ textarea {
   flex: 1;
 }
 
+/* The playhead is the slider's thumb: a tall bar with a ring of the surface colour, so it reads
+   against the marks from across a room at 1080p. */
 .timeline__track input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  accent-color: var(--accent);
+  height: 24px;
+  margin: 0;
   padding: 0;
   border: none;
   background: transparent;
+  cursor: pointer;
+}
+
+.timeline__track input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.timeline__track input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.timeline__track input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 6px;
+  height: 24px;
+  margin-top: -9px; /* centred on the 6px track */
+  border: none;
+  border-radius: var(--radius-1);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface-1);
+}
+
+.timeline__track input[type="range"]::-moz-range-thumb {
+  width: 6px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-1);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface-1);
 }
 
 .timeline__marks {
   position: relative;
-  height: 8px;
+  height: 18px;
 }
 
+/* A mark is a button that jumps to the moment. Its colour says what kind of moment it is (the
+   tone in lib/timeline.ts); its height says how much it matters. */
 .mark {
   position: absolute;
   top: 0;
   width: 3px;
-  height: 8px;
-  border-radius: 2px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-1);
+  background: var(--text-secondary);
+  cursor: pointer;
   transform: translateX(-1px);
 }
 
-.mark--chaos,
-.mark--dead,
-.mark--collision {
-  background: var(--bad);
+.mark::after {
+  content: "";
+  position: absolute;
+  inset: -4px -6px; /* a bigger target than the mark */
 }
 
-.mark--adopt {
-  background: #6fe0a8;
+.mark--kill {
+  background: var(--danger);
+}
+
+.mark--recovery {
+  background: var(--ok-text);
 }
 
 .mark--warn {
-  background: #e0b25c;
+  background: var(--warn-text);
+}
+
+.mark--minor {
+  height: 6px;
+  opacity: 0.6;
+}
+
+/* The kill the run must survive, and the kill switch, are the tallest marks; an agent's is routine. */
+.mark--coordinator-kill,
+.mark--halt {
+  width: 5px;
+  height: 18px;
+  transform: translateX(-2px);
+}
+
+.mark--agent-kill {
+  height: 12px;
+}
+
+.mark:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mark:hover {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 }
 
 .timeline__readout {
-  min-width: 180px;
+  min-width: 220px;
   color: var(--text-secondary);
+  font-size: var(--fs-base);
+  font-variant-numeric: tabular-nums;
 }
 
 .speeds {
@@ -773,7 +910,7 @@ textarea {
 
 .charts__head h1 {
   margin: 0 0 4px;
-  font-size: 26px;
+  font-size: var(--fs-stat);
 }
 
 .charts__head p {
@@ -796,7 +933,7 @@ textarea {
 .runs__table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--fs-body);
 }
 
 .charts__table th,
@@ -805,7 +942,7 @@ textarea {
 .runs__table td {
   text-align: left;
   padding: 6px 8px;
-  border-bottom: 1px solid #262624;
+  border-bottom: 1px solid var(--divider);
 }
 
 .charts__table summary {
@@ -829,15 +966,15 @@ textarea {
 }
 
 .newtask textarea {
-  font-family: var(--mono);
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
 }
 
 .newtask__field {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
 }
 
@@ -858,15 +995,15 @@ textarea {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-secondary);
 }
 
 .newtask__errors {
   margin: 0;
   padding-left: 18px;
-  color: #ffd3d3;
-  font-size: 13px;
+  color: var(--danger-text);
+  font-size: var(--fs-body);
 }
 
 .newtask__buttons {
@@ -878,9 +1015,9 @@ textarea {
 .newtask__yaml {
   margin: 0;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
-  font-size: 12px;
+  font-size: var(--fs-label);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -922,10 +1059,10 @@ textarea {
 
 @keyframes collide {
   from {
-    background: #6b1f1f;
+    background: var(--collide-from);
   }
   to {
-    background: #b33030;
+    background: var(--collide-to);
   }
 }
 
@@ -940,11 +1077,11 @@ textarea {
 /* ---- supporting panels (Day 9) ---- */
 .feed__row--warn .feed__type,
 .evrow--warn .evrow__type {
-  color: #e0b25c;
+  color: var(--warn-text);
 }
 
 .chaos__net {
-  font-size: 12px;
+  font-size: var(--fs-label);
   color: var(--text-muted);
 }
 
@@ -1003,34 +1140,34 @@ textarea {
 .pstat {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   padding: 4px 10px;
   min-width: 76px;
 }
 
 .pstat__value {
-  font-size: 17px;
+  font-size: var(--fs-lead);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .pstat__label {
-  font-size: 11px;
+  font-size: var(--fs-label);
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .pstat--good .pstat__value {
-  color: #6fe0a8;
+  color: var(--ok-text);
 }
 
 .pstat--warn .pstat__value {
-  color: #e0b25c;
+  color: var(--warn-text);
 }
 
 .pstat--bad .pstat__value {
-  color: var(--bad);
+  color: var(--danger);
 }
 
 .subhead {
@@ -1038,7 +1175,7 @@ textarea {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-label);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-secondary);
@@ -1060,12 +1197,12 @@ textarea {
 
 .ptable .badge {
   padding: 1px 9px;
-  font-size: 11.5px;
+  font-size: var(--fs-label);
 }
 
 .nothing {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-body);
   padding: 6px 2px;
   list-style: none;
 }
@@ -1073,21 +1210,21 @@ textarea {
 .meter__head {
   display: flex;
   justify-content: space-between;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   margin-bottom: 3px;
 }
 
 .meter__track {
   height: 8px;
-  border-radius: 4px;
-  background: #121211;
+  border-radius: var(--radius-1);
+  background: var(--bg);
   overflow: hidden;
 }
 
 .meter__fill {
   display: block;
   height: 100%;
-  background: var(--good);
+  background: var(--ok);
   transition: width 400ms;
 }
 
@@ -1096,14 +1233,14 @@ textarea {
 }
 
 .meter__fill--bad {
-  background: var(--bad);
+  background: var(--danger);
 }
 
 /* the model ladder: committed money against the cap, ticks at 80 / 90 / 95% */
 .ladder {
   position: relative;
   height: 14px;
-  border-radius: 7px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
   border: 1px solid var(--border);
   margin: 4px 0 20px;
@@ -1112,8 +1249,8 @@ textarea {
 .ladder__fill {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 7px 0 0 7px;
-  background: var(--good);
+  border-radius: var(--radius-2) 0 0 var(--radius-2);
+  background: var(--ok);
   transition: width 400ms;
 }
 
@@ -1122,7 +1259,7 @@ textarea {
 }
 
 .ladder__fill--bad {
-  background: var(--bad);
+  background: var(--danger);
 }
 
 .ladder__tick {
@@ -1137,7 +1274,7 @@ textarea {
   position: absolute;
   top: 18px;
   left: -14px;
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 400;
   color: var(--text-muted);
 }
@@ -1156,7 +1293,7 @@ textarea {
   grid-template-columns: 62px minmax(0, 1fr) 62px 62px;
   gap: 8px;
   align-items: center;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
 }
 
 .bars--memory li {
@@ -1165,7 +1302,7 @@ textarea {
 
 .bars__track {
   height: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-1);
   background: var(--surface-2);
   overflow: hidden;
 }
@@ -1181,7 +1318,7 @@ textarea {
 }
 
 .bars__track i.bars__fill--bad {
-  background: var(--bad);
+  background: var(--danger);
 }
 
 .auction {
@@ -1191,7 +1328,7 @@ textarea {
 }
 
 .auction__line {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
 }
 
 .spendchips {
@@ -1201,9 +1338,9 @@ textarea {
 }
 
 .spendchip {
-  font-size: 12px;
+  font-size: var(--fs-label);
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-2);
   border: 1px solid var(--border);
   white-space: nowrap;
@@ -1216,20 +1353,20 @@ textarea {
 .ptable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
 }
 
 .ptable th,
 .ptable td {
   text-align: left;
   padding: 4px 6px;
-  border-bottom: 1px solid #262624;
+  border-bottom: 1px solid var(--divider);
   vertical-align: top;
 }
 
 .ptable th {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1254,17 +1391,17 @@ textarea {
   list-style: none;
   margin: 0;
   padding: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
 }
 
 .generic__list li {
   padding: 3px 0;
-  border-bottom: 1px solid #262624;
+  border-bottom: 1px solid var(--divider);
 }
 
 .generic__text {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--fs-label);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1277,15 +1414,15 @@ textarea {
 }
 
 .pevent {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   padding: 5px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
   border-left: 3px solid var(--border);
 }
 
 .pevent--bad {
-  border-left-color: var(--bad);
+  border-left-color: var(--danger);
 }
 
 .pevent--warn {
@@ -1306,14 +1443,14 @@ textarea {
   flex-direction: column;
   gap: 3px;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
-  border-left: 3px solid var(--good);
-  font-size: 12.5px;
+  border-left: 3px solid var(--ok);
+  font-size: var(--fs-body);
 }
 
 .crow--open {
-  border-left-color: var(--bad);
+  border-left-color: var(--danger);
 }
 
 .crow__head {
@@ -1325,7 +1462,7 @@ textarea {
 
 .crow__keys {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--fs-label);
   word-break: break-all;
 }
 
@@ -1335,7 +1472,7 @@ textarea {
 
 .limit {
   background: var(--surface-2);
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
@@ -1347,7 +1484,7 @@ textarea {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .blist {
@@ -1366,13 +1503,13 @@ textarea {
   gap: 8px;
   padding: 6px 8px;
   background: var(--surface-2);
-  border-radius: 8px;
-  border-left: 3px solid var(--good);
-  font-size: 13px;
+  border-radius: var(--radius-2);
+  border-left: 3px solid var(--ok);
+  font-size: var(--fs-body);
 }
 
 .brow--open {
-  border-left-color: var(--bad);
+  border-left-color: var(--danger);
 }
 
 .brow--half_open {
@@ -1381,7 +1518,7 @@ textarea {
 
 .brow__why {
   width: 100%;
-  color: #ffd3d3;
+  color: var(--danger-text);
 }
 
 .faults {
@@ -1392,29 +1529,29 @@ textarea {
 
 .fault {
   background: var(--surface-2);
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   padding: 5px 8px;
   display: flex;
   flex-direction: column;
-  font-size: 11.5px;
+  font-size: var(--fs-label);
 }
 
 .fault b {
-  font-size: 16px;
+  font-size: var(--fs-lead);
 }
 
 .fault--on b {
-  color: #e0b25c;
+  color: var(--warn-text);
 }
 
 .step {
   display: inline-block;
   margin: 0 6px 2px 0;
   padding: 1px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-2);
   border: 1px solid var(--border);
-  font-size: 12px;
+  font-size: var(--fs-label);
 }
 
 /* run controls: budget shock and kill switch, one slim strip */
@@ -1428,7 +1565,7 @@ textarea {
 }
 
 .controls__label {
-  font-size: 13px;
+  font-size: var(--fs-body);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-secondary);
@@ -1450,11 +1587,11 @@ textarea {
 .controls__state {
   margin-left: auto;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .controls__state--bad {
-  color: #ffd3d3;
+  color: var(--danger-text);
 }
 
 .controls__kill {
@@ -1493,9 +1630,9 @@ textarea {
 
 .chip {
   font: inherit;
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
@@ -1505,7 +1642,7 @@ textarea {
 .chip--on {
   background: var(--surface-2);
   color: var(--text-primary);
-  border-color: #55544f;
+  border-color: var(--border-strong);
 }
 
 .chip--noise {
@@ -1527,8 +1664,8 @@ textarea {
 }
 
 .evrow {
-  border-bottom: 1px solid #262624;
-  font-size: 13px;
+  border-bottom: 1px solid var(--divider);
+  font-size: var(--fs-body);
 }
 
 .evrow__line {
@@ -1562,11 +1699,11 @@ textarea {
 }
 
 .evrow--bad .evrow__type {
-  color: var(--bad);
+  color: var(--danger);
 }
 
 .evrow--good .evrow__type {
-  color: #6fe0a8;
+  color: var(--ok-text);
 }
 
 .evrow__actor {
@@ -1584,8 +1721,8 @@ textarea {
   margin: 0 0 6px;
   padding: 8px 10px;
   background: var(--surface-2);
-  border-radius: 8px;
-  font-size: 12px;
+  border-radius: var(--radius-2);
+  font-size: var(--fs-label);
   overflow: auto;
   max-height: 360px;
 }
@@ -1615,11 +1752,11 @@ textarea {
 
 .results__title h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--fs-title);
 }
 
 .results__outcome {
-  font-size: 15px;
+  font-size: var(--fs-base);
   padding: 3px 6px;
 }
 
@@ -1659,9 +1796,9 @@ textarea {
   max-height: 360px;
   overflow: auto;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
-  font-size: 12.5px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1670,7 +1807,7 @@ textarea {
 .results__raw pre {
   max-height: 300px;
   overflow: auto;
-  font-size: 12px;
+  font-size: var(--fs-label);
   margin: 6px 0 0;
 }
 
@@ -1724,7 +1861,7 @@ textarea {
 }
 
 .plan__status {
-  font-size: 15px;
+  font-size: var(--fs-base);
   padding: 3px 6px;
   letter-spacing: 0.04em;
 }
@@ -1748,7 +1885,7 @@ textarea {
 }
 
 .plan__text {
-  font-size: 13.5px;
+  font-size: var(--fs-body);
   line-height: 1.5;
 }
 
@@ -1758,10 +1895,10 @@ textarea {
   margin-left: 6px;
   min-width: 18px;
   padding: 0 6px;
-  border-radius: 999px;
-  background: #8f2626;
-  color: #ffe1e1;
-  font-size: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--danger-solid);
+  color: var(--danger-solid-ink);
+  font-size: var(--fs-label);
   font-weight: 700;
   text-align: center;
 }
@@ -1783,7 +1920,7 @@ textarea {
 }
 
 .security__banner--contained {
-  border-color: #23744f;
+  border-color: var(--ok-border);
 }
 
 .security__title {
@@ -1793,7 +1930,7 @@ textarea {
 }
 
 .security__verdict {
-  font-size: 15px;
+  font-size: var(--fs-base);
   padding: 3px 6px;
   letter-spacing: 0.06em;
 }
@@ -1832,23 +1969,23 @@ textarea {
   gap: 8px;
   padding: 6px 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   color: var(--text-primary);
   text-align: left;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   cursor: pointer;
 }
 
 .erow--quarantined {
-  border-color: #8f3434;
-  background: #2a1616;
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
 }
 
 .erow--blocked {
-  border-color: #7a5a14;
-  background: #2b2210;
+  border-color: var(--warn-border);
+  background: var(--warn-bg);
 }
 
 .erow--on {
@@ -1862,10 +1999,10 @@ textarea {
 .email__body {
   margin: 0;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1874,10 +2011,10 @@ textarea {
 }
 
 .email__body mark {
-  background: #8f2626;
-  color: #fff2f2;
+  background: var(--danger-solid);
+  color: var(--danger-solid-ink);
   padding: 1px 3px;
-  border-radius: 3px;
+  border-radius: var(--radius-1);
 }
 
 .email__stub {
@@ -1891,10 +2028,10 @@ textarea {
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid #8f3434;
-  border-left: 5px solid var(--bad);
-  background: #2a1616;
+  border-radius: var(--radius-2);
+  border: 1px solid var(--danger-border);
+  border-left: 5px solid var(--danger);
+  background: var(--danger-bg);
 }
 
 .blocked__head {
@@ -1905,7 +2042,7 @@ textarea {
 }
 
 .blocked__word {
-  font-size: 15px;
+  font-size: var(--fs-base);
   letter-spacing: 0.1em;
   padding: 2px 6px;
 }
@@ -1915,7 +2052,7 @@ textarea {
   padding: 6px 10px;
   border-left: 3px solid var(--text-muted);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-style: italic;
 }
 
@@ -1928,11 +2065,11 @@ textarea {
 .blocked__reasons {
   margin: 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: var(--fs-body);
 }
 
 .blocked__evidence {
-  font-size: 12.5px;
+  font-size: var(--fs-body);
 }
 
 .trail {
@@ -1946,18 +2083,18 @@ textarea {
 
 .trail__row {
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
   border-left: 3px solid var(--border);
-  font-size: 12.5px;
+  font-size: var(--fs-body);
 }
 
 .trail__row--bad {
-  border-left-color: var(--bad);
+  border-left-color: var(--danger);
 }
 
 .trail__row--good {
-  border-left-color: var(--good);
+  border-left-color: var(--ok);
 }
 
 .trail__text {

@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { asNumber, asStrings, digest } from "../lib/generic";
 import type { ViewState } from "../lib/reducer";
 import { outcomeOf, placementsOf, type Outcome } from "../lib/results";
-import { useRun } from "../store";
+import { useRunStore } from "../store";
 import { Card, GenericRows, money, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
 
 const OUTCOME: Record<Outcome, { label: string; tone: "good" | "warn" | "bad" | "muted" }> = {
@@ -66,9 +66,9 @@ function Schedule({ report }: { report: Record<string, unknown> }) {
 
 export function ResultsView({ view }: { view: ViewState }) {
   const { results, economy } = view.panels;
-  const seek = useRun((s) => s.seek);
-  const total = useRun((s) => s.events.length);
-  const live = useRun((s) => s.live);
+  const seek = useRunStore((s) => s.seek);
+  const total = useRunStore((s) => s.events.length);
+  const live = useRunStore((s) => s.live);
   const outcome = outcomeOf(results);
   const task = results.task;
   const report = task?.report ?? {};
