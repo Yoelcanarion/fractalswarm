@@ -14,7 +14,9 @@ from statistics import mean
 from typing import Any
 
 from fractalswarm.bench.harness import read_results
+from fractalswarm.bench.profiles import jittered_plan
 from fractalswarm.bench.verdicts import RIVALS, RULES, evaluate, judge, parse_knobs
+from fractalswarm.comms.chaos import build_plan
 
 Row = dict[str, Any]
 
@@ -536,9 +538,10 @@ def _points(value: float) -> str:
 
 
 def _jitter(rows: list[Row]) -> dict[str, str]:
-    """T2 at C3 at each jitter setting (each with its own C0 twin): the locality of the swarm
-    against each rival as ``bench verdicts`` reads it, each workflow's means, and the locality
-    metrics seed by seed against ``durable-max``. Exploratory: none of it is in ``honesty.json``."""
+    """T2 at C3 at each jitter setting (each with its own C0 twin): where the crashes of each
+    seed's plan land, the locality of the swarm against each rival as ``bench verdicts`` reads it,
+    each workflow's means, and the locality metrics seed by seed against ``durable-max``.
+    Exploratory: none of it is in ``honesty.json``."""
     swept = [
         (parse_knobs(r.get("knobs")).get(JITTER_AXIS), r)
         for r in rows
@@ -547,6 +550,17 @@ def _jitter(rows: list[Row]) -> dict[str, str]:
     mine = [(setting, r) for setting, r in swept if setting is not None]
     settings = sorted({setting for setting, _ in mine})
     chaos = [(setting, r) for setting, r in mine if r["profile"] == "C3"]
+
+    seeds = _seeds_of(r for _, r in chaos)
+    plans = []
+    for seed in seeds:  # where the crashes of the plan land: what a setting means
+        row = [seed]
+        for setting in settings:
+            plan = jittered_plan(build_plan("C3", seed).model_dump(mode="json"), seed, int(setting))
+            at = [a["at"] for a in plan["actions"] if a["kind"] == "kill_coordinator"]
+            row.append(" / ".join(f"{x * 100:.0f}" for x in at))
+        plans.append(row)
+    out = {"jitter_plans": _table(["Seed", *(f"Jitter {_points(s)}" for s in settings)], plans)}
 
     regimes = evaluate([(JITTER_AXIS, [r for _, r in mine])]).regimes
     found = {(r.rival, r.value): r for r in regimes if r.axis == JITTER_AXIS and r.profile == "C3"}
@@ -557,22 +571,20 @@ def _jitter(rows: list[Row]) -> dict[str, str]:
             point = found.get((rival, setting))
             row += ["-"] * 4 if point is None else [point.locality, *_ratios(point.model_dump())]
         body.append(row)
-    out = {
-        "jitter_locality": _table(
-            [
-                "Jitter (points)",
-                "vs durable-max",
-                "cdt",
-                "blast",
-                "idle",
-                "vs durable",
-                "cdt",
-                "blast",
-                "idle",
-            ],
-            body,
-        )
-    }
+    out["jitter_locality"] = _table(
+        [
+            "Jitter (points)",
+            "vs durable-max",
+            "cdt",
+            "blast",
+            "idle",
+            "vs durable",
+            "cdt",
+            "blast",
+            "idle",
+        ],
+        body,
+    )
 
     body = []
     for setting in settings:
@@ -603,7 +615,6 @@ def _jitter(rows: list[Row]) -> dict[str, str]:
     )
 
     index = {(s, r["workflow"], r["seed"]): r for s, r in chaos}
-    seeds = _seeds_of(r for _, r in chaos)
     body = []
     for metric, label in LOCALITY:
         for seed in seeds:

@@ -115,7 +115,11 @@ def test_the_jitter_tables_are_laid_out_from_the_sweeps_own_rows(tmp_path: Path)
     out.mkdir(parents=True)
     write_results(jitter_sweep(), out)
     made = {n: t.splitlines() for n, t in report_tables(tmp_path).items() if n.startswith("jitter")}
-    assert list(made) == ["jitter_locality", "jitter_means", "jitter_seeds"]
+    assert list(made) == ["jitter_plans", "jitter_locality", "jitter_means", "jitter_seeds"]
+    assert made["jitter_plans"][2:] == [  # the crash points of the plan, by seed and setting
+        "| 1 | 20 / 35 / 50 / 65 / 80 | 21 / 34 / 54 / 64 / 80 | 22 / 33 / 62 / 63 / 80 |",
+        "| 2 | 20 / 35 / 50 / 65 / 80 | 25 / 37 / 54 / 69 / 77 | 34 / 42 / 62 / 72 / 78 |",
+    ]
     assert made["jitter_locality"][2:] == [
         "| 0 | holds | 0.20 | 0.20 | 0.20 | holds | 0.20 | 0.20 | 0.20 |",
         "| ±5 | holds | 0.20 | 0.20 | 0.20 | holds | 0.20 | 0.20 | 0.20 |",
