@@ -202,6 +202,30 @@ interface RoleRow { role: string; purpose: Purpose; /* same numbers as ModelRow 
 
 `demo/backup` (79 calls): $0.49477, input 198,719 (cached 120,350 = 60.6 %), output 80,448 (reasoning 52,501); Wonder 1 call $0.04707, Spark 78 calls $0.44770; coordination and recovery tokens 0.
 
+### `GET /disputes` → the semantic disputes of the run (step 3)
+`{ run_id, ended, count, open, disputes: Dispute[] }`. `ended` is true when the log holds `run.completed` or `run.halted`; `open` counts the disputes with no ruling. A run never waits on a person, so a dispute can still be open when it ends: that is what this route lists. A run with no dispute (arbitration off, or nothing disagreed) answers `count: 0`. Unknown run: 404.
+
+```ts
+interface Dispute {
+  key: string; subject: string;           // "speaker:S02:availability", "S02"
+  status: "open" | "ruled";
+  opened_seq: number; opened_ts: number;  // the first collision.detected{kind: "semantic"} for the key
+  goal_id: string; holder: string;        // the goal and the agent whose publish opened it
+  lca: string | null;                     // the goal whose owner arbitrates; null until arbitration.requested
+  candidates: { label: string; value: any; works: string[]; sources: string[] }[];  // the board's last word before the ruling
+  calls: { attempt: number; effect_id: string; actor: string; status: CallStatus; model: string | null;
+           cost_usd: number; estimated: boolean; started_ts: number; ended_ts: number | null;
+           cancel: Cancel | null }[];     // one per arbitration call, in order; effect_id opens GET /calls/{effect_id}
+  ruling: null | { winner: string; work: string; reason: string; confidence: number; evidence: string[];
+                   by: "arbiter" | "agreement" | "fallback"; attempt: number; reused: boolean;
+                   arbiter: string; seq: number; ts_virtual: number };
+  escalation: null | { id: string; options: string[]; default: string; confidence: number;
+                       timeout_ms: number; ts_virtual: number };
+  why_open: string | null;                // one English sentence for a dispute with no ruling, else null
+}
+```
+`why_open` is read from the dispute's last call: "no arbitration call was made: nobody had taken the dispute up when the log ended" · "o0 finished its work before the arbiter answered; its call was cancelled" · "the arbiter's call was cancelled: o0 was killed by chaos (kill_coordinator)" · "the arbiter's call was still in flight when the log ended" · "the arbiter's call ended error and no later attempt was made" · "the arbiter's answer is in the log and no ruling followed it". The `ref` of an arbitration call in `GET /calls` is `{kind: "arbitrate", key, attempt}`.
+
 ---
 
 ## Step 2 — the ablation
@@ -339,7 +363,7 @@ Two unusable answers (not JSON, a winner that is no label, an error, a refusal) 
 - `actors/arbitration.py` (new): the events, `DisputesView` (reducer name `disputes`: contract → work, the disputes and their candidates, the rulings, the arbitration calls by tag), `lca_of`, `join`, `read_ruling`, `step` (the owner's turn), `gate`, the prompt.
 - `bench/tasks/t2_conference/arbitration.py` (new): T2's side — `fact_keys`, `overlay`, `evidence`, the fake arbiter (registered in `fake.HANDLERS`, reads the email the way the fake extractor does) and `with_dispute(script, speaker, session)`, the fake script variant that makes one session misread one speaker.
 - `actors/board.py`: `_contest` (detection), `_resolve` (applies the order), `promote` skips disputed keys.
-- Light edits, listed for the merge: `actors/orchestrator.py` (+88 −9): init flag, `_opt_ins`, `_handle` (arbitrate / arb.hold tags, request / ruling topics), `_dispatch` (the gate, the timer, the cancel), `_arb_woken`, `_arb_ruled`, `_arbitrate`, `_parent_of`, one call each in `_reconcile` and the central tick, and **in W1's durable code** `_crash` (cancels the arbitration call in flight) and `_crash_durable(state, view)` (the same, `durable` only; the signature gained `view`). `actors/swarm.py` (+13 −2): `DisputesView` in the reducers, the flag to the board and the root, a `ValueError` for a task with no hooks. `planning/taskspec.py` (+7 −1, the coordinator's OK): `arbitration: bool = Field(default=False, exclude=True)` and `params["arbitration"] = True` in `_with_economy`. `api/lens.py`: sentences for the new events, and `ref: {kind: "arbitrate", key, attempt}` on the arbitration call (the lens already labelled the `arbiter` role as `purpose: "arbitration"`).
+- Light edits, listed for the merge: `actors/orchestrator.py` (+88 −9): init flag, `_opt_ins`, `_handle` (arbitrate / arb.hold tags, request / ruling topics), `_dispatch` (the gate, the timer, the cancel), `_arb_woken`, `_arb_ruled`, `_arbitrate`, `_parent_of`, one call each in `_reconcile` and the central tick, and **in W1's durable code** `_crash` (cancels the arbitration call in flight) and `_crash_durable(state, view)` (the same, `durable` only; the signature gained `view`). `actors/swarm.py` (+13 −2): `DisputesView` in the reducers, the flag to the board and the root, a `ValueError` for a task with no hooks. `planning/taskspec.py` (+7 −1, the coordinator's OK): `arbitration: bool = Field(default=False, exclude=True)` and `params["arbitration"] = True` in `_with_economy`. `api/lens.py`: sentences for the new events, `ref: {kind: "arbitrate", key, attempt}` on the arbitration call (the lens already labelled the `arbiter` role as `purpose: "arbitration"`), and the route `GET /api/runs/{id}/disputes` (shape under "Endpoint shapes").
 
 ### What happens when the arbiter dies mid-call (forced dispute S02 at track-ai/d1, an arbiter 8 s slow, o0 killed at 30 %, all checked in the log)
 | System | The call in flight | Who finishes it |
@@ -362,11 +386,11 @@ An answer a dead owner got is adopted by the heir without a new call (`reused: t
 4. **A finished goal reads an answer that comes in late but pays for no new call.** If the root completes first, the call is cancelled with the run and the dispute stays open in the log.
 5. **`DisputesView` is always installed**, whatever the flag, so replay of a log needs no knowledge of it; it adds no event.
 
-### Open questions
-1. **Answering an escalation.** Needs W2 step 7's `control.injected` payload. The ruling is already applied when the escalation opens, so a person's answer would be a second event (an overruling) and a board path that replaces a verified fact; neither exists. If step 7 is not approved, the escalation stays what it is: a visible flag with a default.
-2. **No closing event for `escalation.opened`.** After `timeout_ms` nothing in the log says the ruling stood; the UI can derive it from the event's time plus `timeout_ms`. Say if W5 wants an event for it.
-3. **A dispute still open when the run ends** (the root completes before the arbiter answers, or the call was cancelled with the run) stays open in the log, with no ruling. The result is unaffected, since the contracts went out with their own values after the 30 s. Say if the root should hold its completion for open disputes.
-4. **The 30 s hold** is the brief's number on the virtual clock. A real Wonder call at effort high may take longer than that, and then the `place` goes out with its own values and the ruling only settles the fact. Change `HOLD_MS` if the real run shows that.
+### Decisions on the open questions (the coordinator, at the merge, 24995b5)
+1. **Answering an escalation: after W2's step 7, as a separate commit.** The shape W2 proposes, which fits: `control.injected{op: "answer", to: "goal:<escalation.goal_id>", body: {escalation_id, choice}}`, `escalation_id` being the escalation's `id` (`arbitration:<key>`) and `choice` one of its `options` (a candidate label). The ruling is already applied when the escalation opens, so an answer equal to the ruled label confirms it and a different one is an overruling: new event types `escalation.answered{id, choice, by, accepted, overruled}` and `arbitration.overruled{key, winner, contract, value}`, and a board path that replaces the verified fact. Ignored with `accepted: false`: a choice that is not an option, an unknown id, a second answer, an answer after `timeout_ms`. Placed contracts keep their value; those not yet dispatched take the new one. **Not built yet:** it waits for W2 to document the applied event's payload keys and whether a reducer sees it.
+2. **No closing event for `escalation.opened`:** fine; the UI derives the end from the event's time plus `timeout_ms`.
+3. **A dispute still open when the run ends is not waited for** (a run must not stall on a person). It stays open in the log with no ruling, and `GET /api/runs/{id}/disputes` lists it with `status: "open"` and `why_open`. The contracts went out with their own values after the 30 s, so the result is unaffected.
+4. **`HOLD_MS` stays 30 s.** If a real run shows the hold timing out, the coordinator and I decide before the handler freeze (Sun Nov 1, 20:00).
 
 ### Limits to know
 - **Only T2 has the hooks** (`TASK_HOOKS`): a run with `arbitration` on another task fails at boot with a `ValueError`. Only a `place` reads availability, so only a `place` waits.
@@ -382,3 +406,4 @@ An answer a dead owner got is adopted by the heir without a new call (`reused: t
 - **What the suite caught:** the board's `_tool` had gained a required `state` argument, and the LangGraph baseline calls it on a bare `Blackboard` (`baselines/langgraph_teams.py:521`); 11 baseline tests errored and 3 more failed downstream. `state` is optional again (without it there are no disputes) and a unit test pins the call shape. The baseline file is untouched.
 - **References:** 43 of 43 runs identical to `~/.fractalswarm/refs/arena-c2b5e08` by `compare_refs.py` (the 11 CLI runs and the 32-cell fake matrix; event counts and hash-chain heads equal). Arbitration is off unless `params.arbitration` is set, and `DisputesView` adds no event.
 - `fractalswarm demo --verify --no-serve --no-browser` (scratch dirs): MATCH, 8177 events.
+- **After merging arena `13f2909`** (8531784, W4 steps 8-9 and W2 steps 5-6, plus the progress commit) into the branch at `418a5d8`: two textual conflicts, both resolved without losing either side. `cli.py`: both sides added a block after `run_id = ...` (my ablation scenario path, W2's `--start-barrier`); both kept. `tests/integration/test_ablation.py`: the same content-type fix on both sides; arena's wording taken. Rerun on the merged head: 415 targeted tests passed (arbitration unit + integration, ablation, lens, LangGraph baseline, API, guard, arena, run status, launch API, replay verify, takeover check, durable rivals, central baseline), and the references are again 43 of 43 identical to `arena-c2b5e08`. The full suite was not rerun on the merged head; it ran at `e5061b8` before the merge.
