@@ -59,7 +59,7 @@ a free checkpoint). The two differ in the coordinator's own plan, judge and scan
 
 from typing import Any
 
-from fractalswarm.actors import autoscale, market_maker
+from fractalswarm.actors import arbitration, autoscale, market_maker
 from fractalswarm.actors.board import BOARD
 from fractalswarm.actors.integrator import finish_goal, leaf_outcome, merge_children
 from fractalswarm.baselines.durable import DURABLE_MODES
@@ -167,6 +167,7 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "contributor": bool(args.get("contributor")),
         "channel_breakers": args.get("channel_breakers"),
         "audit": bool(args.get("audit")),  # the cross-squad audit (verify/cross_audit.py)
+        "arbitration": bool(args.get("arbitration")),  # Wonder rules disputes (arbitration.py)
         "feasibility": bool(args.get("feasibility")),  # the report at plan approval
         "market": args.get("market"),  # the economy's settings; None: no epochs (the default)
         "autoscale": args.get("autoscale"),  # the caps of scaling.mode: autoscale; None: exact
@@ -275,6 +276,10 @@ def _handle(state: dict[str, Any], event: Event, view: View):
             return _woken(state, tag[1], view)
         if tag[0] == APPROVAL_TAG:
             return _hold_tick(state, tag[1], view)
+        if tag[0] == arbitration.TAG:
+            return state, _arbitrate(state, view)
+        if tag[0] == arbitration.HOLD_TAG:
+            return _arb_woken(state, tag[1], view)
         return state, []
     if kind == "control.injected":
         return _controlled(state, event.payload, view)
@@ -293,6 +298,10 @@ def _handle(state: dict[str, Any], event: Event, view: View):
         return _audit_requested(state, body, view)
     if topic == cross_audit.TOPIC_RESULT:
         return _audit_result(state, body, view)
+    if topic == arbitration.TOPIC_REQUEST:
+        return state, _arbitrate(state, view)
+    if topic == arbitration.TOPIC_RULING:
+        return _arb_ruled(state, view)
     if topic == "shutdown":
         return state, [Stop(reason="shutdown")]
     return state, []
@@ -817,10 +826,16 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
     spread = autoscale.spread(gid, ready, contracts, agents) if several else {}
     if ready:
         commands += market_maker.request_topup(state, gid, [contracts[cid] for cid in ready], view)
+    held: int | None = None
     for cid in ready:
         contract = Contract.model_validate(contracts[cid])
         deps = {dep: entry["outputs"][dep] for dep in contract.depends_on}
         inputs = task.contract_inputs(entry["goal"], contract, deps)
+        if state["arbitration"]:
+            until_ms, inputs = arbitration.gate(state, contract.kind, inputs, view)
+            if until_ms is not None:  # a fact it reads is in dispute: wait for the ruling
+                held = until_ms if held is None else min(held, until_ms)
+                continue
         update: dict[str, Any] = {"inputs": inputs, "owner": state["id"]}
         if f"{gid}/{cid}" in spread:
             update["assignee"] = spread[f"{gid}/{cid}"]
@@ -840,6 +855,13 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
         commands.append(_emit(state, gid, "contract.dispatched", dispatched))
         body = {"contract": contracts[cid]} | market_maker.level_body(state)
         commands.append(Send(to=contract.assignee, topic="contract", body=body))
+    if held is not None and entry.get("arb_wake") != held:  # one timer per wait
+        entry = {**entry, "arb_wake": held}
+        delay = max(held - view.now, 0)
+        commands.append(SetTimer(delay_ms=delay, tag=f"{arbitration.HOLD_TAG}|{gid}"))
+    elif held is None and entry.get("arb_wake") is not None:  # the wait is over: drop its timer
+        entry = {**entry, "arb_wake": None}
+        commands.append(Cancel(tag=f"{arbitration.HOLD_TAG}|{gid}"))
     entry = {**entry, "status": status, "contracts": contracts}
     state = _put_goal(state, gid, entry)
     if commands:
@@ -848,6 +870,8 @@ def _dispatch(state: dict[str, Any], gid: str, view: View):
         return state, []
     if until is not None:  # nothing runs and the breaker holds the rest: wait for it to close
         return market_maker.wake(state, gid, until, view)
+    if held is not None:  # nothing runs and a ruling is awaited: the goal is not done
+        return state, []
     output, gaps = leaf_outcome(task, entry, dag)
     return _complete(state, gid, output, gaps, view)
 
@@ -874,6 +898,25 @@ def _woken(state: dict[str, Any], gid: str, view: View):
     if entry is None or entry["phase"] != "running":
         return state, []
     return _dispatch(_put_goal(state, gid, {**entry, "wake": None}), gid, view)
+
+
+def _arb_woken(state: dict[str, Any], gid: str, view: View):
+    """The wait for a ruling may be over (it came, or its 30 s did): dispatch what it held."""
+    entry = state["goals"].get(gid)
+    if entry is None or entry["phase"] != "running":
+        return state, []
+    return _dispatch(_put_goal(state, gid, {**entry, "arb_wake": None}), gid, view)
+
+
+def _arb_ruled(state: dict[str, Any], view: View):
+    """A ruling is in the log: the leaf goals with contracts waiting for it go on."""
+    commands: list[Command] = []
+    for gid in sorted(state["goals"]):
+        entry = state["goals"][gid]
+        if entry["phase"] == "running" and "pending" in entry.get("status", {}).values():
+            state, more = _dispatch(state, gid, view)
+            commands += more
+    return state, commands
 
 
 def _contract_result(state: dict[str, Any], body: dict[str, Any], view: View):
@@ -1332,6 +1375,7 @@ def _reconcile(state: dict[str, Any], view: View):
                 respawned.add(group)
                 state, more = _respawn(state, record.level, group)
                 commands += more
+    commands += _arbitrate(state, view)  # a dead arbiter's open dispute is the heir's now
     for gid in sorted(state["goals"]):
         state, more = _pull(state, gid, view)
         commands += more
@@ -1560,6 +1604,7 @@ def _central_step(state: dict[str, Any], event: Event, view: View):
             return state, []
         commands: list[Command] = [SetTimer(delay_ms=CENTRAL_TICK_MS, tag=CENTRAL_TICK)]
         if state["up"]:  # the same 1 s check as the swarm's: lost agents, results in the log
+            commands += _arbitrate(state, view)
             for gid in sorted(state["goals"]):
                 state, more = _pull(state, gid, view)
                 commands += more
@@ -1573,8 +1618,8 @@ def _crash(state: dict[str, Any], view: View):
     """Process-tree crash: everything in flight dies, the workers' calls included. A durable
     supervisor (``DURABLE_MODES``) stops nobody."""
     if state["mode"] in DURABLE_MODES:
-        return _crash_durable(state)
-    tags: list[str] = []
+        return _crash_durable(state, view)
+    tags: list[str] = arbitration.tags_in_flight(view, state["id"]) if state["arbitration"] else []
     lost: list[str] = []
     for gid in sorted(state["goals"]):
         entry = state["goals"][gid]
@@ -1604,13 +1649,17 @@ def _crash(state: dict[str, Any], view: View):
     return state, commands
 
 
-def _crash_durable(state: dict[str, Any]):
+def _crash_durable(state: dict[str, Any], view: View):
     """The coordinator's process dies and nothing else does: no worker is stopped and none of
     their calls is cancelled; what they and the board send meanwhile is in the log. Its own
-    calls in flight (``_own_tags``) are lost under ``durable``, a realistic supervisor (the
-    framework drops the call with the process), and kept under ``durable-max``, whose planner
-    and judge calls are durable jobs. ``lost`` lists the cancelled calls."""
-    tags = _own_tags(state) if state["mode"] == "durable" else []
+    calls in flight (``_own_tags``, and an arbitration call) are lost under ``durable``, a
+    realistic supervisor (the framework drops the call with the process), and kept under
+    ``durable-max``, whose planner and judge calls are durable jobs. ``lost`` lists the
+    cancelled calls."""
+    lossy = state["mode"] == "durable"
+    tags = _own_tags(state) if lossy else []
+    if lossy and state["arbitration"]:
+        tags += arbitration.tags_in_flight(view, state["id"])
     number = state["crashes"] + 1
     payload = {
         "coordinator": state["id"],
@@ -1900,7 +1949,8 @@ def _opt_ins(state: dict[str, Any]) -> dict[str, Any]:
     """The opt-in features this run turned on, and a sweep's detection time, for the
     orchestrators spawned below. They are left out when off, so a run that did not ask for
     them logs the spawn args it always did."""
-    passed: dict[str, Any] = {name: True for name in ("audit", "feasibility") if state[name]}
+    names = ("audit", "feasibility", "arbitration")
+    passed: dict[str, Any] = {name: True for name in names if state[name]}
     if state.get("human_approval"):
         passed["human_approval"] = True
     if state["detect_ms"] is not None:
@@ -1914,6 +1964,35 @@ def _route(state: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
     if state["rung"] != "L0":
         request = request | {"level": request_level(state["rung"])}
     return request | {"contributor": True} if state["contributor"] else request
+
+
+def _arbitrate(state: dict[str, Any], view: View) -> list[Command]:
+    """Take up the semantic disputes whose lowest common ancestor goal this orchestrator owns
+    (``actors/arbitration.py``): on the board's word, on every tick, and after a takeover."""
+    if not state["arbitration"]:
+        return []
+    tools = arbitration.Tools(
+        emit=_emitter(state),
+        route=lambda request: _route(state, request),
+        parent_of=_parent_of(state, view),
+        board=BOARD,
+    )
+    return arbitration.step(state, view, tools)
+
+
+def _parent_of(state: dict[str, Any], view: View):
+    """A goal's parent goal: from the goals this orchestrator holds (all of them, in the central
+    modes), else from the tree."""
+    tree = view.views.get("tree")
+
+    def parent_of(gid: str) -> str | None:
+        entry = state["goals"].get(gid)
+        if entry is not None:
+            return entry["parent_gid"]
+        record = tree.goals.get(gid) if tree is not None else None
+        return record.parent if record is not None else None
+
+    return parent_of
 
 
 def _recursion(state: dict[str, Any], gid: str, goal: dict[str, Any]) -> list[Command]:

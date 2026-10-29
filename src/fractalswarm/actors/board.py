@@ -10,17 +10,24 @@ mailbox of the channel breakers (``comms/mailbox.py``): ``mailbox.put``, ``mailb
 
 The web tools (``actors/web.py``) are the exception to "applies requests in delivery order": a
 search or a fetch is a chain of effects, so its ``tool.result`` comes after their completions.
+
+With arbitration on (``actors/arbitration.py``) a publish whose value differs from another
+contract's value for the same key does not overwrite it: the fact is marked ``disputed``, its
+candidates are logged (``collision.detected``, kind ``semantic``), and the owner of the lowest
+common ancestor is told. The owner's ``fact.resolve`` makes the winner's value the verified fact.
 """
 
+import copy
 import json
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from fractalswarm.actors import web
+from fractalswarm.actors import arbitration, web
 from fractalswarm.comms.mailbox import MAIL_ITEMS, MAIL_NOTIFY, MAIL_POLL, MAIL_PUT, Mailbox
 from fractalswarm.coord.leases import FencingToken, Write
 from fractalswarm.kernel.events import Event
+from fractalswarm.kernel.ids import canonical_json
 from fractalswarm.kernel.scheduler import Command, Emit, Send, View
 from fractalswarm.memory.blackboard import Blackboard, Fact, Provenance, WorkspaceError
 
@@ -93,7 +100,14 @@ TOOL_DESCRIPTIONS = {
 
 
 def board_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
-    return {"id": actor_id, "board": Blackboard(), "mail": Mailbox()}
+    return {
+        "id": actor_id,
+        "board": Blackboard(),
+        "mail": Mailbox(),
+        "arbitration": bool(args.get("arbitration")),
+        "disputes": {},  # key -> the candidates of an open semantic dispute
+        "settled": set(),  # keys with a ruling: tested for membership only
+    }
 
 
 def board_handle(state: dict[str, Any], event: Event, view: View):
@@ -106,15 +120,19 @@ def board_handle(state: dict[str, Any], event: Event, view: View):
     if topic == "tool":
         if body["name"] in web.WEB_TOOLS:
             return web.start(state, body, sender, view)
-        output, commands = _tool(board, body, view)
+        output, commands = _tool(board, body, view, state)
         reply = {"call_id": body["call_id"], "contract": body["contract"], "output": output}
         return state, [*commands, Send(to=sender, topic="tool.result", body=reply)]
     if topic == "promote":
         commands: list[Command] = []
         for key in sorted(body["keys"]):
+            if key in state["disputes"]:
+                continue  # the arbiter settles a disputed fact; its owner does not promote it
             if board.promote(key) is not None:
                 commands.append(Emit(type="fact.promoted", payload={"key": key, "by": sender}))
         return state, commands
+    if topic == arbitration.TOPIC_RESOLVE:
+        return state, _resolve(state, board, body, view)
     if topic == "book":
         return state, _book(board, body, sender, view)
     if topic == MAIL_PUT:
@@ -153,7 +171,9 @@ def _fact_event(fact: Fact) -> Emit:
     return Emit(type="fact.published", payload=payload)
 
 
-def _tool(board: Blackboard, body: dict[str, Any], view: View):
+def _tool(board: Blackboard, body: dict[str, Any], view: View, state: dict[str, Any] | None = None):
+    """The board's tools. ``state`` is the board actor's; the LangGraph baseline, which runs the
+    tools without an actor, passes none, and so has no disputes."""
     name, squad = body["name"], body["squad"]
     try:
         args = TOOL_ARGS[name].model_validate(body["args"])
@@ -191,6 +211,12 @@ def _tool(board: Blackboard, body: dict[str, Any], view: View):
             ),
             lamport=view.lamport,
         )
+        if (
+            state is not None
+            and state["arbitration"]
+            and (contested := _contest(state, board, fact, view)) is not None
+        ):
+            return contested
         stored = board.publish(fact)
         if stored.status != "draft" or stored.provenance.contract != body["contract"]:
             return {"ok": False, "key": args.key, "note": "a verified fact already exists"}, []
@@ -223,6 +249,82 @@ def _tool(board: Blackboard, body: dict[str, Any], view: View):
     return {"ok": True, "path": written.path, "version": written.version}, [
         Emit(type="artifact.written", payload=payload)
     ]
+
+
+def _contest(state: dict[str, Any], board: Blackboard, fact: Fact, view: View):
+    """A publish that disagrees with another contract's value for the key (canonical JSON), as
+    (output, commands), or ``None`` when it is an ordinary publish: a new key, a retry of the
+    contract that holds it, two readings that agree, or a key the arbiter has ruled on."""
+    key, disputes = fact.key, state["disputes"]
+    current = board.facts.get(key)
+    if current is None or key in state["settled"]:
+        return None
+    new = arbitration.supporter(fact, view)
+    if key not in disputes:
+        if new["work"] == arbitration.supporter(current, view)["work"]:
+            return None
+        if canonical_json(current.value) == canonical_json(fact.value):
+            return None
+        disputes[key] = {"candidates": [], "labels": 0}
+        arbitration.join(disputes[key], current, view)
+    candidates = arbitration.join(disputes[key], fact, view)
+    stored = current.model_copy(update={"status": "disputed", "version": current.version + 1})
+    board.facts[key] = stored
+    board.index.set_status(key, "disputed")
+    # A copy: the board keeps editing its candidates, the event must not change after it is logged.
+    conflict = {"key": key, "subject": fact.subject, "candidates": copy.deepcopy(candidates)}
+    detected = {"kind": "semantic", "goal_id": new["goal"], "holder": fact.provenance.agent}
+    commands: list[Command] = [
+        _fact_event(stored.model_copy(update={"provenance": fact.provenance})),
+        Emit(type="collision.detected", payload=detected | {"conflicts": [conflict]}),
+    ]
+    goals = sorted({s["goal"] for c in candidates for s in c["by"] if s["goal"]})
+    if (arbiter := arbitration.arbiter_of(view, goals)) is not None:
+        request = Send(to=arbiter, topic=arbitration.TOPIC_REQUEST, body={"key": key})
+        commands.append(request)
+    note = "disputed: another contract published a different value; its owner arbitrates"
+    return {"ok": True, "key": key, "version": stored.version, "note": note}, commands
+
+
+def _resolve(state: dict[str, Any], board: Blackboard, body: dict[str, Any], view: View):
+    """The arbiter's order: the winner's value becomes the verified, global fact, for good."""
+    key = body["key"]
+    dispute = state["disputes"].get(key)
+    if dispute is None:
+        return []  # a second order for a ruling already applied
+    ruling = arbitration.ruling_of(view, key)
+    if ruling is None or ruling["contract"] != body["contract"]:
+        return []  # the order is not what the log says was ruled
+    winner = next(
+        (
+            c
+            for c in dispute["candidates"]
+            if any(s["contract"] == body["contract"] for s in c["by"])
+        ),
+        None,
+    )
+    if winner is None:
+        return []
+    first = winner["by"][0]
+    fact = Fact(
+        key=key,
+        subject=board.facts[key].subject,
+        value=winner["value"],
+        provenance=Provenance(
+            contract=first["contract"],
+            agent=first["agent"],
+            squad=first["squad"],
+            sources=first["sources"],
+        ),
+        status="verified",
+        visibility="global",
+        lamport=view.lamport,
+    )
+    stored = board.publish(fact)
+    del state["disputes"][key]
+    state["settled"].add(key)
+    resolved = {"key": key, "contract": first["contract"], "version": stored.version}
+    return [Emit(type="fact.resolved", payload=resolved | {"by": body["by"]})]
 
 
 def _book(board: Blackboard, body: dict[str, Any], sender: str, view: View) -> list[Command]:
