@@ -137,14 +137,25 @@ describe("arena counters", () => {
   });
 
   it("counts agent-time idle while their coordinator is down", () => {
+    // A coordinator that goes down and leaves its agents alive (a durable supervisor).
     const s = supervised();
-    centralCrash(s, 10_000);
-    restart(s, 15_000);
+    s.at(10_000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 0, lost: [], restart_in_ms: 5000 });
+    s.at(15_000).emit("baseline.restarted", "o0", { coordinator: "o0", crash: 1, redo: [] });
     const v = foldEvents(s.events);
     // Two agents, idle for the 5 s between the crash and the restart.
     expect(at(v, 15_000).idleAgentMs).toBe(2 * 5000);
     expect(at(v, 15_000).idleAgentsNow).toBe(0);
     expect(at(v, 99_000).idleAgentMs).toBe(2 * 5000); // nothing accrues once it is back
+  });
+
+  it("does not count the agents that a central supervisor's crash takes with it: their work is redone, not waited for", () => {
+    // bench/recovery.py scores 0.0 idle agent-seconds for t2-real-c3-central-seed1: an agent counts only while it is alive.
+    const s = supervised();
+    centralCrash(s, 10_000);
+    expect(idleAgents(foldEvents(s.events))).toBe(0);
+    restart(s, 15_000);
+    const v = foldEvents(s.events);
+    expect(at(v, 15_000)).toMatchObject({ idleAgentMs: 0, coordinatorDownMs: 5000 });
   });
 
   it("does not count an agent that finished, or was killed by chaos, under a coordinator that goes down", () => {
@@ -168,16 +179,16 @@ describe("arena counters", () => {
     expect(at(v, 60_000)).toMatchObject({ idleAgentMs: 0, coordinatorCrashes: 0 });
   });
 
-  it("counts an agent the crash stopped, until the restart brings it back", () => {
+  it("does not count an agent the crash stopped, nor the respawned one once the restart brings it back", () => {
     const s = supervised();
     s.at(1000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 2, lost: [], restart_in_ms: 5000 });
     s.emit("actor.stopped", "o0", { actor_id: "o0.a1", reason: "crash" });
     s.emit("actor.stopped", "o0", { actor_id: "o0.a2", reason: "crash" });
-    expect(idleAgents(foldEvents(s.events))).toBe(2);
+    expect(idleAgents(foldEvents(s.events))).toBe(0); // gone, not waiting
     restart(s, 6000, 1, []);
     const v = foldEvents(s.events);
-    expect(idleAgents(v)).toBe(0);
-    expect(at(v, 9000).idleAgentMs).toBe(2 * 5000);
+    expect(idleAgents(v)).toBe(0); // back, and the coordinator is up
+    expect(at(v, 9000).idleAgentMs).toBe(0);
   });
 
   it("does not count an agent that is in the middle of a call", () => {

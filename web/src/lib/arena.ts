@@ -9,10 +9,12 @@
 //   coordinator down-time per crash, one window: a supervisor's baseline.crashed -> baseline.restarted;
 //                         the swarm's kill -> the last takeover event for the victim (bench/recovery.py
 //                         ends it at the last ownership.remapped, and tree.adopted lands with it)
-//   idle agents           an agent that is alive (or stopped by the crash and waiting for the restart),
-//                         has no call in flight, and answers to a coordinator that is down; integrated
-//                         over virtual time in agent-ms. Approximates "idle agent-seconds", which also
-//                         needs its session to have a blocked contract
+//   idle agents           an agent that is alive, has no call in flight, and answers to a coordinator that
+//                         is down; integrated over virtual time in agent-ms. One a crash stopped is gone
+//                         (a process-tree baseline redoes its work), not idle: bench/recovery.py scores
+//                         the central baseline's idle agent-seconds 0.0. Approximates "idle agent-seconds",
+//                         which also needs its session to have work waiting on the coordinator, so it
+//                         is equal or higher (tests: arena.parity.test.ts)
 //   re-dispatches         contract.dispatched of work that was rejected as lost, or of an idem_key that
 //                         went out before
 //   duplicated calls      LLM calls cancelled and then redone, plus completed calls whose request is one
@@ -104,10 +106,10 @@ const isLeaf = (actor: ActorNode): boolean => actor.kind === "agent" || actor.ki
 const DOWN: ReadonlySet<string> = new Set(["restarting", "killed"]);
 const PAID: ReadonlySet<string> = new Set(["ok", "incomplete"]); // takeover.py PAID: a completion with these was billed
 
-/** An agent that is waiting on its coordinator rather than finished or gone: alive, or stopped by
- * the crash (the restart brings it back). One that finished, or was killed by chaos, is not. */
-const awaitsCoordinator = (actor: ActorNode): boolean =>
-  actor.status === "alive" || (actor.status === "killed" && actor.stopReason === "crash");
+/** An agent that is waiting on its coordinator rather than finished or gone: alive. One that finished,
+ * was killed by chaos, or was stopped by the coordinator's crash (the restart respawns it and its work
+ * is done again) is not. */
+const awaitsCoordinator = (actor: ActorNode): boolean => actor.status === "alive";
 
 /** Agents waiting on a coordinator that is down, and not in the middle of an LLM call. */
 export function idleAgents(view: ViewState): number {

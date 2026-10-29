@@ -50,12 +50,13 @@ describe.skipIf(!recorded("t2-real-c3-central-seed1"))("central baseline, 5 coor
     ]);
   });
 
-  it("measures the outage from crash to restart, and agents idle only inside it", () => {
+  it("measures the outage from crash to restart, and no agent idles in it: the crash takes them with it", () => {
     expect(counters.coordinatorDownMs).toBe(25_108);
     expect(counters.idleAgentsNow).toBe(0);
-    // About 7 agents wait out each 5 s outage; never more than the agents the run has.
-    expect(counters.idleAgentMs).toBeGreaterThan(0);
-    expect(counters.idleAgentMs).toBeLessThan(counters.coordinatorDownMs * Object.keys(view.actors).length);
+    // The agents are stopped with the supervisor and respawned by the restart, and the redone work is counted above.
+    // bench/recovery.py scores this run's idle agent-seconds 0.0 too (arena.parity.test.ts).
+    expect(counters.idleAgentMs).toBe(0);
+    expect(Object.keys(view.actors).length).toBeGreaterThan(2);
   });
 });
 
@@ -97,7 +98,7 @@ describe.skipIf(!recorded("tmp-pipeline-c3"))("pipeline baseline, 5 coordinator 
     });
   });
 
-  it("idles its one agent for each outage", () => {
-    expect(counters.idleAgentMs).toBe(25_000);
+  it("loses its one agent with each crash, so nothing idles (bench/recovery.py: 0.0 idle agent-seconds)", () => {
+    expect(counters.idleAgentMs).toBe(0);
   });
 });
