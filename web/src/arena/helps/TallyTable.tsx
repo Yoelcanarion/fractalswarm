@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { systemName } from "../assumptions";
 import type { Honesty, Tally } from "./honesty";
 import { countText, fmt, rivalLabel } from "./labels";
+import { Model } from "./Model";
 import { comparisonLines, falseDeathSummary, tallyRows, tallyTotals, type TallyCell, type Which } from "./tally";
 
 /** A cell of the table that is open: the results it counts, listed. */
@@ -106,7 +107,10 @@ export function TallyTable({ honesty, rivals, against, open, onOpen }: TallyTabl
   return (
     <section className="tally" data-helps="table" aria-label="Wins, ties and losses">
       <header className="helps__section-head">
-        <h3 className="helps__h">Wins, ties and losses</h3>
+        <div className="helps__h-row">
+          <h3 className="helps__h">Wins, ties and losses</h3>
+          <Model kind="crash" />
+        </div>
         <p className="helps__sub">
           Swarm against each rival, one comparison per setting. A win needs every seed to agree; anything less is a tie. Click a number to list its settings.
         </p>
@@ -123,6 +127,9 @@ export function TallyTable({ honesty, rivals, against, open, onOpen }: TallyTabl
                   <b>{row.id}</b> {row.name}
                 </span>
                 {row.expected && <span className="tally__expected">Expected: {row.expected}</span>}
+                <span className="tally__model">
+                  <Model kind="crash" />
+                </span>
               </th>
               {row.cells.map((cell) => (
                 <td key={cell.rival} className={cell.rival === against ? "tally__col--against" : undefined}>
@@ -137,6 +144,9 @@ export function TallyTable({ honesty, rivals, against, open, onOpen }: TallyTabl
                 <b>All</b> H1 to H6
               </span>
               <span className="tally__expected">Stall time is reported above and not counted.</span>
+              <span className="tally__model">
+                <Model kind="crash" />
+              </span>
             </th>
             {totals.map((cell) => (
               <td key={cell.rival} className={cell.rival === against ? "tally__col--against" : undefined}>

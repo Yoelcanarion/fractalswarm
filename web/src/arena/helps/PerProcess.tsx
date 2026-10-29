@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { systemName } from "../assumptions";
 import type { Honesty } from "./honesty";
 import { taskName } from "./labels";
+import { Model } from "./Model";
 import { processView, readingText, type ProcessView } from "./process";
 
 export interface PerProcessProps {
@@ -26,7 +27,10 @@ export function PerProcess({ honesty, rival }: PerProcessProps) {
   return (
     <section className="proc" data-helps="process" aria-label="Per process">
       <header className="helps__section-head">
-        <h3 className="helps__h">Per process</h3>
+        <div className="helps__h-row">
+          <h3 className="helps__h">Per process</h3>
+          <Model kind="process" />
+        </div>
         <p className="helps__sub">{lead(view, noun)}</p>
       </header>
       {view && (

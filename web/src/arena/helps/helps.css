@@ -89,6 +89,41 @@
   color: var(--text-muted);
 }
 
+.helps__h-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+/* ---- the failure model a result holds under ---- */
+.model {
+  display: inline-block;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* inside a row it is small print, not a chip */
+.map__model,
+.tally__model {
+  display: block;
+}
+
+.map__model .model,
+.tally__model .model {
+  padding: 0;
+  border: none;
+  color: var(--text-muted);
+}
+
 /* ---- the outcome the decision rule read at the gate ---- */
 .outcome {
   display: grid;

@@ -6,6 +6,7 @@
 
 import type { Honesty, Locality, Ratios, RegimePoint } from "./honesty";
 import { crashesText, settingLabel, taskName } from "./labels";
+import { crashModel } from "./models";
 
 interface AxisInfo {
   title: string;
@@ -47,6 +48,8 @@ export interface MapRow {
   id: string;
   title: string;
   detail: string;
+  /** The failure model of the row: every point of the map is per crash. */
+  model: string;
   cells: MapCell[];
 }
 
@@ -72,6 +75,7 @@ export function regimeRows(honesty: Honesty, rival: string): MapRow[] {
       task,
       title: named ? `${axisTitle(axis)} · ${taskName(task)}` : axisTitle(axis),
       detail: AXES[axis ?? "gate"]?.detail ?? "",
+      model: crashModel(ordered.map((point) => point.profile)),
       cells: ordered.map((point) => ({
         key: `${id}:${point.value ?? point.profile}`,
         setting: settingLabel(point.axis, point.value, point.profile),
@@ -82,7 +86,7 @@ export function regimeRows(honesty: Honesty, rival: string): MapRow[] {
     };
   });
   rows.sort((a, b) => axisRank(a.axis) - axisRank(b.axis) || Number(b.task === decidingTask) - Number(a.task === decidingTask) || a.task.localeCompare(b.task));
-  return rows.map(({ id, title, detail, cells }) => ({ id, title, detail, cells }));
+  return rows.map(({ id, title, detail, model, cells }) => ({ id, title, detail, model, cells }));
 }
 
 /** How many points of the map there are per locality, over the rows given: "5 hold, 9 tie, 2 fail". */

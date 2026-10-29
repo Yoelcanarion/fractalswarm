@@ -1,10 +1,9 @@
 import { Skeleton, SkeletonGroup } from "../../components/ui";
-import { useHonesty } from "./load";
+import { useHonesty, type HonestyState } from "./load";
 import { WhereItHelps } from "./WhereItHelps";
 
-/** `#/helps`: the panel on its own page, with the file's state spelled out when it is not there to show. */
-export function HelpsPage() {
-  const state = useHonesty();
+/** The panel for each state of the file: loading, unreadable (said in words, nothing half shown) or there. */
+export function HelpsView({ state }: { state: HonestyState }) {
   if (state.status === "loading") {
     return (
       <SkeletonGroup label="Loading the verdicts">
@@ -25,4 +24,9 @@ export function HelpsPage() {
     );
   }
   return <WhereItHelps honesty={state.honesty} source={state.source} />;
+}
+
+/** `#/helps`: the panel on its own page. */
+export function HelpsPage() {
+  return <HelpsView state={useHonesty()} />;
 }

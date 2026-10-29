@@ -6,6 +6,7 @@ import { CLAIMS, headlineClaim } from "./claims";
 import { rivalOrder, type Honesty } from "./honesty";
 import { LOCALITY_WORD, rivalLabel, taskName } from "./labels";
 import type { HonestySource } from "./load";
+import { Model } from "./Model";
 import { PerProcess } from "./PerProcess";
 import { Mark, RegimeMap } from "./RegimeMap";
 import { ruleLines } from "./tally";
@@ -43,6 +44,7 @@ function OutcomeStrip({ honesty }: { honesty: Honesty }) {
               {point.profile} {LOCALITY_WORD[point.locality]}
             </span>
           ))}
+          {outcome.gate.length > 0 && <Model kind="crash" />}
         </p>
         {headline && (
           <p className="outcome__claim">

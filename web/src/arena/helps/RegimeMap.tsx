@@ -4,6 +4,7 @@ import { Tooltip } from "../../components/ui";
 import { systemName } from "../assumptions";
 import type { Honesty, Locality } from "./honesty";
 import { fmt, LOCALITY_WORD } from "./labels";
+import { Model } from "./Model";
 import { localityCounts, RATIO_NAMES, regimeRows, type MapCell } from "./regime";
 
 /** A locality as a class suffix: "n/a" cannot be one. */
@@ -67,7 +68,10 @@ export function RegimeMap({ honesty, rival }: RegimeMapProps) {
   return (
     <section className="map" data-helps="map" aria-label="Regime map">
       <header className="helps__section-head">
-        <h3 className="helps__h">Regime map</h3>
+        <div className="helps__h-row">
+          <h3 className="helps__h">Regime map</h3>
+          <Model kind="crash" />
+        </div>
         <p className="helps__sub">
           Against the {systemName(rival)}: locality holds at {counts.holds} of {points} settings, ties at {counts.ties} and fails at {counts.fails}.
         </p>
@@ -81,6 +85,9 @@ export function RegimeMap({ honesty, rival }: RegimeMapProps) {
               <div className="map__head">
                 <span className="map__title">{row.title}</span>
                 <span className="map__detail">{row.detail}</span>
+                <span className="map__model">
+                  <Model kind="crash" text={row.model} />
+                </span>
               </div>
               <ul className="map__cells">
                 {row.cells.map((cell) => (
