@@ -747,6 +747,23 @@ def test_an_order_for_another_contract_than_the_logged_choice_is_ignored() -> No
     assert fact_resolved(overrule(state, view, "c-ai", logged=False))
 
 
+def test_an_order_for_a_candidate_the_person_did_not_choose_is_ignored() -> None:
+    """With three values in dispute, an order naming one that is neither the ruled nor the chosen
+    one is not what the log says: only the board's check against the log can refuse it."""
+    state, view = board_with_works()
+    dispatched(view.views["disputes"], 3, "track-data/d1", "extract", "c-late")
+    third = {"available": [{"day": 2, "slots": [0]}], "preference": "evening"}
+    for contract, value in (("c-hci", READ_A), ("c-ai", READ_B), ("c-late", third)):
+        publish(state, view, contract, value)
+    settle(state, view, "c-hci")
+    chose = {"key": KEY, "winner": "B", "contract": "c-ai", "value": READ_B}
+    view.views["disputes"].apply(event(7, "arbitration.overruled", chose))
+    assert overrule(state, view, "c-late", logged=False) == []
+    assert state["board"].facts[KEY].value == READ_A
+    assert fact_resolved(overrule(state, view, "c-ai", logged=False))
+    assert state["board"].facts[KEY].value == READ_B
+
+
 def test_an_order_for_a_key_with_no_ruling_applied_does_nothing() -> None:
     state, view = board_with_works()
     publish(state, view, "c-hci", READ_A)
