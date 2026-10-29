@@ -188,8 +188,10 @@ export function readArenaLaunch(raw: unknown): Read<ArenaLaunch> {
 
 const PREFLIGHT_PATHS: Record<Kind, string> = { intake: "api/intake/preflight", task: "api/tasks/preflight", arena: "api/arena/preflight" };
 
-export function createIntakeApi(fetcher: Fetcher = (input, init) => fetch(input, init)) {
-  async function call<T>(method: "GET" | "POST", path: string, body: unknown, read: (raw: unknown) => Read<T>): Promise<Outcome<T>> {
+/** One call of the API, for any page that reads it the same way: the method and path, the body (always sent as JSON, even
+ * when empty), and the reader of the answer. It never throws. */
+export function caller(fetcher: Fetcher = (input, init) => fetch(input, init)) {
+  return async function call<T>(method: "GET" | "POST", path: string, body: unknown, read: (raw: unknown) => Read<T>): Promise<Outcome<T>> {
     let response: Response;
     try {
       response = await fetcher(path, method === "GET" ? undefined : { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });
@@ -200,8 +202,11 @@ export function createIntakeApi(fetcher: Fetcher = (input, init) => fetch(input,
     if (!response.ok) return { ok: false, status: response.status, error: errorOf(response.status, raw) };
     const read_ = read(raw);
     return read_.ok ? { ok: true, status: response.status, body: read_.value } : { ok: false, status: response.status, error: `the server's answer could not be read: ${read_.reason}` };
-  }
+  };
+}
 
+export function createIntakeApi(fetcher?: Fetcher) {
+  const call = caller(fetcher);
   const id = encodeURIComponent;
   return {
     sample: (seed = 1) => call("GET", `api/intake/sample?seed=${seed}`, undefined, readSample),

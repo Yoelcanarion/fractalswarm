@@ -1,0 +1,1286 @@
+{
+  "error": null,
+  "notes": [
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.1",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "note_id": "E01",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "afternoon"
+      },
+      "reference_text": "day 1: all day; day 2: all day; prefers afternoon",
+      "subject": "S01",
+      "text": "Hi all,\nThanks for accepting \"A practical guide to trust in AI assistants\" (T09) and \"Scaling onboarding design for small teams\" (T32).\nI'm flexible: both days are fine, any time.\nIf you can, put me in the afternoon.\nLet me know if you need a longer bio.\nThanks,\nLars Sato"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.3",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers morning"
+      },
+      "note_id": "E02",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers morning"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "morning"
+      },
+      "reference_text": "day 1: all day; day 2: all day; prefers morning",
+      "subject": "S02",
+      "text": "Hi program committee,\nThanks for accepting \"Collaborative editing without the hype\" (T29) and \"Lessons from model distillation in production\" (T42).\nI'm flexible: both days are fine, any time.\nIf possible I'd prefer a morning slot.\nSlides will be ready a week before the event.\nThanks,\nDara Petrov"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.5",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: 09:00-12:45; day 2: 09:00-12:45; prefers morning"
+      },
+      "note_id": "E03",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: 09:00-12:45; day 2: 09:00-12:45; prefers morning"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        ],
+        "preference": "morning"
+      },
+      "reference_text": "day 1: 09:00-12:45; day 2: 09:00-12:45; prefers morning",
+      "subject": "S03",
+      "text": "Hi program committee,\nThanks for accepting \"Scaling data lineage for small teams\" (T03) and \"Scaling quantized inference for small teams\" (T19).\nI can only do mornings (sessions starting before 12:30), on either day.\nA morning slot would be ideal.\nLet me know if you need a longer bio.\nCheers,\nElif Fischer"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.7",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "note_id": "E04",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "afternoon"
+      },
+      "reference_text": "day 1: all day; day 2: all day; prefers afternoon",
+      "subject": "S04",
+      "text": "Hello!\nThanks for accepting \"A practical guide to lakehouse tables\" (T13) and \"A practical guide to cost-aware warehousing\" (T47).\nAny slot on either day works for me.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nKind regards,\nOlga Sato"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.9",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "preference": "none"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: 09:00-12:45; day 2: 09:00-12:45; no time preference"
+      },
+      "note_id": "E05",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "preference": "none"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: 09:00-12:45; day 2: 09:00-12:45; no time preference"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        ],
+        "preference": "none"
+      },
+      "reference_text": "day 1: 09:00-12:45; day 2: 09:00-12:45; no time preference",
+      "subject": "S05",
+      "text": "Hi program committee,\nQuick note about \"Rethinking reward modelling\" (T04) and \"Visualizing uncertainty: what actually worked\" (T12).\nAfternoons are impossible for me on both days, so mornings only please.\nNo preference on the time otherwise.\nLet me know if you need a longer bio.\nCheers,\nChen Okafor"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.11",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "note_id": "E06",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "afternoon"
+      },
+      "reference_text": "day 1: all day; day 2: all day; prefers afternoon",
+      "subject": "S06",
+      "text": "Dear organizers,\nI'm excited to present \"A practical guide to query optimization\" (T18) and \"Rethinking prompt caching\" (T20).\nAny slot on either day works for me.\nIf you can, put me in the afternoon.\nBest,\nPablo Haddad"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-17.1",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: not free; day 2: all day; prefers afternoon"
+      },
+      "note_id": "E07",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: not free; day 2: all day; prefers afternoon"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "afternoon"
+      },
+      "reference_text": "day 1: not free; day 2: all day; prefers afternoon",
+      "subject": "S07",
+      "text": "Hello!\nThanks for accepting \"Voice interfaces without the hype\" (T26) and \"Onboarding design: what actually worked\" (T33).\nUnfortunately I'll only be around on Day 2.\nAn afternoon slot would suit me best.\nLet me know if you need a longer bio.\nThanks,\nHiro Haddad"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-22.1",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers morning"
+      },
+      "note_id": "E08",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers morning"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "morning"
+      },
+      "reference_text": "day 1: all day; day 2: all day; prefers morning",
+      "subject": "S08",
+      "text": "Hi program committee,\nI'm excited to present \"A practical guide to columnar storage\" (T34) and \"Lessons from usability testing at scale in production\" (T39).\nI'm flexible: both days are fine, any time.\nA morning slot would be ideal.\nI'll bring my own laptop with an HDMI adapter.\nKind regards,\nYusuf Kowalski"
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-27.1",
+        "error": null,
+        "reading": {
+          "expected_attendance": 31
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 31 attendees"
+      },
+      "note_id": "T01",
+      "parser": {
+        "reading": {
+          "expected_attendance": 31
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 31 attendees"
+      },
+      "reference": {
+        "expected_attendance": 31
+      },
+      "reference_text": "about 31 attendees",
+      "subject": "T01",
+      "text": "Why accessible interfaces is harder than it looks, and a design that holds up. No prior experience is needed, but familiarity with the basics helps. We expect around 31 attendees."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-32.1",
+        "error": null,
+        "reading": {
+          "expected_attendance": 89
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 89 attendees"
+      },
+      "note_id": "T02",
+      "parser": {
+        "reading": {
+          "expected_attendance": 89
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 89 attendees"
+      },
+      "reference": {
+        "expected_attendance": 89
+      },
+      "reference_text": "about 89 attendees",
+      "subject": "T02",
+      "text": "This talk walks through how our team approached GPU scheduling over the past year. No prior experience is needed, but familiarity with the basics helps. We expect around 89 attendees."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-37.1",
+        "error": null,
+        "reading": {
+          "expected_attendance": 146
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 146 attendees"
+      },
+      "note_id": "T03",
+      "parser": {
+        "reading": {
+          "expected_attendance": 146
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 146 attendees"
+      },
+      "reference": {
+        "expected_attendance": 146
+      },
+      "reference_text": "about 146 attendees",
+      "subject": "T03",
+      "text": "This talk walks through how our team approached data lineage over the past year. No prior experience is needed, but familiarity with the basics helps. Organizers of past editions told us to plan for around 146 people."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-42.1",
+        "error": null,
+        "reading": {
+          "expected_attendance": 70
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 70 attendees"
+      },
+      "note_id": "T04",
+      "parser": {
+        "reading": {
+          "expected_attendance": 70
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 70 attendees"
+      },
+      "reference": {
+        "expected_attendance": 70
+      },
+      "reference_text": "about 70 attendees",
+      "subject": "T04",
+      "text": "We share the mistakes we made with reward modelling and how we fixed them. The session ends with a checklist attendees can apply on Monday. Expected audience: about 70 participants."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-47.1",
+        "error": null,
+        "reading": {
+          "expected_attendance": 104
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 104 attendees"
+      },
+      "note_id": "T05",
+      "parser": {
+        "reading": {
+          "expected_attendance": 104
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 104 attendees"
+      },
+      "reference": {
+        "expected_attendance": 104
+      },
+      "reference_text": "about 104 attendees",
+      "subject": "T05",
+      "text": "This talk walks through how our team approached multi-agent planning over the past year. We compare three approaches and explain the trade-offs we accepted. We expect around 104 attendees."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-52.1",
+        "error": null,
+        "reading": {
+          "expected_attendance": 102
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 102 attendees"
+      },
+      "note_id": "T06",
+      "parser": {
+        "reading": {
+          "expected_attendance": 102
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 102 attendees"
+      },
+      "reference": {
+        "expected_attendance": 102
+      },
+      "reference_text": "about 102 attendees",
+      "subject": "T06",
+      "text": "We share the mistakes we made with dark patterns and how we fixed them. No prior experience is needed, but familiarity with the basics helps. We expect around 102 attendees."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-57.1",
+        "error": null,
+        "reading": {
+          "expected_attendance": 54
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 54 attendees"
+      },
+      "note_id": "T07",
+      "parser": {
+        "reading": {
+          "expected_attendance": 54
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 54 attendees"
+      },
+      "reference": {
+        "expected_attendance": 54
+      },
+      "reference_text": "about 54 attendees",
+      "subject": "T07",
+      "text": "We share the mistakes we made with long-context attention and how we fixed them. We compare three approaches and explain the trade-offs we accepted. Last year a similar session drew roughly 54 people."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-62.1",
+        "error": null,
+        "reading": {
+          "expected_attendance": 39
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 39 attendees"
+      },
+      "note_id": "T08",
+      "parser": {
+        "reading": {
+          "expected_attendance": 39
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 39 attendees"
+      },
+      "reference": {
+        "expected_attendance": 39
+      },
+      "reference_text": "about 39 attendees",
+      "subject": "T08",
+      "text": "This talk walks through how our team approached model distillation over the past year. No prior experience is needed, but familiarity with the basics helps. We expect around 39 attendees."
+    }
+  ],
+  "progress": {
+    "done": 16,
+    "of": 16
+  },
+  "result": {
+    "agreement": {
+      "both": 16,
+      "neither": 0,
+      "only_muse": 0,
+      "only_parser": 0
+    },
+    "backend": "fake",
+    "caveats": [
+      {
+        "applies": true,
+        "id": "generator",
+        "text": "On the generator's emails the regex parser wins by construction: its patterns are the phrasings the generator writes. Read the comparison on notes a person wrote."
+      },
+      {
+        "applies": false,
+        "id": "reference",
+        "text": "Muse seeds the approved reference and a person approves it, so where Muse agrees with the reference, part of that agreement is the person accepting its reading."
+      },
+      {
+        "applies": true,
+        "id": "fake",
+        "text": "This run used the fake backend: its Muse is the same regex parser, so the two agree by construction. It checks the plumbing and the scoring, not the models."
+      }
+    ],
+    "complete": true,
+    "definitions": {
+      "agreement": "how the two readers split the notes: both, only Muse, only the parser, neither",
+      "differences": "the notes on which the parser's reading and Muse's reading are not the same",
+      "jaccard": "shared cells over all cells named by either the reading or the reference",
+      "understood": "an email: the available cells match the reference exactly and so does the time preference; an abstract: the attendance is within 10 % of the reference"
+    },
+    "differences": [],
+    "headline": "the parser understood 16 of 16 notes, Muse 16 of 16",
+    "muse": {
+      "abstracts": {
+        "mean_error_pct": 0.0,
+        "of": 8,
+        "understood": 8
+      },
+      "emails": {
+        "cells_exact": 8,
+        "mean_jaccard": 1.0,
+        "of": 8,
+        "preference": 8,
+        "understood": 8
+      },
+      "of": 16,
+      "understood": 16
+    },
+    "notes": 16,
+    "parser": {
+      "abstracts": {
+        "mean_error_pct": 0.0,
+        "of": 8,
+        "understood": 8
+      },
+      "emails": {
+        "cells_exact": 8,
+        "mean_jaccard": 1.0,
+        "of": 8,
+        "preference": 8,
+        "understood": 8
+      },
+      "of": 16,
+      "understood": 16
+    },
+    "source": "generator"
+  },
+  "run_id": "ablation-34a7d710",
+  "status": "completed"
+}

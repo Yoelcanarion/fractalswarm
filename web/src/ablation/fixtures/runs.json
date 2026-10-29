@@ -1,0 +1,54 @@
+[
+  {
+    "clock": "live",
+    "duration_ms": 118609,
+    "events": 8177,
+    "head": "b052b4bc33cfe1b54c7b6ceb2872de26",
+    "id": "demo-backup",
+    "private": false,
+    "run_id": "t2-real-killhalf-seed1",
+    "scenario": "fractalswarm.actors.swarm:SWARM",
+    "seed": "1",
+    "source": "demo",
+    "status": "completed"
+  },
+  {
+    "clock": "sim",
+    "duration_ms": 1692,
+    "events": 56,
+    "head": "a47d0153d0743b9c5ec532e049d9afa1",
+    "id": "demo-toy",
+    "private": false,
+    "run_id": "golden-toy",
+    "scenario": "fractalswarm.actors.toy:TOY",
+    "seed": "42",
+    "source": "demo",
+    "status": "completed"
+  },
+  {
+    "clock": "sim",
+    "duration_ms": 11592,
+    "events": 88,
+    "head": "6fbd6c8176eba2950ce63de4265d561a",
+    "id": "ablation-34a7d710",
+    "private": false,
+    "run_id": "ablation-34a7d710",
+    "scenario": "fractalswarm.bench.tasks.t2_conference.ablation:ABLATION",
+    "seed": "1",
+    "source": "runs",
+    "status": "completed"
+  },
+  {
+    "clock": "sim",
+    "duration_ms": 875,
+    "events": 38,
+    "head": "d6e5b63b0b7216363ce7e873a864ad21",
+    "id": "ablation-sample",
+    "private": false,
+    "run_id": "ablation-sample",
+    "scenario": "fractalswarm.bench.tasks.t2_conference.ablation:ABLATION",
+    "seed": "0",
+    "source": "runs",
+    "status": "completed"
+  }
+]

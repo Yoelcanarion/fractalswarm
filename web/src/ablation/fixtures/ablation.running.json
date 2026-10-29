@@ -1,0 +1,720 @@
+{
+  "error": null,
+  "notes": [
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.1",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "note_id": "E01",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "afternoon"
+      },
+      "reference_text": "day 1: all day; day 2: all day; prefers afternoon",
+      "subject": "S01",
+      "text": "Hi all,\nThanks for accepting \"A practical guide to trust in AI assistants\" (T09) and \"Scaling onboarding design for small teams\" (T32).\nI'm flexible: both days are fine, any time.\nIf you can, put me in the afternoon.\nLet me know if you need a longer bio.\nThanks,\nLars Sato"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.3",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers morning"
+      },
+      "note_id": "E02",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers morning"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "morning"
+      },
+      "reference_text": "day 1: all day; day 2: all day; prefers morning",
+      "subject": "S02",
+      "text": "Hi program committee,\nThanks for accepting \"Collaborative editing without the hype\" (T29) and \"Lessons from model distillation in production\" (T42).\nI'm flexible: both days are fine, any time.\nIf possible I'd prefer a morning slot.\nSlides will be ready a week before the event.\nThanks,\nDara Petrov"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.5",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: 09:00-12:45; day 2: 09:00-12:45; prefers morning"
+      },
+      "note_id": "E03",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "preference": "morning"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: 09:00-12:45; day 2: 09:00-12:45; prefers morning"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        ],
+        "preference": "morning"
+      },
+      "reference_text": "day 1: 09:00-12:45; day 2: 09:00-12:45; prefers morning",
+      "subject": "S03",
+      "text": "Hi program committee,\nThanks for accepting \"Scaling data lineage for small teams\" (T03) and \"Scaling quantized inference for small teams\" (T19).\nI can only do mornings (sessions starting before 12:30), on either day.\nA morning slot would be ideal.\nLet me know if you need a longer bio.\nCheers,\nElif Fischer"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.7",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "note_id": "E04",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "afternoon"
+      },
+      "reference_text": "day 1: all day; day 2: all day; prefers afternoon",
+      "subject": "S04",
+      "text": "Hello!\nThanks for accepting \"A practical guide to lakehouse tables\" (T13) and \"A practical guide to cost-aware warehousing\" (T47).\nAny slot on either day works for me.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nKind regards,\nOlga Sato"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.9",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "preference": "none"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: 09:00-12:45; day 2: 09:00-12:45; no time preference"
+      },
+      "note_id": "E05",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "preference": "none"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: 09:00-12:45; day 2: 09:00-12:45; no time preference"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        ],
+        "preference": "none"
+      },
+      "reference_text": "day 1: 09:00-12:45; day 2: 09:00-12:45; no time preference",
+      "subject": "S05",
+      "text": "Hi program committee,\nQuick note about \"Rethinking reward modelling\" (T04) and \"Visualizing uncertainty: what actually worked\" (T12).\nAfternoons are impossible for me on both days, so mornings only please.\nNo preference on the time otherwise.\nLet me know if you need a longer bio.\nCheers,\nChen Okafor"
+    },
+    {
+      "kind": "email",
+      "muse": {
+        "effect_id": "eff-3.11",
+        "error": null,
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "note_id": "E06",
+      "parser": {
+        "reading": {
+          "available": [
+            {
+              "day": 1,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
+            {
+              "day": 2,
+              "slots": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            }
+          ],
+          "preference": "afternoon"
+        },
+        "score": {
+          "cells_exact": true,
+          "jaccard": 1.0,
+          "preference": true,
+          "understood": true
+        },
+        "text": "day 1: all day; day 2: all day; prefers afternoon"
+      },
+      "reference": {
+        "available": [
+          {
+            "day": 1,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "day": 2,
+            "slots": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        ],
+        "preference": "afternoon"
+      },
+      "reference_text": "day 1: all day; day 2: all day; prefers afternoon",
+      "subject": "S06",
+      "text": "Dear organizers,\nI'm excited to present \"A practical guide to query optimization\" (T18) and \"Rethinking prompt caching\" (T20).\nAny slot on either day works for me.\nIf you can, put me in the afternoon.\nBest,\nPablo Haddad"
+    }
+  ],
+  "progress": {
+    "done": 6,
+    "of": 16
+  },
+  "result": null,
+  "run_id": "ablation-34a7d710",
+  "status": "running"
+}

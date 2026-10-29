@@ -1,0 +1,120 @@
+{
+  "error": null,
+  "notes": [
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-3.7",
+        "error": null,
+        "reading": {
+          "expected_attendance": 80
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 80 attendees"
+      },
+      "note_id": "T90",
+      "parser": {
+        "reading": {
+          "expected_attendance": 80
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 80 attendees"
+      },
+      "reference": {
+        "expected_attendance": 80
+      },
+      "reference_text": "about 80 attendees",
+      "subject": "T90",
+      "text": "A full room is expected: organizers say about 80 attendees."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-3.9",
+        "error": null,
+        "reading": {
+          "expected_attendance": 120
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 120 attendees"
+      },
+      "note_id": "T91",
+      "parser": {
+        "reading": {
+          "expected_attendance": 50
+        },
+        "score": {
+          "error": -70,
+          "error_pct": 58.333333333333336,
+          "understood": false,
+          "within": false
+        },
+        "text": "about 50 attendees"
+      },
+      "reference": {
+        "expected_attendance": 120
+      },
+      "reference_text": "about 120 attendees",
+      "subject": "T91",
+      "text": "Last year this drew roughly a hundred and twenty people."
+    },
+    {
+      "kind": "abstract",
+      "muse": {
+        "effect_id": "eff-3.11",
+        "error": null,
+        "reading": {
+          "expected_attendance": 100
+        },
+        "score": {
+          "error": 0,
+          "error_pct": 0.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 100 attendees"
+      },
+      "note_id": "T92",
+      "parser": {
+        "reading": {
+          "expected_attendance": 95
+        },
+        "score": {
+          "error": -5,
+          "error_pct": 5.0,
+          "understood": true,
+          "within": true
+        },
+        "text": "about 95 attendees"
+      },
+      "reference": {
+        "expected_attendance": 100
+      },
+      "reference_text": "about 100 attendees",
+      "subject": "T92",
+      "text": "We are planning for about 95 people."
+    }
+  ],
+  "progress": {
+    "done": 3,
+    "of": 6
+  },
+  "result": null,
+  "run_id": "ablation-cut",
+  "status": "interrupted"
+}

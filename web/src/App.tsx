@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { ArenaPage } from "./arena/ArenaPage";
 import { HelpsPage } from "./arena/helps/HelpsPage";
 import { parseArenaRoute, type ArenaRoute } from "./arena/route";
+import { AblationPage } from "./ablation/AblationPage";
+import { parseAblationRoute, type AblationRoute } from "./ablation/route";
 import { RunStrip } from "./components/RunStrip";
 import { IntakePage } from "./intake/IntakePage";
 import { parseIntakeRoute, type IntakeRoute } from "./intake/route";
@@ -41,6 +43,7 @@ type Route =
   | { page: "run"; runId: string | null; view: RunView; playback: Playback }
   | { page: "arena"; arena: ArenaRoute }
   | { page: "intake"; intake: IntakeRoute }
+  | { page: "ablation"; ablation: AblationRoute }
   | { page: "helps" }
   | { page: "charts" }
   | { page: "runs" };
@@ -50,6 +53,8 @@ function parseHash(hash: string): Route {
   if (arena) return { page: "arena", arena };
   const intake = parseIntakeRoute(hash);
   if (intake) return { page: "intake", intake };
+  const ablation = parseAblationRoute(hash);
+  if (ablation) return { page: "ablation", ablation };
   const [path, query = ""] = hash.replace(/^#\/?/, "").split("?");
   const parts = path.split("/");
   if (parts[0] === "helps") return { page: "helps" };
@@ -140,6 +145,9 @@ export function App() {
           <a className={route.page === "intake" ? "tab tab--on" : "tab"} href="#/new">
             New task (live)
           </a>
+          <a className={route.page === "ablation" ? "tab tab--on" : "tab"} href="#/ablation">
+            Ablation
+          </a>
           <a className={route.page === "helps" ? "tab tab--on" : "tab"} href="#/helps">
             Where it helps
           </a>
@@ -183,6 +191,7 @@ export function App() {
         {route.page === "run" && route.view === "events" && <EventsPage />}
         {route.page === "arena" && <ArenaPage route={route.arena} />}
         {route.page === "intake" && <IntakePage route={route.intake} />}
+        {route.page === "ablation" && <AblationPage route={route.ablation} />}
         {route.page === "helps" && <HelpsPage />}
         {route.page === "charts" && <ChartsPage />}
         {route.page === "runs" && <RunsPage />}
