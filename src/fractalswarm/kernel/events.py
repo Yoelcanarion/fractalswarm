@@ -195,6 +195,24 @@ class BudgetShock(Payload):
     reason: str = ""
 
 
+GOAL_CONTROL = "goal:"  # a control for a goal: ``goal:<id>``
+
+
+@register("control.injected")
+class ControlInjected(Payload):
+    """A control from a person in the middle of a run, addressed to one actor, to every live one
+    (``*``) or to a goal (``goal:<id>``): the arena's kill button (``chaos``, for the monkey), a
+    plan approved or sent back (``approve``, ``replan``), the answer to an escalation
+    (``answer``). The kernel records and delivers it; what ``op`` means is up to the actor, which
+    ignores an ``op`` that is not for it. A goal's control reaches every live actor and the
+    goal's owner, as that actor's own view of the log has it at this event, is the one that
+    acts: it survives a takeover that happens between the click and the handling."""
+
+    op: str
+    body: dict[str, Any] = {}
+    to: str
+
+
 @register("run.resumed")
 class RunResumed(Payload):
     """The process died and the run went on from its log (spec §8, docs/resume.md)."""

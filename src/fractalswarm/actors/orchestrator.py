@@ -39,6 +39,15 @@ LLM call at a time. ``pipeline`` plans every goal first (the planner), then work
 contracts (the sequential worker) and integrates. All three make the same planning calls as
 the swarm, so they plan as well as it does.
 
+**A person's approval** (``args["human_approval"]``, set for a run launched to take controls,
+``live_control``, whose TaskSpec says ``auto_approve: false``; a CLI run never waits for an answer
+that cannot come): the root goal's plan is proposed and then held (phase ``awaiting``) until a
+``control.injected`` for the goal says ``approve`` (``plan.approved`` by ``human``) or ``replan``
+(the plan goes back to its planner with the feedback). A timer keeps the run alive while it waits,
+and the hold ends by itself after ``APPROVAL_TIMEOUT_MS`` of virtual time (approved by
+``timeout``). The goal's owner acts, as its view of the log has it at the event: after a takeover,
+its heir.
+
 ``durable-max`` and ``durable`` are the arena's rivals (``baselines/durable.py``): the central
 process with workers that outlive it. A crash stops no agent and cancels none of their calls;
 what they and the board send meanwhile is in the log, and the restart (``_recover``) reads it
@@ -66,7 +75,7 @@ from fractalswarm.coord import membership
 from fractalswarm.coord.hrw import assign, rank
 from fractalswarm.coord.membership import Detector
 from fractalswarm.coord.tree import ROLE, heir
-from fractalswarm.kernel.events import Event
+from fractalswarm.kernel.events import GOAL_CONTROL, Event
 from fractalswarm.kernel.scheduler import (
     Cancel,
     Command,
@@ -94,6 +103,9 @@ MAX_PLAN_ATTEMPTS = 3
 MAX_FEEDBACK_LINES = 20
 MIN_HEARTBEAT_MS = 10  # the fastest heartbeat a sweep may ask the swarm's detector for
 ACTIVE = ("running", "judging", "auditing", "booking")
+APPROVAL_TAG = "approval"  # the timer that keeps a run alive while a plan waits for a person
+APPROVAL_TICK_MS = 5_000
+APPROVAL_TIMEOUT_MS = 30 * 60 * 1000
 # One orchestrator under the best-case supervisor (spec §15.1); ``single`` and ``pipeline`` have
 # one worker. ``durable-max`` and ``durable`` are the arena's rivals (baselines/durable.py).
 CENTRAL_MODES = ("central", "single", "pipeline", *DURABLE_MODES)
@@ -177,6 +189,8 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "restart_ms": int(args.get("restart_ms", RESTART_DELAY_MS)),
         "detect_ms": args.get("detect_ms"),
     }
+    if args.get("human_approval"):  # left out of the state when off, like the args
+        state["human_approval"] = True
     if state["membership"]:
         state["det"] = _detector(actor_id, args)
         guard = Guard.create(actor_id, state["channel_breakers"])
@@ -259,7 +273,11 @@ def _handle(state: dict[str, Any], event: Event, view: View):
             return _audit_done(state, tag[1], tag[2], int(tag[3]), event, view)
         if tag[0] == market_maker.BREAKER_TAG:
             return _woken(state, tag[1], view)
+        if tag[0] == APPROVAL_TAG:
+            return _hold_tick(state, tag[1], view)
         return state, []
+    if kind == "control.injected":
+        return _controlled(state, event.payload, view)
     if kind != "msg.sent":
         return state, []
     topic, body, sender = event.payload["topic"], event.payload["body"], event.actor
@@ -477,6 +495,11 @@ def _planned(state: dict[str, Any], gid: str, attempt: int, event: Event, view: 
         commands.append(_emit(state, gid, "plan.proposed", proposed))
         if state["feasibility"]:
             commands += _feasibility(state, gid, task, goal, plan, envelope, view)
+        if state.get("human_approval"):
+            held = {"phase": "awaiting", "held_at": view.now, "plan": plan, "fallback": fallback}
+            held |= {"token": token, "envelope": envelope.model_dump(mode="json")}
+            state = _put_goal(state, gid, {**entry, **held})
+            return state, [*commands, _hold_timer(gid)]
         approved = {"goal_id": gid, "scope_token": token, "by": "auto"}
         approved["envelope"] = envelope.model_dump(mode="json")
         commands.append(_emit(state, gid, "plan.approved", approved))
@@ -523,6 +546,69 @@ def _ancestors(state: dict[str, Any], gid: str, view: View) -> list[str]:
         found.append(tree.goals[parent].owner)
         parent = tree.goals[parent].parent
     return found
+
+
+# -- a person approves the plan (control.injected) ---------------------------------------------
+
+
+def _hold_timer(gid: str) -> SetTimer:
+    return SetTimer(delay_ms=APPROVAL_TICK_MS, tag=f"{APPROVAL_TAG}|{gid}")
+
+
+def _hold_tick(state: dict[str, Any], gid: str, view: View):
+    """The plan still waits: look again, or end the wait. It ends by itself after
+    ``APPROVAL_TIMEOUT_MS`` (``plan.approved`` by ``timeout``), so a run nobody answers does not
+    wait for ever; a coordinator that is down does not decide, it only keeps the timer going."""
+    entry = state["goals"].get(gid)
+    if entry is None or entry["phase"] != "awaiting":
+        return state, []  # decided meanwhile, or this member lost the goal
+    if state.get("up", True) and view.now - entry["held_at"] >= APPROVAL_TIMEOUT_MS:
+        return _approve(state, gid, "timeout", view)
+    return state, [_hold_timer(gid)]
+
+
+def _controlled(state: dict[str, Any], control: dict[str, Any], view: View):
+    """``control.injected`` for a goal (``to`` is ``goal:<id>``): ``approve`` the plan it waits
+    on, or ``replan`` it (send it back with ``feedback``). Every actor gets the control and the
+    goal's owner, as this actor's view of the log has it now, is the one that acts: a root that
+    died between the click and now has an heir that owns the goal, and the heir handles it. A
+    control that arrives while the owner is dead and its heir has not taken over yet is lost
+    with the plan, which the heir proposes again. ``plan_hash`` in the body, if given, must be
+    the held plan's, so an answer to a plan that is gone changes nothing. Any other actor,
+    ``op`` or goal changes nothing too."""
+    op, body, to = control["op"], control["body"], control["to"]
+    if op not in ("approve", "replan") or not to.startswith(GOAL_CONTROL):
+        return state, []
+    gid = to.removeprefix(GOAL_CONTROL)
+    entry = state["goals"].get(gid)
+    if entry is None or entry["phase"] != "awaiting":
+        return state, []
+    tree = view.views.get("tree")
+    if tree is not None and tree.owner_of(gid) != state["id"]:
+        return state, []
+    if body.get("plan_hash") not in (None, entry["token"]):
+        return state, []
+    if op == "approve":
+        return _approve(state, gid, "human", view)
+    feedback = str(body.get("feedback") or "the plan was sent back")
+    errors = {"goal_id": gid, "attempt": entry["attempt"], "errors": [feedback]}
+    rejected = _emit(state, gid, "plan.rejected", errors)
+    dropped = ("plan", "fallback", "token", "envelope", "held_at")
+    entry = {key: value for key, value in entry.items() if key not in dropped}
+    entry |= {"phase": "planning", "attempt": entry["attempt"] + 1, "feedback": [feedback]}
+    state = _put_goal(state, gid, entry)
+    return state, [rejected, _plan_effect(state, gid)]
+
+
+def _approve(state: dict[str, Any], gid: str, by: str, view: View):
+    """The root plan was held: approve it as the automatic path does, and assign its children."""
+    entry = state["goals"][gid]
+    approved = {"goal_id": gid, "scope_token": entry["token"], "by": by}
+    approved["envelope"] = entry["envelope"]
+    command = _emit(state, gid, "plan.approved", approved)
+    children = TASKS[state["task"]].root_children(entry["goal"], entry["plan"])
+    state, more = _assign_children(state, gid, children, view)
+    return state, [command, *more]
 
 
 # -- non-leaf: child subgoals -------------------------------------------------------------
@@ -1461,6 +1547,8 @@ def _central_step(state: dict[str, Any], event: Event, view: View):
     tag = event.payload.get("tag") if event.type == "effect.completed" else None
     if tag == RESTART_TAG:
         return _restart(state)
+    if tag is not None and tag.startswith(f"{APPROVAL_TAG}|"):
+        return _hold_tick(state, tag.split("|")[1], view)
     if tag == CENTRAL_REDO:
         return _redo(state, view)
     if event.type == "msg.sent" and event.payload["topic"] == CRASH_TOPIC:
@@ -1813,6 +1901,8 @@ def _opt_ins(state: dict[str, Any]) -> dict[str, Any]:
     orchestrators spawned below. They are left out when off, so a run that did not ask for
     them logs the spawn args it always did."""
     passed: dict[str, Any] = {name: True for name in ("audit", "feasibility") if state[name]}
+    if state.get("human_approval"):
+        passed["human_approval"] = True
     if state["detect_ms"] is not None:
         passed["detect_ms"] = state["detect_ms"]
     return passed

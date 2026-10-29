@@ -156,6 +156,9 @@ async def _advance(runtime: Runtime, recorded: Event | None, replayers: Mapping[
         runtime.shock(
             shock["level"], shock["key"], shock["usd"], recorded.ts_virtual, shock["reason"]
         )
+    elif recorded.actor == ENV and recorded.type == "control.injected":
+        injected = recorded.payload
+        runtime.inject(injected["op"], injected["body"], injected["to"], recorded.ts_virtual)
     elif recorded.actor == ENV and recorded.type == "run.resumed":
         runtime.resume(recorded.payload, recorded.ts_virtual)
     elif recorded.actor == ENV:

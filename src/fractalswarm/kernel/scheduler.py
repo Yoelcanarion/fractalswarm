@@ -32,7 +32,7 @@ from typing import Any, Protocol
 from pydantic import BaseModel, ConfigDict, Field
 
 from fractalswarm.kernel.clock import lamport_receive, lamport_tick
-from fractalswarm.kernel.events import ENV, KERNEL, Event, EventDraft
+from fractalswarm.kernel.events import ENV, GOAL_CONTROL, KERNEL, Event, EventDraft
 from fractalswarm.kernel.store import EventStore
 from fractalswarm.market.ledger import Ledger
 
@@ -326,6 +326,27 @@ class Runtime:
                 self._enqueue(event, actor_id)
         return event
 
+    def inject(self, op: str, body: dict[str, Any], to: str, ts_virtual: int) -> Event:
+        """A control from a person for the actor ``to`` (``*`` or ``goal:<id>``: every live
+        actor): record it and deliver it. Like a completion or a shock it enters only when the
+        queue is empty, and a halted run only records it. An actor that is gone gets nothing: the
+        person did act, and the log says so."""
+        self.vtime = max(self.vtime, ts_virtual)
+        self.kernel_lamport = lamport_tick(self.kernel_lamport)
+        payload = {"op": op, "body": body, "to": to}
+        event = self._append(
+            "control.injected",
+            ENV,
+            payload,
+            self.kernel_lamport,
+            idem_key=f"inject:{self.store.next_seq}",
+        )
+        if self.halted is None:
+            everyone = to == "*" or to.startswith(GOAL_CONTROL)
+            for actor_id in sorted(self.actors) if everyone else [to]:
+                self._enqueue(event, actor_id)
+        return event
+
     def resume(self, resumed: dict[str, Any], ts_virtual: int) -> Event:
         """Record that a dead process was replaced (spec §8, docs/resume.md) and put every
         effect that was in flight into the outbox, for the driver to run again.
@@ -529,9 +550,10 @@ class Runtime:
     @staticmethod
     def _origin(reaction: Reaction) -> str:
         """What the keys and effect ids a reaction makes start with: the cause's seq. A budget
-        shock reaches every actor, so each one's reaction adds its own id and none collide."""
+        shock (or a control for every actor) reaches many actors, so each one's reaction adds
+        its own id and none collide."""
         cause = reaction.cause
-        if cause.type == "budget.shock" and reaction.actor != KERNEL:
+        if cause.type in ("budget.shock", "control.injected") and reaction.actor != KERNEL:
             return f"{cause.seq}.{reaction.actor}"
         return str(cause.seq)
 
