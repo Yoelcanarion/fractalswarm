@@ -3,6 +3,7 @@
 //   ?swarm=<run>&rival=<run>   the pair an arena scene plays (otherwise sources.json)
 //   &run=<run>                 the run a run scene plays (otherwise the swarm)
 //   &ablation=<run id>         the ablation an ablation scene shows
+//   &real                      the runs were recorded with the real model: only then does the frame say "real"
 //   &hold                      wait for `window.__director.go()` instead of starting by itself (the recorder does)
 //   &hud                       the author's readout: take time, frame, warnings, the crashes of the run
 
@@ -11,6 +12,7 @@ export interface DirectorQuery {
   rival: string | null;
   run: string | null;
   ablation: string | null;
+  real: boolean;
   hold: boolean;
   hud: boolean;
 }
@@ -42,6 +44,7 @@ export function parseDirectorRoute(hash: string): DirectorRoute | null {
       rival: params.get("rival") || null,
       run: params.get("run") || null,
       ablation: params.get("ablation") || null,
+      real: params.has("real"),
       hold: params.has("hold"),
       hud: params.has("hud"),
     },

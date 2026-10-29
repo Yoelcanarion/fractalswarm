@@ -16,6 +16,7 @@ interface Options {
   from: number;
   to: number;
   every: number;
+  real: boolean;
   dry: boolean;
   list: boolean;
   help: boolean;
@@ -38,7 +39,7 @@ interface Recorder {
   framesToCapture(total: number, window: Window): number[];
   isWhole(total: number, window: Window): boolean;
   frameName(n: number, format: string): string;
-  sceneUrl(base: string, id: string, sources: Record<string, string>, hold: boolean): string;
+  sceneUrl(base: string, id: string, sources: Record<string, string>, hold: boolean, real?: boolean): string;
   ffmpegArgs(args: { dir: string; format: string; out: string; crf: number; fps?: number }): string[];
   pngSize(bytes: Buffer): { width: number; height: number } | null;
   findFfmpeg(env: Record<string, string | undefined>, exists: (path: string) => boolean): string | null;
@@ -63,7 +64,7 @@ describe("the recorder's options", () => {
 
   it("have defaults that record a scene whole, as frames", () => {
     const options = r.parseArgs(["s6-fair-fight"]);
-    expect(options).toMatchObject({ scenes: ["s6-fair-fight"], mode: "frames", format: "png", from: 1, every: 1, dry: false, encode: true, strict: false, sources: {} });
+    expect(options).toMatchObject({ scenes: ["s6-fair-fight"], mode: "frames", format: "png", from: 1, every: 1, real: false, dry: false, encode: true, strict: false, sources: {} });
     expect(options.to).toBe(Infinity);
     expect(options.url).toBe("http://127.0.0.1:8765");
     expect(options.out.replaceAll("\\", "/")).toMatch(/\/video\/clips$/);
@@ -74,6 +75,11 @@ describe("the recorder's options", () => {
     expect(options.scenes).toEqual(["s1-arena-open", "s6-fair-fight"]);
     expect(options.sources).toEqual({ swarm: "a", rival: "b" });
     expect(options).toMatchObject({ dry: true, strict: true, encode: false, url: "http://x:9000" });
+  });
+
+  it("call the runs real only when they are told to", () => {
+    expect(r.parseArgs(["s1-arena-open"]).real).toBe(false);
+    expect(r.parseArgs(["s1-arena-open", "--real"]).real).toBe(true);
   });
 
   it("read a window of frames, a sample and a quality", () => {
@@ -138,6 +144,13 @@ describe("where a scene is shown", () => {
   it("holds the take for the recorder when it is the recorder that turns the clock", () => {
     expect(r.sceneUrl("http://h", "s4-lens", { run: "x" }, true)).toBe("http://h/#/director/s4-lens?hold&run=x");
     expect(r.sceneUrl("http://h", "s9-close", {}, true)).toBe("http://h/#/director/s9-close?hold");
+  });
+
+  it("says the runs are real only when they are", () => {
+    expect(r.sceneUrl("http://h", "s1-arena-open", { swarm: "a", rival: "b" }, true, true)).toBe("http://h/#/director/s1-arena-open?hold&swarm=a&rival=b&real");
+    expect(r.sceneUrl("http://h", "s1-arena-open", { swarm: "a", rival: "b" }, true, false)).not.toContain("real");
+    expect(r.sceneUrl("http://h", "s1-arena-open", { swarm: "a", rival: "b" }, true)).not.toContain("real");
+    expect(r.sceneUrl("http://h", "s9-close", {}, false, true)).toBe("http://h/#/director/s9-close?real");
   });
 
   it("writes a run's name so that the page reads the same one back", () => {

@@ -1,20 +1,20 @@
 # W5 `ui-arena` — notes
 
 Branch `Yoelcanarion/arena-ui-arena` (from the arena tip `52db68e`; arena `b66098b` merged in on the coordinator's
-word). This file is the coordinator's reference for what W5 built and which shapes it relies on. It is updated at
-each merge point.
+word, and arena `7e64957` on Oct 29 for W1's per-rival keys). This file is the coordinator's reference for what W5
+built and which shapes it relies on. It is updated at each merge point.
 
 ## Status
 
 | Step | State |
 |---|---|
-| 1. Arena `#/arena/<left>/<right>` (two stores on one clock, shared timeline, counters, caption, picker) | built and committed; looked at in a browser once on scratch pairs; the static build and `demo --verify` wait for a slot |
-| 1b. Supervisor recovery chip on W1's `GET /api/runs/{id}/recovery` | done, tested on real report JSON |
-| 2. "Where it helps" panel `#/helps` on `GET /api/bench/honesty` | done, follows `docs/claims.md` after the gate, tested; a browser look at the final version waits for a slot |
-| 3. Intake and review UI `#/new` | built and committed (`web/src/intake`); tested on real W2 bodies; **not yet seen in a browser** |
-| 4. Ablation view `#/ablation` | built and committed (`web/src/ablation`); tested on real W3 bodies; **not yet seen in a browser** |
-| 5. Director mode `#/director/<scene>` | not started |
-| 6. `scripts/record_scenes.*` | not started |
+| 1. Arena `#/arena/<left>/<right>` (two stores on one clock, shared timeline, counters, caption, picker) | built; seen in a browser at 1920×1080 on the $0 reference pair and on a pair launched from the intake page (Oct 29) |
+| 1b. Supervisor recovery chip on W1's `GET /api/runs/{id}/recovery` | done, tested on real report JSON, seen in a browser |
+| 2. "Where it helps" panel `#/helps` on `GET /api/bench/honesty` | done, follows `docs/claims.md` after the gate, tested; seen in a browser with W1's per-rival columns |
+| 3. Intake and review UI `#/new` | built (`web/src/intake`), tested on real W2 bodies; **driven end to end in a browser** (sample, practice reader, review, approve, start the arena pair) with no console error |
+| 4. Ablation view `#/ablation` | built (`web/src/ablation`), tested on real W3 bodies; **seen in a browser** on a run it started itself |
+| 5. Director mode `#/director/<scene>` | built and committed (`web/src/director`), 8 scene scripts, 180 tests; **seen in a browser** through the recorder, first look: see "Director mode" |
+| 6. `scripts/record_scenes.*` | written and committed: PNG sequences at 1920×1080, 60 fps; no ffmpeg on the machine (the coordinator said not to install it) |
 
 No recorded pair is bundled: the coordinator said to wait for the post-freeze pair (Mon Nov 2). The arena runs on
 scratch pairs made with the fake LLM at $0.
@@ -157,6 +157,61 @@ Reads `GET /api/bench/honesty` (W1's route, `bench/results/honesty.json` as comm
 - The API caller is shared with the intake page (`caller` in `intake/api.ts`, and the strict readers in
   `intake/strict.ts`).
 
+## Director mode `#/director/<scene>`
+
+A scene is a strict JSON script (`web/src/director/scenes/<scene id>.json`, one per scene of `docs/video-script.md`
+except `s2-intake`, which is recorded live). `#/director` lists them with what each still needs. The frame is a
+logical 1920×1080 box with no app chrome, scaled to the window (scale 1 at exactly 1920×1080).
+
+- **Steps:** `seek`, `play`, `pause`, `speed`, `wait` (a time, or `until` an anchor), `camera` (fit a region, an actor
+  or a subtree, with padding and easing), `highlight`, `caption` (lower third or overlay statement), `lens` (open or
+  close a call), `panel` (show or hide). Moments are anchors read from the log (`crash:N`, `recovered:N`,
+  `call:NAME`, `end`, with an offset like `crash:2-3s`); actors are ids, `$root`, `$crashed:N`, `$heir:N`.
+- **A take is a count of frames of 1/60 s**, not a wall clock: the take's clock is W4's fixed-step clock, so the same
+  scene shows the same moment of the run on the same frame, on any machine. A pre-roll of 45 frames lets what animates
+  by itself settle before frame 1.
+- **The runs are not in the scenes.** The final pair is recorded after the scenes were written, so a scene names no
+  run: `sources.json` (the coordinator fills it) or the address (`?swarm=&rival=`, `&run=`, `&ablation=`) gives them.
+  `&real` (or `"real": true` in `sources.json`) declares that the runs were recorded with the real model.
+- **The frame's note.** The video script wants "Replay of a real recorded run · real cost $X" on every replay. A log
+  does not say which model wrote it, and a practice run prices its tokens like a real one (the $0 reference pair shows
+  a cost of about $0.3 a side), so "real" appears only on a take that declares it, and only with a cost the server
+  gave; otherwise it says "practice model, no cost". A declared-real take with no cost is flagged.
+- **Captions** are checked by a test to be lines of `docs/video-script.md` (the claims come from `docs/claims.md`
+  through the script). The arena's assumptions caption is never touched by a scene.
+- **`window.__director`** is what a recorder reads: `ready`, `state`, `frame`, `frames`, `done`, `steps`, `position`,
+  `warnings`, `problem`, `note`, `go()`, `restart()`. `&hold` waits for `go()`. `&hud` shows the take's clock.
+
+First look in a browser (Oct 29, on the $0 pair, so every number is a practice number): all eight scenes load, run
+their whole script and stop on their last frame; the title card, the helps and ablation scenes and the arena scenes
+look right. Found on that look, fixed the same day: the replay note sat over the arena's assumptions caption (it now
+takes the empty left of the arena's top bar: `.dir[data-stage="arena"] .dir__note`), and a highlight right after a
+`lens open` raised a false "target not on the page" because React had not drawn the drawer yet (a ring now gets
+`RING_GRACE_MS` = 500 ms, and still warns if its target is missing after that or when its time is up). Seen and **not
+yet fixed** (the director's next merge point, MP2):
+
+1. the arena at 1080 is about 60 px taller than the frame, so its timeline is cut at the bottom: the stage needs a
+   definite height (a `grid-template-rows: minmax(0, 1fr)` on the sides in director mode) or a camera that fits all of it;
+2. a camera fit near the edge of the stage shows black beyond it: the camera needs clamping to the stage;
+3. `s5`'s `tree` region is the whole panel; it should hug the nodes (the tree is small inside a large panel);
+4. on the run page the note still sits over the end of the "Takeover OK" chip by a few pixels.
+
+Every scene's timings, `crash:N` indexes and call picks are first drafts, to be tuned on the final pair.
+
+### The recorder `scripts/record_scenes.mjs`
+
+Node and `playwright-core@1.48.2` (the build that matches Playwright's `chromium-1140` here), installed in a scratch
+directory outside the repo (`RECORD_TOOLS`, default `%LOCALAPPDATA%\fractalswarm-record`). **Frames mode** (default):
+a shim (`record_scenes.shim.js`) replaces `requestAnimationFrame` and `performance.now` and holds the CSS animations,
+so the recorder grants the page one frame of 1/60 s, screenshots it, and goes on: the clip has exactly the frames the
+scene says, however slowly the machine draws them. Output: a PNG sequence per scene in `video/clips/` (gitignored),
+a sidecar JSON with the take's flags, and an mp4 only if ffmpeg is on the machine (`FFMPEG` or the path); without it
+the exact command is printed. **Video mode** records in real time (Playwright's `recordVideo`, a webm at 25 fps) for a
+quick look at the choreography. `--dry` runs the frames without screenshots; `--from/--to/--every` record a window or
+a sample; `--real` declares the runs real. A take with a page error, a scene warning or a script longer than its scene
+is flagged and, with `--strict`, fails. Measured on this machine: 1920 frames of an arena scene take about 20 s
+without screenshots.
+
 ## Shapes I rely on
 
 - `GET /api/pairs`, `GET /api/runs/{id}/metrics` (top-level `recovery`), `GET /api/runs/{id}/takeover`: W2/W1, as in
@@ -197,25 +252,44 @@ W4's `.mark`, `.btn`, `.speeds`, `.badge`, `.empty` and `.stat` on purpose. `ass
 3. **W4's `components/NewTaskForm.tsx` posts the bare TaskSpec to `/api/tasks`**, but W2's `TaskRequest` needs
    `{spec: {...}, scenario, chaos, clock, backend, …}` with `extra="forbid"`, so its "Submit for planning" gets a 422.
    Not touched (not my file); the intake page posts the right shape.
-4. W1's 38bad89 (`tally_by_rival`, `locality_by_rival` in `honesty.json`) is not in arena yet; the panel shows no
-   totals until it is. Re-sync `fixtures/honesty.sample.json` then.
-5. **Nothing of the panel's final layout, the intake page or the ablation has been seen in a browser.** Merge point 1
-   needs, after RELEASE and a slot: `npm run build` copied into `src/fractalswarm/api/static/` (stale assets removed),
-   `demo --verify --no-serve --no-browser`, the $0 reference comparison, and screenshots at 1920×1080.
+4. W1's per-rival keys (`tally_by_rival`, `locality_by_rival`) arrived with the arena merge `7e64957`: the panel shows
+   a column per rival (screenshot `helps.png`) and its tests pass on the merged `bench/results/honesty.json`.
+5. **Seen in a browser at MP1 (Oct 29), on the scratch server with the key neutralised:** the arena at three points,
+   the panel, the intake page from the sample text to the approved reading to "Start the arena pair" (the pair ran and
+   opened in the arena), and the ablation (it started its own fake run). No console error, page error or HTTP error in
+   any of them. Two things found and fixed on the way: a long run id (a launched pair's) wrapped the title of a side
+   and misaligned the two boards (the title stays on one line and the id is truncated, with the full id on hover);
+   and, in the director, the run stage waited for a tree node that does not exist at the start of a run.
+   Known and left: a hash change to the same pair with a new `?t=` is not a load, so the seek applies only when the
+   pair opens (as the page comment says); at 1080 the arena page scrolls inside the content area by about 230 px (the
+   timeline is below the fold), which the director works around with a camera.
+5b. The practice pair's cost is not zero (about $0.3 a side): the practice model prices its tokens like the real one.
+   Anything that says "real cost" must come from a declaration, not from a cost above zero (see the director's note).
 6. After approval the server returns Muse's proposal, not the approved one. A reopened page shows Muse's rows plus the
    edits list. An endpoint (or the approved proposal in `GET /api/intake/{id}`) would let it show what was approved.
 7. The status note under each claim in the panel ("Status in docs/claims.md: …") is my addition; it can come out.
 8. The static `GET /api/ablation` caveat labels (Generated notes / The reference / Practice backend) are mine; the
    text next to them is the server's.
+9. **ffmpeg is not on this machine** and the coordinator said not to install it without Yoel's OK. The recorder keeps the
+   PNG sequences (`video/clips/<scene>/f00001.png`, 60 fps) and prints the exact mp4 command; Playwright's bundled
+   ffmpeg is VP8-only, so it does not help.
+10. `docs/video-script.md` s8 mentions hovering a takeover chip ("the heir of each, recomputed from the log, is the one
+    the run used"). That text is a native `title` tooltip, which a headless screenshot does not draw. If the scene needs
+    it, a `tooltip` step that draws the same text as a popover is a small addition; say if you want it.
+11. The recorder is a browser: it needs a SLOT (the MP1 GO covered one browser, and I used it for the screenshots and
+    for a sparse sample of every scene). A full recording of all eight scenes is about 5 minutes of one browser.
+12. The server refuses `backend: real` without an approval gate, and I additionally ran my scratch server with a dummy
+    `MODEL_API_KEY` and an empty `HF_TOKEN`; no real call was possible from any of my runs.
 
 ## Tests
 
 `npm --prefix web test` runs vitest in node: the pure modules, and the components drawn on the server
 (`renderToStaticMarkup`). The panel's tests run over the bench's own `honesty.json`; the recovery tests over real
-`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At 0156eaa the whole
-web suite is 53 files, 776 tests, green; `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
+`check_run` output; the intake tests over real W2 bodies; the ablation tests over real W3 bodies. At the MP1 commit the
+whole web suite is 62 files, 956 tests, green (the director's are 180 of them); `tsc --noEmit` clean. Mutation-checked, each reverted: the panel (flipping a
 claim's placeholder, hiding the loss counts, dropping the row model, toning down the per-process loss); the intake
 page (20 mutants: a billed launch without the gate, a wrong or lower-case word, a stale or expired token, the approval
 not blocked, frozen inputs editable, a wrong provenance, browser storage, a sentence marked that is not in the text,
 …); the ablation view (17 mutants: a swapped headline, caveats hidden or not filtered, a flipped mark, the split read
 wrong, a lacking part not said, the real backend sent, a note as markup, …). Every one was caught.
+The director's rules are not mutation-checked yet (MP2).

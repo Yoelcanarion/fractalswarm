@@ -125,6 +125,12 @@ html.dir-on body {
   font-weight: 600;
 }
 
+/* The arena's assumptions caption is right-aligned in the top bar and must never be covered: the note takes the empty left of it. */
+.dir[data-stage="arena"] .dir__note {
+  left: 24px;
+  right: auto;
+}
+
 .dir__lower {
   position: absolute;
   left: 96px;

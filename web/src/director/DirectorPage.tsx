@@ -14,7 +14,7 @@ import { directorHash, type DirectorRoute } from "./route";
 import { SCENE_FILES, sceneFile, SOURCES } from "./scenes";
 import type { Scene, Stage } from "./script";
 import { missingSources, resolveSources, type Sources } from "./sources";
-import { createArenaStage, createRunStage, replayNote, type StageController } from "./stages";
+import { createArenaStage, createRunStage, noteProblems, replayNote, type StageController } from "./stages";
 import { AblationStageView, ArenaStageView, HelpsStageView, RunStageView, TitleStageView } from "./StageViews";
 import { createDomSurface } from "./surface";
 import { createTake, type Take } from "./take";
@@ -57,7 +57,7 @@ const FITS: Record<Stage, boolean> = { arena: true, run: true, helps: false, abl
 /** What has to be on the page before a take starts, besides the stage's own stores having loaded. */
 const REQUIRED: Record<Stage, string[]> = {
   arena: [".side--swarm .board", ".side--rival .board", ".score"],
-  run: [".counters", ".run__tree .react-flow__node", ".timeline"],
+  run: [".counters", ".run__tree", ".timeline"],
   helps: ['[data-helps="outcome"]'],
   ablation: [".abl__head"],
   title: [".dir__card"],
@@ -152,7 +152,7 @@ function SceneList() {
         <h1>Director</h1>
         <p>
           A scene is a script over a replay (<code>web/src/director/scenes/&lt;scene&gt;.json</code>); it plays at 1920 x 1080 with no app around it. Add{" "}
-          <code>?hud</code> for the take's clock, <code>?swarm=&amp;rival=</code>, <code>?run=</code> or <code>?ablation=</code> to choose the runs. Space pauses, R restarts, . steps one frame.
+          <code>?hud</code> for the take's clock, <code>?swarm=&amp;rival=</code>, <code>?run=</code> or <code>?ablation=</code> to choose the runs, and <code>&amp;real</code> when they were recorded with the real model. Space pauses, R restarts, . steps one frame.
         </p>
         <ul className="dir-page__list">
           {SCENE_FILES.map((file) => {
@@ -164,7 +164,7 @@ function SceneList() {
               );
             }
             const scene = file.read.value;
-            const missing = missingSources(scene.stage, resolveSources(SOURCES, { swarm: null, rival: null, run: null, ablation: null }));
+            const missing = missingSources(scene.stage, resolveSources(SOURCES, { swarm: null, rival: null, run: null, ablation: null, real: false }));
             return (
               <li key={file.id}>
                 <a className="mono" href={directorHash(file.id)}>
@@ -255,6 +255,7 @@ function Frame({ scene, sources, hold, hud }: FrameProps) {
     let ready = false;
     let trouble: string | null = null;
     let words: string | null = null;
+    let noted: string[] = [];
 
     const check = (): void => {
       const said = controller?.problem() ?? null;
@@ -269,7 +270,8 @@ function Frame({ scene, sources, hold, hud }: FrameProps) {
       if (document.fonts.status !== "loaded") return;
       clearInterval(poll);
       ready = true;
-      words = scene.replayNote && controller !== null ? replayNote(controller.costs()) : null;
+      words = scene.replayNote && controller !== null ? replayNote(controller.costs(), sources.real) : null;
+      noted = scene.replayNote && controller !== null ? noteProblems(controller.costs(), sources.real) : [];
       setNote(words);
       made.restart();
       drive.ready();
@@ -298,7 +300,7 @@ function Frame({ scene, sources, hold, hud }: FrameProps) {
         return made.state.getState().position;
       },
       get warnings() {
-        return made.state.getState().warnings;
+        return [...made.state.getState().warnings, ...noted];
       },
       get problem() {
         return trouble;
@@ -331,7 +333,7 @@ function Frame({ scene, sources, hold, hud }: FrameProps) {
   }, [built, scene, hold]);
 
   return (
-    <div className="dir" data-scene={scene.id}>
+    <div className="dir" data-scene={scene.id} data-stage={scene.stage}>
       <div ref={frameRef} className="dir__frame" style={{ left: box.left, top: box.top, transform: `scale(${box.scale})` }}>
         <div ref={cameraRef} className="dir__camera">
           <div ref={stageRef} className={`app dir__stage dir__stage--${FITS[scene.stage] ? "fit" : "flow"}`} data-stage={scene.stage}>

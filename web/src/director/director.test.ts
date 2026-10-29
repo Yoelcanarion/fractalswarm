@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DURABLE_MAX_SCENARIO, crash, kill, restart, rivalStream, swarmStream, takeOver } from "../arena/testing";
 import { emptyView, foldEvents } from "../lib/reducer";
 import { crashesOf, resolveActor, subtreeOf } from "./anchors";
-import { FRAME_H, FRAME_W, HOME, cameraAt, contentRect, fit, lerp, lookAt, panned, speedAt, transformOf, union, zoomedTo } from "./camera";
+import { FRAME_H, FRAME_W, HOME, cameraAt, contentRect, fit, lerp, lookAt, panned, speedAt, transformOf, union, zoomedTo, type Rect } from "./camera";
 import { FADE_MS, addCaption, captionOpacity, envelope, liveCaptions, ringOpacity } from "./overlay";
 import { createProgram, type Host } from "./program";
 import { parseScene, type Step } from "./script";
@@ -567,11 +567,42 @@ describe("a take", () => {
 
   it("warns, once, of a camera or a highlight whose target is not on the page, and goes on", () => {
     const { take } = takeOf({ steps: [{ do: "camera", fit: { region: "scoreboard" } }, { do: "highlight", target: { region: "heads" }, ms: 1000 }, { do: "caption", text: "Still here", ms: 1000 }] });
-    for (let i = 0; i < 30; i++) take.tick();
+    for (let i = 0; i < 45; i++) take.tick();
     const { warnings, captions } = take.state.getState();
     expect(warnings.filter((w) => /camera's target/.test(w))).toHaveLength(1);
     expect(warnings.filter((w) => /highlight's target/.test(w))).toHaveLength(1);
     expect(captions.map((c) => c.text)).toEqual(["Still here"]);
+  });
+
+  it("gives a highlight's target a few frames to be drawn (a lens just opened) before it warns", () => {
+    const rects: Record<string, Rect> = {};
+    const surface = fakeSurface(rects);
+    const take = createTake(sceneOf({ steps: [{ do: "highlight", target: { region: "swarm" }, ms: 2000 }] }), fakeReplay(), surface);
+    for (let i = 0; i < 4; i++) take.tick();
+    expect(take.state.getState()).toMatchObject({ rings: [], warnings: [] });
+    rects[target({ region: "swarm" })] = BOARD;
+    take.tick();
+    expect(take.state.getState().rings).toHaveLength(1);
+    for (let i = 0; i < 90; i++) take.tick();
+    expect(take.state.getState().warnings).toEqual([]);
+  });
+
+  it("warns of a highlight that is over before its target ever showed up", () => {
+    const { take } = takeOf({ steps: [{ do: "highlight", target: { region: "heads" }, ms: 300 }] });
+    for (let i = 0; i < 40; i++) take.tick();
+    expect(take.state.getState().rings).toEqual([]);
+    expect(take.state.getState().warnings.filter((w) => /highlight's target/.test(w))).toHaveLength(1);
+  });
+
+  it("warns of a highlight whose target goes away while it runs, and only once", () => {
+    const rects: Record<string, Rect> = { [target({ region: "swarm" })]: BOARD };
+    const surface = fakeSurface(rects);
+    const take = createTake(sceneOf({ steps: [{ do: "highlight", target: { region: "swarm" }, ms: 3000 }] }), fakeReplay(), surface);
+    for (let i = 0; i < 20; i++) take.tick();
+    expect(take.state.getState().warnings).toEqual([]);
+    delete rects[target({ region: "swarm" })];
+    for (let i = 0; i < 60; i++) take.tick();
+    expect(take.state.getState().warnings.filter((w) => /highlight's target/.test(w))).toHaveLength(1);
   });
 
   it("places a ring on its target as the camera has it now, so it follows a move", () => {

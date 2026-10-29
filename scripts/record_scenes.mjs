@@ -46,6 +46,8 @@ const USAGE = `usage: node scripts/record_scenes.mjs <scene>... | all  [options]
   --swarm <run> --rival <run>   the pair an arena scene plays (else web/src/director/sources.json)
   --run <run>            the run a run scene plays (else the swarm)
   --ablation <id>        the ablation an ablation scene shows
+  --real                 the runs were recorded with the real model: only then does the frame say "real"
+                         (a log does not say which model wrote it; sources.json can declare it too)
   --url <base>           the server (default http://127.0.0.1:8765)
   --out <dir>            default video/clips
   --mode frames|video    frames: one screenshot per frame of 1/60 s (default); video: Playwright's real-time recording
@@ -70,6 +72,7 @@ export function parseArgs(argv) {
     from: 1,
     to: Infinity,
     every: 1,
+    real: false,
     dry: false,
     list: false,
     help: false,
@@ -100,6 +103,9 @@ export function parseArgs(argv) {
         break;
       case "--dry":
         options.dry = true;
+        break;
+      case "--real":
+        options.real = true;
         break;
       case "--no-encode":
         options.encode = false;
@@ -165,11 +171,13 @@ export const isWhole = (total, { from, to, every }) => from === 1 && to >= total
 
 export const frameName = (n, format) => `f${String(n).padStart(5, "0")}.${format === "jpeg" ? "jpg" : "png"}`;
 
-/** The address of a scene on the server. `hold`: the page waits for the recorder to start the take. */
-export function sceneUrl(base, id, sources, hold) {
+/** The address of a scene on the server. `hold`: the page waits for the recorder to start the take. `real`: the runs were
+ * recorded with the real model, which is the only case in which the frame says "real". */
+export function sceneUrl(base, id, sources, hold, real = false) {
   const query = [];
   if (hold) query.push("hold");
   for (const key of ["swarm", "rival", "run", "ablation"]) if (sources[key]) query.push(`${key}=${encodeURIComponent(sources[key])}`);
+  if (real) query.push("real");
   return `${base}/#/director/${encodeURIComponent(id)}${query.length > 0 ? `?${query.join("&")}` : ""}`;
 }
 
@@ -290,7 +298,7 @@ async function recordScene(browser, id, options, scene) {
     if (response.status() >= 400 && response.url().includes("/api/")) notes.push(`${response.status()} ${response.url().replace(options.url, "")}`);
   });
 
-  const address = sceneUrl(options.url, id, options.sources, frames);
+  const address = sceneUrl(options.url, id, options.sources, frames, options.real);
   console.log(`${id}: ${address}`);
   await page.goto(address, { waitUntil: "load" });
   await page.waitForFunction(() => window.__director && (window.__director.ready || window.__director.problem !== null), null, { timeout: options.loadTimeoutMs, polling: 100 });
@@ -407,7 +415,7 @@ export async function main(argv) {
         continue;
       }
       const flags = flagsOf(report);
-      const sidecar = { scene: id, stage: scene.stage, frames: report.loaded.frames, fps: FPS, size: FRAME, mode: options.mode, format: options.format, sources: options.sources, note: report.loaded.note, captured: report.taken, seconds: report.seconds, flags, notes: report.notes };
+      const sidecar = { scene: id, stage: scene.stage, frames: report.loaded.frames, fps: FPS, size: FRAME, mode: options.mode, format: options.format, sources: options.sources, real: options.real, note: report.loaded.note, captured: report.taken, seconds: report.seconds, flags, notes: report.notes };
       if (options.mode === "frames" && !options.dry) writeFileSync(join(options.out, `${id}.json`), `${JSON.stringify(sidecar, null, 2)}\n`);
       for (const line of flags) console.error(`${id}: FLAG: ${line}`);
       for (const line of report.notes) console.log(`${id}: note: ${line}`);

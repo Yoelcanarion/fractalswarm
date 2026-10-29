@@ -218,15 +218,23 @@ async function waitFor(ready: () => boolean, tries = 400): Promise<void> {
 
 const dollars = (usd: number): string => formatUsd(usd);
 
-/** What the frame says about the replay (the video script asks for it wherever one is shown). "Real" only where the
- * server gave a cost above zero: a run on the practice model costs nothing and is never called real. */
-export function replayNote(costs: readonly (number | null)[]): string {
-  const real = costs.map((cost) => (cost !== null && cost > 0 ? cost : null));
-  if (costs.length === 1) {
-    return real[0] === null ? "Replay of a recorded run · practice model, no cost" : `Replay of a real recorded run · real cost ${dollars(real[0])}`;
-  }
-  const [swarm, rival] = real;
-  if (swarm === null && rival === null) return "Replay of two recorded runs · practice model, no cost";
-  if (swarm !== null && rival !== null) return `Replay of two real recorded runs · real cost ${dollars(swarm)} and ${dollars(rival)}`;
-  return `Replay of two recorded runs · real cost ${swarm === null ? "none" : dollars(swarm)} (swarm), ${rival === null ? "none" : dollars(rival)} (rival)`;
+/** What the frame says about the replay (the video script asks for it wherever one is shown). "Real" only for a take that
+ * declares its runs real (`real`, from the address or sources.json): a log does not say which model wrote it, and a run
+ * on the practice model prices its tokens like a real one, so a cost above zero proves nothing. A real take with no cost
+ * on record says so, and `noteProblems` says why the clip is not for the cut. */
+export function replayNote(costs: readonly (number | null)[], real: boolean): string {
+  if (!real) return costs.length === 1 ? "Replay of a recorded run · practice model, no cost" : "Replay of two recorded runs · practice model, no cost";
+  const paid = costs.map((cost) => (cost !== null && cost > 0 ? dollars(cost) : null));
+  if (costs.length === 1) return `Replay of a real recorded run · real cost ${paid[0] ?? "not on record"}`;
+  const [swarm, rival] = paid;
+  if (swarm !== null && rival !== null) return `Replay of two real recorded runs · real cost ${swarm} and ${rival}`;
+  if (swarm === null && rival === null) return "Replay of two real recorded runs · real cost not on record";
+  return `Replay of two real recorded runs · real cost ${swarm ?? "not on record"} (swarm), ${rival ?? "not on record"} (rival)`;
+}
+
+/** Why a real take cannot go in the video: a run declared real that the server has no cost for. */
+export function noteProblems(costs: readonly (number | null)[], real: boolean): string[] {
+  if (!real) return [];
+  const names = costs.length === 1 ? ["the run"] : ["the swarm run", "the rival run"];
+  return costs.flatMap((cost, i) => (cost !== null && cost > 0 ? [] : [`declared real, but the server has no cost for ${names[i]}`]));
 }

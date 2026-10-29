@@ -79,12 +79,12 @@ describe("the scenes of the video", () => {
   });
 
   it("name no run: the pair is the coordinator's to choose, in sources.json or the address", () => {
-    expect(SOURCES).toEqual({ swarm: null, rival: null, run: null, ablation: null });
+    expect(SOURCES).toEqual({ swarm: null, rival: null, run: null, ablation: null, real: false });
     expect(JSON.stringify(scenes)).not.toMatch(/t2-real|bench-gate|seed1/);
   });
 
   it("need only what their stage needs", () => {
-    const need = (id: string) => missingSources(scenes.find((scene) => scene.id === id)!.stage, { swarm: null, rival: null, run: null, ablation: null });
+    const need = (id: string) => missingSources(scenes.find((scene) => scene.id === id)!.stage, { swarm: null, rival: null, run: null, ablation: null, real: false });
     expect(need("s1-arena-open")).toEqual(["swarm", "rival"]);
     expect(need("s4-lens")).toEqual(["run"]);
     expect(need("s3-ablation")).toEqual(["ablation"]);

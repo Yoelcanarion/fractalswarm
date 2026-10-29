@@ -21,6 +21,10 @@ import type { PanelName, Scene, Step } from "./script";
 import type { Target } from "./targets";
 import { resolveTime, type TimeContext, type TimeExpr } from "./time";
 
+/** What a target gets to be drawn after the step that brings it (a lens that was just opened is in the page a frame or
+ * two later): a highlight warns only when its target is still missing once this has passed, or its time is up. */
+export const RING_GRACE_MS = 500;
+
 /** The replay the scene plays; absent on stages that have none (the title card, the panels). */
 export interface ReplayClock {
   playing(): boolean;
@@ -167,9 +171,9 @@ export function createTake(scene: Scene, replay: ReplayClock | null, surface: Su
     for (const ring of rings) {
       const rect = surface.screenRect(ring.target);
       if (rect === null) {
-        if (!unplaced.has(ring.id)) {
+        if (t - ring.from >= Math.min(RING_GRACE_MS, ring.to - ring.from) && !unplaced.has(ring.id)) {
           unplaced.add(ring.id);
-          warn(`a highlight's target is not on the page at ${(t / 1000).toFixed(2)} s`);
+          warn(`a highlight's target is not on the page (it began at ${(ring.from / 1000).toFixed(2)} s)`);
         }
         continue;
       }

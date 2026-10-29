@@ -1,6 +1,8 @@
 // The director's views drawn on the server (react-dom/server): no browser, but every render path runs. What they look
 // like is checked on screenshots; here it is that the page has what the scenes point at.
 
+import { readFileSync } from "node:fs";
+
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -145,9 +147,9 @@ describe("what is drawn over the stage", () => {
 });
 
 describe("the pages that say a scene cannot be shown", () => {
-  const route = (scene: string | null, query: Partial<{ swarm: string | null; rival: string | null; run: string | null; ablation: string | null }> = {}) => ({
+  const route = (scene: string | null, query: Partial<{ swarm: string | null; rival: string | null; run: string | null; ablation: string | null; real: boolean }> = {}) => ({
     scene,
-    query: { swarm: null, rival: null, run: null, ablation: null, hold: false, hud: false, ...query },
+    query: { swarm: null, rival: null, run: null, ablation: null, real: false, hold: false, hud: false, ...query },
   });
   const page = (scene: string | null, query = {}) => plainText(renderToStaticMarkup(createElement(DirectorPage, { route: route(scene, query) })));
 
@@ -163,6 +165,13 @@ describe("the pages that say a scene cannot be shown", () => {
 
   it("says there is no such scene", () => {
     expect(page("s0-nothing")).toContain("No scene called s0-nothing");
+  });
+
+  it("marks its frame with the stage, so the note keeps clear of the arena's assumptions caption", () => {
+    // The frame needs a window to be drawn, so what is checked is the two ends of the rule: the attribute and the CSS.
+    const read = (name: string): string => readFileSync(new URL(name, import.meta.url), "utf-8");
+    expect(read("./DirectorPage.tsx")).toContain('<div className="dir" data-scene={scene.id} data-stage={scene.stage}>');
+    expect(read("./director.css")).toMatch(/\.dir\[data-stage="arena"\] \.dir__note \{\s*left: 24px;\s*right: auto;/);
   });
 
   it("says which runs a scene needs, and where to give them", () => {

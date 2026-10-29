@@ -96,6 +96,7 @@
 
 .side__verify {
   margin-left: auto;
+  flex: none;
 }
 
 .side__proof {
@@ -111,6 +112,9 @@
   margin: 0;
   font-size: var(--fs-title);
   font-weight: 700;
+  /* the title stays on one line whatever the run id is; the id gives way (below), so both sides' heads are the same height */
+  flex: none;
+  white-space: nowrap;
 }
 
 .side__swatch {
@@ -121,6 +125,10 @@
 }
 
 .side__run {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-muted);
   font-size: var(--fs-body);
 }

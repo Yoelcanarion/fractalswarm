@@ -17,9 +17,15 @@ describe("the director's address", () => {
 
   it("carries the runs, hold and the readout in its query", () => {
     const route = parseDirectorRoute("#/director/s1-arena-open?swarm=a%20b&rival=r&hold&hud");
-    expect(route?.query).toEqual({ swarm: "a b", rival: "r", run: null, ablation: null, hold: true, hud: true });
+    expect(route?.query).toEqual({ swarm: "a b", rival: "r", run: null, ablation: null, real: false, hold: true, hud: true });
     expect(parseDirectorRoute("#/director/s4-lens?run=x&ablation=y")?.query).toMatchObject({ run: "x", ablation: "y", hold: false, hud: false });
     expect(parseDirectorRoute("#/director/s4-lens?swarm=")?.query.swarm).toBeNull();
+  });
+
+  it("says the runs are real only when it is told so", () => {
+    expect(parseDirectorRoute("#/director/s1-arena-open")?.query.real).toBe(false);
+    expect(parseDirectorRoute("#/director/s1-arena-open?swarm=a&rival=b&real")?.query.real).toBe(true);
+    expect(parseDirectorRoute("#/director/s1-arena-open?real&hold")?.query).toMatchObject({ real: true, hold: true });
   });
 
   it("is written back the way it is read", () => {
@@ -34,17 +40,24 @@ describe("the director's address", () => {
 });
 
 describe("the runs a scene plays", () => {
-  const none = { swarm: null, rival: null, run: null, ablation: null };
+  const none = { swarm: null, rival: null, run: null, ablation: null, real: false };
 
   it("come from the manifest, and the address wins over it", () => {
     const manifest = { swarm: "m-swarm", rival: "m-rival", ablation: "m-abl" };
-    expect(resolveSources(manifest, none)).toEqual({ swarm: "m-swarm", rival: "m-rival", run: "m-swarm", ablation: "m-abl" });
-    expect(resolveSources(manifest, { ...none, swarm: "q-swarm", run: "q-run" })).toEqual({ swarm: "q-swarm", rival: "m-rival", run: "q-run", ablation: "m-abl" });
+    expect(resolveSources(manifest, none)).toEqual({ swarm: "m-swarm", rival: "m-rival", run: "m-swarm", ablation: "m-abl", real: false });
+    expect(resolveSources(manifest, { ...none, swarm: "q-swarm", run: "q-run" })).toEqual({ swarm: "q-swarm", rival: "m-rival", run: "q-run", ablation: "m-abl", real: false });
   });
 
   it("play the swarm on a run page unless a run is named", () => {
     expect(resolveSources({}, { ...none, swarm: "s" }).run).toBe("s");
     expect(resolveSources({ run: "r", swarm: "s" }, none).run).toBe("r");
+  });
+
+  it("are real when the manifest or the address says so, and practice otherwise", () => {
+    expect(resolveSources({ swarm: "s", rival: "r" }, none).real).toBe(false);
+    expect(resolveSources({ swarm: "s", rival: "r", real: true }, none).real).toBe(true);
+    expect(resolveSources({ swarm: "s", rival: "r", real: false }, { ...none, real: true }).real).toBe(true);
+    expect(resolveSources({}, none).real).toBe(false);
   });
 
   it("leave nothing when nobody names one", () => {

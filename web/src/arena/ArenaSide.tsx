@@ -20,7 +20,9 @@ function SideHead({ role, title }: { role: "swarm" | "rival"; title: string }) {
           <span className="side__swatch" aria-hidden />
           {title}
         </h2>
-        <span className="side__run mono">{runId ?? ""}</span>
+        <span className="side__run mono" title={runId ?? undefined}>
+          {runId ?? ""}
+        </span>
         <span className="side__verify">
           <VerifyBadge />
         </span>

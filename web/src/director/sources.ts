@@ -13,13 +13,22 @@ export interface Sources {
   run: string | null;
   /** The id of an ablation run (`GET /api/ablation/{id}`). */
   ablation: string | null;
+  /** The runs were recorded with the real model. Nothing in a log says so (a practice run prices its tokens too), so it is
+   * declared with the runs, and the frame says "real" only for a take that declares it. */
+  real: boolean;
 }
 
-export const NO_SOURCES: Sources = { swarm: null, rival: null, run: null, ablation: null };
+export const NO_SOURCES: Sources = { swarm: null, rival: null, run: null, ablation: null, real: false };
 
-export function resolveSources(manifest: Partial<Sources>, query: Pick<DirectorQuery, "swarm" | "rival" | "run" | "ablation">): Sources {
+export function resolveSources(manifest: Partial<Sources>, query: Pick<DirectorQuery, "swarm" | "rival" | "run" | "ablation" | "real">): Sources {
   const swarm = query.swarm ?? manifest.swarm ?? null;
-  return { swarm, rival: query.rival ?? manifest.rival ?? null, run: query.run ?? manifest.run ?? swarm, ablation: query.ablation ?? manifest.ablation ?? null };
+  return {
+    swarm,
+    rival: query.rival ?? manifest.rival ?? null,
+    run: query.run ?? manifest.run ?? swarm,
+    ablation: query.ablation ?? manifest.ablation ?? null,
+    real: query.real || manifest.real === true,
+  };
 }
 
 /** What a stage needs that the sources do not give, in the words of the address that would. */

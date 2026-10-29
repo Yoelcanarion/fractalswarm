@@ -10,7 +10,7 @@ import type { LensApi, LensStoreApi } from "../lensStore";
 import type { RunApi } from "../store";
 import { callTimes, pickCall } from "./calls";
 import type { CallPick } from "./script";
-import { clockReplay, createArenaStage, createRunStage, lensHandle, replayNote, takeClock } from "./stages";
+import { clockReplay, createArenaStage, createRunStage, lensHandle, noteProblems, replayNote, takeClock } from "./stages";
 
 const swarmLog = (() => {
   const s = swarmStream();
@@ -212,17 +212,37 @@ describe("the clock a take steps", () => {
 });
 
 describe("the note on a replay", () => {
-  it("says real only where the server gave a cost above zero", () => {
-    expect(replayNote([1.2345])).toBe("Replay of a real recorded run · real cost $1.23");
-    expect(replayNote([0.4948])).toBe("Replay of a real recorded run · real cost $0.4948");
-    expect(replayNote([0])).toBe("Replay of a recorded run · practice model, no cost");
-    expect(replayNote([null])).toBe("Replay of a recorded run · practice model, no cost");
+  it("says real only for runs declared real, with the cost the server gave", () => {
+    expect(replayNote([1.2345], true)).toBe("Replay of a real recorded run · real cost $1.23");
+    expect(replayNote([0.4948], true)).toBe("Replay of a real recorded run · real cost $0.4948");
   });
 
-  it("gives both costs of a pair, and never calls a side real that cost nothing", () => {
-    expect(replayNote([12.3, 8.5])).toBe("Replay of two real recorded runs · real cost $12.30 and $8.50");
-    expect(replayNote([0, null])).toBe("Replay of two recorded runs · practice model, no cost");
-    expect(replayNote([12.3, 0])).toBe("Replay of two recorded runs · real cost $12.30 (swarm), none (rival)");
-    expect(replayNote([null, 8.5])).toBe("Replay of two recorded runs · real cost none (swarm), $8.50 (rival)");
+  it("never calls a run real that is not declared real, whatever its cost: a practice run prices its tokens too", () => {
+    expect(replayNote([0.2948], false)).toBe("Replay of a recorded run · practice model, no cost");
+    expect(replayNote([0], false)).toBe("Replay of a recorded run · practice model, no cost");
+    expect(replayNote([null], false)).toBe("Replay of a recorded run · practice model, no cost");
+    expect(replayNote([0.2948, 0.3222], false)).toBe("Replay of two recorded runs · practice model, no cost");
+    expect(replayNote([12.3, 8.5], false)).not.toMatch(/real/);
+  });
+
+  it("gives both costs of a real pair", () => {
+    expect(replayNote([12.3, 8.5], true)).toBe("Replay of two real recorded runs · real cost $12.30 and $8.50");
+  });
+
+  it("says when a real take has no cost on record, instead of a cost it does not have", () => {
+    expect(replayNote([0], true)).toBe("Replay of a real recorded run · real cost not on record");
+    expect(replayNote([null], true)).toBe("Replay of a real recorded run · real cost not on record");
+    expect(replayNote([12.3, 0], true)).toBe("Replay of two real recorded runs · real cost $12.30 (swarm), not on record (rival)");
+    expect(replayNote([null, 8.5], true)).toBe("Replay of two real recorded runs · real cost not on record (swarm), $8.50 (rival)");
+    expect(replayNote([0, null], true)).toBe("Replay of two real recorded runs · real cost not on record");
+  });
+
+  it("flags a real take that has a cost missing, and nothing else", () => {
+    expect(noteProblems([1.2], true)).toEqual([]);
+    expect(noteProblems([12.3, 8.5], true)).toEqual([]);
+    expect(noteProblems([null], true)).toEqual(["declared real, but the server has no cost for the run"]);
+    expect(noteProblems([12.3, 0], true)).toEqual(["declared real, but the server has no cost for the rival run"]);
+    expect(noteProblems([null, null], true)).toHaveLength(2);
+    expect(noteProblems([null, 0], false)).toEqual([]);
   });
 });

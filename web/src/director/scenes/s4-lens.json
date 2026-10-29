@@ -4,7 +4,7 @@
   "stage": "run",
   "duration_ms": 18000,
   "calls": {
-    "spark": { "model": "spark", "purpose": "intake" },
+    "spark": { "model": "spark", "purpose": "work" },
     "wonder": { "model": "wonder", "role": "root_planner" }
   },
   "steps": [
