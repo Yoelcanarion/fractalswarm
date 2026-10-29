@@ -1,6 +1,7 @@
 import { Background, Handle, Position, ReactFlow, ReactFlowProvider, type Edge, type Node, type NodeProps } from "@xyflow/react";
 import { memo, useMemo, type CSSProperties } from "react";
 
+import { useLens, useLensStoreApi } from "../lensStore";
 import { useClock } from "../lib/clockHooks";
 import { ADOPTION_LIFE_MS, fadeLife, glowVars, litMessages, MESSAGE_LIFE_MS, ringVars } from "../lib/decay";
 import { boundsOf, colorOf, isInfraKind, isLeafKind, layoutTree, structureKey } from "../lib/layout";
@@ -25,6 +26,13 @@ type ActorProps = NodeProps<Node<ActorData>>;
 
 function ActorCardView({ data }: ActorProps) {
   const { actor, color, rootDuty, glow, leaf } = data;
+  // A click (or Enter) opens the actor's calls in the Muse lens; a second one closes it.
+  const lens = useLensStoreApi();
+  const inLens = useLens((s) => s.open && s.scope.kind === "actor" && s.scope.actor === actor.id);
+  const toggleLens = () => {
+    if (inLens) lens.getState().close();
+    else lens.getState().openActor(actor.id);
+  };
   const down = actor.status === "killed" || actor.status === "dead";
   const outage = actor.status === "restarting" ? actor.outage : undefined;
   const classes = [
@@ -35,10 +43,25 @@ function ActorCardView({ data }: ActorProps) {
     actor.status === "stopped" ? "actor--stopped" : "",
     actor.suspected ? "actor--suspected" : "",
     glow ? `actor--${glow.kind}` : "",
+    inLens ? "actor--lens" : "",
   ].join(" ");
   const style = { "--owner": color, ...(glow ? glowVars(glow.born, glow.life) : {}) } as CSSProperties;
   return (
-    <div className={classes} style={style}>
+    <div
+      className={classes}
+      style={style}
+      role="button"
+      tabIndex={0}
+      aria-pressed={inLens}
+      aria-label={`${actor.id}, ${actor.kind}, ${actor.llmCalls} ${actor.llmCalls === 1 ? "model call" : "model calls"}. Open in the Muse lens.`}
+      onClick={toggleLens}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          toggleLens();
+        }
+      }}
+    >
       <Handle type="target" position={Position.Top} className="actor__handle" />
       <div className="actor__id">{actor.id}</div>
       <div className="actor__meta">
@@ -95,6 +118,7 @@ function buildGraph(view: ViewState, now: number): TreeFrame {
       type: "actor",
       position: { x, y },
       draggable: false,
+      focusable: false, // the card inside is the tab stop
       data: {
         actor,
         color: colorOf(view, id),

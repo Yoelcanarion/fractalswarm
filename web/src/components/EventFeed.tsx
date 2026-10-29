@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 
 import { NOISE_GROUPS, recent, summarize, tone } from "../lib/eventlog";
 import type { RunEvent } from "../lib/types";
+import { LensButton } from "./lens/LensButton";
 
 const SHOWN = 60;
 const NOTHING_HIDDEN: ReadonlySet<string> = new Set();
@@ -24,7 +25,10 @@ export function EventFeed({ events, cursor }: { events: RunEvent[]; cursor: numb
         {rows.map((event) => (
           <li key={event.seq} className={`feed__row ${tone(event.type) ? `feed__row--${tone(event.type)}` : ""}`}>
             <span className="mono feed__seq">{event.seq}</span>
-            <span className="feed__type">{event.type}</span>
+            <span className="feed__type">
+              {event.type}
+              <LensButton effectId={event.payload?.effect_id} />
+            </span>
             <span className="feed__actor">{event.actor}</span>
             <span className="feed__text">{summarize(event)}</span>
           </li>

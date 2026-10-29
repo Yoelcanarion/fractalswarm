@@ -1,0 +1,102 @@
+// The takeover check as the UI shows it: "Takeover OK" when every heir recomputed from the log is the
+// heir the run used (verify/takeover.py). The server's report is a TakeoverReport; W2's route
+// (`GET api/runs/{id}/takeover`) sends at least `ok` and `violations`, and may send the lists the
+// check found (`successions`, `adoptions`, `kills`). Only `ok` and `violations` are required here.
+//
+// A run in which no goal changed hands has nothing to take over, and the check passes trivially. The
+// chip must not call that "Takeover OK": it would claim a proof the run never exercised (a supervisor's
+// run, or a swarm run without chaos). When the report counts what it checked, a count of zero says
+// "No takeover to check"; when it does not, the log decides, by the two events the check starts from.
+
+import { asNumber, asRecord, asString } from "./generic";
+import type { RunEvent } from "./types";
+
+export interface TakeoverViolation {
+  check: string;
+  kind: string;
+  seq: number | null;
+  detail: string;
+}
+
+export interface TakeoverSummary {
+  ok: boolean;
+  violations: TakeoverViolation[];
+  /** Successions the check recomputed: goals that changed hands. Null if the report does not say. */
+  heirs: number | null;
+  /** Tree adoptions it checked. Null if the report does not say. */
+  adoptions: number | null;
+  /** Kills the run had. Null if the report does not say. */
+  kills: number | null;
+}
+
+const count = (value: unknown): number | null => (Array.isArray(value) ? value.length : null);
+
+/** Read a takeover report, or null when the body is not one (no boolean `ok`). */
+export function readTakeover(body: unknown): TakeoverSummary | null {
+  const b = asRecord(body);
+  if (typeof b.ok !== "boolean") return null;
+  return {
+    ok: b.ok,
+    violations: (Array.isArray(b.violations) ? b.violations : []).map((raw) => {
+      const v = asRecord(raw);
+      return { check: asString(v.check), kind: asString(v.kind), seq: asNumber(v.seq), detail: asString(v.detail) };
+    }),
+    heirs: count(b.successions),
+    adoptions: count(b.adoptions),
+    kills: count(b.kills),
+  };
+}
+
+/** The events the check starts from: each `ownership.remapped` is a succession, each `tree.adopted`
+ * an adoption. A log without either has nothing to take over. */
+export const logHasTakeover = (events: readonly RunEvent[]): boolean =>
+  events.some((event) => event.type === "ownership.remapped" || event.type === "tree.adopted");
+
+export type ChipTone = "good" | "bad" | "muted";
+
+export interface Chip {
+  tone: ChipTone;
+  /** The short text on the chip. */
+  text: string;
+  /** The longer explanation, on hover. */
+  detail: string;
+}
+
+const plural = (n: number, one: string, many = `${one}s`): string => `${n} ${n === 1 ? one : many}`;
+
+/** What the chip says. `inLog`: whether the run's own log holds a succession or an adoption, which
+ * decides when the report does not count them itself. */
+export function describeTakeover(report: TakeoverSummary, inLog: boolean): Chip {
+  if (!report.ok || report.violations.length > 0) {
+    const shown = report.violations
+      .slice(0, 3)
+      .map((v) => `${v.check || "check"}${v.kind ? `/${v.kind}` : ""}${v.seq !== null ? ` at seq ${v.seq}` : ""}: ${v.detail}`);
+    const more = report.violations.length - shown.length;
+    return {
+      tone: "bad",
+      text: report.violations.length > 0 ? `Takeover check failed: ${plural(report.violations.length, "violation")}` : "Takeover check failed",
+      detail: [...shown, ...(more > 0 ? [`and ${more} more`] : [])].join("\n") || "The check reported a failure without saying which.",
+    };
+  }
+
+  const counted = report.heirs !== null || report.adoptions !== null;
+  const heirs = report.heirs ?? 0;
+  const adoptions = report.adoptions ?? 0;
+  if (counted ? heirs + adoptions === 0 : !inLog) {
+    return {
+      tone: "muted",
+      text: "No takeover to check",
+      detail: `No goal changed hands in this run${report.kills ? ` (${plural(report.kills, "kill")})` : ""}, so there was no heir to recompute from the log.`,
+    };
+  }
+
+  const checked = [
+    heirs > 0 ? `${plural(heirs, "heir")} recomputed from the log, none different from the one the run used.` : "",
+    adoptions > 0 ? `${plural(adoptions, "tree adoption")} checked against the log.` : "",
+  ].filter(Boolean);
+  return {
+    tone: "good",
+    text: heirs > 0 ? `Takeover OK ✓ ${plural(heirs, "heir")}` : "Takeover OK ✓",
+    detail: checked.length > 0 ? checked.join(" ") : "Every heir recomputed from the log is the one the run used.",
+  };
+}

@@ -8,8 +8,10 @@
 //
 //   --glow: clamp(0, calc(1 - (var(--now) - var(--born)) / var(--life)), 1);      (styles.css)
 //
-// --now is the clock's virtual time in ms, written on the tree each frame (useClockFrame);
-// --born and --life are set on the element from ``glowVars``, so the lifetimes live here only.
+// --now is the clock's virtual time in ms, written each frame (useClockFrame) on a clock scope that
+// everything inside inherits it from; a scope with only rare fades writes it only while one runs
+// (``needsNow``). --born and --life are set on the element from ``glowVars``, so the lifetimes live
+// here only.
 
 import type { CSSProperties } from "react";
 
@@ -37,6 +39,15 @@ export const glowVars = (bornMs: number, lifeMs: number): CSSProperties =>
 /** The custom properties of a restart ring: it fills from ``sinceTs`` over ``restartInMs``. */
 export const ringVars = (outage: { sinceTs: number; restartInMs: number }): CSSProperties =>
   ({ "--since": outage.sinceTs, "--dur": outage.restartInMs }) as CSSProperties;
+
+/** Whether a clock scope has to write ``--now`` at ``nowMs``. ``--now`` is inherited, so every write
+ * restyles everything inside the scope; a scope that fades rarely (the schedule grid, 72 cells)
+ * therefore skips the frames in which nothing in it fades. ``liveUntilMs`` is when its last fade
+ * ends (``-Infinity`` for none, ``Infinity`` to write every frame) and ``lastMs`` the time it wrote
+ * last, ``null`` before the first write. It writes while something fades, and once after the last
+ * fade ends, so a seek past the end cannot leave a glow lit. */
+export const needsNow = (nowMs: number, liveUntilMs: number, lastMs: number | null): boolean =>
+  lastMs === null || nowMs <= liveUntilMs || lastMs <= liveUntilMs;
 
 export const messageGlow = (nowMs: number, ts: number): number => glow(nowMs, ts, MESSAGE_LIFE_MS);
 export const adoptionGlow = (nowMs: number, ts: number): number => glow(nowMs, ts, ADOPTION_LIFE_MS);

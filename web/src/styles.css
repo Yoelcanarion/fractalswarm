@@ -344,7 +344,8 @@ textarea {
 }
 
 /* A clock scope only carries --now, the virtual time in ms, which the clock writes on it every
-   frame (components/ClockScope.tsx). It makes no box of its own. */
+   frame (components/ClockScope.tsx); the schedule grid's scope writes it only while a ruling mark
+   fades, because every write restyles everything inside. It makes no box of its own. */
 .clock-scope {
   display: contents;
 }
