@@ -464,9 +464,10 @@ def test_an_outage_that_is_never_repaired_ends_with_the_run() -> None:
 # -- partitions ------------------------------------------------------------------------------
 
 
-def a_partition(heal_at: float | None, remap_at: float | None) -> Log:
+def a_partition(heal_at: float | None, remap_at: float | None, stray: bool = False) -> Log:
     """o1.1 is cut off from 20 s with a2's result (sent at 22 s) in its inbox. The partition heals
-    at ``heal_at``, or o1.2 takes s1 at ``remap_at`` (whichever the test sets)."""
+    at ``heal_at``, or o1.2 takes s1 at ``remap_at`` (whichever the test sets). ``stray`` adds a
+    chaos event with no payload at all, between the cut and the heal."""
     log = Log()
     swarm_cast(log)
     log.add(
@@ -478,6 +479,8 @@ def a_partition(heal_at: float | None, remap_at: float | None) -> Log:
         progress=0.5,
         detail={"partition": "p1", "duration_ms": 8000},
     )
+    if stray:
+        log.add(20.5, "chaos.injected", "chaos")
     log.call_end(21, "E4", cost=0.2)
     log.result(22, "a2", "s1", "c2", 0)
     if remap_at is not None:
@@ -506,6 +509,18 @@ def test_a_partition_that_heals_is_an_outage_that_ends_at_the_heal() -> None:
     assert row.idle_agent_s == pytest.approx(2.0) and row.idle_agent_own_s == pytest.approx(1.0)
     assert (row.at_risk_calls, row.preserved_calls) == (0, 0), "at-risk work is a crash's figure"
     assert m.ttr_own_mean_s is None, "the means are over crashes, and there was none"
+
+
+def test_a_chaos_event_without_a_fault_is_skipped_by_every_scan() -> None:
+    """The metric reads logs it did not write (a synthetic or foreign event of the type): the
+    event is not a fault, and it must not make the figures of the others fail."""
+    plain = run(a_partition(heal_at=23, remap_at=None))
+    stray = run(a_partition(heal_at=23, remap_at=None, stray=True))
+    assert stray.outages == plain.outages
+    crashed = Log()
+    crashed.start()
+    crashed.add(1, "chaos.injected", "chaos")
+    assert run(crashed).outages == []
 
 
 def test_a_partition_that_ends_in_a_takeover_is_also_a_false_death() -> None:

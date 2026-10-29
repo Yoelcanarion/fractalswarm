@@ -652,7 +652,7 @@ def _outages(log: _Log, owners: _Owners) -> list[_Outage]:
     else:
         for kill in log.of("chaos.injected"):
             p = kill.payload
-            if p["fault"] == "kill_coordinator" and p.get("target"):
+            if p.get("fault") == "kill_coordinator" and p.get("target"):
                 outages.append(_swarm_outage(log, owners, "crash", kill, p["target"], None))
     outages += _partitions(log, owners, supervised)
     return sorted(outages, key=lambda o: (o.onset_seq, o.kind))
@@ -694,7 +694,7 @@ def _partitions(log: _Log, owners: _Owners, supervised: bool) -> list[_Outage]:
     for event in log.of("chaos.injected"):
         p = event.payload
         target = p.get("target")
-        if p["fault"] != "partition" or target not in log.coordinators:
+        if p.get("fault") != "partition" or target not in log.coordinators:
             continue
         if not log.alive_at(target, event.seq):
             continue  # already down: its crash covers the goals
@@ -703,7 +703,7 @@ def _partitions(log: _Log, owners: _Owners, supervised: bool) -> list[_Outage]:
             (
                 h.ts_virtual
                 for h in log.of("chaos.injected")
-                if h.payload["fault"] == "heal"
+                if h.payload.get("fault") == "heal"
                 and (h.payload.get("detail") or {}).get("partition") == ident
                 and h.seq > event.seq
             ),
