@@ -599,14 +599,6 @@ body:has(.home) {
   width: 100%;
 }
 
-.home-demo__title {
-  font-family: var(--font-display);
-  font-weight: 650;
-  font-size: var(--fs-h2);
-  line-height: 1.08;
-  letter-spacing: var(--track-display);
-}
-
 .home-demo__label {
   font-family: var(--font-mono);
   font-size: var(--fs-label);
