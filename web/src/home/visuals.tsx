@@ -13,6 +13,7 @@ import { useEffect, useRef, type ComponentType } from "react";
 // the bundle of the home page should not carry.
 import { DotPlot } from "./viz/charts/DotPlot";
 import { LineDraw } from "./viz/charts/LineDraw";
+import { PairedBars } from "./viz/charts/PairedBars";
 import { HashStrip } from "./viz/hash/HashStrip";
 import { HrwPanels } from "./viz/hrw/HrwPanels";
 import { WorkLanes } from "./viz/lanes/WorkLanes";
@@ -48,6 +49,7 @@ const REGISTRY: Partial<Record<VizName, VizComponent>> = {
   WorkLanes: WorkLanes as unknown as VizComponent,
   LineDraw: LineDraw as unknown as VizComponent,
   DotPlot: DotPlot as unknown as VizComponent,
+  PairedBars: PairedBars as unknown as VizComponent,
   HrwPanels: HrwPanels as unknown as VizComponent,
   HashStrip: HashStrip as unknown as VizComponent,
 };

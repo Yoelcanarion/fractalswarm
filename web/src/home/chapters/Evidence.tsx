@@ -151,7 +151,7 @@ function Helps() {
       <Reveal delay={60}>
         <Claim id="R4" className="home-claim--lead" />
       </Reveal>
-      <Chart name="PairedBars" path="verdicts" duration={1.6} />
+      <Chart name="PairedBars" path="verdicts" duration={1.6} extra={{ setting: false }} />
       <Setting>{captionFor(story, "headline")}</Setting>
       <Reveal delay={80} className="home-beat__why">
         <p>{COPY.evidence.helps.gate(gateCrashes(story).map(word).join(" and ") || MISSING)}</p>
