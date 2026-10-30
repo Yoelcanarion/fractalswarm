@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import { canonicalBody } from "./spend";
-import { BOX_LIMIT, chaosLabel, confirmed, DEFAULT_CHOICE, emptyForm, formProblems, launchBody, readingBody, requestFor, roomsOf, scenarioLabel, specOf, watchHash } from "./launch";
+import { BOX_LIMIT, chaosLabel, confirmed, DEFAULT_CHOICE, emptyForm, formProblems, launchBody, readingBody, requestFor, roomsOf, scenarioLabel, specOf, startedRuns, untilRunsListed, watchHash } from "./launch";
 
 describe("the form", () => {
   const filled = { ...emptyForm(), talks: "Submission 1 ..." };
@@ -101,6 +101,11 @@ describe("running the approved reading", () => {
     expect(watchHash({ run_id: "ui 1" })).toBe("#/run/ui%201");
   });
 
+  it("names the runs a launch started: both sides of a pair, or the one run", () => {
+    expect(startedRuns({ left: "p-swarm", right: "p-durable-max" })).toEqual(["p-swarm", "p-durable-max"]);
+    expect(startedRuns({ run_id: "ui-1" })).toEqual(["ui-1"]);
+  });
+
   it("words the choices the way the rest of the page does", () => {
     expect(scenarioLabel("swarm")).toBe("FractalSwarm");
     expect(scenarioLabel("durable-max")).toBe("Ideal durable supervisor");
@@ -143,5 +148,31 @@ describe("what leaves the page", () => {
         expect(JSON.stringify(requestFor(body, closed, ""))).not.toContain("preflight_token");
       }
     }
+  });
+});
+
+describe("waiting for a launch's runs", () => {
+  const instant = async () => undefined;
+
+  it("goes on at once when every run is listed", async () => {
+    let asked = 0;
+    const all = async () => (asked++, new Set(["a", "b", "other"]));
+    expect(await untilRunsListed(all, ["a", "b"], { sleep: instant })).toBe(true);
+    expect(asked).toBe(1);
+  });
+
+  it("asks again until the last run has come, and waits between the asks", async () => {
+    let calls = 0;
+    const waits: number[] = [];
+    const lateRight = async () => new Set(++calls > 3 ? ["left", "right"] : ["left"]);
+    expect(await untilRunsListed(lateRight, ["left", "right"], { everyMs: 250, sleep: async (ms) => void waits.push(ms) })).toBe(true);
+    expect(waits).toEqual([250, 250, 250]);
+  });
+
+  it("gives up after its tries and says so, so the page opens anyway", async () => {
+    let asked = 0;
+    const never = async () => (asked++, new Set<string>());
+    expect(await untilRunsListed(never, ["a"], { tries: 5, sleep: instant })).toBe(false);
+    expect(asked).toBe(5);
   });
 });
