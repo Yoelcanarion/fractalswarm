@@ -213,7 +213,8 @@ describe("the home page, standing still", () => {
   });
 
   it("shows the same words as the animated page", () => {
-    const words = (page: string) => new Set(plain(page).split(" ").filter((word) => word.length > 3));
+    // the words, not the figures: a number that grows reads as zero in the markup of the page that plays it
+    const words = (page: string) => new Set(plain(page).split(" ").filter((word) => word.length > 3 && /\p{L}/u.test(word)));
     const moving = words(render(FIXTURE_STORY, false));
     const missing = [...words(html)].filter((word) => !moving.has(word));
     expect(missing).toEqual([]);

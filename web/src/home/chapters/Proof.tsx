@@ -9,8 +9,8 @@ import { Claim } from "../parts/Claim";
 import { SeeMore } from "../parts/SeeMore";
 import { Terminal } from "../parts/Terminal";
 import { evidenceHash } from "../route";
-import { ProofBars } from "../slots";
 import { useStory } from "../story";
+import { ProofBars } from "../viz/charts/ProofBars";
 
 /** The command that checks a recorded run, without the `uv run` of the repository's own setup. */
 const bare = (command: string): string => command.replace(/^uv run\s+/, "");
