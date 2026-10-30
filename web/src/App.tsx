@@ -132,7 +132,8 @@ export function App() {
           window.location.hash = runViewHash(id, route.page === "run" ? route.view : "overview");
         }}
       />
-      {route.page === "run" && runId && <RunStrip />}
+      {/* the strip's place is held from the first paint: it is there before the run is open, and the page below does not jump down when it fills */}
+      {route.page === "run" && (runId ? <RunStrip /> : <div className="runstrip" aria-hidden />)}
       <main className="content" id="main" tabIndex={-1}>
         {route.page === "run" && route.view === "overview" && <RunPage />}
         {route.page === "run" && route.view === "plan" && <PlanPage />}
