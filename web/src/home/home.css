@@ -479,7 +479,7 @@ body:has(.home) {
 
 .home-chapter--calm,
 .home-chapter--enter {
-  padding-block: 9svh;
+  padding-block: 6svh;
 }
 
 .home-chapter__head {
@@ -530,8 +530,8 @@ body:has(.home) {
 .home-closer {
   display: grid;
   place-items: center;
-  min-height: 50svh;
-  padding: 8svh var(--home-pad);
+  min-height: 42svh;
+  padding: 6svh var(--home-pad);
   text-align: center;
 }
 
@@ -869,6 +869,14 @@ body:has(.home) {
   overflow-wrap: anywhere;
 }
 
+/* a command in a sentence is not broken at its hyphens ("--" and "verify" on two lines); a phone's column is too narrow
+   for that, and there it may wrap */
+@media (min-width: 900px) {
+  .home-claim .home-code {
+    white-space: nowrap;
+  }
+}
+
 .home-figures {
   display: flex;
   flex-wrap: wrap;
@@ -1060,6 +1068,20 @@ body:has(.home) {
   max-width: 896px;
 }
 
+/* the question and the answer's parts: one above the other, and on a wide screen side by side */
+.home-models-pair {
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .home-models-pair {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: clamp(32px, 4vw, 72px);
+  }
+}
+
 .home-roles {
   display: grid;
   margin-top: var(--space-5);
@@ -1130,7 +1152,7 @@ body:has(.home) {
 
 /* ---- the evidence chapter ---- */
 .home-chapter:has(.home-beat) .home-chapter__head {
-  padding-top: 8svh;
+  padding-top: 5svh;
 }
 
 .home-beat {
@@ -1138,7 +1160,50 @@ body:has(.home) {
   gap: var(--space-5);
   align-content: center;
   justify-items: start;
-  padding-block: 7svh;
+  padding-block: 5svh;
+}
+
+/* The words of a beat and what they speak of: one above the other, and on a wide screen
+   split: the words beside the chart;
+   over:  the lead, the words and an aside in one row, over a chart that is drawn for the whole width;
+   wide:  one column, for a chart or a row of figures that wants the whole width. */
+.home-beat__text,
+.home-beat__aside,
+.home-beat__body {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+  justify-items: start;
+  min-width: 0;
+}
+
+.home-beat__body {
+  width: 100%;
+}
+
+@media (min-width: 1280px) {
+  .home-beat--split {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: var(--space-8);
+    align-items: start;
+    justify-items: stretch;
+  }
+
+  .home-beat--over {
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--space-7);
+    align-items: start;
+    justify-items: stretch;
+  }
+
+  /* the lead and the words are two cells of the row, not one cell holding both */
+  .home-beat--over .home-beat__text {
+    display: contents;
+  }
+
+  .home-beat--over .home-beat__body {
+    grid-column: 1 / -1;
+  }
 }
 
 .home-beat__lead {
@@ -1223,6 +1288,57 @@ body:has(.home) {
   color: var(--text-muted);
 }
 
+/* the terms past the first few: in the page, and out of sight until the control under the table opens them */
+.home-table tr[hidden] {
+  display: none;
+}
+
+.home-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-more:hover {
+    background: var(--surface-2);
+    border-color: var(--text-muted);
+  }
+}
+
+.home-more:active {
+  transform: scale(0.97);
+}
+
+.home-more__chevron {
+  flex: none;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.home-more[aria-expanded="true"] .home-more__chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-more,
+  .home-more__chevron {
+    transition: none;
+  }
+}
+
 @media (max-width: 899px) {
   /* one block per term: what, its value, why; the column heads stay for screen readers */
   .home-table,
@@ -1268,6 +1384,10 @@ body:has(.home) {
   height: clamp(110px, 16svh, 170px);
 }
 
+.home-chart--regime {
+  height: clamp(240px, 32svh, 350px);
+}
+
 .home-fails {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1291,6 +1411,21 @@ body:has(.home) {
 
 .home-fail .home-figures {
   margin-top: var(--space-2);
+}
+
+/* four groups in a row when the screen has the room */
+@media (min-width: 1280px) {
+  .home-fails {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-6);
+    max-width: none;
+  }
+}
+
+@media (min-width: 1600px) {
+  .home-fails {
+    column-gap: var(--space-7);
+  }
 }
 
 @media (max-width: 899px) {
@@ -1442,7 +1577,7 @@ a.home-door:hover .home-door__go {
 }
 
 .home-footer {
-  padding: var(--space-9) var(--home-pad);
+  padding: var(--space-8) var(--home-pad);
   text-align: center;
   font-family: var(--font-mono);
   font-size: var(--fs-body);
