@@ -54,11 +54,12 @@ code,
   flex-shrink: 0;
 }
 
+/* The same lockup as the home page's bar (home/home.css `.home-bar__brand`), so the brand does not change size on the way in. */
 .brand {
-  font-weight: 700;
-  font-size: var(--fs-title);
+  font-weight: 650;
+  font-size: var(--fs-lead);
   color: var(--text-primary);
-  letter-spacing: 0.2px;
+  letter-spacing: var(--track-tight, -0.012em);
   display: flex;
   align-items: center;
   gap: 8px;
