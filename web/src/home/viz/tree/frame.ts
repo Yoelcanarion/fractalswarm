@@ -4,7 +4,7 @@
 
 import type { TreeSlice } from "../../data/types";
 import { clamp01, lerp, smoothstep, span } from "../shared";
-import type { Slot } from "./layout";
+import type { Epoch, Slot } from "./layout";
 import { isBusy, treeModel, type Msg, type TreeModel } from "./model";
 import { buildTimeline, treeKeyframes, type Cursor, type Keyframe, type Pacing, type Timeline } from "./timeline";
 
@@ -49,10 +49,18 @@ export interface NodeFrame {
   /** 0..1: how far the node has gone from the tree to the memorial row. */
   buried: number;
   opacity: number;
+  /** The row of the picture the node sits in (0 is the top one); the memorial row comes after the last. */
+  row: number;
+  /** 1 once the tree is fully drawn; below it while the tree grows from its root or folds back into it (the hero's loop). */
+  appear: number;
 }
 
 export interface EdgeFrame {
   child: string;
+  /** The brain the edge hangs from (the new parent once the re-wiring is half done). */
+  parent: string | null;
+  /** The row of the child, which is 1 or more: the root has no edge. */
+  row: number;
   /** The parent end, which slides from the old parent to the new one in a takeover. */
   x1: number;
   y1: number;
@@ -75,6 +83,8 @@ export interface DashFrame {
 
 export interface TreeFrame {
   p: number;
+  /** See NodeFrame.appear. */
+  appear: number;
   tMs: number;
   hold: Cursor["hold"];
   nodes: NodeFrame[];
@@ -88,7 +98,36 @@ export interface TreePlayer {
   model: TreeModel;
   timeline: Timeline;
   keyframes: Keyframe[];
-  frame(p: number): TreeFrame;
+  /**
+   * The tree at progress ``p``. ``appear`` (1 unless given) is how much of the tree is drawn: below 1 the rows fade in from
+   * the root down, and out from the memorial row up (the hero shows the run again and again, and does not cut from the
+   * wounded tree to the new one). It is a second axis, so the recorded run is the same frame at any ``appear`` of 1.
+   */
+  frame(p: number, appear?: number): TreeFrame;
+}
+
+/** How much of ``appear`` one row's fade takes; the rows start evenly spaced in the rest, so that the last one ends at 1. */
+const ROW_SPAN = 0.4;
+
+/** How drawn a row is (0..1) at ``appear``, for the ``levels`` rows of a picture (the memorial row counts as one). */
+export function rowGate(row: number, levels: number, appear: number): number {
+  if (appear >= 1) return 1;
+  const start = levels > 1 ? (row * (1 - ROW_SPAN)) / (levels - 1) : 0;
+  return smoothstep(span(appear, start, start + ROW_SPAN));
+}
+
+interface Rows {
+  /** The row of each node in the picture of an epoch. */
+  of: Record<string, number>;
+  /** How many rows the picture has: the memorial row is this one. */
+  count: number;
+}
+
+/** The rows of an epoch's picture: nodes at the same height are in the same row, counted from the top. */
+function rowsOf(epoch: Epoch): Rows {
+  const key = (id: string): number => Math.round((epoch.pos[id] as Slot).y * 1000);
+  const heights = [...new Set(epoch.present.map(key))].sort((a, b) => a - b);
+  return { of: Object.fromEntries(epoch.present.map((id) => [id, heights.indexOf(key(id))])), count: heights.length };
 }
 
 const players = new WeakMap<TreeSlice, Partial<Record<Pacing, TreePlayer>>>();
@@ -133,8 +172,9 @@ function createPlayer(model: TreeModel, pacing: Pacing): TreePlayer {
   const dashLife = timeline.perS(profile.dashS);
   const flashLife = timeline.perS(profile.flashS);
   const interval = (id: string): number => model.beats[id]?.intervalMs ?? model.detector.intervalMs;
+  const epochRows = model.epochs.map(rowsOf);
 
-  const frame = (p: number): TreeFrame => {
+  const frame = (p: number, appear = 1): TreeFrame => {
     const cur = timeline.at(p);
     const { tMs, hold } = cur;
     const group = hold ? model.groups[hold.group] : undefined;
@@ -144,6 +184,9 @@ function createPlayer(model: TreeModel, pacing: Pacing): TreePlayer {
     const epochA = model.epochs[Math.min(done, last)];
     const epochB = model.epochs[Math.min(hold ? done + 1 : done, last)];
     if (!epochA || !epochB) throw new Error("the tree has no epochs");
+    const rows = epochRows[epochA.index] as Rows;
+    const rowOf = (id: string): number => rows.of[id] ?? rows.count;
+    const gateOf = (id: string): number => rowGate(rowOf(id), rows.count + 1, appear);
 
     const glide = hold ? smoothstep(span(c, CHOREO.glide[0], CHOREO.glide[1])) : 0;
     const rewire = hold ? smoothstep(span(c, CHOREO.rewire[0], CHOREO.rewire[1])) : 0;
@@ -204,6 +247,7 @@ function createPlayer(model: TreeModel, pacing: Pacing): TreePlayer {
 
       const buried = !epochA.pos[id] ? 1 : !epochB.pos[id] ? glide : 0;
       const candidate = scoreOf.has(id) ? scoresIn : 0;
+      const drawn = gateOf(id);
       return {
         id,
         x: slot.x,
@@ -221,7 +265,9 @@ function createPlayer(model: TreeModel, pacing: Pacing): TreePlayer {
         heir: heirs.has(id) ? heirIn : 0,
         score: candidate > 0 ? (scoreOf.get(id) ?? null) : null,
         buried,
-        opacity: dead ? lerp(0.95, 0.7, buried) : 1,
+        opacity: (dead ? lerp(0.95, 0.7, buried) : 1) * drawn,
+        row: rowOf(id),
+        appear: drawn,
       };
     });
 
@@ -251,13 +297,16 @@ function createPlayer(model: TreeModel, pacing: Pacing): TreePlayer {
       } else {
         continue;
       }
-      edges.push({ child: id, x1: anchor.x, y1: anchor.y, x2: here.x, y2: here.y, broken, opacity: opacity * own });
+      const parent = (rewire >= 0.5 ? pb : pa) ?? null;
+      edges.push({ child: id, parent, row: rowOf(id), x1: anchor.x, y1: anchor.y, x2: here.x, y2: here.y, broken, opacity: opacity * own * gateOf(id) });
     }
 
+    // A message still on its way when the run ends fades with the last of it, so the settled tree holds none in mid-air.
+    const settle = 1 - smoothstep(span(cur.p, 1 - dashLife / 2, 1));
     const dashes: DashFrame[] = [];
     model.messages.forEach((m, i) => {
       const f = (cur.p - (pMessage[i] ?? 0)) / dashLife;
-      if (f < 0 || f > 1) return;
+      if (appear < 1 || f < 0 || f > 1) return;
       const a = posOf(m.from);
       const b = posOf(m.to);
       if (a.x === b.x && a.y === b.y) return;
@@ -267,12 +316,12 @@ function createPlayer(model: TreeModel, pacing: Pacing): TreePlayer {
         x: at.x,
         y: at.y,
         angle: at.angle,
-        opacity: smoothstep(span(f, 0, 0.12)) * (1 - smoothstep(span(f, 0.8, 1))),
+        opacity: smoothstep(span(f, 0, 0.12)) * (1 - smoothstep(span(f, 0.8, 1))) * settle,
         kind: m.kind,
       });
     });
 
-    return { p: cur.p, tMs, hold, nodes, edges, dashes, killed: model.kills.filter((k) => tMs >= k.atMs).length };
+    return { p: cur.p, appear, tMs, hold, nodes, edges, dashes, killed: model.kills.filter((k) => tMs >= k.atMs).length };
   };
 
   return { model, timeline, keyframes: treeKeyframes(model, timeline), frame };
