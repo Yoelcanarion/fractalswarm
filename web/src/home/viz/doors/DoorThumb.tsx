@@ -25,7 +25,7 @@ const LEG = 2.4;
  */
 export function DoorThumb({ door, still, className }: DoorThumbProps) {
   const progress = useMotionValue(0);
-  const host = useRef<HTMLDivElement>(null);
+  const host = useRef<HTMLSpanElement>(null);
   const calm = useCalm(still);
 
   useEffect(() => {
@@ -41,8 +41,8 @@ export function DoorThumb({ door, still, className }: DoorThumbProps) {
   }, [calm, progress]);
 
   return (
-    <div ref={host} className={className ? `hv-thumb ${className}` : "hv-thumb"}>
+    <span ref={host} className={className ? `hv-thumb ${className}` : "hv-thumb"}>
       <DoorGlyph progress={progress} data={door} still={calm} />
-    </div>
+    </span>
   );
 }

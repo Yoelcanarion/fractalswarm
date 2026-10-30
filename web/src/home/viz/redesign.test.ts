@@ -2,6 +2,7 @@
 // the page, and the words that must not be there. Their motion is tested where it is made (ease.test.ts, demo/stage.test.ts);
 // here, the markup, the geometry of the chart and the data.
 
+import { motionValue } from "motion/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,6 +34,7 @@ import { grown, GrowNumber, MISSING } from "./parts/GrowNumber";
 import { fx } from "./shared";
 import { STEP_IDS, StepDrawing } from "./steps/StepDrawing";
 import { Pen } from "./tree/paint";
+import { SwarmTree } from "./tree/SwarmTree";
 
 beforeEach(() => {
   // React warns that useLayoutEffect does nothing on the server; the markup is what is under test.
@@ -88,6 +90,13 @@ describe("the click demo's markup", () => {
 
   it("is quiet for a still page: no ambient layer", () => {
     expect(render(KillDemo, { still: true })).not.toContain("hv-amb-halo");
+  });
+
+  it("writes KILLED above the rule, where a full row of the dead cannot cover it; the hero's tree keeps it beside its row", () => {
+    const at = (markup: string, part: string, attr: string): number => Number(new RegExp(`class="hv-memorial-${part}"[^>]*\\s${attr}="(-?[\\d.]+)"`).exec(markup)?.[1]);
+    expect(at(html, "label", "y")).toBeLessThan(at(html, "rule", "y1"));
+    const hero = render(SwarmTree, { progress: motionValue(0), data: story.tree, still: true });
+    expect(at(hero, "label", "y")).toBeGreaterThan(at(hero, "rule", "y1"));
   });
 });
 
