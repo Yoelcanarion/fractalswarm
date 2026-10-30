@@ -1406,3 +1406,20 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 - **`t2-real-c3-swarm-seed1`:** status interrupted, so it cannot be verified.
 - **Three private intakes: my error, corrected here.** My entry at 20:45 says the two failed attempts were the only recordings on the old schema. They are three runs: `intake-20261029-174443-c2de`, `intake-20261029-175031-c023` and the failed `intake-20261030-194128-14a2`. `budget.reserved` differs at seq 12, because the longer schema reserves slightly more ($0.07777075 against $0.0777495). **Checked:** the first of them gives MATCH on the code before 180829f (the `arena` worktree at 10c2ff7) and MISMATCH at HEAD. All three hold private input, are not in git and back no claim. The fix stays, since the old schema could never work on the real model. But the failed one was recorded after the freeze, so S5's "runs recorded after the handler freeze" needs that exception when I lift it.
 - All the pairs and all three demo bundles match. Nothing a fresh clone ships is affected.
+
+**The ten seeds reach the page (23:10–23:25).** W1 sent `worker_done` (ca7e92a: REPORT §4.10.7, both cost bases, R2, R4, R5, R6, S4, S7). Its terminal is closed; session 85097601 stays resumable. Then 2fdcec9:
+- **Everything the page draws comes from `bench/results/headline-10`:** hero, per-seed rows, verdicts, R2, R5 (T2 only), S4 and S7 (176 runs, 14 at C3). `--hero-set` and the slices `hero10`, `headline10` and `verdicts10` are gone: nothing read them, and a hero from another set would contradict R5.
+- **The hero chart loses points.** Ten seeds exist only at C0 and C3, so it has two points per system, 0 and 5 killed, where v1 had four. **Decision:** no mix of sets in one chart. The 4-profile chart stays on the app's Charts page, under `v1`, and `headline-10` is now that page's first set. `gateCrashes` reads the failure profiles.
+- **The pre-registered reading stays where it was:** `bench/results/headline` and the REPORT, next to the ten seeds. The page quotes only the ten, as the claims do.
+- **The evidence page's words followed R4:** "Where it helps" is "Locality ties too", "What it costs" is "One loss", "Where it does not" is "Where it does worse".
+- **README** and the REPORT's headline paragraph (W1's sentence) carry the ten-seed figures. **S5** must be scoped to "the runs this repository ships" when it is lifted.
+
+**Arena is red on purpose for one merge:** 35 tests in `home/viz` pin the old data (`dots`, `line`, `pairs`, `redesign`), everything else is green (2,044 of 2,079, tsc clean). They are W7's files, and the charts need a look at ten seeds anyway, so W7 does this first. The bundle on 8765 stays at c754326 until then, and **no number on 8765 is the ten-seed one yet.**
+
+**Merged too:** W4's five More views and the amber replay check (be0c906), W6's second pass (c4bd691), W7's notes (a6960e3). Pushed. **W4 did the five views before the run page:** my mail about the run page reached it late, so the run page is still undone, and it is its top item now.
+
+**The first coordinator's review of c754326 (23:25),** eleven items, now in the workers' lists:
+- **W7:** the click demo does not fit a laptop (status line and buttons below the window at 1366x768); the result of Kill half lasts 3 s; the third step card never connects, in Firefox too (`vector-effect` breaks the `pathLength` dashes); a plural; fast clicks.
+- **W6:** the Director door is a dead end and the Model against parser door opens an empty page, so both come off the home page until they have content; every cost figure names its basis, since R5 has two; two sentences that are not in `docs/claims.md`.
+- **W4:** the tree on the run page; jargon; `Play from the start` keeps its label while playing; every app page scrolls 246 px sideways on a phone.
+- **W7's order:** ten seeds, demo, step card, Proof in two columns, film captions, hero. The demo goes before the rest because it is the home page's main action.
