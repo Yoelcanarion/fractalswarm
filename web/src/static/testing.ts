@@ -1,6 +1,7 @@
 // A small static site in memory, for the tests of the shim: the manifest the exporter would write, and the files under
 // data/ it names. A log of ten events in pages of three, so that a request can fall inside a page, across pages and past
-// the end; a second run with no calls. Used by the tests only.
+// the end, with the answers for its first and last event alone as the exporter writes them; a second run with no calls.
+// Used by the tests only.
 
 import { MANIFEST_FORMAT, readManifest, type Entry, type Manifest } from "./manifest";
 import type { ShimOptions } from "./shim";
@@ -93,7 +94,11 @@ export function makeSite(): Site {
     },
     runs: {
       [ALPHA]: {
-        events: { last_seq: 10, pages: pagesOf(ALPHA, alpha) },
+        events: {
+          last_seq: 10,
+          pages: pagesOf(ALPHA, alpha),
+          edges: { seqs: [1, 10], ...put(`run/${ALPHA}/edges.json`, { "1": reference(alpha, 1, 1), "10": reference(alpha, 10, 1) }) },
+        },
         routes: {
           summary: inline(SUMMARY),
           feasibility: inline({ ok: true }),

@@ -299,6 +299,9 @@ def export_run(
         "events": {"last_seq": last_seq, "pages": pages},
         "routes": routes,
     }
+    edges = export_edges(client, data, run_id, folder, last_seq)
+    if edges is not None:
+        manifest["events"]["edges"] = edges
     calls = export_call_details(client, data, run_id, folder)
     if calls is not None:
         manifest["calls"] = calls
@@ -324,6 +327,24 @@ def export_events(
         if page["done"] or not seqs:
             return pages, page["last_seq"]
         from_seq = page["next_seq"]
+
+
+def export_edges(
+    client: TestClient, data: Data, run_id: str, folder: str, last_seq: int
+) -> dict[str, Any] | None:
+    """The first and the last event, each as the API answers a request for that one event
+    (``from_seq=N&limit=1``), in one small file. The Runs page asks for both of every run it
+    lists: from the pages that would be a whole page (megabytes) each."""
+    seqs = sorted({1, last_seq} - {0})
+    if not seqs:
+        return None
+    answers: dict[str, Any] = {}
+    for seq in seqs:
+        found = client.get(f"/api/runs/{run_id}/events?from_seq={seq}&limit=1")
+        if found.status_code != 200:
+            raise Refused(f"{run_id}: event {seq}: the API answered {found.status_code}")
+        answers[str(seq)] = found.json()
+    return {"seqs": seqs, **data.write(f"{folder}/edges.json", _dump(answers))}
 
 
 def export_call_details(

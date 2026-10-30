@@ -136,6 +136,22 @@ class TestEveryFileHoldsWhatTheApiAnswers:
             assert page["bytes"] == len(live.content)
 
     @pytest.mark.parametrize("run_id", RUN_IDS)
+    def test_the_first_and_last_event_alone_are_the_apis_answers(
+        self, site: Exported, run_id: str
+    ) -> None:
+        # The Runs page asks for both of every run it lists (limit=1): a file of two small answers
+        # saves the shim a whole page each.
+        events = site.manifest["runs"][run_id]["events"]
+        edges = events["edges"]
+        assert edges["seqs"] == sorted({1, events["last_seq"]})
+        held = json.loads((site.out / "data" / edges["file"]).read_bytes())
+        assert sorted(held, key=int) == [str(seq) for seq in edges["seqs"]]
+        for seq in edges["seqs"]:
+            live = site.live.get(f"/api/runs/{run_id}/events?from_seq={seq}&limit=1")
+            assert held[str(seq)] == live.json()
+            assert live.json()["events"][0]["seq"] == seq
+
+    @pytest.mark.parametrize("run_id", RUN_IDS)
     def test_every_call_in_full(self, site: Exported, run_id: str) -> None:
         calls = site.manifest["runs"][run_id]["calls"]
         details = json.loads((site.out / "data" / calls["file"]).read_bytes())

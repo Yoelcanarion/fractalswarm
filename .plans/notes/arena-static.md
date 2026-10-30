@@ -62,6 +62,7 @@ What it writes under `data/`:
 |---|---|
 | `manifest.json` | the format number, the build stamp (`commit`, `commit_short`, `dirty`, `built_at`, `page_size`), and one entry per route: `{status, body}` when the answer is 4 KB or less (or not a 200), else `{status, file, bytes}` |
 | `run/<id>/events-0001.json` ... | the log in pages of 5000: exactly the API's answer for `from_seq=1`, `5001`, ... with `limit=5000`, which is the request the client makes, so a page is sent as it is |
+| `run/<id>/edges.json` | the API's answers for the first and the last event alone (`from_seq=1&limit=1`, `from_seq=<last>&limit=1`), keyed by seq. W4's Runs page asks for both of every run it lists (`fetchEventAt`, 4 at a time): from the pages that would be a whole page each (2.7 to 3.7 MB for the 8177-event run), from this file it is a few kB. The manifest's `events.edges` names the file and the seqs it holds |
 | `run/<id>/call-details.json` | every `calls/{effectId}` of the run in one file, keyed by effect id (read when the lens opens a call) |
 | `run/<id>/<route>.json` | a large answer (summary, calls, takeover, metrics ...) |
 | `bench-honesty.json`, `bench-results.json`, `runs.json`, `pairs.json`, `capabilities.json` | the global routes, when large |
@@ -78,7 +79,7 @@ Run ids are those of the catalog: a bundle `demo/backup` is `demo-backup`.
 |---|---|
 | `GET api/runs`, `capabilities`, `pairs`, `bench/results`, `bench/honesty` | from the manifest |
 | `GET api/runs/{id}`, `feasibility`, `takeover`, `recovery`, `metrics`, `models`, `disputes` | from the manifest, with the status the API gave (404 and 409 stay as they were: the app already treats them as "not offered") |
-| `GET api/runs/{id}/events?from_seq=&limit=` | a request for exactly one page (`from_seq` = 1 mod 5000, `limit=5000`) is the page file as it is; any other window is cut from the pages it falls in, with the same `next_seq`, `last_seq` and `done`; paging errors are the API's own 422 words |
+| `GET api/runs/{id}/events?from_seq=&limit=` | a request for exactly one page (`from_seq` = 1 mod 5000, `limit=5000`) is the page file as it is; a `limit=1` request for the first or the last event is the small `edges.json` (falling back to the pages if that file does not hold it); any other window is cut from the pages it falls in, with the same `next_seq`, `last_seq` and `done`; paging errors are the API's own 422 words |
 | `GET api/runs/{id}/calls` | the list; `role`, `status`, `actor`, `model`, `purpose` filter it like `lens.py` (exact match, last value wins) and `count` follows |
 | `GET api/runs/{id}/calls/{effectId}` | from `call-details.json`; `404 {"error": "no LLM call 'x' in run 'y'"}` otherwise |
 | `POST api/runs/{id}/verify` | the report the build made |

@@ -13,6 +13,8 @@ describe("reading the manifest", () => {
     expect(manifest.runs[ALPHA].events.pages).toHaveLength(4);
     expect(manifest.runs[ALPHA].calls?.ids).toEqual(["e1", "e2", "e3"]);
     expect(manifest.runs[BETA].calls).toBeUndefined();
+    expect(manifest.runs[ALPHA].events.edges).toMatchObject({ seqs: [1, 10], file: `run/${ALPHA}/edges.json` });
+    expect(manifest.runs[BETA].events.edges).toBeUndefined();
     expect(manifest.global.runs.body).toBeDefined();
     expect(manifest.global["bench/honesty"].file).toBe("bench-honesty.json");
   });
@@ -36,6 +38,9 @@ describe("reading the manifest", () => {
     ["no list of runs", (m: Record<string, any>) => delete m.global.runs, "has no runs"],
     ["no capabilities", (m: Record<string, any>) => delete m.global.capabilities, "has no capabilities"],
     ["call ids that are no list", (m: Record<string, any>) => (m.runs[ALPHA].calls.ids = "e1"), "calls.ids"],
+    ["edges that are no list", (m: Record<string, any>) => (m.runs[ALPHA].events.edges.seqs = "1"), "edges.seqs"],
+    ["an edge that is no seq", (m: Record<string, any>) => (m.runs[ALPHA].events.edges.seqs[0] = -1), "edges.seqs[0]"],
+    ["an edges file with no size", (m: Record<string, any>) => delete m.runs[ALPHA].events.edges.bytes, "edges.bytes"],
   ])("names the field when there is %s", (_what, damage, field) => {
     const manifest = written();
     damage(manifest);

@@ -101,6 +101,16 @@ describe("opening a run", () => {
     expect(events).toEqual((JSON.parse(read(`run/${TOY}/events-0001.json`).toString("utf-8")) as { events: unknown[] }).events);
   });
 
+  it("answers the first and the last event alone from their small file, which is how the Runs page reads a run", async () => {
+    const { loaded } = install();
+    const log = (JSON.parse(read(`run/${TOY}/events-0001.json`).toString("utf-8")) as { events: { seq: number }[] }).events;
+    const first = (await (await fetch(`api/runs/${TOY}/events?from_seq=1&limit=1`)).json()) as { events: unknown[] };
+    const last = await (await fetch(`api/runs/${TOY}/events?from_seq=56&limit=1`)).json();
+    expect(first.events).toEqual([log[0]]);
+    expect(last).toEqual({ events: [log[55]], next_seq: 57, last_seq: 56, done: true });
+    expect(loaded).toEqual([`run/${TOY}/edges.json`]);
+  });
+
   it("loads the log of the other run too", async () => {
     install();
     expect(await loadAllEvents(ONE_CALL)).toHaveLength(9);

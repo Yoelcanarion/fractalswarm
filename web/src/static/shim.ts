@@ -103,6 +103,7 @@ export function createStaticFetch(options: ShimOptions): typeof fetch {
   const known = Object.keys(manifest.runs);
   const pageEvents = new Map<string, Promise<readonly unknown[] | Response>>();
   const callDetails = new Map<string, Promise<Record<string, unknown> | Response>>();
+  const edgeAnswers = new Map<string, Promise<Record<string, unknown> | Response>>();
 
   /** The text of a file under data/, or the Response that says it is missing. */
   async function fileText(file: string, signal: AbortSignal | null, onBytes?: (bytes: number) => void): Promise<string | Response> {
@@ -141,9 +142,25 @@ export function createStaticFetch(options: ShimOptions): typeof fetch {
     });
   }
 
+  /** The answer for the first or the last event alone, from the run's small file of them: undefined when the file does
+   * not hold it (or did not load), and the request is then answered from the pages, which gives the same answer. */
+  async function edgeAnswer(runId: string, run: RunData, from: number, signal: AbortSignal | null): Promise<unknown> {
+    const { edges } = run.events;
+    if (edges === undefined || !edges.seqs.includes(from)) return undefined;
+    const all = await memo(edgeAnswers, runId, async () => {
+      const text = await fileText(edges.file, signal);
+      return typeof text === "string" ? (JSON.parse(text) as Record<string, unknown>) : text;
+    });
+    return all instanceof Response ? undefined : all[String(from)];
+  }
+
   async function eventsRoute(runId: string, run: RunData, query: URLSearchParams, signal: AbortSignal | null): Promise<Response> {
     const paging = readPaging(query);
     if ("error" in paging) return refusal(422, paging.error);
+    if (paging.limit === 1) {
+      const edge = await edgeAnswer(runId, run, paging.from, signal);
+      if (edge !== undefined) return jsonResponse(200, edge);
+    }
     const size = manifest.site.page_size;
     const whole = (paging.from - 1) / size;
     if (isWholePage(paging, size) && run.events.pages[whole] !== undefined) return wholePage(runId, run, whole, signal);

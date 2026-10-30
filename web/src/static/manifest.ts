@@ -4,7 +4,8 @@
 //   global                 the routes that belong to no run: runs, capabilities, pairs, bench/results, bench/honesty
 //   runs[id].routes        a run's read routes: summary, feasibility, takeover, recovery, metrics, calls, models,
 //                          disputes, and the replay check (`verify`) done at build time
-//   runs[id].events        the log in pages of `site.page_size`; the page files are the API's own answers
+//   runs[id].events        the log in pages of `site.page_size`; the page files are the API's own answers; and the
+//                          answers for its first and last event alone (`edges`)
 //   runs[id].calls         every call in full, in one file, keyed by effect id
 //
 // An entry is a status and, for a 200, a body: small ones sit in the manifest (one request less), large ones in a file.
@@ -28,8 +29,14 @@ export interface Entry {
   bytes?: number;
 }
 
+/** The first and the last event of a log, each as the API answers a request for that one event (`limit=1`), in one file
+ * keyed by seq. The Runs page reads both of every run it lists; from the pages that would be a whole page each. */
+export interface Edges extends FileRef {
+  seqs: number[];
+}
+
 export interface RunData {
-  events: { last_seq: number; pages: FileRef[] };
+  events: { last_seq: number; pages: FileRef[]; /** Absent for an empty log. */ edges?: Edges };
   routes: Record<string, Entry>;
   /** Absent when the run made no LLM call. */
   calls?: FileRef & { ids: string[] };
@@ -92,6 +99,14 @@ function readRun(id: string, value: unknown): RunData {
     },
     routes: readEntries(raw.routes, `${path}.routes`),
   };
+  if (events.edges !== undefined) {
+    const edges = asRecord(events.edges);
+    if (!Array.isArray(edges.seqs)) fail(`${path}.events.edges.seqs`, "is not a list");
+    run.events.edges = {
+      ...readFile(edges, `${path}.events.edges`),
+      seqs: (edges.seqs as unknown[]).map((seq, i) => count(seq, `${path}.events.edges.seqs[${i}]`)),
+    };
+  }
   for (const route of ["summary", "verify"]) if (!(route in run.routes)) fail(`${path}.routes`, `has no ${route}`);
   if (raw.calls !== undefined) {
     const calls = asRecord(raw.calls);

@@ -170,6 +170,49 @@ describe("a run's events", () => {
   });
 });
 
+describe("the first and the last event of a run, which the Runs page asks for alone", () => {
+  const ALL = eventsOf(10);
+  const EDGES = `run/${ALPHA}/edges.json`;
+
+  it("answers both from their small file, with no page file loaded", async () => {
+    const { get, loaded } = setup();
+    expect((await answer(get(`api/runs/${ALPHA}/events?from_seq=1&limit=1`))).body).toEqual(reference(ALL, 1, 1));
+    expect((await answer(get(`api/runs/${ALPHA}/events?from_seq=10&limit=1`))).body).toEqual(reference(ALL, 10, 1));
+    expect(loaded).toEqual([EDGES]);
+  });
+
+  it("reads the file once, however often an edge is asked for", async () => {
+    const { get, loaded } = setup();
+    for (let i = 0; i < 3; i += 1) await get(`api/runs/${ALPHA}/events?from_seq=1&limit=1`);
+    expect(loaded).toEqual([EDGES]);
+  });
+
+  it("answers any other single event from the pages, and the same window of another size from the pages too", async () => {
+    const { get, loaded } = setup();
+    expect((await answer(get(`api/runs/${ALPHA}/events?from_seq=5&limit=1`))).body).toEqual(reference(ALL, 5, 1));
+    expect((await answer(get(`api/runs/${ALPHA}/events?from_seq=1&limit=2`))).body).toEqual(reference(ALL, 1, 2));
+    expect(loaded).toEqual([`run/${ALPHA}/events-0002.json`, `run/${ALPHA}/events-0001.json`]);
+  });
+
+  it("answers from the pages when the small file is missing, with the same answer", async () => {
+    const { get, files } = setup();
+    files.delete(EDGES);
+    expect((await answer(get(`api/runs/${ALPHA}/events?from_seq=10&limit=1`))).body).toEqual(reference(ALL, 10, 1));
+  });
+
+  it("answers from the pages when the file does not hold the seq", async () => {
+    const { get, files } = setup();
+    files.set(EDGES, JSON.stringify({}));
+    expect((await answer(get(`api/runs/${ALPHA}/events?from_seq=1&limit=1`))).body).toEqual(reference(ALL, 1, 1));
+  });
+
+  it("is for a run that has them: another run's first event comes from its pages", async () => {
+    const { get, loaded } = setup();
+    expect((await answer(get(`api/runs/${BETA}/events?from_seq=1&limit=1`))).body).toEqual(reference(eventsOf(2), 1, 1));
+    expect(loaded).toEqual([`run/${BETA}/events-0001.json`]);
+  });
+});
+
 describe("loading a log, as the load bar sees it", () => {
   it("reports the bytes read of a run's pages against their total, and ends at the total", async () => {
     const { get, progress, manifest } = setup();
