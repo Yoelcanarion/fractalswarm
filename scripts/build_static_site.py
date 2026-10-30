@@ -98,6 +98,7 @@ class RunReport:
     verified: bool
     bytes: int = 0
     files: int = 0
+    notes: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -241,12 +242,24 @@ def _dump(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
+def read_route(client: TestClient, url: str) -> tuple[int, bytes, Exception | None]:
+    """A GET as the live server answers it. A route that raises answers 500 there (uvicorn), while
+    the test client re-raises: keep the answer, and the exception for the build report."""
+    try:
+        found = client.get(url)
+    except Exception as exc:
+        return 500, b"Internal Server Error", exc
+    return found.status_code, found.content, None
+
+
 def export_run(
     client: TestClient, data: Data, run_id: str, provenance: Provenance
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], list[str]]:
     """Everything the app reads for one run: its log in pages, its read routes, its calls in full
-    and the replay check. Returns the run's part of the manifest."""
+    and the replay check. Returns the run's part of the manifest, and what the build report
+    should say about it."""
     base = f"/api/runs/{run_id}"
+    notes: list[str] = []
     folder = f"run/{run_id}"  # not runs/: the repo's .gitignore skips every folder of that name
     routes: dict[str, Any] = {}
 
@@ -259,8 +272,13 @@ def export_run(
 
     pages, last_seq = export_events(client, data, run_id, folder)
     for name in RUN_ROUTES:
-        found = client.get(f"{base}/{name}")
-        routes[name] = data.entry(f"{folder}/{name}.json", found.status_code, found.content)
+        status, content, error = read_route(client, f"{base}/{name}")
+        routes[name] = data.entry(f"{folder}/{name}.json", status, content)
+        if error is not None:
+            notes.append(
+                f"{run_id}: GET {name} raised {type(error).__name__}: {error}; the live server "
+                "answers 500 for it, and so does the site"
+            )
 
     try:
         verified = client.post(f"{base}/verify", json={})
@@ -281,7 +299,7 @@ def export_run(
     calls = export_call_details(client, data, run_id, folder)
     if calls is not None:
         manifest["calls"] = calls
-    return manifest
+    return manifest, notes
 
 
 def export_events(
@@ -309,17 +327,22 @@ def export_call_details(
     client: TestClient, data: Data, run_id: str, folder: str
 ) -> dict[str, Any] | None:
     """Every call in full (``calls/{effect_id}``) in one file, read when the lens opens a call."""
-    rows = client.get(f"/api/runs/{run_id}/calls").json().get("calls") or []
+    status, content, error = read_route(client, f"/api/runs/{run_id}/calls")
+    if status != 200:
+        if error is not None:
+            raise Refused(f"{run_id}: the calls could not be read: {error!r}") from error
+        return None  # the route is not offered for this run: nothing to open in full
+    rows = json.loads(content).get("calls") or []
     if not rows:
         return None
     details: dict[str, Any] = {}
     for row in rows:
-        found = client.get(f"/api/runs/{run_id}/calls/{row['effect_id']}")
-        if found.status_code != 200:
+        status, content, error = read_route(client, f"/api/runs/{run_id}/calls/{row['effect_id']}")
+        if status != 200:
             raise Refused(
-                f"{run_id}: call {row['effect_id']}: the API answered {found.status_code}"
+                f"{run_id}: call {row['effect_id']}: the API answered {status}: {error!r}"
             )
-        details[row["effect_id"]] = found.json()
+        details[row["effect_id"]] = json.loads(content)
     return {"ids": list(details), **data.write(f"{folder}/call-details.json", _dump(details))}
 
 
@@ -360,10 +383,11 @@ def public_bench(content: bytes) -> bytes:
     """``GET api/bench/results`` names the file it read by its path on this machine; the site
     says where it lives in the repo. The one thing that differs from the live answer."""
     body = json.loads(content)
-    source = body.get("source")
+    source = body.get("source") if isinstance(body, dict) else None
     if isinstance(source, str) and source != "fixture":
         body["source"] = f"bench/results/{Path(source).name}"
-    return _dump(body)
+        return _dump(body)
+    return content  # any other shape: the scan of the finished site still looks for a local path
 
 
 def export_globals(
@@ -436,7 +460,7 @@ def export_site(
         runs: dict[str, Any] = {}
         for run_id in listed:
             before = (data.written, data.files)
-            runs[run_id] = export_run(client, data, run_id, provenance)
+            runs[run_id], notes = export_run(client, data, run_id, provenance)
             report.runs.append(
                 RunReport(
                     run_id,
@@ -445,6 +469,7 @@ def export_site(
                     verified=True,
                     bytes=data.written - before[0],
                     files=data.files - before[1],
+                    notes=notes,
                 )
             )
         globals_ = export_globals(client, data, pair_ids, started)
@@ -590,6 +615,7 @@ def describe(report: SiteReport, budget_mb: int = BUDGET_MB) -> str:
     )
     if report.pairs:
         lines.append("pairs: " + ", ".join(report.pairs))
+    lines += [f"note: {note}" for run in report.runs for note in run.notes]
     return "\n".join(lines)
 
 

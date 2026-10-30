@@ -77,14 +77,19 @@ class Exported(NamedTuple):
     bench: Path
 
 
-def export(base: Path, *, sources: tuple[str, ...], pair: tuple[str, str] | None) -> Exported:
+def export(
+    base: Path, *, sources: tuple[str, ...], pairs: tuple[tuple[str, str], ...] = ()
+) -> Exported:
     out, bench = base / "site", base / "bench"
     out.mkdir()
     bench.mkdir()
     cfg = settings_in(base)
-    found = {name: build.resolve_source(name, cfg.runs_dir) for name in sources}
-    pairs = [(found[pair[0]], found[pair[1]])] if pair else []
-    report = build.export_site(list(found.values()), pairs, out, PROVENANCE, bench, cfg)
+    names = dict.fromkeys([*sources, *(name for pair in pairs for name in pair)])
+    found = {name: build.resolve_source(name, cfg.runs_dir) for name in names}
+    named = [(found[left], found[right]) for left, right in pairs]
+    report = build.export_site(
+        [found[name] for name in sources], named, out, PROVENANCE, bench, cfg
+    )
     manifest = json.loads((out / "data" / "manifest.json").read_bytes())
     live = live_client(base, bench, [source.path for source in found.values()])
     return Exported(out, manifest, report, live, base, bench)
@@ -93,7 +98,7 @@ def export(base: Path, *, sources: tuple[str, ...], pair: tuple[str, str] | None
 @pytest.fixture(scope="module")
 def site(tmp_path_factory: pytest.TempPathFactory) -> Exported:
     return export(
-        tmp_path_factory.mktemp("static-site"), sources=(TOY, ONE_CALL), pair=(TOY, ONE_CALL)
+        tmp_path_factory.mktemp("static-site"), sources=(TOY, ONE_CALL), pairs=((TOY, ONE_CALL),)
     )
 
 
@@ -246,12 +251,53 @@ class TestWhatTheSiteSaysAboutItself:
         assert "verified at build" in text and "demo-toy" in text and "OVER BUDGET" not in text
 
 
+class TestARouteThatRaises:
+    def test_the_site_keeps_the_500_the_live_server_gives_and_says_so(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The takeover route of a supervisor's log (the central rival) raises; uvicorn answers 500.
+        from fractalswarm.verify import takeover
+
+        def refuse(run: Any, **_: Any) -> None:
+            raise takeover.SupervisorLog("supervisor log: use `fractalswarm recovery`")
+
+        monkeypatch.setattr(takeover, "check_run", refuse)
+        site = export(tmp_path, sources=(TOY,))
+        routes = site.manifest["runs"]["demo-toy"]["routes"]
+        assert routes["takeover"] == {"status": 500, "body": {"error": "Internal Server Error"}}
+        assert routes["recovery"]["status"] == 200  # the other routes are not touched
+        notes = site.report.runs[0].notes
+        assert len(notes) == 1
+        assert "GET takeover raised SupervisorLog" in notes[0] and "answers 500" in notes[0]
+        assert f"note: {notes[0]}" in build.describe(site.report)
+
+
+class TestPairsAndTheRunsTheyNeed:
+    def test_a_run_in_two_pairs_is_exported_once_and_listed_in_both(self, tmp_path: Path) -> None:
+        other = tmp_path / "bundles" / "toy-b"
+        shutil.copytree(REPO / TOY, other)
+        base = tmp_path / "export"
+        base.mkdir()
+        site = export(base, sources=(), pairs=((TOY, ONE_CALL), (TOY, str(other))))
+        assert sorted(site.manifest["runs"]) == ["demo-one-call", "demo-toy", "demo-toy-b"]
+        _status, listed = answer_of(site, site.manifest["global"]["pairs"])
+        assert [pair["pair_id"] for pair in listed] == [
+            "demo-toy+demo-one-call",
+            "demo-toy+demo-toy-b",
+        ]
+        assert site.report.pairs == ["demo-toy:demo-one-call", "demo-toy:demo-toy-b"]
+
+    def test_a_site_with_runs_and_no_pair_lists_none(self, tmp_path: Path) -> None:
+        site = export(tmp_path, sources=(TOY,))
+        assert answer_of(site, site.manifest["global"]["pairs"]) == (200, [])
+
+
 class TestALogInPages:
     def test_pages_tile_the_log_and_end_where_the_api_says_it_does(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(build, "PAGE_SIZE", 20)
-        site = export(tmp_path, sources=(TOY,), pair=None)
+        site = export(tmp_path, sources=(TOY,))
         pages = site.manifest["runs"]["demo-toy"]["events"]["pages"]
         whole = site.live.get("/api/runs/demo-toy/events?limit=5000").json()
         assert site.manifest["site"]["page_size"] == 20
@@ -450,6 +496,11 @@ class TestBenchResults:
         )
         body = json.loads(build.public_bench(live.encode()))
         assert body == {"source": "bench/results/hero_chart.json", "fixture": False, "data": [1]}
+
+    @pytest.mark.parametrize("body", [[1, 2], {"data": []}, {"source": 3}, "text"])
+    def test_any_other_shape_goes_through_unchanged(self, body: Any) -> None:
+        content = json.dumps(body).encode()
+        assert build.public_bench(content) == content
 
     def test_the_packaged_fixture_keeps_saying_it_is_one(self) -> None:
         live = json.dumps({"source": "fixture", "fixture": True, "data": []})
