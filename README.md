@@ -1,6 +1,6 @@
 # FractalSwarm
 
-> **Kill half the brains. It still finishes — without stalling or paying twice. Verify it yourself.**
+> **Kill half the brains. It still finishes.**
 
 FractalSwarm is a multi-agent LLM runtime in which orchestrators form a fractal tree (root → tracks → sessions). Any orchestrator can die mid-run, the root included: the survivors re-own its work by deterministic hashing, with no election and zero coordination tokens. Every run replays bit-for-bit from a hash-verified log. It is built on Meta Model API (Muse Spark / Muse Wonder) and LlamaFirewall.
 
