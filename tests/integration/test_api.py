@@ -471,6 +471,20 @@ def test_static_ui_is_served_when_built(dirs: dict[str, Path]) -> None:
     assert client.get("/api/runs").status_code == 200
 
 
+def test_the_index_is_never_reused_unasked_and_the_hashed_assets_may_be(
+    dirs: dict[str, Path],
+) -> None:
+    dirs["static"].mkdir()
+    (dirs["static"] / "index.html").write_text("<html>fractal</html>")
+    (dirs["static"] / "assets").mkdir()
+    (dirs["static"] / "assets" / "index-abc123.js").write_text("// built")
+    client = TestClient(create_app(dirs["runs"], dirs["demo"], dirs["bench"], dirs["static"]))
+    assert client.get("/").headers["cache-control"] == "no-cache"
+    assert client.get("/index.html").headers["cache-control"] == "no-cache"
+    asset = client.get("/assets/index-abc123.js")
+    assert asset.status_code == 200 and "cache-control" not in asset.headers
+
+
 def test_demo_verify_prints_match_without_a_key(monkeypatch) -> None:
     monkeypatch.setenv("MODEL_API_KEY", "")
     result = CliRunner().invoke(cli, ["demo", "--verify", "--no-serve"])

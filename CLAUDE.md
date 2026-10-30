@@ -18,7 +18,8 @@ A multi-agent LLM runtime for the Meta Global AI Developer Hackathon (Indie trac
 - **Briefs** live in `.plans/arena/`:
   - `coordinator.md`, plus `handoff.md` for the second coordinator (from Oct 30);
   - `w1-rival.md` … `w5-ui-arena.md`;
-  - `backend-design.md`.
+  - `backend-design.md`;
+  - `redesign.md` (Yoel, Oct 30, evening): the short home, the click demo and the simple app. It wins over the W4, W5, W6 and W7 briefs.
 - **How the work runs:**
   - an Orca coordinator owns the branch `Yoelcanarion/arena`: the first one in the `arena` workspace until Oct 30, then a second one in its own worktree (`handoff.md`);
   - workers branch from `Yoelcanarion/arena`, not from `master`;
