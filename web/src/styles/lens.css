@@ -40,6 +40,16 @@
   max-width: min(980px, calc(100vw - 40px));
 }
 
+/* A phone: the strip says it in the fold's name alone, and the drawer clears a replay bar of two rows. */
+@media (max-width: 760px) {
+  .meter-fold .disclosure__hint {
+    display: none;
+  }
+  .run {
+    --timeline-h: 112px;
+  }
+}
+
 /* ---- the Muse meter ---- */
 .meter {
   display: flex;
@@ -152,6 +162,8 @@
   top: 12px;
   right: 16px;
   bottom: calc(var(--timeline-h) + 24px);
+  /* a page that is taller than the window (the run page, with its Details open) gives the drawer a height of its own: see --lens-max-h */
+  max-height: var(--lens-max-h, none);
   display: flex;
   flex-direction: column;
   width: min(720px, calc(100% - 32px));

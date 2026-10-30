@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
+
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { occurrences, plainText } from "../../arena/helps/testing";
 import type { Where } from "../../lib/shell";
+import { REPO_ROOT } from "../../lib/testing";
 import { TopBar, type TopBarProps } from "./TopBar";
 
 const base: Omit<TopBarProps, "where"> = {
@@ -130,6 +133,23 @@ describe("the evidence's pages", () => {
 
   it("are not on a run's page", () => {
     expect(bar(inRun)).not.toContain('aria-label="Evidence"');
+  });
+});
+
+describe("the bars on a phone", () => {
+  // The four places, the guide and the theme once ran 246 px past a 390 px screen on every page. This reads the sheet: the bars wrap there.
+  const sheet = readFileSync(`${REPO_ROOT}web/src/components/shell/shell.css`, "utf-8").replace(/\r\n/g, "\n");
+  const phone = /@media \(max-width: 760px\) \{([\s\S]*?)\n\}\n/.exec(sheet)?.[1] ?? "";
+  const rule = (selector: string): string => new RegExp(`${selector.replace(/[.>]/g, "\\$&")} \\{([^}]*)\\}`).exec(phone)?.[1] ?? "";
+
+  it("wrap: the top bar, the rows of tabs and the run's sub-bar", () => {
+    expect(phone).not.toBe("");
+    for (const selector of [".shell .topbar", ".shell .tabs", ".shell .subnav"]) expect(rule(selector), selector).toContain("flex-wrap: wrap");
+  });
+
+  it("let the four places have a row of their own, and the run picker the width of the screen", () => {
+    expect(rule(".shell .topbar > .tabs")).toMatch(/flex: 1 1 100%/);
+    expect(rule(".shell .subnav select")).toMatch(/width: 100%/);
   });
 });
 

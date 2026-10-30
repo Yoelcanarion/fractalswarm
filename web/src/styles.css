@@ -332,6 +332,8 @@ textarea {
 .run--overview {
   height: auto;
   min-height: 100%;
+  /* the Muse lens is as tall as the window leaves it, under the bars above the page and over the replay bar, not as tall as the page */
+  --lens-max-h: max(320px, calc(100vh - 163px - var(--timeline-h) - 36px));
 }
 
 .run--overview .run__tree {
@@ -1247,6 +1249,35 @@ textarea {
   }
 }
 
+/* A phone: the replay bar wraps (the track beside the play button, the readout and the speed under it, so that none of them is off the
+   screen), and the three numbers of a run's line share the width instead of running off it. */
+@media (max-width: 760px) {
+  .timeline {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 8px 12px;
+  }
+  .timeline__track {
+    flex: 1 1 0;
+    min-width: 120px;
+  }
+  .timeline__readout {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--fs-body);
+  }
+  .speedpick__label {
+    display: none;
+  }
+  .counters--headline {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+  .counters--headline .stat {
+    flex: 1 1 auto;
+  }
+}
+
 @keyframes pulse {
   50% {
     opacity: 0.55;
@@ -1806,6 +1837,14 @@ textarea {
   letter-spacing: 0.08em;
   color: var(--text-secondary);
   font-weight: 700;
+}
+
+/* the controls themselves: the cap and the kill switch, side by side, in the strip or in its fold */
+.controls__body {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 22px;
 }
 
 .controls__shock {
