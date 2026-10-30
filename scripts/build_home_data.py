@@ -14,6 +14,8 @@ Slices (camelCase keys; seconds are floats rounded to 3 places, money to 6, time
     numbers      the figures the claims quote (R2, R5, S4, S7) and the structure counts
     tree         the demo bundle's tree: nodes (brains and agents), goals, counts
     takeover     its kills, death verdicts, successions, adoptions, orphan results and chains
+    traffic      the failure detector's heartbeats (per sender: first, last, ticks, peers) and the
+                 task messages (assign, contract, contract.result, result) of the bundle
     hrw          one record per succession: the pool, the real scores, the heir, who read the log
     finish       the run's result: talks placed, hard violations, duplicate calls, cost
     lanes        work lanes of a run of ``central`` at C3 (not in git: carried over when absent) and
@@ -52,6 +54,7 @@ from fractalswarm.bench.scoring import (  # noqa: E402
     score_run,
 )
 from fractalswarm.bench.verdicts import verdicts as read_verdicts  # noqa: E402
+from fractalswarm.coord.membership import Detector  # noqa: E402
 from fractalswarm.kernel.events import Event  # noqa: E402
 from fractalswarm.kernel.store import EventStore  # noqa: E402
 from fractalswarm.verify.takeover import check_run  # noqa: E402
@@ -649,6 +652,56 @@ def tree_slice(events: list[Event]) -> dict[str, Any]:
     }
 
 
+MESSAGE_KINDS = ("assign", "contract", "contract.result", "result")
+
+
+def traffic_slice(events: list[Event]) -> dict[str, Any]:
+    """What crossed the tree: the failure detector's heartbeats, and the messages that carry work.
+
+    Heartbeats are one frame per watched peer every tick; a sender's ticks are summarised as
+    first, last and count (they stop for good when the brain is killed). The task messages
+    (an assignment down, a contract down, its result up, a goal's result) are kept one by one.
+    """
+    detector = Detector(member="")
+    ticks: dict[str, set[int]] = defaultdict(set)
+    watching: dict[str, set[str]] = defaultdict(set)
+    frames = 0
+    messages: list[list[Any]] = []
+    for e in events:
+        if e.type != "msg.sent":
+            continue
+        topic = e.payload["topic"]
+        bus = (e.payload.get("body") or {}).get("bus") or {}
+        if topic == "net.frame" and bus.get("topic") == "member.heartbeat":
+            frames += 1
+            ticks[e.actor].add(e.ts_virtual)
+            watching[e.actor].add(bus["to"])
+        elif topic in MESSAGE_KINDS and e.actor != e.payload["to"]:
+            messages.append([e.ts_virtual, e.actor, e.payload["to"], MESSAGE_KINDS.index(topic)])
+    messages.sort(key=lambda m: (m[0], m[1], m[2], m[3]))
+    senders = {
+        sender: {
+            "firstMs": min(times),
+            "lastMs": max(times),
+            "ticks": len(times),
+            "peers": sorted(watching[sender], key=natural),
+        }
+        for sender, times in sorted(ticks.items(), key=lambda kv: natural(kv[0]))
+    }
+    return {
+        "heartbeat": {
+            "intervalMs": detector.interval_ms,
+            "suspectAfter": detector.suspect_after,
+            "deadAfter": detector.dead_after,
+            "frames": frames,
+            "senders": senders,
+        },
+        "messageKinds": list(MESSAGE_KINDS),
+        "messageFields": ["tMs", "from", "to", "kind"],
+        "messages": messages,
+    }
+
+
 def takeover_slice(report: TakeoverReport, events: list[Event]) -> dict[str, Any]:
     start = next(e.ts_virtual for e in events if e.type == "run.started")
     level_of = {
@@ -1233,6 +1286,7 @@ def build(
         "numbers": numbers_slice(v1_rows, head_rows, structure),
         "tree": tree,
         "takeover": takeover_slice(report, events),
+        "traffic": traffic_slice(events),
         "hrw": hrw_slice(report, events),
         "finish": finish_slice(report, events),
         "lanes": {"central": central, "swarm": swarm_lanes},

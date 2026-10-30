@@ -1,0 +1,93 @@
+/* The lab page (#/home-lab). A workbench, not a design: tokens only, no container queries. */
+
+.lab {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5) var(--space-7);
+  color: var(--text-primary);
+  background: var(--bg);
+}
+.lab h1 {
+  font-size: var(--fs-hero);
+  line-height: var(--lh-tight);
+  margin: 0 0 var(--space-2);
+}
+.lab h2 {
+  font-size: var(--fs-title);
+  margin: 0 0 var(--space-1);
+}
+.lab-header p,
+.lab-note {
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-3);
+  max-width: 70ch;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+.lab-section {
+  margin-top: var(--space-7);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--divider);
+}
+.lab-stage {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  padding: var(--space-4);
+  margin: var(--space-3) 0;
+}
+.lab-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-3) 0;
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+}
+.lab-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.lab select,
+.lab button {
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+.lab button:hover {
+  background: var(--surface-3);
+}
+.lab-scrub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-body);
+}
+.lab-scrub input[type="range"] {
+  flex: 1 1 320px;
+  accent-color: var(--accent);
+}
+.lab-scrub output {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+  min-width: 22ch;
+}
+.lab-jumps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  flex-basis: 100%;
+}
+.lab-jumps button {
+  font-size: var(--fs-label);
+  padding: 2px var(--space-2);
+}

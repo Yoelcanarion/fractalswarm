@@ -175,6 +175,33 @@ def test_the_takeover_sequence_is_the_bundles(committed: dict):
     )
 
 
+def test_the_traffic_is_the_bundles(committed: dict):
+    from fractalswarm.coord.membership import Detector
+
+    detector = Detector(member="")
+    traffic = committed["traffic"]
+    beat = traffic["heartbeat"]
+    assert (beat["intervalMs"], beat["suspectAfter"], beat["deadAfter"]) == (
+        detector.interval_ms,
+        detector.suspect_after,
+        detector.dead_after,
+    )
+    nodes = {n["id"] for n in committed["tree"]["nodes"]}
+    brains = {n["id"] for n in committed["tree"]["nodes"] if n["kind"] == "brain"}
+    assert set(beat["senders"]) == brains
+    killed = {k["target"]: k for k in committed["takeover"]["kills"]}
+    for sender, ticks in beat["senders"].items():
+        if sender in killed:
+            assert ticks["lastMs"] <= killed[sender]["atMs"], "a killed brain sends nothing after"
+        else:
+            assert ticks["lastMs"] > committed["takeover"]["durationMs"] - 2000
+    messages = traffic["messages"]
+    assert messages == sorted(messages, key=lambda m: (m[0], m[1], m[2], m[3]))
+    assert all(m[1] in nodes and m[2] in nodes and m[1] != m[2] for m in messages)
+    assert all(0 <= m[3] < len(traffic["messageKinds"]) for m in messages)
+    assert all(m[0] <= committed["takeover"]["durationMs"] for m in messages)
+
+
 def test_the_finish_numbers_are_the_runs(committed: dict):
     finish = committed["finish"]
     assert finish["placed"] == finish["expected"] and finish["hardViolations"] == 0
