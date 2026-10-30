@@ -334,7 +334,9 @@ def test_pasted_text_is_read_reviewed_approved_and_run(api: Api) -> None:
     assert answer.status_code == 200, answer.text
     assert answer.json()["edits"] == [f"talks[{first['id']}].attendance"]
     assert answer.json()["task_inputs"] == {"intake": intake_id}
-    assert api.get(f"/api/intake/{intake_id}").json()["state"] == "approved"
+    reopened = api.get(f"/api/intake/{intake_id}").json()
+    assert reopened["state"] == "approved"
+    assert reopened["approved"]["proposal"]["talks"] == proposal["talks"]  # the person's reading
     assert api.post(f"/api/intake/{intake_id}/approve", {}).status_code == 409
 
     approved = PrivateDir(api.private).approved(intake_id)
