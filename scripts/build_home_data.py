@@ -35,6 +35,10 @@ Slices (camelCase keys; seconds are floats rounded to 3 places, money to 6, time
     failures     R3's figures with their settings: where locality fails, false deaths, per process
     tokens       tokens spent on coordination and on recovery
     tokensByModel the bundle's tokens by model; scans: its PromptGuard scans
+    extraction   one speaker's email as an extract call of the bundle read it, and the availability
+                 and preference the call published for them, in words, each pointing at the stretch
+                 of the email it is read from: {email, constraints: [{text, source: [from, to]}],
+                 model}; where it comes from is in sources.extraction (effect, seq, speaker)
     assumptions  what the benchmark grants the rival (bench/REPORT.md section 1): a list
 """
 
@@ -1028,6 +1032,116 @@ def tokens_slice(events: list[Event]) -> dict[str, Any]:
     }
 
 
+# -- one real extraction ---------------------------------------------------------------------
+
+# The Models chapter shows one speaker's email next to what Muse Spark read in it. This one is the
+# least direct in the run: nothing in it names a slot or says which day "that day" is, so the model
+# reads a train and publishes a slot index.
+EXTRACTION_SPEAKER = "S12"
+# The stretch of the email, in its own words, that each constraint is read from. Each occurs once.
+EXTRACTION_PHRASES: dict[tuple[str, int], str] = {
+    ("day", 1): "(the other day is fine)",
+    ("day", 2): "My train arrives late on day 2, so nothing before 10:30 that day",
+    ("preference", 0): "No preference on the time otherwise.",
+}
+EXTRACTION_PREFERENCES = {
+    "none": "No time preference",
+    "morning": "Prefers the morning",
+    "afternoon": "Prefers the afternoon",
+}
+EMAILS_BLOCK = re.compile(r"<<<UNTRUSTED emails\n(.*?)\nEND UNTRUSTED emails>>>", re.S)
+SLOTS_BLOCK = re.compile(r"<<<DATA slots\n(.*?)\nEND DATA slots>>>", re.S)
+DAYS_BLOCK = re.compile(r"<<<DATA days\n(.*?)\nEND DATA days>>>", re.S)
+
+
+def slot_words(day: int, slots: list[int], every: list[dict[str, Any]]) -> str:
+    """One day's slot indices in the words of the clock: any time, from 10:30, until 12:00, or
+    from 10:30 to 12:45."""
+    if not slots:
+        return f"Day {day}: not available"
+    first, last = slots[0], slots[-1]
+    assert slots == list(range(first, last + 1)), f"day {day}: the slots are not one stretch"
+    if first == 0 and last == len(every) - 1:
+        return f"Day {day}: any time"
+    if last == len(every) - 1:
+        return f"Day {day}: from {every[first]['start']}"
+    if first == 0:
+        return f"Day {day}: until {every[last]['end']}"
+    return f"Day {day}: {every[first]['start']} to {every[last]['end']}"
+
+
+def extraction_slice(events: list[Event]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """One real extraction, as ``(slice, source)``: the email as an extract call of the recorded run
+    read it, and the availability and preference that call published for its speaker, in words.
+    The constraints come from the published fact (``value_json``), not from the email; the stretch
+    of the email each is read from is written down above, and checked to occur in it once."""
+    emails: dict[str, dict[str, Any]] = {}
+    slots: list[dict[str, Any]] = []
+    days: list[int] = []
+    readings: list[tuple[Event, dict[str, Any], str]] = []
+    key = f"speaker:{EXTRACTION_SPEAKER}:availability"
+    for e in events:
+        if e.type == "effect.started" and e.payload.get("kind") == "llm":
+            messages = (e.payload.get("request") or {}).get("input")
+            first = messages[0].get("content") if isinstance(messages, list) and messages else None
+            if not isinstance(first, str) or "Kind: extract" not in first:
+                continue
+            block = EMAILS_BLOCK.search(first)
+            if block is None:
+                continue
+            for item in json.loads(block.group(1)):
+                emails.setdefault(item["speaker_id"], item)
+            if not slots:
+                slots = json.loads(SLOTS_BLOCK.search(first).group(1))  # type: ignore[union-attr]
+                days = json.loads(DAYS_BLOCK.search(first).group(1))  # type: ignore[union-attr]
+        elif e.type == "effect.completed" and e.payload.get("kind") == "llm":
+            result = e.payload.get("result") or {}
+            for item in result.get("output") or []:
+                if item.get("type") != "function_call" or item.get("name") != "memory.publish_fact":
+                    continue
+                args = json.loads(item["arguments"])
+                if args.get("key") == key:
+                    value = args["value_json"]
+                    value = json.loads(value) if isinstance(value, str) else value
+                    readings.append((e, value, result["model"]))
+    assert readings and EXTRACTION_SPEAKER in emails, f"the run holds no reading of {key}"
+    event, value, model = readings[0]
+    agreeing = sum(1 for _, other, _ in readings if other == value)
+    email = emails[EXTRACTION_SPEAKER]["body"]
+    assert email.isascii(), "the offsets are counted in characters, in Python and in the page"
+
+    words: dict[tuple[str, int], str] = {}
+    by_day = {int(d["day"]): [int(s) for s in d["slots"]] for d in value["available"]}
+    for day in days:
+        words[("day", day)] = slot_words(day, by_day.get(day, []), slots)
+    words[("preference", 0)] = EXTRACTION_PREFERENCES[value["preference"]]
+    assert set(words) == set(EXTRACTION_PHRASES), (
+        "a constraint has no stretch of the email, or vice versa"
+    )
+
+    constraints = []
+    for which, phrase in EXTRACTION_PHRASES.items():
+        assert email.count(phrase) == 1, f"{phrase!r} must occur once in the email"
+        at = email.index(phrase)
+        constraints.append({"text": words[which], "source": [at, at + len(phrase)]})
+    constraints.sort(key=lambda c: c["source"][0])
+    return (
+        {
+            "email": email,
+            "constraints": constraints,
+            "model": f"{model} · recorded demo run · a generated test email, not a real person's",
+        },
+        {
+            "effect": event.payload["effect_id"],
+            "seq": event.seq,
+            "speaker": EXTRACTION_SPEAKER,
+            "email": emails[EXTRACTION_SPEAKER]["id"],
+            "readings": len(readings),
+            "agreeing": agreeing,
+        },
+    )
+
+
 def hashes_slice(events: list[Event], bundle: Path, report: TakeoverReport) -> dict[str, Any]:
     """A sample that keeps runs of consecutive events, so the strip can show each hash pointing
     at the one before, and the events around every kill."""
@@ -1488,6 +1602,7 @@ def build(
     takeover["deathVerdictS"] = gaps["meanS"]
     takeover["deathVerdictRangeS"] = [gaps["minS"], gaps["maxS"]]
     hashes = hashes_slice(events, bundle, report)
+    extraction, extraction_source = extraction_slice(events)
     sources: dict[str, Any] = {
         "bundle": {
             "path": rel(bundle),
@@ -1495,6 +1610,12 @@ def build(
             "head": events[-1].hash,
             "events": len(events),
             "inGit": True,
+        },
+        "extraction": {
+            "path": f"{rel(bundle)}/events.jsonl",
+            "runId": report.run_id,
+            "head": events[-1].hash,
+            **extraction_source,
         },
         "lanesCentral": central_source,
         "claims": source_record("docs/claims.md"),
@@ -1526,6 +1647,7 @@ def build(
         "finish": finish,
         "lanes": {"central": with_page_fields(central), "swarm": swarm_lanes},
         "hashes": hashes,
+        "extraction": extraction,
         "proof": proof_slice(hashes, bundle),
         "hero": hero,
         "hero10": hero_slice(HEADLINE_10),

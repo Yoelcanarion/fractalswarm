@@ -14,7 +14,7 @@ export const isDoor = (id: string): id is DoorId => (DOOR_IDS as readonly string
 export const DOOR_LABELS: Record<DoorId, string> = {
   arena: "Two systems, a swarm of coordinators and a supervisor, each hit by the same failure",
   live: "A pasted text becomes a tree of coordinators, and a crosshair lands on one of them",
-  replays: "A chain of recorded steps, each with a check mark once it has been verified",
+  replays: "A table of recorded runs, each row getting a check mark once it has been verified",
   director: "A clapperboard closing on a scene",
   numbers: "A chart with two lines and a marker running along it",
   ablation: "A hand-written parser and Muse, both reading the same notes",
@@ -42,7 +42,7 @@ export const quad = (t: number, a: readonly [number, number], c: readonly [numbe
 export const GEOM = {
   arena: { deadLeft: [30, 50], deadRight: [153, 82] },
   live: { flow: 24, target: [190, 50] },
-  replays: { checks: [32, 84, 136, 188], checkY: 88 },
+  replays: { checkX: 190, rows: [42, 59, 76, 93] },
   director: { hinge: [36, 46], open: -18 },
   numbers: { from: 24, to: 206, marks: [64, 104, 144, 204] },
   ablation: {
@@ -78,11 +78,11 @@ export function doorFrame(id: string, p: number): DoorFrame {
     }
     case "replays": {
       const frame: DoorFrame = {};
-      GEOM.replays.checks.forEach((cx, i) => {
+      // the rows are verified one after the other, from the top
+      GEOM.replays.rows.forEach((y, i) => {
         const c = ease(p, 0.08 + 0.2 * i, 0.36 + 0.2 * i);
-        frame[`check-${i}`] = { opacity: c, transform: at(cx, GEOM.replays.checkY, 0.6 + 0.4 * c) };
+        frame[`check-${i}`] = { opacity: c, transform: at(GEOM.replays.checkX, y, 0.6 + 0.4 * c) };
       });
-      for (let i = 0; i < 3; i++) frame[`link-${i}`] = { opacity: smoothstep(span(p, 0.2 + 0.2 * i, 0.5 + 0.2 * i)) };
       return frame;
     }
     case "director": {

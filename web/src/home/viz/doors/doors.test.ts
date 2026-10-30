@@ -96,9 +96,9 @@ describe("the door glyphs' frames", () => {
     expect(dots["dot-left"]!.transform).not.toBe(dots["dot-right"]!.transform);
   });
 
-  it("puts the marks where the drawing has its targets, and the runs of a replay in order", () => {
+  it("puts the marks where the drawing has its targets, and the rows of a replay in order", () => {
     const end = doorFrame("replays", 1);
-    GEOM.replays.checks.forEach((cx, i) => expect(end[`check-${i}`]!.transform).toBe(`translate(${cx.toFixed(2)} ${GEOM.replays.checkY.toFixed(2)}) scale(1.000)`));
+    GEOM.replays.rows.forEach((y, i) => expect(end[`check-${i}`]!.transform).toBe(`translate(${GEOM.replays.checkX.toFixed(2)} ${y.toFixed(2)}) scale(1.000)`));
     const early = doorFrame("replays", 0.3);
     expect(early["check-0"]!.opacity!).toBeGreaterThan(early["check-1"]!.opacity!);
     expect(early["check-1"]!.opacity!).toBeGreaterThanOrEqual(early["check-3"]!.opacity!);
