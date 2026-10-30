@@ -308,7 +308,7 @@ function HeroSection({ still, setting }: { still: boolean; setting: boolean }) {
 
 function DotsSection({ still, setting }: { still: boolean; setting: boolean }) {
   return (
-    <FrameSection id="dots" title="DotPlot" note="One dot for each run: stall time and extra cost, three seeds, the swarm beside the rivals." seconds={5} height={460}>
+    <FrameSection id="dots" title="DotPlot" note="One dot for each run: stall time and extra cost, the swarm beside the two durable supervisors." seconds={5} height={460}>
       {(progress) => (story.headline ? <DotPlot progress={progress} data={story.headline} still={still} setting={setting} /> : NONE)}
     </FrameSection>
   );

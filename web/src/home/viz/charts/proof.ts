@@ -59,6 +59,9 @@ export type ProofStory = Pick<Story, "numbers" | "verdicts" | "workflows" | "hea
 const taskName = (task: string): string => task.replace(/^t(\d+)_/, "T$1 ").replace(/_/g, " ");
 const seedsName = (n: number): string => `${n} seed${n === 1 ? "" : "s"}`;
 
+/** What an extra cost is measured on: the pre-registered basis, which estimates the cost of the calls a crash cancels (the claims' R5 gives the other). */
+const COST_LABEL = "Extra cost, pre-registered basis";
+
 /** Written the way the page writes them: one decimal, a real minus. */
 export function proofText(value: number, unit: Unit): string {
   const abs = Math.abs(value).toFixed(1);
@@ -100,7 +103,7 @@ export function proofPanels(story: ProofStory): ProofPanel[] {
       setting: setting(story.hero.model === "real", t2.task, central?.profile ?? null, t2.seeds),
       rows: [
         { id: "stall", label: "Stalled after a crash", unit: "s", swarm: t2.swarmStallS, rival: t2.centralStallS },
-        { id: "cost", label: "Extra cost", unit: "pct", swarm: t2.swarmExtraPct, rival: t2.centralExtraPct },
+        { id: "cost", label: COST_LABEL, unit: "pct", swarm: t2.swarmExtraPct, rival: t2.centralExtraPct },
       ],
     },
     {
@@ -119,7 +122,7 @@ export function proofPanels(story: ProofStory): ProofPanel[] {
         },
         {
           id: "cost",
-          label: "Extra cost",
+          label: COST_LABEL,
           unit: "pct",
           swarm: perSeed(story, "swarm", profile, (c) => c.extraCostPct),
           rival: perSeed(story, "durable-max", profile, (c) => c.extraCostPct),

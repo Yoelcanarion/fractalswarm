@@ -1635,9 +1635,11 @@
   stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
+/* The swarm's dots are ringed in the page's own colour, so two seeds that fall close together read as two. */
 [data-who="swarm"] .hv-proof-dot {
   fill: var(--accent);
-  stroke: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 1.5;
 }
 .hv-proof-zero {
   stroke: var(--border-strong);

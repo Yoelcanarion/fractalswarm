@@ -12,7 +12,7 @@ import {
   pairSummary,
   paintPairs,
   valueText,
-  verdictText,
+  verdictWords,
   type PairRig,
 } from "./pairs";
 import { ChartTable, useBox } from "./parts";
@@ -78,8 +78,10 @@ export function PairedBars({ progress, data, still, stillAt, className, rival = 
             return (
               <g key={row.hypothesis}>
                 <text className="hv-ch-head" x={fx(L.labelX)} y={fx(g.titleY)}>
-                  <tspan className="hv-ch-name">{row.name}</tspan>
-                  {row.sub && (
+                  <tspan className="hv-ch-name" style={L.titleSize === null ? undefined : { fontSize: L.titleSize }}>
+                    {row.name}
+                  </tspan>
+                  {row.sub && g.sub && (
                     <tspan className="hv-ch-sub" dx="8">
                       {row.sub}
                     </tspan>
@@ -130,10 +132,16 @@ export function PairedBars({ progress, data, still, stillAt, className, rival = 
                   <text x={fx(g.pill.x + g.pill.w / 2)} y={fx(g.pill.y + 10)}>
                     {g.pill.text}
                   </text>
+                  <title>{verdictWords(row.verdict, row.mixed)}</title>
                 </g>
               </g>
             );
           })}
+          {L.note && (
+            <text className="hv-pb-key hv-pb-note" x={fx(L.noteX)} y={fx(L.noteY)}>
+              {L.note}
+            </text>
+          )}
         </g>
 
         {L.caption && (
@@ -151,10 +159,10 @@ export function PairedBars({ progress, data, still, stillAt, className, rival = 
           valueText(r, r.swarm),
           valueText(r, r.rival),
           `${Math.round(r.fraction * 100)}%`,
-          verdictText(r),
+          verdictWords(r.verdict, r.mixed),
           r.other && r.other.value !== null ? valueText(r, r.other.value) : "none",
           r.other && r.other.ratio !== null ? `${Math.round(r.other.ratio * 100)}%` : "none",
-          r.other ? r.other.verdict : "none",
+          r.other ? verdictWords(r.other.verdict, r.other.mixed) : "none",
         ])}
       />
     </div>
