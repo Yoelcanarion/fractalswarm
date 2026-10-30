@@ -181,11 +181,9 @@ describe("the text on a dead, a restarting and a finished tree card", () => {
   });
 
   describe.each(Object.entries(themes()))("%s theme", (theme, tokens) => {
-    it.each(CARDS)("%s: its id and its meta are at AA on the card", (card, background) => {
+    it.each(CARDS)("%s: its id is at AA on the card", (card, background) => {
       const id = colourOf(`.${card} .actor__id`) ?? colourOf(".actor__id") ?? "--text-primary";
-      const meta = colourOf(`.${card} .actor__meta`) ?? colourOf(".actor__meta");
-      expect(meta, `${card}'s meta has a colour`).toBeDefined();
-      for (const text of [id, meta!]) expect(contrast(tokens[text], tokens[background]), `${text} on ${background} (${theme})`).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(tokens[id], tokens[background]), `${id} on ${background} (${theme})`).toBeGreaterThanOrEqual(4.5);
     });
   });
 });

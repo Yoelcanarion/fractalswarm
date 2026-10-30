@@ -164,7 +164,7 @@ describe("the five views of a run", () => {
 describe("the run page", () => {
   it("opens with one line on what the page is for and one main action: play the run from its start", async () => {
     const out = render(await opened(), createElement(RunPage));
-    expect(text(out)).toContain("A recorded run, shown at its end");
+    expect(text(out)).toContain("A recorded run. Play it to watch coordinators get killed and the survivors take over.");
     expect(out).toContain('<button type="button" class="btn btn--on">Play from the start</button>');
     // the guide is the app's, in the shell: the page has no second one, and no tab stop for every orchestrator to skip
     expect(out).not.toContain('id="guide"');
@@ -182,9 +182,42 @@ describe("the run page", () => {
   it("holds its own shape, the counters and the tree, from the first paint, before the list of runs has answered", () => {
     const out = render(renderCurrent(createRunStore({ api: apiOf() })), createElement(RunPage));
     expect(out).toContain("Loading the runs");
-    expect(out).toContain('class="counters"');
+    expect(out).toContain('class="counters counters--headline"');
     expect(out).toContain("run__tree");
     expect(text(out)).not.toContain("No run selected");
+  });
+
+  it("opens with the state of the run in a line of words and the three numbers that are its claim, the rest folded away", async () => {
+    const store = await opened();
+    const out = render(store, createElement(RunPage));
+    expect(text(out)).toContain("At the start: nothing has happened yet.");
+    expect(out).toContain('class="counters counters--headline"');
+    // every other counter, the schedule, the chaos list and the event log are one click away, and the address can open them
+    expect(out).toMatch(/<details id="more" class="disclosure run__more">/);
+    expect(render(store, createElement(RunPage, { unfold: true }))).toMatch(/<details id="more" class="disclosure run__more" open="">/);
+  });
+
+  it("does not say a finished run has no actors alive: it says the run is finished", async () => {
+    const store = await opened();
+    expect(text(render(store, createElement(RunPage)))).toContain("actors alive");
+    store.getState().seek(store.getState().events.length);
+    const t = text(render(store, createElement(RunPage)));
+    expect(t).toContain("Finished: no coordinator crashed.");
+    expect(t).not.toContain("actors alive");
+    expect(t).toMatch(/finished actors/);
+  });
+
+  it("says what the one main action will do now: play from the start, pause while it plays, carry on from where it stopped", async () => {
+    const store = await opened();
+    const label = () => /<button type="button" class="btn btn--on">([^<]+)<\/button>/.exec(render(store, createElement(RunPage)))?.[1];
+    expect(label()).toBe("Play from the start");
+    store.getState().seek(10);
+    expect(label()).toBe("Carry on");
+    store.setState({ playing: true });
+    expect(label()).toBe("Pause");
+    expect(text(render(store, createElement(RunPage)))).toContain("Replaying: at ");
+    store.setState({ playing: false });
+    expect(text(render(store, createElement(RunPage)))).toContain("Paused: at ");
   });
 
   it("says a recorded run is at its start, where it opens, and offers to play it or to jump to its end", async () => {
