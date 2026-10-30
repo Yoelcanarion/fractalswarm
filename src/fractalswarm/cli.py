@@ -1146,4 +1146,6 @@ def demo(
             )
             raise typer.Exit(1)
     if serve_ui:
-        _serve(_settings().runs_dir, host, port, DEMO_PREFIX + path.name, browser)
+        # The home page by default: it leads into the bundled run. A named bundle opens that run.
+        open_run = DEMO_PREFIX + path.name if bundle else None
+        _serve(_settings().runs_dir, host, port, open_run, browser)
