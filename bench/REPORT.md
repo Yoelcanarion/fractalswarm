@@ -991,14 +991,14 @@ Extra cost against the same workflow's own C0 (%), mean over the two seeds:
 
 *`bench/results/v1/results.csv`, column `cost_usd`.*
 
-`central` is the only workflow whose extra cost grows with the crashes: +30.6, +57.5 and +75.6% on T2
-and +3.5, +23.4 and +37.7% on T1 (C1, C2, C3), and its cost rises from $0.278 to $0.489 on T2. The
-swarm's is +9.3, −2.8 and +6.6% on T2 and −5.1, +17.2 and +2.6% on T1. Apart from `central`, the extra
-costs of the other five lie between −17.4% and +42.3%, with no trend by profile that they share. On T2 all six values of
-the two durable supervisors are negative (−4.8 to −14.0%), which means that the C3 run cost less than
-its own C0 run, not that a crash saves money: the two runs of a pair are runs of a live model, each
-with its own plan and its own retries, and the same cell recorded twice differs in cost by up to 20%
-(§4.10.6).
+`central`'s extra cost grows with the crashes and is the largest: +30.6, +57.5 and +75.6% on T2 and
++3.5, +23.4 and +37.7% on T1 (C1, C2, C3), and its cost rises from $0.278 to $0.489 on T2. `single`'s
+grows too, but less (+10.4% on T2 and +19.8% on T1 at C3). The swarm's is +9.3, −2.8 and +6.6% on T2
+and −5.1, +17.2 and +2.6% on T1. Apart from `central`, the extra costs of the other five lie between
+−17.4% and +42.3%, with no trend by profile that they share. On T2 all six values of the two durable
+supervisors are negative (−4.8 to −14.0%), which means that the C3 run cost less than its own C0 run,
+not that a crash saves money: the two runs of a pair are runs of a live model, each with its own plan
+and its own retries, and the same cell recorded twice differs in cost by up to 20% (§4.10.6).
 
 **The estimate behind `central`'s figure.** The cost of a cell counts an estimate for the calls that
 its crashes cancel (§2: input in full, output so far), since the API reports no usage for them.
@@ -1084,9 +1084,9 @@ detector, make none. Its preserved work is 81.7% (T2) and 88.2% (T1), `durable-m
 and `durable`'s 59.6% and 72.9%; the calls in flight at a crash are few (§4.10.5). Two seeds, so this
 is descriptive. The swarm's values are below `durable-max`'s in all twelve comparisons of the two
 tables (dependency time, blast radius and idle agent-seconds, at C2 and C3, on both tasks), as at the
-$0 gate (§4.3); the ratio of the two-seed means is below one half in five of the twelve (0.28–0.86). §4.10.5
-reads the headline point with the preregistered rules on three seeds, and §4.10.6 compares the two
-recordings of the same cells.
+$0 gate (§4.3); the ratio of the two-seed means is below one half in five of the twelve (0.28–0.86).
+§4.10.5 reads the headline point with the preregistered rules on three seeds, and §4.10.6 compares
+the two recordings of the same cells.
 
 #### 4.10.4 Secondary: completion, validity, coordination tokens
 
@@ -1113,7 +1113,10 @@ All profiles pooled, 8 runs per row:
 Every one of the 96 runs completed and is valid, at every profile (validity is §2's), and none spent an
 LLM token on coordination: the rivals' supervisors are code too, so they spend none either
 (`docs/claims.md` S4: a property of the design, never an advantage over the rivals). Six calls ended
-in an error in v1 and none in the headline, and every run still completed. `central` is the dearest on
+in an error in v1 and none in the headline: five `APIConnectionError: Connection error.` in
+`pipeline` C2 seed 2 and one ledger error (`IntegrityError: UNIQUE constraint failed:
+entries.reservation_id`) in `single` C1 seed 1, the two cells that were run again (§3). Every run
+still completed. `central` is the dearest on
 T2 ($0.391 a run against $0.286–0.291 for the swarm and the durable supervisors): its crashes cancel
 work that it redoes, and the estimate for the cancelled calls is counted (§4.10.2). `single` and
 `pipeline` are the slowest (548.0 and 469.6 s on T2 against 203.9–257.2 s for the others), because
@@ -1209,10 +1212,10 @@ paid twice by a crash or a false death, in points of the run's C0 cost.*
   run: `durable-max` seed 3 stalled 86.2 s, and cost $0.352 against $0.279 at C0. Against `durable` it
   is a win on all three seeds (10.3 against 23.3 s).
 - **All 18 runs completed and are valid, seed 3 included.** Seed 3 is the one that is invalid for
-  every workflow at the fake gate (§4.4); here its six cells score 0.86–1.0 on the checker's soft
-  score (§2; not a PREREG metric). That score runs 0.64–1.0 over the 18 runs, and seed 2 is the lowest
-  for all three workflows at C0 (0.72, 0.72 and 0.80). Coordination tokens are 0 in every run, the
-  rivals' included.
+  every workflow at the fake gate (§4.4); here its six cells have a Quality (T2's soft score, §2; not
+  a PREREG metric) of 0.86–1.0. Quality runs 0.64–1.0 over the 18 runs, and seed 2 is the lowest for
+  all three workflows at C0 (0.72, 0.72 and 0.80). Coordination tokens are 0 in every run, the rivals'
+  included.
 
 The 18 cells behind the tables:
 
