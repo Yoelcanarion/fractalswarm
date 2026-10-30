@@ -621,6 +621,39 @@ body:has(.home) {
   color: var(--text-muted);
 }
 
+/* the click demo's own two buttons, set like the page's other ghost button (Repeat) */
+.home-demo .hv-demo-btn {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  font-weight: 560;
+  cursor: pointer;
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.home-demo .hv-demo-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.home-demo .hv-demo-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-demo .hv-demo-btn:not(:disabled):hover {
+    background: var(--hover-wash);
+    color: var(--text-primary);
+  }
+}
+
 @media (max-width: 899px) {
   .home-steps {
     grid-template-columns: minmax(0, 1fr);
