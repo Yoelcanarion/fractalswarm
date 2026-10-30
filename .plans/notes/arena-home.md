@@ -1,71 +1,63 @@
 # W6 `home` — notes
 
-Branch `Yoelcanarion/arena-home` (from `Yoelcanarion/arena` 287704a). Brief: `.plans/arena/w6-home.md`. W7 `home-viz` works beside me
-on `web/src/home/viz/**` and `web/src/home/data/story.json`.
+Branch `Yoelcanarion/arena-home` (from `Yoelcanarion/arena` 287704a; `origin/Yoelcanarion/arena` 76ac1f0 merged at `bb54c58`). Brief: `.plans/arena/w6-home.md`. W7 `home-viz` works beside me
+on `web/src/home/viz/**`, `web/src/home/data/**` and `scripts/build_home_data.py`.
 
 ## What exists (web only; nothing under `src/fractalswarm`, `docs/claims.md`, `bench/`)
 
 | Piece | Where |
 |---|---|
-| Route and bundle split | `web/src/main.tsx` loads fonts, `tokens.css` and `home/Root.tsx`. `Root` shows `HomePage` for `isHomeHash` (`""`, `#`, `#/`, `#/?...`, `#/home`) and lazy-loads `App.tsx` (which now carries the shell CSS) for every other hash. The home page never touches the zustand store, recharts or React Flow. |
+| Route and bundle split | `web/src/main.tsx` loads fonts, `tokens.css` and `home/Root.tsx`. `pageOf(hash)` (`route.ts`) picks the page: `home` for `""`, `#`, `#/`, `#/?...`, `#/home`; `lab` for `#/home-lab` (W7's `HomeLab`, a lazy chunk of its own, so the lab and its CSS stay out of the home bundle); `app` for every other hash (lazy `App.tsx`, which carries the shell CSS). The home page never touches the zustand store, recharts or React Flow. |
 | Deep links | `#/?at=<problem|solution|models|evidence|enter|tie>` opens at a chapter or at the beat `tie`; `#/?still` (or `?still`) shows every beat in its final state, as reduced motion does. |
 | Pinned stages | `scroll/Stage.tsx` + `scroll/timeline.ts` (pure maths, tested). A tall section, a `position: sticky` visual and a column of steps; the wheel is never intercepted. Reading line at `anchor + p·(height−1)` vh. |
-| Chapters | `chapters/{Hero,Problem,Solution,Models,Evidence,Enter}.tsx`. Words in `copy.ts`, numbers from the story (`numbers.ts`), never typed. |
+| Chapters | `chapters/{Hero,Problem,Solution,Models,Evidence,Enter}.tsx`. Words in `copy.ts`, numbers from the story (`numbers.ts`), never typed. Each visual gets only its slice: `<Viz data={slice(story, "tree")}>`. |
 | Bar and rail | `bar/TopBar.tsx` (brand, "Enter the simulation", theme switch), `bar/ChapterRail.tsx` (right edge, hidden on the hero). |
 | Style | `home.css` (class prefix `home-`, scoped under `.home`, tokens only, media queries only). New tokens in `styles/tokens.css`: display type scale, `--space-8..10`, `--dur-reveal`. No new colours. |
 | Display face | `"Inter Opsz"` declared in `home.css` from `inter-latin-opsz-normal.woff2` (72.9 KB, `font-display: block`); the global font is unchanged. |
-| Tests | `src/home/*.test.ts`: timeline, route, emailSegments, format, numbers, copy guard, claims guard (against `docs/claims.md`), doors, and a whole-page render (`HomeView.test.ts`) with a made-up story (`testing.ts`). |
+| Tests | `src/home/*.test.ts`: timeline, route (`pageOf`), emailSegments, format, numbers, copy guard, claims guard (against `docs/claims.md`), doors, and a whole-page render (`HomeView.test.ts`) with a made-up story (`testing.ts`, a clone of the real story with changed numbers and made-up claims) and with the real one. |
 
 ## The contract with W7
 
-`web/src/home/data/types.ts` (W7) is the one place the story is typed (coordinator, Oct 30) and `data/story.ts` exports the typed `story`.
-Without the data every number is "—" and every claim says NO DATA YET; a visual W7 has not written yet draws as a labelled placeholder
-that shows its progress (`visuals.tsx`). W7's commit 9bca49d makes the data follow the list below. What the page reads itself:
+`web/src/home/data/types.ts` (W7) is the one place the story is typed and `data/story.ts` exports the typed `story`. Without the data every number is "—" and every
+claim says NO DATA YET; a visual W7 has not written yet draws as a placeholder that says in plain words what will be drawn (`visuals.tsx`, `LABELS`). What the page reads itself:
 
-- `claims.<id> = {text, status}` for S1–S7, R1–R5: the rows of `docs/claims.md`, verbatim, markdown stripped from `text`'s quotes only.
-  The page quotes `text` as is and tags the row PENDING when `status` contains "pending"; "not claimed" rows are never drawn.
+- `claims.<id> = {text, status, state}` for S1–S7, R1–R6: the rows of `docs/claims.md`. The page quotes `text` as is and tags the row PENDING when `state` is `pending`; `not-claimed` rows (R1) are never drawn.
 - `facts {talks, tracks, days, sessions, orchestrators, agents}`.
-- `hero {task, title, series.<workflow>.points[{profile, x, stall_s, extra_cost_pct, seeds[]}]}` — `hero-t2_conference.json` as is; "real" is read from `title` (`rivals-real`).
-- `headline`: whatever `DotPlot` draws, plus the number of seeds as `seeds` (a count or a list) or `cells[].seed`, and optionally `real: boolean`. `verdicts` for `PairedBars`, `regime` for `RegimeStrip`.
-- `finish {talksPlaced, talksTotal, hardViolations, duplicateCalls, costUsd, task, real, seeds}`, `takeover {killed, rootChain[], deathVerdictS, keyframes}`, `lanes.central {stallS, keyframes}`.
-- `failures {fastRestart[{value,label}], falseDeaths[{value,label}], perProcess{value,label,decimals}}` (R3's 13.2 / 5.7, 1.25–2.25, 0.90).
-- `assumptions[{id,label,value}]`, `tokens {coordination, recovery}` and `tokensByModel`, `extraction {email, constraints[{text, source}], model}`, `ablation {parser, muse, total}`, `proof.lines[]` (the real `demo --verify` output).
-- `keyframes` inside a visual's own slice: `tree {grown, log, kill1, verdict1, heir1, adopt1, kill5, settled}` and `lanes.central {filled, crash, restart, redone, end}`, in that visual's progress (0–1).
+- `hero {task, model, seedCount, series.<workflow>.points[{profile, x, stall_s, extra_cost_pct, seeds[]}]}`: the reading at the last point (C3, five crashes). `hero10` exists in the type and is `null`: **the page reads `hero`, not `hero10`** (see decision 8).
+- `headline {task, real, seeds, seedCount, cells[]}`, `verdicts` (`PairedBars`, and `verdicts.falseDeaths[]` for the real-model false deaths beside R4), `regime` for `RegimeStrip`.
+- `finish {talksPlaced, hardViolations, duplicateCalls, costUsd, task, real, seeds}`, `takeover {killed, rootChain[]}`, `lanes.central {stallS, keyframes}`.
+- `failures {fastRestart[], falseDeaths[], perProcess}` (R3's 13.2 / 5.7, 1.25–2.25, 0.90; the fast-restart values carry no `decimals`, the page writes them at one decimal as R3 does).
+- `assumptions[{id, label, value, why, checkedBy}]`, `tokens {coordination, recovery}` and `tokensByModel`, `proof {command, lines[], takeover {command, line}}`.
+- Beats: `TREE_KEYFRAMES` (`viz/keyframes.ts`, a name-to-progress record) for the solution stage and `lanes.central.keyframes` for the problem stage.
+- **Not in the data yet:** `extraction` (W7 will add one email and facts with source spans; the model chapter shows NO DATA YET) and `ablation` (stays absent; its tag is PENDING).
 
-Visual conventions: components fill their parent (`position: relative`, the parent sets the size); `progress` is a `MotionValue<number>`
-(0–1; scroll-driven in the stages, time-driven on enter elsewhere); `still` means the final state with no motion; `DoorGlyph` gets `data = door.id`
-(`arena`, `live`, `replays`, `new-task`, `director`, `numbers`, `ablation`). A visual that draws from `progress` reads it with `useTransform`/`useMotionValueEvent`, never React state per frame.
+Visual conventions: components fill their parent (`position: relative`, the parent sets the size); `progress` is a `MotionValue<number>` (0–1; scroll-driven in the stages, time-driven on enter
+elsewhere); `still` means the final state with no motion; `DoorGlyph` gets `data = door.id` (`arena`, `live`, `replays`, `director`, `numbers`, `ablation`: **`new-task` no longer exists**, see decision 4).
+A visual that draws from `progress` reads it with `useTransform`/`useMotionValueEvent`, never React state per frame.
 
 ## Static showcase (W8)
 
-`isStaticShowcase()` is `import.meta.env.MODE === "static"` (the coordinator's message, Oct 30). The doors that need the local server
-(`live`, `new-task`, `ablation`) show their `closedNote` instead of a link in that build.
+`isStaticShowcase()` is `import.meta.env.MODE === "static"` (the coordinator's message, Oct 30). The doors that need the local server (`live`, `ablation`) show their `closedNote` instead of a link in that build.
 
 ## Decisions and deviations
 
-1. **The hero subtitle is R6, not R2** (coordinator, Oct 30): R6 verbatim, one sentence to a line, then the visible link "Where this holds, and where it does not"
-   to the beat `tie` (`#/?at=tie`) of the evidence chapter, where R2 and R3 stand one under the other.
+1. **The hero subtitle is R6, not R2** (coordinator, Oct 30): R6 verbatim, one sentence to a line, then the visible link "Where this holds, and where it does not" to the beat `tie` (`#/?at=tie`) of the evidence chapter, where R2 and R3 stand one under the other.
 2. **R5 everywhere it appears** carries the rival named, the setting and the reason ("In-process: its workers die with it, so most of the gap comes from that design.").
 3. **The primary button is the inverted neutral pill**, not the accent: the accent is the colour of the swarm at work, and accent-on-inverse is 4.3:1 in the light theme.
-4. "A live run" and "New task" both lead to `#/new` (the intake page has a sample button). Two doors, one page, until there is a better target.
+4. **One door for "A live run"** (coordinator's copy notes, Oct 30): "A live run" and "New task" both led to `#/new`; now one door, "A live run" ("Paste your own messy text, launch a run, and kill its coordinators yourself."). "Ablation" is titled "Model against parser" (same purpose line). Six doors: two wide, four narrow (`home.css`). W7's `DoorGlyph` needs no glyph for `new-task`.
 5. `Inter Opsz` is a second family only for display type, so the app's type does not change.
+6. **Nothing on the page says every run was valid** (coordinator, Oct 30; the first invalid real run is `swarm__t2_conference__C0__s5`, no chaos, 40 of 48 talks placed). A guard (`UNIVERSAL` in `testing.ts`, used by `copy.test.ts` and `HomeView.test.ts`) fails on "valid", "every run finished" and "always finishes" in the page's own copy and in any text outside a claim; among the drawn claims only R6 may say it, in the row's words, with its setting ("(C3) · real model") and the link to R2 and R3 beside it. The kill chapter's last step reads "This run still finishes." (it is the recorded demo run). S7 is drawn only as the tagline.
+7. **Copy notes of the coordinator (Oct 30)** applied: "In the usual setup" is "In the simplest setup", and for the same reason "The team has one coordinator." replaces "usually has one"; "gave it every advantage" is "the strongest rival we could implement fairly"; the gate sentence is "With a fake model, at our pre-registered gate, this measure tied at three and five crashes.", with the crash counts read from the data (`gateCrashes`: profiles C2 and C3 of the hero points) and on its own line under R4's setting; the lead over the rival's numbers says "in real runs". `copy.test.ts` bans "usual(ly)" and "every advantage".
+8. **R5 and R6 will change** (coordinator, 10-seed re-reading): every number printed beside R5 comes from the data (`hero`) and a guard checks that it appears in R5's text. When the rows are rewritten and W7 regenerates the data, `hero` has to carry the same reading (or I switch to `hero10`), or that test fails, on purpose. My side draws the rival's and the swarm's numbers as plain figures, no bars, so a much shorter rival value needs no rescaling here; W7's charts scale from the data.
+9. **The stall counter** in the problem stage counts the recorded run's own `stallS` (101.8 s) from the crash to the restart of the lanes and says "the work is waiting, in this recorded run": it is one run, not R5's reading.
+10. **The real-model false deaths** (2 per run) show only in the beat of R4 and its setting, never in R3's figures; R4's caption is the headline rows' own setting.
 
-## State at the Oct 30 12:00 stop (Yoel's STOP)
+## State on Oct 30, about 16:05 (resumed after the reboot)
 
-**Done.** Everything in the table above: route and bundle split, the five chapters and the hero (R6 + link to `tie`), claims drawn verbatim (PENDING tag,
-code spans as code), the terminal with both proof commands, the doors, the tests. At `e32c5fd` (before the last merge): `tsc` clean, `vitest run src/home
-src/lib/tokens.test.ts --maxWorkers=1` 138 of 139 passed (the one failure: R6 missing from the old `story.json`, which 9bca49d fixes). Merged into this branch:
-`Yoelcanarion/arena` (R6) and W7's `Yoelcanarion/arena-home-viz` up to 9bca49d (merge `bfc0046`).
+**Done.** Typecheck repaired against W7's `data/types.ts` and committed (`8f07552`); the coordinator's copy notes, the one live-run door and intentional placeholders (`e7eb3b4`); `#/home-lab` route line. `tsc --noEmit` clean; `vitest run src/home src/lib/tokens.test.ts --maxWorkers=1`:
+16 files, 154 tests green; the whole web suite on one worker (88 files, 1291 tests) was green at `8f07552`. No build, browser, dev server or real call yet (HOLD).
 
-**Half done.** After that merge the page does not typecheck (not re-run): `story.ts`, `numbers.ts`, `visuals.tsx`, `testing.ts` and the tests read the typed schema W7 had
-at 79fbfe6, and 9bca49d replaced it with the page's contract. No build, browser check, screenshots, bundle size or fps yet (they waited for the RELEASE).
+**Half done / not done.** First-load bundle size, screenshots (1920x1080, 1366x768, 390x844; both themes; reduced motion), `?frames` fps and the polish pass wait for the RELEASE (about 16:55, I go first). W7's visuals not written yet
+(WorkLanes, LineDraw, DotPlot, PairedBars, RegimeStrip, TokenBar, DoorGlyph) show a placeholder; `extraction` is missing, `ablation` is absent. W7's branch had nothing new in `viz/` or `data/` at 16:00 (`a3d9c77`: notes and the arena merge).
 
-**Next step.** (1) Re-adapt to the new `data/types.ts`: claims `{text,status,state}`; `facts` with `days`; `hero.series.<wf>.points[]` (`stall_s`, `extra_cost_pct`) and
-`hero.{task,model,seedCount}`; `headline.{real,seedCount}`; `finish.{task,real,seeds,talksPlaced}`; `takeover.{killed,rootChain}`; `failures` (ratios at 1 decimal, as R3 writes them);
-`tokens`; `proof` + `proof.takeover` (two commands in the terminal); `assumptions[{id,label,value,why,checkedBy}]`. Each visual takes only its slice
-(`<Viz data={slice(story,"tree"|"hrw"|"hashes"|"lanes.central"|...)}>`, SwarmTree `pacing`, HrwPanels `round`); `TREE_KEYFRAMES` is a name-to-progress record; `lanes.central.keyframes` and
-`stallS` are in the data, so the waiting counter is `stallS` times a ramp from crash to restart (drop `lanesBeats`/`waitedSeconds`). `e32c5fd` keeps what survives: `parts/Inline.tsx`,
-`Terminal` with steps, the fixture built as a tweaked clone of the real story, the test structure. (2) The one route line W7 asked for: `#/home-lab` renders `HomeLab` (`isHomeLabHash`).
-(3) `tsc` + `vitest` (one worker); after a RELEASE: build and report the first-load bundle size, dev server on 5174, Playwright screenshots (1920x1080, 1366x768, 390x844; both themes; reduced motion),
-`?frames` fps, polish in the order 2, 0, 1, 4, 5, 3. (4) `extraction` comes from W7 later, `ablation` stays PENDING; the counter shows this run's 101.8 s beside R5's 2-seed mean 92.6 s, so label it "this run".
-(5) Update this file, `merge_ready`, then `worker_done`.
+**Next.** At the slot: `npm --prefix web run build`, read the first-load bundle size (the home chunk alone, against the prior 1.2 MB), dev server on 5174, screenshots, `?frames`, check every placeholder looks intended, `merge_ready` (even with placeholders). Then polish in the order 2, 0, 1, 4, 5, 3, and adopt W7's visuals and `extraction` as they land (add each to `REGISTRY` in `visuals.tsx`, merge `Yoelcanarion/arena-home-viz`).
