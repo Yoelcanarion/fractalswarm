@@ -4,14 +4,14 @@ import react from "@vitejs/plugin-react";
 
 // What the static showcase's page says until its app starts, and for good where its script cannot run: a module script
 // does not load from a file, so index.html opened from disk would be a blank page. The app replaces it when it mounts.
-const ROOT = '<div id="root"></div>';
+const ROOT = /<div id="root"([^>]*)><\/div>/;
 const staticPlaceholder: Plugin = {
   name: "static-placeholder",
   transformIndexHtml(html) {
-    if (!html.includes(ROOT)) throw new Error(`index.html has no ${ROOT} for the static showcase's placeholder`);
+    if (!ROOT.test(html)) throw new Error('index.html has no empty <div id="root"></div> for the static showcase\'s placeholder');
     const say =
       "Loading the static showcase. If this stays empty, the page cannot run from a file: serve this folder (python -m http.server) and open http://localhost:8000/.";
-    return html.replace(ROOT, `<div id="root"><p style="margin:0;padding:24px">${say}</p></div>`);
+    return html.replace(ROOT, `<div id="root"$1><p style="margin:0;padding:24px">${say}</p></div>`);
   },
 };
 
