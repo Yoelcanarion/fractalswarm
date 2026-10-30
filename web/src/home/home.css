@@ -651,6 +651,12 @@ body:has(.home) {
   inset: 0 0 18% 0;
 }
 
+/* The tree is as tall as its width makes it. Where the box is wider than it is tall (a tablet held upright, a short
+   window) it gives way to the box instead of running its lanes over the strip. */
+.home-solution__tree .hv-tree {
+  max-height: 100%;
+}
+
 .home-solution__hrw {
   inset: 0 0 18% 0;
   pointer-events: none;
@@ -766,12 +772,23 @@ body:has(.home) {
     top: var(--home-bar);
     z-index: 2;
     height: 44svh;
-    padding: 0;
+    padding: 0 0 var(--space-3);
     background: var(--bg);
   }
 
   .home-stage__frame {
     height: 100%;
+  }
+
+  /* the strip's two rows (the cards, the head hash) keep their own height, and the text that scrolls up under the
+     visual has a little air below the head hash */
+  .home-solution__strip {
+    min-height: 52px;
+  }
+
+  /* the pinned visual starts where the bar ends: no text shows through the bar's fade above it */
+  .home-bar::before {
+    background: linear-gradient(var(--bg) 73%, transparent);
   }
 
   /* below the pinned visual there is about half a screen for the text: a block is its card and no more, so that one is
