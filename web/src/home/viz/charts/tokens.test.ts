@@ -78,7 +78,7 @@ describe("the token bar's model", () => {
     expect(text).toContain("279,167 in all");
     expect(text).toContain("Muse Spark 1.3 274,797 tokens, 98% (196,682 read and 78,115 written, 50,816 of those written while reasoning; 78 calls)");
     expect(text).toContain("Muse Wonder 1.0 4,370 tokens, 1.6% (2,037 read and 2,333 written, 1,685 of those written while reasoning; 1 call)");
-    expect(text).toContain("Llama PromptGuard 2 (22M) read the inputs first: 32 scans, 32 allowed, and spent no tokens.");
+    expect(text).toContain("Llama PromptGuard 2 (22M) read the inputs before any model did: 32 scans, 32 allowed, and spent no tokens.");
     expect(text).toContain("Coordination tokens 0, recovery tokens 0.");
     expect(text).not.toMatch(/\b(simpler|cheaper|more reliable|better|worse)\b/i);
   });

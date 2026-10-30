@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { story } from "../../data/story";
+import { HASH_COMPACT_MIN, HASH_FULL_MIN, fitHash } from "./fit";
 import { HashStrip } from "./HashStrip";
 import { offsetFor, shortHash, stripItems, stripState } from "./state";
 
@@ -57,5 +58,23 @@ describe("HashStrip markup", () => {
     expect(html).toContain(story.hashes.head);
     expect(html).toContain("MATCH");
     expect(html).not.toMatch(/NaN|undefined/);
+  });
+
+  it("is drawn in full until it is measured, and says which tier it is", () => {
+    const html = renderToStaticMarkup(createElement(HashStrip, { progress: motionValue(1), data: story.hashes, still: true }));
+    expect(html).toContain('data-tier="full"');
+  });
+});
+
+describe("the strip in the box the page gives it", () => {
+  it("is a line of cards where it has 109 px (a desktop stage) or less, two lines of them from 158 px, and in full from 262 px", () => {
+    expect(fitHash(52)).toBe("mini");
+    expect(fitHash(82)).toBe("mini");
+    expect(fitHash(109)).toBe("mini");
+    expect(fitHash(HASH_COMPACT_MIN - 1)).toBe("mini");
+    expect(fitHash(HASH_COMPACT_MIN)).toBe("compact");
+    expect(fitHash(HASH_FULL_MIN - 1)).toBe("compact");
+    expect(fitHash(HASH_FULL_MIN)).toBe("full");
+    expect(fitHash(1000)).toBe("full");
   });
 });

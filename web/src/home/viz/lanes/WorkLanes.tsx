@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { LanesSlice } from "../../data/types";
 import { fx, useProgress, type VizProps } from "../shared";
 import "../viz.css";
-import { LABEL_W, layoutFor, textWidth } from "./layout";
+import { LABEL_W, READOUT_W, layoutFor, textWidth } from "./layout";
 import { lanesModel, lifeTracks, timeMap, type Bar, type LanesModel } from "./model";
 import { collectLanes, paintLanes, seconds, usd, type LanesRig } from "./paint";
 
@@ -180,7 +180,7 @@ export function WorkLanes({ progress, data, still, stillAt, className }: WorkLan
           ))}
         </g>
 
-        <line className="hv-ln-cursor" x1="0" x2="0" y1={fx(L.yTop - 6)} y2={fx(L.yBottom + 4)} />
+        <line className="hv-ln-cursor" x1="0" x2="0" y1={fx(L.yTop - 6)} y2={fx(L.axisY + 3)} />
 
         {/* each period of waiting, told once the damage is shown */}
         <g data-group="notes" opacity="0">
@@ -209,8 +209,13 @@ export function WorkLanes({ progress, data, still, stillAt, className }: WorkLan
               </text>
             </g>
           ))}
-          <text className="hv-ln-clock" x={LABEL_W - 4} y={fx(L.tickY)} textAnchor="end">
-            0.0
+        </g>
+
+        {/* the moment of the run being shown: a box on the cursor, over the axis' numbers */}
+        <g className="hv-ln-readout" transform="translate(0 0)" opacity="0">
+          <rect className="hv-ln-readout-bg" x={-READOUT_W / 2} y={fx(L.tickY - 13)} width={READOUT_W} height="18" rx="4" />
+          <text className="hv-ln-clock" x="0" y={fx(L.tickY)} textAnchor="middle">
+            0.0 s
           </text>
         </g>
 

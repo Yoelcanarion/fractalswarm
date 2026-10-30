@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { story } from "../../data/story";
+import { HRW_TIERS, fitHrw } from "./fit";
 import { HrwPanels } from "./HrwPanels";
 import { digitsShown, groupHex, hrwState, rowsOf } from "./state";
 
@@ -56,5 +57,49 @@ describe("HrwPanels markup", () => {
       expect(html).toContain(`${round.survivors.length} of ${round.survivors.length} pick`);
       expect(html).not.toMatch(/NaN|undefined/);
     }
+  });
+});
+
+describe("the panels in the box the page gives them", () => {
+  const heightOf = (fit: ReturnType<typeof fitHrw>, candidates: number): number => {
+    const spec = HRW_TIERS.find((t) => t.tier === fit.tier)!;
+    return spec.head + fit.rows * spec.panel(candidates) + (fit.rows - 1) * 12 + spec.verdict;
+  };
+
+  it("draws everything in the page's stage at a desktop height, and drops the bars and the answers at a laptop's", () => {
+    expect(fitHrw(9, 3, 690, 640)).toEqual({ tier: "full", cols: 3, rows: 3 });
+    expect(fitHrw(9, 3, 690, 479).tier).toBe("compact");
+    expect(fitHrw(9, 3, 358, 304)).toEqual({ tier: "tiny", cols: 3, rows: 3 });
+  });
+
+  it("always chooses a layout that fits when one exists, with the richest tier, and never more panels than survivors", () => {
+    for (const width of [300, 358, 480, 690, 820, 1224, 1600]) {
+      for (const height of [200, 260, 304, 371, 479, 584, 640, 780]) {
+        for (const count of [1, 2, 4, 7, 9]) {
+          const fit = fitHrw(count, 3, width, height);
+          expect(fit.cols).toBeGreaterThanOrEqual(1);
+          expect(fit.cols).toBeLessThanOrEqual(count);
+          expect(fit.rows).toBe(Math.ceil(count / fit.cols));
+          const spec = HRW_TIERS.find((t) => t.tier === fit.tier)!;
+          expect((width + 12) / fit.cols - 12, `${width}x${height} ${count}`).toBeGreaterThanOrEqual(spec.minW - 0.001);
+          // a richer tier that fits would have been chosen
+          const richer = HRW_TIERS.slice(0, HRW_TIERS.indexOf(spec));
+          for (const t of richer) {
+            const most = Math.max(1, Math.min(count, Math.floor((width + 12) / (t.minW + 12))));
+            for (let cols = 1; cols <= most; cols++) {
+              const rows = Math.ceil(count / cols);
+              expect(t.head + rows * t.panel(3) + (rows - 1) * 12 + t.verdict, `${width}x${height} ${count} ${t.tier}`).toBeGreaterThan(height);
+            }
+          }
+          if (fit.tier !== "tiny" || heightOf(fit, 3) <= height) expect(heightOf(fit, 3), `${width}x${height} ${count}`).toBeLessThanOrEqual(height);
+        }
+      }
+    }
+  });
+
+  it("marks the tier on the markup the box asked for, and sets its columns", () => {
+    const html = renderToStaticMarkup(createElement(HrwPanels, { progress: motionValue(1), data: story.hrw, still: true }));
+    expect(html).toContain('data-tier="full"');
+    expect(html).toContain("grid-template-columns:repeat(3, minmax(0, 1fr))");
   });
 });

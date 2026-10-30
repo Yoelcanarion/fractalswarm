@@ -1,8 +1,10 @@
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import type { HrwRound, HrwSlice } from "../../data/types";
+import { useBox } from "../charts/parts";
 import { useProgress, type VizProps } from "../shared";
 import "../viz.css";
 import { Pen } from "../tree/paint";
+import { HRW_DEFAULT_BOX, fitHrw } from "./fit";
 import { digitsShown, groupHex, hrwState, rowsOf } from "./state";
 
 export interface HrwPanelsProps extends VizProps<HrwSlice> {
@@ -44,9 +46,10 @@ function collect(root: HTMLElement, round: HrwRound): Rig {
 
 export function HrwPanels({ progress, data, still, stillAt, className, round: index = 0 }: HrwPanelsProps) {
   const round = data.rounds[index];
-  const root = useRef<HTMLDivElement>(null);
+  const [root, box] = useBox(HRW_DEFAULT_BOX, 100);
   const rig = useRef<Rig | null>(null);
   const rows = useMemo(() => (round ? rowsOf(round) : []), [round]);
+  const fit = useMemo(() => fitHrw(round?.survivors.length ?? 0, round?.pool.length ?? 0, box.width, box.height), [round, box]);
 
   useLayoutEffect(() => {
     rig.current = root.current && round ? collect(root.current, round) : null;
@@ -79,7 +82,7 @@ export function HrwPanels({ progress, data, still, stillAt, className, round: in
     `${round.scores.map((s) => `${s.member} ${s.score}`).join(", ")}. All of them pick ${heir}.`;
 
   return (
-    <div ref={root} className={className ? `hv hv-hrw ${className}` : "hv hv-hrw"} role="img" aria-label={summary}>
+    <div ref={root} className={className ? `hv hv-hrw ${className}` : "hv hv-hrw"} data-tier={fit.tier} role="img" aria-label={summary}>
       <div className="hv-hrw-head" aria-hidden="true">
         <span className="hv-hrw-goal">
           goal <b>{round.goal}</b>
@@ -89,7 +92,7 @@ export function HrwPanels({ progress, data, still, stillAt, className, round: in
         </span>
         <span className="hv-hrw-rule">{data.rule}</span>
       </div>
-      <div className="hv-hrw-grid" aria-hidden="true">
+      <div className="hv-hrw-grid" style={{ gridTemplateColumns: `repeat(${fit.cols}, minmax(0, 1fr))` }} aria-hidden="true">
         {round.survivors.map((survivor) => (
           <article key={survivor} className="hv-hrw-panel" data-panel={survivor} style={{ opacity: 0 }}>
             <header>

@@ -331,10 +331,68 @@
   color: var(--accent-text);
 }
 
+/* The box decides what a panel shows (hrw/fit.ts): the tighter tiers drop parts so that every panel fits it. */
+.hv.hv-hrw {
+  height: 100%;
+  min-height: 0;
+}
+.hv-hrw[data-tier="compact"] .hv-hrw-rule,
+.hv-hrw[data-tier="tiny"] .hv-hrw-rule,
+.hv-hrw[data-tier="compact"] .hv-hrw-reads,
+.hv-hrw[data-tier="tiny"] .hv-hrw-reads,
+.hv-hrw[data-tier="compact"] .hv-hrw-track,
+.hv-hrw[data-tier="tiny"] .hv-hrw-track,
+.hv-hrw[data-tier="compact"] .hv-hrw-panel footer,
+.hv-hrw[data-tier="tiny"] .hv-hrw-panel footer {
+  display: none;
+}
+.hv-hrw[data-tier="compact"] .hv-hrw-head,
+.hv-hrw[data-tier="tiny"] .hv-hrw-head {
+  margin-bottom: var(--space-3);
+}
+.hv-hrw[data-tier="compact"] .hv-hrw-verdict,
+.hv-hrw[data-tier="tiny"] .hv-hrw-verdict {
+  margin-top: var(--space-3);
+  font-size: var(--fs-body);
+}
+.hv-hrw[data-tier="compact"] .hv-hrw-panel {
+  padding: var(--space-2) var(--space-3);
+}
+.hv-hrw[data-tier="compact"] .hv-hrw-panel header {
+  margin-bottom: 4px;
+}
+.hv-hrw[data-tier="compact"] .hv-hrw-row {
+  margin-bottom: 3px;
+}
+.hv-hrw[data-tier="tiny"] .hv-hrw-panel {
+  padding: 6px;
+}
+.hv-hrw[data-tier="tiny"] .hv-hrw-panel header {
+  margin-bottom: 0;
+}
+.hv-hrw[data-tier="tiny"] .hv-hrw-row {
+  grid-template-columns: minmax(0, 1fr);
+  margin-bottom: 0;
+  font-size: 11px;
+}
+.hv-hrw[data-tier="tiny"] .hv-hrw-row[data-win="false"],
+.hv-hrw[data-tier="tiny"] .hv-hrw-member {
+  display: none;
+}
+.hv-hrw[data-tier="tiny"] .hv-hrw-hex {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 /* ---- the log as a strip of hashes ---------------------------------------------------------- */
 
 .hv-hash {
   position: relative;
+}
+.hv.hv-hash {
+  height: 100%;
+  min-height: 0;
 }
 .hv-hash-view {
   position: relative;
@@ -521,6 +579,102 @@
   font-size: var(--fs-label);
 }
 
+/* The box decides what a card shows (hash/fit.ts): less height, fewer parts, the chain and the verdict always. */
+.hv-hash[data-tier="compact"] .hv-hash-view {
+  padding: 18px 0 0;
+}
+.hv-hash[data-tier="compact"] .hv-hash-mark {
+  top: -17px;
+}
+.hv-hash[data-tier="compact"] .hv-hash-card {
+  flex-basis: 208px;
+  padding: 6px 10px 7px;
+  font-size: 11px;
+}
+.hv-hash[data-tier="compact"] .hv-hash-actor,
+.hv-hash[data-tier="compact"] .hv-hash-card dt {
+  display: none;
+}
+.hv-hash[data-tier="compact"] .hv-hash-type {
+  margin-top: 2px;
+}
+.hv-hash[data-tier="compact"] .hv-hash-card dl {
+  display: flex;
+  gap: 6px;
+  margin: 3px 0 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.hv-hash[data-tier="compact"] .hv-hash-prev::before {
+  content: "\2190  ";
+  color: var(--text-muted);
+}
+.hv-hash[data-tier="compact"] .hv-hash-end,
+.hv-hash[data-tier="mini"] .hv-hash-end {
+  flex-wrap: nowrap;
+  margin-top: 8px;
+  gap: var(--space-4);
+}
+.hv-hash[data-tier="compact"] .hv-hash-head code {
+  font-size: var(--fs-body);
+}
+.hv-hash[data-tier="compact"] .hv-hash-stamp {
+  padding: 2px var(--space-3);
+}
+.hv-hash[data-tier="compact"] .hv-hash-stamp b {
+  font-size: var(--fs-lead);
+  letter-spacing: 0.14em;
+}
+.hv-hash[data-tier="mini"] .hv-hash-view {
+  padding: 2px 0 0;
+}
+.hv-hash[data-tier="mini"] .hv-hash-end {
+  margin-top: 4px;
+}
+.hv-hash[data-tier="mini"] .hv-hash-label {
+  flex: none;
+  white-space: nowrap;
+}
+.hv-hash[data-tier="mini"] .hv-hash-mark,
+.hv-hash[data-tier="mini"] .hv-hash-actor,
+.hv-hash[data-tier="mini"] .hv-hash-time,
+.hv-hash[data-tier="mini"] .hv-hash-card dl,
+.hv-hash[data-tier="mini"] .hv-hash-stamp span {
+  display: none;
+}
+.hv-hash[data-tier="mini"] .hv-hash-card {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.hv-hash[data-tier="mini"] .hv-hash-card header {
+  display: inline;
+}
+.hv-hash[data-tier="mini"] .hv-hash-type {
+  display: inline;
+  margin: 0 0 0 8px;
+}
+.hv-hash[data-tier="mini"] .hv-hash-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.hv-hash[data-tier="mini"] .hv-hash-head code {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hv-hash[data-tier="mini"] .hv-hash-stamp {
+  padding: 0 var(--space-3);
+}
+.hv-hash[data-tier="mini"] .hv-hash-stamp b {
+  font-size: var(--fs-body);
+  letter-spacing: 0.12em;
+}
+
 /* ---- the work lanes -------------------------------------------------------------------- */
 
 .hv.hv-lanes {
@@ -640,6 +794,10 @@
 .hv-ln-tick-label {
   fill: var(--text-muted);
 }
+.hv-ln-readout-bg {
+  fill: var(--hv-fade, var(--bg));
+  stroke: var(--border-strong);
+}
 .hv-ln-clock {
   fill: var(--text-primary);
 }
@@ -742,6 +900,9 @@
 .hv-ch-axis-title {
   text-anchor: end;
   fill: var(--text-muted);
+}
+.hv-pb-axis-title {
+  text-anchor: start;
 }
 .hv-ch-caption {
   fill: var(--text-muted);

@@ -12,6 +12,8 @@ export const BOTTOM = 126;
 const BRAIN_WEIGHT = 1.7;
 /** One character of the mono labels (12 px) in pixels. */
 export const CHAR_W = 7.2;
+/** The width of the box that tells the run's time at the cursor: the widest time (345.3 s) and a little air. */
+export const READOUT_W = 62;
 
 export interface LaneBox {
   index: number;

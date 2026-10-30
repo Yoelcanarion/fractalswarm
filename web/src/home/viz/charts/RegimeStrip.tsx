@@ -175,7 +175,7 @@ export function RegimeStrip({ progress, data, still, stillAt, className, setting
       </svg>
 
       <ChartTable
-        caption={`Locality of the swarm against the ${model.againstLabel.toLowerCase()} at each setting that was run, one assumption moved at a time: it holds when the coordinator-dependency time and the blast radius are wins and idle agent-seconds is not a loss, fails when the first or the second is a loss, and ties otherwise (PREREG section 4). Ratios of the swarm's mean to the supervisor's, over the seeds.`}
+        caption={`Locality of the swarm against the ${model.againstLabel.toLowerCase()} at each setting that was run, one assumption moved at a time: it holds when the coordinator-dependency time and the blast radius are wins and idle agent-seconds is not a loss, fails when either of those two is a loss, and ties otherwise (PREREG section 4). Ratios of the swarm's mean to the supervisor's, over the seeds.`}
         head={["Setting", "Locality", "Coordinator-dependency time", "Blast radius", "Idle agent-seconds", "In the plausible region", "The default"]}
         rows={model.rows.flatMap((row) =>
           row.cells.map((c) => [

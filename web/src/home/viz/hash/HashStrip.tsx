@@ -1,14 +1,18 @@
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import type { HashesSlice } from "../../data/types";
+import { useBox } from "../charts/parts";
 import { useProgress, type VizProps } from "../shared";
 import "../viz.css";
 import { Pen } from "../tree/paint";
+import { HASH_DEFAULT_BOX, fitHash } from "./fit";
 import { offsetFor, shortHash, stripItems, stripState } from "./state";
 
 export type HashStripProps = VizProps<HashesSlice>;
 
 export function HashStrip({ progress, data: hashes, still, stillAt, className }: HashStripProps) {
   const items = useMemo(() => stripItems(hashes), [hashes]);
+  const [root, box] = useBox(HASH_DEFAULT_BOX, 100);
+  const tier = fitHash(box.height);
   const view = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
   const stamp = useRef<HTMLDivElement>(null);
@@ -25,12 +29,17 @@ export function HashStrip({ progress, data: hashes, still, stillAt, className }:
     r.stamp.set("style", `opacity:${s.stamp.toFixed(3)};transform:scale(${(1.12 - 0.12 * s.stamp).toFixed(4)}) rotate(-3deg)`);
   }, []);
 
-  // The widths are measured when the layout changes, never while the strip moves.
+  // The widths are measured when the layout changes (a new tier makes the cards narrower), never while the strip moves.
   useLayoutEffect(() => {
     if (!view.current || !track.current || !stamp.current) return undefined;
     pens.current = { track: new Pen(track.current), stamp: new Pen(stamp.current) };
     const measure = (): void => {
-      size.current = { view: view.current?.clientWidth ?? 0, track: track.current?.scrollWidth ?? 0 };
+      // The track's own width can come out short of its cards' (a card whose text is wider than its basis), and an
+      // overflow leaves out the padding after the last card, so its length is read from the last card.
+      const el = track.current;
+      const tail = el?.lastElementChild as HTMLElement | null;
+      const toTail = el && tail ? tail.offsetLeft + tail.offsetWidth + (parseFloat(getComputedStyle(el).paddingRight) || 0) : 0;
+      size.current = { view: view.current?.clientWidth ?? 0, track: Math.max(toTail, el?.scrollWidth ?? 0) };
       apply(last.current);
     };
     measure();
@@ -38,7 +47,7 @@ export function HashStrip({ progress, data: hashes, still, stillAt, className }:
     const watch = new ResizeObserver(measure);
     watch.observe(view.current);
     return () => watch.disconnect();
-  }, [items, apply]);
+  }, [items, apply, tier]);
   useProgress(progress, apply, still, stillAt);
 
   const matched = hashes.replay.matches === true;
@@ -48,7 +57,7 @@ export function HashStrip({ progress, data: hashes, still, stillAt, className }:
     (matched ? `Replaying the log gives the same head hash, ${hashes.head}.` : "");
 
   return (
-    <div className={className ? `hv hv-hash ${className}` : "hv hv-hash"} role="img" aria-label={summary}>
+    <div ref={root} className={className ? `hv hv-hash ${className}` : "hv hv-hash"} data-tier={tier} role="img" aria-label={summary}>
       <div ref={view} className="hv-hash-view" aria-hidden="true">
         <div ref={track} className="hv-hash-track">
           {items.map((item, i) =>

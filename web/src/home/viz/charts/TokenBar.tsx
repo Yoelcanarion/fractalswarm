@@ -68,7 +68,7 @@ export function TokenBar({ progress, data, still, stillAt, className }: VizProps
       </svg>
 
       <ChartTable
-        caption="Tokens by model in the recorded run, with the guard that read the inputs first (it spends no tokens)"
+        caption="Tokens by model in the recorded run, with the guard that read the inputs before any model did (it spends no tokens)"
         head={["Model", "Tokens", "Share of the run", "Read", "Written", "Of which reasoning", "Calls"]}
         rows={[
           ...model.rows.map((r) => [r.name, grouped(r.tokens), percent(r.share), grouped(r.input), grouped(r.output), grouped(r.reasoning), r.calls]),

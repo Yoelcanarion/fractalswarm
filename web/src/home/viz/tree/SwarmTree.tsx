@@ -103,7 +103,7 @@ function describe(model: TreeModel): string {
   const first = model.kills[0];
   return (
     `A tree of ${counts.orchestrators} orchestrators and ${counts.agents} agents, drawn while the run replays. ` +
-    `${model.kills.length} of the ${counts.orchestrators} orchestrators are killed in turn${first?.heldRoot ? ", the root first" : ""}. ` +
+    `${model.kills.length} of the ${counts.orchestrators} orchestrators are killed in turn${first?.heldRoot ? ", beginning with the root" : ""}. ` +
     `After each death the survivors, reading the same log, pick the same heir and re-wire the tree, with no election. ` +
     `${talks.placed} of ${talks.expected} talks end up placed.`
   );

@@ -141,7 +141,9 @@ function checkLayout(layout: PairLayout, label: string, m = model): void {
     expect(layout.labelX + textWidth(layout.names === "full" ? "Ideal durable supervisor" : "FractalSwarm"), label).toBeLessThanOrEqual(layout.x0);
   });
   expect(layout.axisY, label).toBeGreaterThan(layout.groups[layout.groups.length - 1]!.rival.y + layout.barH);
-  expect(layout.axisY + 24, label).toBeLessThanOrEqual(layout.keyY);
+  expect(layout.axisTitle.y + 10, label).toBeLessThanOrEqual(layout.keyY);
+  expect(layout.axisTitle.y, label).toBeGreaterThan(layout.axisY + 24);
+  expect(layout.axisTitle.x + textWidth(layout.axisTitle.text), label).toBeLessThanOrEqual(layout.width - 10);
   expect(layout.halfX, label).toBeCloseTo((layout.xAt(0) + layout.xAt(1)) / 2, 6);
   expect(layout.x1 - layout.x0, label).toBeGreaterThanOrEqual(150);
   if (layout.caption) expect(textWidth(layout.caption), label).toBeLessThanOrEqual(layout.width - 20);
@@ -163,6 +165,16 @@ describe("the paired bars' layout", () => {
     expect(l.halfX).toBeCloseTo(l.x0 + (l.x1 - l.x0) / 2, 6);
     // the swarm's bars end before the line: that is what a win is, drawn
     for (const g of l.groups) expect(g.swarm.x + g.swarm.w).toBeLessThan(l.halfX);
+  });
+
+  it("says what 100% is under the axis, by the rival's name where it fits, and spreads the spare height around the bars", () => {
+    expect(pairLayout(model, 1100, 420, captions).axisTitle.text).toBe("% of the ideal durable supervisor's value");
+    expect(pairLayout(model, 350, 388, captions).axisTitle.text).toBe("% of the rival's value");
+    const tall = pairLayout(model, 1100, 700, captions);
+    const top = tall.groups[0]!.titleY;
+    expect(top).toBeGreaterThan(40);
+    const bottom = tall.height - tall.axisTitle.y;
+    expect(Math.abs(top - bottom)).toBeLessThan(120);
   });
 });
 
