@@ -7,7 +7,7 @@ import { createElement, type FunctionComponent } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { occurrences, plainText } from "../arena/helps/testing";
+import { occurrences, plainText, visibleText } from "../arena/helps/testing";
 import type { RunListing } from "../lib/types";
 import { AblationBanner, AblationFailed, AblationFlow, Launcher } from "./AblationPage";
 import { AblationView, type AblationViewProps } from "./AblationView";
@@ -26,6 +26,10 @@ const running = ablationOf("ablation.running.json");
 const interrupted = ablationOf("ablation.interrupted.json");
 
 const view = (run = sample, filter: Filter = "all"): string => html(AblationView, { run, filter, onFilter: nothing } satisfies AblationViewProps);
+/** What React writes for a text inside markup, as the open hint holds it. */
+const esc = (text: string): string => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+/** The hint that opens on hover, as the markup holds it closed. */
+const hint = (text: string): string => `role="tooltip" class="tip__bubble">${esc(text)}</span>`;
 /** The markup of one note's row. */
 const rowOf = (markup: string, id: string): string => new RegExp(`<tr class="abl__row[^"]*" id="note-${id}">[\\s\\S]*?</tr>`).exec(markup)?.[0] ?? "";
 
@@ -33,8 +37,17 @@ describe("the headline", () => {
   it("is the brief's line, from the result's tallies, with the server's sentence behind it", () => {
     const markup = view();
     expect(plainText(markup)).toContain("parser 3 of 6 · Muse 5 of 6");
-    expect(markup).toContain('title="the parser understood 3 of 6 notes, Muse 5 of 6"');
+    // the server's sentence is text a screen reader reads in place of the shorthand, not something to hover
+    expect(markup).toContain('<span class="sr-only">the parser understood 3 of 6 notes, Muse 5 of 6</span>');
+    expect(markup).toContain('class="abl__parser" aria-hidden="true"');
+    expect(markup).not.toContain('title="the parser understood');
     expect(plainText(view(generator))).toContain("parser 16 of 16 · Muse 16 of 16");
+  });
+
+  it("is read as it stands while there is no sentence from the server yet", () => {
+    const markup = view({ ...sample, result: null, status: "running" });
+    expect(markup).not.toContain('class="abl__parser" aria-hidden');
+    expect(markup).not.toContain("the parser understood");
   });
 
   it("says it is the notes scored so far, until the server gives its tallies, and shows the progress", () => {
@@ -86,14 +99,17 @@ describe("the caveats", () => {
 describe("by kind and by who understood", () => {
   it("gives the server's tallies for emails and abstracts, with the definitions behind the terms", () => {
     const markup = view();
-    const text = plainText(markup);
+    const text = visibleText(markup);
     expect(text).toContain("Emails understood 1 of 3 2 of 3");
     expect(text).toContain("cells exact 1 of 3 3 of 3");
     expect(text).toContain("preference right 2 of 3 2 of 3");
     expect(text).toContain("mean Jaccard 0.76 1.00");
     expect(text).toContain("Abstracts understood 2 of 3 3 of 3");
     expect(text).toContain("mean error 21.1 % 0.0 %");
-    expect(markup).toContain(`title="${sample.result!.definitions.jaccard}"`);
+    // the definitions open from the keyboard: the terms are tab stops, and the words are in the markup, not in a title
+    expect(markup).toContain(hint(sample.result!.definitions.jaccard));
+    expect(markup).toContain(hint(sample.result!.definitions.understood));
+    expect(markup).not.toMatch(/<th[^>]* title=/);
   });
 
   it("splits the notes between both, only Muse, only the parser and neither, as the server counts them", () => {
@@ -128,7 +144,10 @@ describe("the notes", () => {
     expect(occurrences(markup, "abl__row--differs")).toBe(4);
     expect(occurrences(markup, "readings differ")).toBe(4);
     expect(rowOf(markup, "E91")).not.toContain("abl__row--differs");
-    expect(markup).toContain(`title="${sample.result!.definitions.differences.replace(/'/g, "&#x27;")}"`);
+    // said on the filter that finds them (the hint, and its copy for a screen reader), not again on each of the four rows
+    expect(markup).toContain(hint(sample.result!.definitions.differences));
+    expect(occurrences(markup, esc(sample.result!.definitions.differences))).toBe(2);
+    expect(e90).not.toContain("title=");
   });
 
   it("highlights what a reading has wrong against the approved one, and lists what it lacks", () => {

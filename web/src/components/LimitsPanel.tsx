@@ -6,7 +6,7 @@ import { compact } from "../lib/generic";
 import { remainingShare, requestsPerMinute, type ModelLimits, type Quota } from "../lib/limits";
 import type { ViewState } from "../lib/reducer";
 import { Card, GenericRows, Meter, Nothing, Pill, PStat, Subhead } from "./PanelParts";
-import { Term } from "./ui";
+import { Hint, Term } from "./ui";
 
 const tone = (share: number | null): "good" | "warn" | "bad" | "" =>
   share === null ? "" : share < 0.1 ? "bad" : share < 0.3 ? "warn" : "";
@@ -98,9 +98,11 @@ export function LimitsPanel({ view }: { view: ViewState }) {
                 {m && m.retryAfterMs !== null && <Pill tone="warn">Retry-After {(m.retryAfterMs / 1000).toFixed(0)} s</Pill>}
                 {quota && quota.pressure && <Pill tone="warn">pressure</Pill>}
                 {quota && (quota.decreases > 0 || quota.increases > 0) && (
-                  <span className="muted" title="how often the quota moved">
-                    ↓{quota.decreases} ↑{quota.increases}
-                  </span>
+                  <Hint label="how often the quota moved">
+                    <span className="muted">
+                      ↓{quota.decreases} ↑{quota.increases}
+                    </span>
+                  </Hint>
                 )}
               </div>
               {m && (

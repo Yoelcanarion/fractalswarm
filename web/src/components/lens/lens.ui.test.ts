@@ -31,8 +31,11 @@ const log = (): RunEvent[] => {
 };
 
 /** The text a person reads: tags gone, entities decoded, runs of white space made one space. */
+// What a person sees: a hint sits in the markup closed, with a copy of its words for a screen reader, and neither is on the page.
 const text = (html: string): string =>
   html
+    .replace(/<span[^>]*role="tooltip"[^>]*>[\s\S]*?<\/span>/g, "")
+    .replace(/<span class="sr-only">[\s\S]*?<\/span>/g, "")
     .replace(/<[^>]+>/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -379,6 +382,15 @@ describe("the takeover chip", () => {
   it("shows nothing on a server that does not offer the check", async () => {
     expect(await chip(async () => null)).toBe("");
     expect(await chip(undefined)).toBe("");
+  });
+
+  it("opens the detail from the keyboard: the chip is a tab stop with the server's words in its hint", async () => {
+    const { run } = await opened(demo, {}, { takeover: async () => ({ ...counted, heirs: 6, adoptions: 5, kills: 5 }), loadAllEvents: async () => log() });
+    await run.getState().runTakeover();
+    const html = render(run, TakeoverChip);
+    expect(html).toMatch(/<span class="tip"[^>]* tabindex="0"[^>]*><span class="badge badge--good badge--big">Takeover OK/);
+    expect(html).toContain('role="tooltip"');
+    expect(html).not.toContain("title=");
   });
 
   it("says it could not check when the request failed", async () => {

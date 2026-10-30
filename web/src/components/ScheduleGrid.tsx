@@ -58,13 +58,11 @@ export const GridCell = memo(function GridCell({ cell, collision, color, fresh }
     ...(color ? { "--squad": color } : {}),
     ...(ruled ? glowVars(collision.resolvedTs!, fadeLife(RESOLVED_LIFE_MS)) : {}),
   } as CSSProperties;
+  const detail = cell ? `${cell.talkId} · ${cell.squad}${cell.speaker ? ` · ${cell.speaker}` : ""}` : "";
   return (
-    <td
-      className={classes}
-      style={style}
-      title={cell ? `${cell.talkId} · ${cell.squad}${cell.speaker ? ` · ${cell.speaker}` : ""}` : ""}
-    >
+    <td className={classes} style={style} title={detail}>
       {cell && <span className="cell__talk">{cell.title ?? cell.talkId}</span>}
+      {cell && <span className="sr-only">{detail}</span>}
       {open && <span className="cell__tag cell__tag--bad">collision</span>}
       {ruled && (
         <span className="cell__tag cell__tag--ruling">

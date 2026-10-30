@@ -35,7 +35,7 @@ function SourceText({ source, evidence }: { source: Source; evidence: Fact["evid
       <p className="source__text">
         {segments.map((segment, i) =>
           segment.marks.length > 0 ? (
-            <mark key={i} className="evidence" title={`supports: ${segment.marks.map((m) => own[m].field).join(", ")}`}>
+            <mark key={i} className="evidence">
               <span className="evidence__field">{[...new Set(segment.marks.map((m) => own[m].field))].join(" · ")}</span>
               {segment.text}
             </mark>

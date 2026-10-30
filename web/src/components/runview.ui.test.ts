@@ -229,3 +229,27 @@ describe("the frame", () => {
     expect(text(out)).toContain("A sentence.");
   });
 });
+
+describe("the keyboard on the run page", () => {
+  it("offers a way past the tree to the replay bar, and the bar's slider has the id it goes to", async () => {
+    const store = await opened();
+    store.getState().seek(store.getState().events.length); // at the start of the run there is no orchestrator yet
+    const out = render(store, createElement(RunPage));
+    expect(out).toContain('<button type="button" class="skip"');
+    expect(text(out)).toContain("Skip the tree and go to the replay bar");
+    expect(out).toContain('id="replay-position"');
+  });
+
+  it("offers none while there is no tree to skip", async () => {
+    const store = renderCurrent(createRunStore({ api: apiOf({ loadAllEvents: async () => [] }) }));
+    await store.getState().openRun("toy");
+    expect(render(store, createElement(RunPage))).not.toContain('class="skip"');
+  });
+
+  it("makes each orchestrator one tab stop, the card's own: not the library's wrapper around it, and not every edge", () => {
+    const source = readFileSync(REPO_ROOT + "web/src/components/TreeGraph.tsx", "utf-8");
+    expect(source).toMatch(/nodesFocusable=\{false\}/);
+    expect(source).toMatch(/edgesFocusable=\{false\}/);
+    expect(source).toMatch(/role="button"\s+tabIndex=\{0\}/);
+  });
+});

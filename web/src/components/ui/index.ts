@@ -3,6 +3,7 @@
 
 export { Card, type CardProps } from "./Card";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
+export { Hint, type HintProps } from "./Hint";
 export { ModelBadge, modelFamily, type ModelBadgeProps, type ModelFamily } from "./ModelBadge";
 export { PageHeader, type PageHeaderProps } from "./PageHeader";
 export { Skeleton, SkeletonGroup, SkeletonText, type SkeletonProps } from "./Skeleton";

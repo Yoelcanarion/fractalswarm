@@ -53,7 +53,7 @@ function ActorCardView({ data }: ActorProps) {
       role="button"
       tabIndex={0}
       aria-pressed={inLens}
-      aria-label={`${actor.id}, ${actor.kind}, ${actor.llmCalls} ${actor.llmCalls === 1 ? "model call" : "model calls"}. Open in the Muse lens.`}
+      aria-label={`${actor.id}, ${actor.kind}${down ? `, ${actor.status === "dead" ? "detected dead" : "killed"}` : ""}, ${actor.llmCalls} ${actor.llmCalls === 1 ? "model call" : "model calls"}. Open in the Muse lens.`}
       onClick={toggleLens}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -198,6 +198,9 @@ function Graph({ view }: { view: ViewState }) {
       nodesDraggable={false}
       nodesConnectable={false}
       elementsSelectable={false}
+      // each card is its own tab stop (a button that opens the lens): the library's wrappers and every edge would add two more per node
+      nodesFocusable={false}
+      edgesFocusable={false}
       proOptions={{ hideAttribution: true }}
       onInit={onInit}
       minZoom={0.2}

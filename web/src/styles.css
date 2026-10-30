@@ -262,6 +262,33 @@ textarea {
   height: 100%;
 }
 
+/* A way past a long run of tab stops: out of sight until the keyboard reaches it. */
+.skip {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip:focus-visible {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip-path: none;
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: var(--fs-body);
+}
+
 /* The counters take the row; the button that opens the guide sits at its end and costs no height. */
 .run__top {
   display: flex;

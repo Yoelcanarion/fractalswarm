@@ -39,6 +39,7 @@ export function Timeline() {
       <div className="timeline__track">
         <input
           ref={slider}
+          id="replay-position"
           type="range"
           min={0}
           max={Math.max(end, 1)}

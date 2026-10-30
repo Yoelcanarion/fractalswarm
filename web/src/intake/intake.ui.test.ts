@@ -213,7 +213,9 @@ describe("the review", () => {
 
   it("does not let a speaker who still has a talk be taken out, and says why", () => {
     const markup = review();
-    expect(markup).toMatch(/title="[^"]*still has (a talk|\d+ talks)[^"]*"[^>]*disabled/);
+    // a disabled button takes no focus, so its wrapper does, and the reason is in the hint it opens
+    expect(markup).toMatch(/tabindex="0"[^>]*><button[^>]*aria-label="Take [^"]+ out"[^>]*disabled/);
+    expect(markup).toMatch(/role="tooltip" class="tip__bubble">[^<]*still has (a talk|\d+ talks)[^<]*</);
   });
 
   it("stops the approval on what the server would refuse, and says what", () => {

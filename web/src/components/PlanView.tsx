@@ -8,7 +8,7 @@ import type { ViewState } from "../lib/reducer";
 import { ControlButton, useControlState } from "./ControlButton";
 import { KeyValues } from "./KeyValues";
 import { Card, GenericRows, money, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
-import { Term } from "./ui";
+import { Hint, Term } from "./ui";
 
 interface Props {
   runId: string;
@@ -120,10 +120,18 @@ export function PlanView({ runId, view, live }: Props) {
                   </thead>
                   <tbody>
                     {tracks.map((track) => (
-                      <tr key={track.id} title={track.acceptance}>
-                        <td className="mono">{track.id}</td>
-                        <td title={track.talks.join(", ")}>
-                          {track.talks.length} <span className="muted mono">{clip(track.talks.slice(0, 5).join(" "), 28)}</span>
+                      <tr key={track.id}>
+                        <td className="mono">
+                          <Hint focusable label={track.acceptance}>
+                            <span>{track.id}</span>
+                          </Hint>
+                        </td>
+                        <td>
+                          <Hint label={track.talks.join(", ")}>
+                            <span>
+                              {track.talks.length} <span className="muted mono">{clip(track.talks.slice(0, 5).join(" "), 28)}</span>
+                            </span>
+                          </Hint>
                         </td>
                         <td>{track.risk === null ? "–" : track.risk.toFixed(2)}</td>
                         <td>{track.priority ?? "–"}</td>

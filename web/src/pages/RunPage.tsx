@@ -63,6 +63,12 @@ function RunOverview() {
         <GuideButton guide={guide} />
       </div>
       <GuideStrip guide={guide} />
+      {view.order.length > 0 && (
+        // every orchestrator is a tab stop: this gets a keyboard user past them to the replay bar
+        <button type="button" className="skip" onClick={() => document.getElementById("replay-position")?.focus()}>
+          Skip the tree and go to the replay bar
+        </button>
+      )}
       <div className={`run__main ${hasSchedule ? "run__main--split" : ""}`}>
         <section className="panel run__tree">
           <header className="panel__title">

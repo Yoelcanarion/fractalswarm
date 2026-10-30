@@ -2,6 +2,7 @@ import { escalationState, timeLeftMs, type EscalationState, type HumanEscalation
 import type { ViewState } from "../lib/reducer";
 import { AnswerBox } from "./AnswerBox";
 import { Card, GenericRows, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
+import { Hint } from "./ui";
 
 const STEP: Record<Step, string> = { retry: "retry", reassign: "reassign", lost: "agent lost" };
 const STATUS: Record<TrailStatus, { label: string; tone: "good" | "warn" | "bad" }> = {
@@ -110,10 +111,12 @@ export function EscalationsPanel({ view, runId }: { view: ViewState; runId?: str
                   <td className="mono">{trail.key}</td>
                   <td>
                     {runsOf(trail.rejections).map((run) => (
-                      <span key={run.first.seq} className="step" title={`attempt ${run.first.attempt} · t = ${virtualSeconds(run.first.ts)}`}>
-                        {STEP[run.first.step]}
-                        {run.count > 1 ? ` ×${run.count}` : ""} <span className="muted">@{run.first.stage}</span>
-                      </span>
+                      <Hint key={run.first.seq} label={`attempt ${run.first.attempt} · t = ${virtualSeconds(run.first.ts)}`}>
+                        <span className="step">
+                          {STEP[run.first.step]}
+                          {run.count > 1 ? ` ×${run.count}` : ""} <span className="muted">@{run.first.stage}</span>
+                        </span>
+                      </Hint>
                     ))}
                   </td>
                   <td>

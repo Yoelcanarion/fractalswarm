@@ -1,4 +1,5 @@
 import { useRunStore } from "../store";
+import { Hint } from "./ui";
 
 export function VerifyBadge() {
   const verify = useRunStore((s) => s.verify);
@@ -17,7 +18,7 @@ export function VerifyBadge() {
       return <span className="badge badge--muted">Replaying from the log…</span>;
     case "error":
       return (
-        <button className="badge badge--bad" onClick={runVerify} title={verify.error}>
+        <button className="badge badge--bad" onClick={runVerify}>
           Verify failed: {verify.error}
         </button>
       );
@@ -25,18 +26,17 @@ export function VerifyBadge() {
       const { report } = verify;
       if (report.ok && report.bundle_head_ok) {
         return (
-          <span
-            className="badge badge--good badge--big"
-            title={`${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head}`}
-          >
-            Replay verified ✓ hash match <span className="mono">{report.replayed_head.slice(0, 12)}</span>
-          </span>
+          <Hint focusable label={`${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head}`}>
+            <span className="badge badge--good badge--big">
+              Replay verified ✓ hash match <span className="mono">{report.replayed_head.slice(0, 12)}</span>
+            </span>
+          </Hint>
         );
       }
       return (
-        <span className="badge badge--bad badge--big" title={report.detail}>
-          ✕ Replay MISMATCH at seq {report.first_divergence ?? "?"}
-        </span>
+        <Hint focusable label={report.detail}>
+          <span className="badge badge--bad badge--big">✕ Replay MISMATCH at seq {report.first_divergence ?? "?"}</span>
+        </Hint>
       );
     }
   }

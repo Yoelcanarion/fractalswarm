@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { easeOutCubic, formatNumber, tween } from "../../lib/motion";
-import { Card, EmptyState, ModelBadge, modelFamily, PageHeader, Skeleton, SkeletonGroup, SkeletonText, Stat, Term, Tooltip } from "./index";
+import { Card, EmptyState, Hint, ModelBadge, modelFamily, PageHeader, Skeleton, SkeletonGroup, SkeletonText, Stat, Term, Tooltip } from "./index";
 
 const html = (element: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(element);
 
@@ -81,7 +81,9 @@ describe("ModelBadge", () => {
     expect(out).toContain("Contributor");
     expect(out).toContain("1.3");
     expect(out).toContain("data-model=\"contributor\"");
-    expect(out).toContain("title=\"muse-spark-1.3-contributor\"");
+    // the full id is a hint that opens from a pointer and is there as text for a screen reader, not a title
+    expect(out).toContain('role="tooltip" class="tip__bubble">muse-spark-1.3-contributor</span>');
+    expect(out).not.toContain("title=");
   });
 
   it("shows an unknown id as it is, in a neutral badge", () => {
@@ -108,6 +110,31 @@ describe("Tooltip", () => {
     const describedBy = /aria-describedby="([^"]+)"/.exec(out)?.[1];
     expect(describedBy).toBeTruthy();
     expect(out).toContain(`id="${describedBy}"`);
+  });
+});
+
+describe("Hint", () => {
+  const word = createElement("span", null, "x");
+
+  it("draws the children as they are when there is nothing to say", () => {
+    expect(html(createElement(Hint, { children: word }))).toBe("<span>x</span>");
+    expect(html(createElement(Hint, { label: null, children: word }))).toBe("<span>x</span>");
+    expect(html(createElement(Hint, { label: "", children: word }))).toBe("<span>x</span>");
+  });
+
+  it("opens from a pointer, and gives a screen reader the same words as text, where nothing has focus to describe", () => {
+    const out = html(createElement(Hint, { label: "What x means", children: word }));
+    expect(out).toContain('role="tooltip"');
+    expect(out).toContain('<span class="sr-only"> What x means</span>');
+    expect(out).not.toContain("tabindex");
+    expect(out).not.toContain("title=");
+  });
+
+  it("is a tab stop when asked, and then the hint is the description of what has focus, not text again", () => {
+    const out = html(createElement(Hint, { label: "What x means", focusable: true, children: word }));
+    expect(out).toContain('tabindex="0"');
+    expect(out).toContain('role="tooltip"');
+    expect(out).not.toContain("sr-only");
   });
 });
 

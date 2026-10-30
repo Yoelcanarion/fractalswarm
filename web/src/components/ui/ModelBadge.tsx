@@ -1,3 +1,5 @@
+import { Hint } from "./Hint";
+
 export type ModelFamily = "wonder" | "spark" | "contributor" | "guard";
 
 const LABELS: Record<ModelFamily, string> = {
@@ -32,10 +34,12 @@ export function ModelBadge({ model, version = false }: ModelBadgeProps) {
   const number = version ? /(\d+(?:\.\d+)?)(?:-contributor)?$/.exec(model)?.[1] : undefined;
   const name = family ? LABELS[family] : model;
   return (
-    <span className="model-badge" data-model={family ?? "unknown"} title={model}>
-      <i className="model-badge__dot" aria-hidden />
-      {name}
-      {number && <span className="model-badge__version">{number}</span>}
-    </span>
+    <Hint label={model}>
+      <span className="model-badge" data-model={family ?? "unknown"}>
+        <i className="model-badge__dot" aria-hidden />
+        {name}
+        {number && <span className="model-badge__version">{number}</span>}
+      </span>
+    </Hint>
   );
 }
