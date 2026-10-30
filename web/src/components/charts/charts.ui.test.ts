@@ -84,6 +84,17 @@ describe("the key", () => {
     expect(out.match(/aria-pressed="true"/g)).toHaveLength(5);
   });
 
+  it("is only a legend where it is in view, with no button to press, and says which workflow is hidden", () => {
+    const hero = set("v1").hero;
+    const out = html(createElement(SeriesKey, { series: hero.series, colors: seriesColors(hero), hidden: new Set(["central"]) }));
+    expect(out).not.toContain("<button");
+    expect(out).not.toContain("aria-pressed");
+    expect(out).toContain('aria-label="Workflows"');
+    expect(out).toContain("FractalSwarm");
+    expect(out.match(/serieskey__item--off/g)).toHaveLength(1);
+    expect(out).toContain("(hidden in the charts)");
+  });
+
   it("gives a workflow the same colour in every set", () => {
     const [v1, headline, gate] = ["v1", "headline", "rivals-gate"].map((name) => seriesColors(set(name).hero));
     expect(v1.swarm).toBe(headline.swarm);
