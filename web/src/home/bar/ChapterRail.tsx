@@ -3,8 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { chapterAt, CHAPTERS } from "../chapters";
 import { COPY } from "../copy";
-import { chapterHash } from "../route";
-import { scrollToChapter } from "../scrollTo";
+import { targetHash } from "../route";
+import { scrollToTarget } from "../scrollTo";
 
 // The chapter counts as current once its top is above this share of the viewport.
 const PROBE = 0.4;
@@ -55,9 +55,9 @@ export function ChapterRail({ active }: { active: number }) {
           <li key={chapter.id}>
             <a
               className="home-rail__item"
-              href={chapterHash(chapter.id)}
+              href={targetHash(chapter.id)}
               aria-current={index === active ? "true" : undefined}
-              onClick={(event) => scrollToChapter(chapter.id, event)}
+              onClick={(event) => scrollToTarget(chapter.id, event)}
             >
               <span className="home-rail__label">
                 <span className="home-rail__number">{chapter.number}</span>

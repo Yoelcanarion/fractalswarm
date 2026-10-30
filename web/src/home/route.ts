@@ -1,6 +1,6 @@
 // Which hashes open the home page. Everything else belongs to the app shell, which loads on demand.
 
-import { isChapterId, type ChapterId } from "./chapters";
+import { isTarget, type Target } from "./chapters";
 
 const pathOf = (hash: string): string => hash.replace(/^#\/?/, "").split("?")[0].replace(/\/+$/, "");
 
@@ -11,8 +11,8 @@ export function isHomeHash(hash: string): boolean {
 }
 
 export interface HomeAddress {
-  /** `#/?at=solution` opens the page at that chapter. */
-  chapter: ChapterId | null;
+  /** `#/?at=solution` opens the page at that chapter; `#/?at=tie`, at that beat. */
+  target: Target | null;
   /** `#/?still` (or `?still` before the hash) shows every beat in its final state, as reduced motion does: for captures. */
   still: boolean;
 }
@@ -23,7 +23,7 @@ export function parseHomeAddress(hash: string, search = ""): HomeAddress {
   const query = queryOf(hash);
   const at = query.get("at");
   return {
-    chapter: isChapterId(at) ? at : null,
+    target: isTarget(at) ? at : null,
     still: query.has("still") || new URLSearchParams(search).has("still"),
   };
 }
@@ -32,5 +32,5 @@ export function parseHomeAddress(hash: string, search = ""): HomeAddress {
 export const currentHash = (): string => (typeof window === "undefined" ? "" : window.location.hash);
 export const currentSearch = (): string => (typeof window === "undefined" ? "" : window.location.search);
 
-/** The hash that opens the page at a chapter. */
-export const chapterHash = (chapter: ChapterId): string => `#/?at=${chapter}`;
+/** The hash that opens the page at a chapter, or at a beat of one. */
+export const targetHash = (target: Target): string => `#/?at=${target}`;

@@ -12,8 +12,8 @@ import { Problem } from "./chapters/Problem";
 import { Solution } from "./chapters/Solution";
 import { COPY } from "./copy";
 import { StillContext, useIsoLayoutEffect, usePrefersReducedMotion } from "./hooks";
-import { chapterHash, currentHash, currentSearch, parseHomeAddress } from "./route";
-import { jumpToChapter } from "./scrollTo";
+import { targetHash, currentHash, currentSearch, parseHomeAddress } from "./route";
+import { jumpToTarget } from "./scrollTo";
 import { bundledStory, StoryContext, type Story } from "./story";
 
 const readAddress = () => parseHomeAddress(currentHash(), currentSearch());
@@ -25,7 +25,7 @@ export function HomeView({ story, still, active }: { story: Story | null; still:
     <StoryContext.Provider value={story}>
       <StillContext.Provider value={still}>
         <div className="home" data-still={still ? "" : undefined}>
-          <a className="home-skip" href={chapterHash("problem")}>
+          <a className="home-skip" href={targetHash("problem")}>
             {COPY.bar.skip}
           </a>
           <TopBar />
@@ -63,13 +63,13 @@ export function HomePage({ story = bundledStory }: { story?: Story | null }) {
   // `#/?at=solution` opens the page at that chapter, before the first paint. Fonts and charts shift the layout as they
   // arrive, so it lands again once they are in, unless the person has already scrolled away.
   useIsoLayoutEffect(() => {
-    if (!address.chapter) return;
-    jumpToChapter(address.chapter);
+    if (!address.target) return;
+    jumpToTarget(address.target);
     const landed = window.scrollY;
     void document.fonts?.ready.then(() => {
-      if (Math.abs(window.scrollY - landed) < 4 && address.chapter) jumpToChapter(address.chapter);
+      if (Math.abs(window.scrollY - landed) < 4 && address.target) jumpToTarget(address.target);
     });
-  }, [address.chapter]);
+  }, [address.target]);
 
   return <HomeView story={story} still={reduced || address.still} active={active} />;
 }

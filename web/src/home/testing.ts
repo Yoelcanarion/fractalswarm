@@ -63,6 +63,7 @@ export const FIXTURE_STORY: Story = {
     claim("R3", "**allowed**, always with R2"),
     claim("R4", "**allowed with its setting** (Oct 30)"),
     claim("R5", "**allowed with its setting** (Oct 30)"),
+    ["R6", { text: "Test claim R6, first line. Test claim R6, second line.", status: "**allowed with its link** (Oct 30)" }],
   ]),
   facts: { talks: 31, tracks: 3, days: 2, sessions: 6, orchestrators: 10, agents: 12 },
   hero: {

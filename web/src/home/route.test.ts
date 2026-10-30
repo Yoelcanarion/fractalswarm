@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { chapterAt, CHAPTERS, isChapterId } from "./chapters";
-import { chapterHash, isHomeHash, parseHomeAddress } from "./route";
+import { BEATS, chapterAt, CHAPTERS, isChapterId, isTarget } from "./chapters";
+import { targetHash, isHomeHash, parseHomeAddress } from "./route";
 
 describe("the home route", () => {
   it("is the empty hash, the bare slash and the home alias", () => {
@@ -29,22 +29,28 @@ describe("the home route", () => {
 
 describe("the home address", () => {
   it("names a chapter to open at, and asks for the still capture", () => {
-    expect(parseHomeAddress("#/")).toEqual({ chapter: null, still: false });
-    expect(parseHomeAddress("#/?at=solution")).toEqual({ chapter: "solution", still: false });
-    expect(parseHomeAddress("#/?at=evidence&still")).toEqual({ chapter: "evidence", still: true });
-    expect(parseHomeAddress("#/", "?still")).toEqual({ chapter: null, still: true });
+    expect(parseHomeAddress("#/")).toEqual({ target: null, still: false });
+    expect(parseHomeAddress("#/?at=solution")).toEqual({ target: "solution", still: false });
+    expect(parseHomeAddress("#/?at=evidence&still")).toEqual({ target: "evidence", still: true });
+    expect(parseHomeAddress("#/", "?still")).toEqual({ target: null, still: true });
   });
 
   it("ignores a chapter that does not exist", () => {
-    expect(parseHomeAddress("#/?at=nowhere").chapter).toBeNull();
+    expect(parseHomeAddress("#/?at=nowhere").target).toBeNull();
     expect(isChapterId("enter")).toBe(true);
     expect(isChapterId("hero")).toBe(false);
   });
 
-  it("round-trips: the hash of a chapter opens the home page at that chapter", () => {
-    for (const { id } of CHAPTERS) {
-      expect(isHomeHash(chapterHash(id))).toBe(true);
-      expect(parseHomeAddress(chapterHash(id)).chapter).toBe(id);
+  it("names a beat of a chapter as well as a chapter", () => {
+    expect(isTarget("tie")).toBe(true);
+    expect(isChapterId("tie")).toBe(false);
+    expect(parseHomeAddress("#/?at=tie").target).toBe("tie");
+  });
+
+  it("round-trips: the hash of a chapter or a beat opens the home page there", () => {
+    for (const id of [...CHAPTERS.map((chapter) => chapter.id), ...BEATS]) {
+      expect(isHomeHash(targetHash(id))).toBe(true);
+      expect(parseHomeAddress(targetHash(id)).target).toBe(id);
     }
   });
 });

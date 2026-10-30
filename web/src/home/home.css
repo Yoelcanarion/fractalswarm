@@ -401,9 +401,11 @@ body:has(.home) {
 .home-hero__proof {
   display: grid;
   gap: var(--space-3);
+  justify-items: start;
   max-width: 640px;
 }
 
+/* the subtitle is claim R6 in its own words, one sentence to a line, with the way to R2 and R3 right under it */
 .home-hero__line {
   font-size: var(--fs-lead-l);
   line-height: 1.45;
@@ -411,22 +413,11 @@ body:has(.home) {
   text-wrap: pretty;
 }
 
-.home-hero__line strong {
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-weight: 560;
+.home-claim__line {
+  display: block;
 }
 
-.home-hero__versus {
-  color: var(--text-primary);
-}
-
-/* the claim against the ideal supervisor, with the way to the conditions it holds under, always together */
-.home-hero__tie {
-  display: grid;
-  gap: var(--space-2);
-  justify-items: start;
+.home-claim__line + .home-claim__line {
   margin-top: var(--space-2);
 }
 

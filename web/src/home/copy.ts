@@ -38,10 +38,6 @@ export const COPY = {
 
   hero: {
     kicker: "FractalSwarm · multi-agent runtime on Muse Spark and Muse Wonder",
-    versus: "Against an in-process supervisor",
-    stall: "stalled",
-    cost: "extra cost",
-    against: "against",
     conditions: "Where this holds, and where it does not",
     how: "See how it works",
     enter: "Enter the simulation",

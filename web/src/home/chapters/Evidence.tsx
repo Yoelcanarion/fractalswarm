@@ -29,9 +29,10 @@ export function Evidence() {
   );
 }
 
+/** One thing the evidence shows. Its id is an address: R6 in the hero links to the one named `tie`. */
 function Beat({ id, lead, children }: { id: string; lead: ReactNode; children: ReactNode }) {
   return (
-    <article className="home-beat" aria-labelledby={`${id}-lead`}>
+    <article id={id} className="home-beat" aria-labelledby={`${id}-lead`}>
       <Reveal>
         <h3 id={`${id}-lead`} className="home-beat__lead">
           {lead}

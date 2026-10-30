@@ -3,12 +3,12 @@ import { ArrowDown, ArrowRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { COPY, TAGLINE } from "../copy";
-import { percent, seconds } from "../format";
 import { useStill } from "../hooks";
-import { heroReading, heroSetting, settingText } from "../numbers";
+import { captionFor } from "../numbers";
 import { Claim } from "../parts/Claim";
 import { Reveal } from "../parts/Reveal";
-import { scrollToChapter } from "../scrollTo";
+import { targetHash } from "../route";
+import { scrollToTarget } from "../scrollTo";
 import { slice, useStory } from "../story";
 import { Viz } from "../visuals";
 
@@ -37,9 +37,7 @@ export function Hero() {
     return () => running.stop();
   }, [still, play]);
 
-  const rival = heroReading(story, "central");
-  const swarm = heroReading(story, "swarm");
-  const setting = settingText({ task: heroSetting(story).task, crashes: swarm.crashes, profile: swarm.profile, real: heroSetting(story).real, seeds: rival.seeds });
+  const setting = captionFor(story, "hero");
 
   return (
     <section ref={section} className="home-hero" aria-labelledby="home-title">
@@ -53,27 +51,22 @@ export function Hero() {
           </h1>
         </Reveal>
         <Reveal delay={140} className="home-hero__proof">
-          <p className="home-hero__line">
-            <span className="home-hero__versus">{COPY.hero.versus}:</span> {COPY.hero.stall} <strong>{seconds(swarm.stallS)}</strong> {COPY.hero.against}{" "}
-            {seconds(rival.stallS)}, <strong>{percent(swarm.extraCostPct)}</strong> {COPY.hero.cost} {COPY.hero.against} {percent(rival.extraCostPct)}.
-          </p>
+          {/* R6, in the words of its row, always with the way to R2 and R3 on the same page */}
+          <Claim id="R6" lines className="home-hero__line" />
+          <a className="home-link" href={targetHash("tie")} onClick={(event) => scrollToTarget("tie", event)}>
+            {COPY.hero.conditions}
+            <ArrowDown size={14} aria-hidden />
+          </a>
           <p className="home-setting">
             {setting} {"·"} {COPY.rivalReason}
           </p>
-          <div className="home-hero__tie">
-            <Claim id="R2" className="home-hero__line" />
-            <a className="home-link" href="#/?at=evidence" onClick={(event) => scrollToChapter("evidence", event)}>
-              {COPY.hero.conditions}
-              <ArrowDown size={14} aria-hidden />
-            </a>
-          </div>
         </Reveal>
         <Reveal delay={220} className="home-hero__actions">
-          <a className="home-button home-button--primary" href="#/?at=problem" onClick={(event) => scrollToChapter("problem", event)}>
+          <a className="home-button home-button--primary" href={targetHash("problem")} onClick={(event) => scrollToTarget("problem", event)}>
             {COPY.hero.how}
             <ArrowDown size={18} aria-hidden />
           </a>
-          <a className="home-button" href="#/?at=enter" onClick={(event) => scrollToChapter("enter", event)}>
+          <a className="home-button" href={targetHash("enter")} onClick={(event) => scrollToTarget("enter", event)}>
             {COPY.hero.enter}
             <ArrowRight size={18} aria-hidden />
           </a>

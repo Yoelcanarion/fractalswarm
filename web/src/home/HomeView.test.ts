@@ -53,12 +53,15 @@ describe("the home page, rendered with a story", () => {
     const drawn = claims(html);
     expect(drawn.length).toBeGreaterThan(0);
     for (const claim of drawn) {
-      expect(claim.body, claim.id).toContain(`Test claim ${claim.id}.`);
+      expect(plain(claim.body), claim.id).toContain(FIXTURE_STORY.claims[claim.id].text);
       const pending = FIXTURE_STORY.claims[claim.id].status.includes("pending");
       expect(claim.state, claim.id).toBe(pending ? "pending" : "allowed");
       expect(claim.body.includes("home-tag"), `${claim.id} tag`).toBe(pending);
     }
-    expect(new Set(drawn.map((claim) => claim.id))).toEqual(new Set(["S1", "S2", "S3", "S4", "S5", "S6", "S7", "R2", "R3", "R4", "R5"].filter((id) => html.includes(`data-claim="${id}"`))));
+  });
+
+  it("draws the claims the story is about and no other", () => {
+    expect(new Set(claims(html).map((claim) => claim.id))).toEqual(new Set(["S1", "S2", "S3", "S4", "S5", "S6", "R2", "R3", "R4", "R5", "R6"]));
   });
 
   it("never draws a claim that is not claimed", () => {
@@ -66,16 +69,30 @@ describe("the home page, rendered with a story", () => {
     expect(html).not.toContain("Test claim R1.");
   });
 
-  it("puts R3 right under R2 in the evidence, and shows R2 in the hero only with the way to its conditions", () => {
-    const tie = /<article[^>]*aria-labelledby="tie-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
+  it("puts R3 right under R2, and only there", () => {
+    const tie = /<article id="tie"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
     const r2 = tie.indexOf('data-claim="R2"');
     const r3 = tie.indexOf('data-claim="R3"');
     expect(r2).toBeGreaterThan(-1);
     expect(r3).toBeGreaterThan(r2);
     expect(r3 - r2, "something sits between R2 and R3").toBeLessThan(400);
+    expect(countOf(html, 'data-claim="R2"')).toBe(1);
     expect(countOf(html, 'data-claim="R3"')).toBe(1);
-    expect(html).toMatch(/<div class="home-hero__tie">[\s\S]*?data-claim="R2"[\s\S]*?href="#\/\?at=evidence"/);
-    expect(countOf(html, 'data-claim="R2"')).toBe(2);
+  });
+
+  it("sets R6 under the tagline, one sentence to a line, with a visible link to the beat where R2 and R3 are", () => {
+    const hero = /<section[^>]*class="home-hero"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+    expect(hero).toContain('data-claim="R6"');
+    expect(countOf(hero, 'class="home-claim__line"')).toBe(2);
+    expect(plain(hero)).toContain(FIXTURE_STORY.claims.R6.text);
+    expect(hero).not.toContain('data-claim="R2"');
+    const proof = /<div class="[^"]*home-hero__proof[^"]*"[^>]*>[\s\S]*?<\/div>/.exec(hero)?.[0] ?? "";
+    const claimAt = proof.indexOf('data-claim="R6"');
+    const linkAt = proof.indexOf('href="#/?at=tie"');
+    expect(claimAt).toBeGreaterThan(-1);
+    expect(linkAt, "the link follows the claim").toBeGreaterThan(claimAt);
+    expect(plain(proof)).toContain(COPY.hero.conditions);
+    expect(countOf(html, 'data-claim="R6"')).toBe(1);
   });
 
   it("shows R4 once, with its setting and the $0 gate beside it", () => {
