@@ -1518,99 +1518,77 @@
 }
 
 .hv-proof {
-  display: grid;
-  gap: 28px;
+  display: block;
+  width: 100%;
 }
-.hv-proof-panel {
-  display: grid;
-  gap: 14px;
+.hv-proof-svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
 }
-.hv-proof-head h3 {
-  margin: 0;
-  color: var(--text-primary);
+.hv.hv-proof-svg text {
+  font-family: inherit;
+  fill: var(--text-secondary);
+  font-size: 13px;
+}
+.hv-proof-t {
+  dominant-baseline: central;
+}
+.hv.hv-proof-svg .hv-proof-rival {
+  fill: var(--text-primary);
   font-size: 15px;
   font-weight: 600;
 }
-.hv-proof-head p {
-  margin: 2px 0 0;
-  color: var(--text-muted);
-  font-size: 13px;
+.hv.hv-proof-svg .hv-proof-setting {
+  fill: var(--text-muted);
+  font-size: 12.5px;
 }
-.hv-proof-row {
-  display: grid;
-  gap: 6px;
+.hv.hv-proof-svg .hv-proof-label {
+  fill: var(--text-secondary);
+  font-size: 12.5px;
 }
-.hv-proof-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-.hv-proof-verdict {
-  padding: 0 8px;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-.hv-proof-line {
-  display: grid;
-  grid-template-columns: minmax(96px, 168px) 1fr max-content;
-  align-items: center;
-  gap: 12px;
-}
-.hv-proof-name {
-  color: var(--text-secondary);
-  font-size: 13px;
+.hv.hv-proof-svg .hv-proof-val {
+  fill: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .hv-proof-track {
-  position: relative;
-  height: 10px;
-  overflow: hidden;
-  border-radius: 5px;
-  background: var(--surface-2);
+  fill: var(--surface-2);
 }
 .hv-proof-bar {
-  position: absolute;
-  inset: 0;
-  border-radius: 5px;
-  background: var(--border-strong);
-  transform-origin: left center;
-  transform: scaleX(var(--w));
+  fill: var(--border-strong);
 }
-.hv-proof-line[data-who="swarm"] .hv-proof-bar {
-  background: var(--accent);
+[data-who="swarm"] > .hv-proof-bar {
+  fill: var(--accent);
 }
-.hv.hv-proof-number {
-  min-width: 5.5ch;
-  justify-items: end;
-  color: var(--text-primary);
-  font-size: 15px;
+/* A dot is one seed: the swarm's is filled, the rival's is a ring, so the two read apart without colour. */
+.hv-proof-dot {
+  fill: var(--surface-1);
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
 }
-/* The bars grow once, in the page's one ease, starting a little apart and ending together (--i is the bar's place in the panel). */
-.hv-proof-panel[data-play="off"] .hv-proof-bar {
-  transform: scaleX(0);
+[data-who="swarm"] .hv-proof-dot {
+  fill: var(--accent);
+  stroke: var(--accent);
 }
-.hv-proof-panel[data-play="on"] .hv-proof-bar {
-  animation: hv-proof-grow calc(1.6s - var(--i) * 0.06s) var(--ease-play) calc(var(--i) * 0.06s) both;
+.hv-proof-zero {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  vector-effect: non-scaling-stroke;
 }
-@keyframes hv-proof-grow {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(var(--w));
-  }
+.hv-proof-chip rect {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
-@media (max-width: 640px) {
-  .hv-proof-line {
-    grid-template-columns: 1fr max-content;
-  }
-  .hv-proof-name {
-    grid-column: 1 / -1;
-  }
+.hv.hv-proof-svg .hv-proof-chip text {
+  fill: var(--text-secondary);
+  font-size: 12px;
 }
 
 /* The Solution's drawings are CSS only: a part has its end state under [data-on="true"], and a transition in the page's one ease to it. */
@@ -1724,10 +1702,6 @@
 @media (prefers-reduced-motion: reduce) {
   .hv-step [data-part] {
     transition: none;
-  }
-  .hv-proof-panel[data-play] .hv-proof-bar {
-    transform: scaleX(var(--w));
-    animation: none;
   }
 }
 

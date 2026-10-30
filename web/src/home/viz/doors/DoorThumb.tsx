@@ -1,17 +1,17 @@
 import { useMotionValue } from "motion/react";
 import { useEffect, useRef } from "react";
-import { prefersReducedMotion } from "../../../lib/motion";
 import { ease } from "../ease";
+import { useCalm } from "../page";
 import { onFrame } from "../ticker";
 import "../viz.css";
 import { whileVisible } from "../visible";
 import { DoorGlyph } from "./DoorGlyph";
-import type { DoorId } from "./doors";
 
 export interface DoorThumbProps {
-  door: DoorId;
-  /** A still page, or a person who asked for less motion: the glyph in its end state, and no loop. */
-  still?: boolean;
+  /** The door's id, as the page names it (arena, live, replays, director, numbers, ablation). */
+  door: string;
+  /** Standing still, which the page says through its own context when this is absent: the glyph in its end state, and no loop. */
+  still?: boolean | undefined;
   className?: string;
 }
 
@@ -23,10 +23,10 @@ const LEG = 2.4;
  * through the page's one ease, so it turns round without a jump and nothing holds at either end; it runs only while the card is
  * on screen and the tab is visible.
  */
-export function DoorThumb({ door, still = false, className }: DoorThumbProps) {
+export function DoorThumb({ door, still, className }: DoorThumbProps) {
   const progress = useMotionValue(0);
   const host = useRef<HTMLDivElement>(null);
-  const calm = still || prefersReducedMotion();
+  const calm = useCalm(still);
 
   useEffect(() => {
     if (calm) return undefined;
