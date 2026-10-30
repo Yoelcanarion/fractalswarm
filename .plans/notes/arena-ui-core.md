@@ -692,3 +692,38 @@ The harness is outside git, in the session scratchpad `...\9e97009a-a246-4f4b-94
 - `deadtext.mjs`: the contrast the dimmed text on dead, restarting and stopped tree cards really has (group opacity composited over what is behind), both themes, with a crop of each kind of card.
 - `preview.mjs` and `frames.mjs`: a scratch production build (`npx vite build --outDir <scratch> --emptyOutDir`, from `web/`) served with the API proxied, and a generic `requestAnimationFrame` logger that takes variants in turns with a warm-up round and reports medians (fps, p95, frames over 34 ms). The Oct 29 numbers to compare with: `new` 37.3 fps, p95 33.4 ms, `?lite=shadow` 40.5 fps, at 20x on `t2-real-c3-swarm-seed1b`, 1920x1080, software rendering.
 Order in the slot: serve (`serve_audit.ps1`, `pw\dev.mjs`), `audit.mjs` in chunks under 10 minutes, `flash.mjs`, `deadtext.mjs`, read the shots and write the ranked list here, send its top as a `status`; the build and `frames.mjs` (the build is heavy); then the merge checks (`uv run pytest -m 'not promptguard' -q` in chunks, `demo --verify --no-serve --no-browser`, `scripts/refs/record_refs.ps1` and `compare_refs.py` against `arena-c2b5e08`, 43 of 43), `merge_ready` for `05e5f0a..HEAD`, `worker_done`.
+
+### RELEASE (Oct 30 evening): the browser audit, the shell wired in, the first merge point
+
+Arena `7452747` (W6) merged at `961c413`, arena `86f2951` (the looping hero) at `cdface9`, both clean. `App.tsx` was released and the shell is wired in (`70505b2`). Playwright Chromium 130, headless, one browser at a time, free memory 1.9-3.4 GB (the harness stops under 1.2 GB). Shots are in the scratchpad `shots\`: `audit1` is the first look at `4926a5b` (all 32 real-log screens at 1920x1080 and 1366x768, dark, plus an Arena pair), `audit3`/`audit5` are after the run-page fixes, `audit4` is the light theme at 1366x768 (17 screens). Titles are right on every page ("Plan · demo-backup · FractalSwarm" ...; the Director page keeps the site title, it is W5's).
+
+#### The ranked list (what Yoel meets first from the home page comes first)
+1. **Runs.** Looks finished: the lead names the replay check, "Start a run" is the inverted neutral, the live strip and the table are in place. Left as it is: four large logs keep a skeleton row for about 1.2 s while their facts load (the loader reads logs progressively); the rows shift the page by 0.03-0.06 when they arrive.
+2. **The run view at 1366x768 (the worst thing in the app; fixed).**
+   - V1: the tree's canvas (min-height 300) ran under the replay bar and the chaos list over the event log; the chrome was 263 px of 768 (top bar 60, second row 44, strip 91, replay bar 68). Now, under 900 px of height the page is as tall as its panels (`.run__main { flex: 1 0 560px }`, a definite basis, so the tree's camera is fitted once) and scrolls, with the replay bar sticky and a shadow in the page colour under it; under 820 px the top bar is 52 px. (`31f6f6a`)
+   - V2: layout shift 0.07-0.18 from the status badge, the picker width and the strip's proof chips arriving. The picker has one width, the scenario and status sit at the end of the row, the open run is in the picker from the first paint; the strip's place is held from the first paint (`461cdf6`); under 1500 px the strip is one row (53 px, was 91): the cache share, the token counts and the replay hash move into the hints. Light, run at its end, measured twice: 0.15-0.18 -> 0.01.
+   - V3: `.actor__adopted` was 4.38:1 (the track colour on the card); it is pulled toward the text colour.
+   - V4 (not changed): the tree's node text is about 5 px at 1080p. It is W5's `arena/` and the tree's own scale; it is the biggest thing left in this view.
+   - V5: panel titles wrap instead of squeezing their hint ("ORCHESTRATOR TREE" + hint, "T2 SCHEDULE" + badge).
+3. **Header.** The brand is the home lockup (17 px, 650, tight tracking) and is the way back to the home (`a.brand href="#/"`, "FractalSwarm, home"); four places with the current one marked; each page has a tab title and an announcement; the second row is a run's own views (or the evidence's three pages). The primary button is the home's inverted neutral everywhere, in both themes (the coordinator's decision, Oct 30 evening).
+4. **Opening a recorded run (the coordinator's decision, Oct 30 evening).** From the Runs list, the results table and the run picker a recorded run opens at its end (`?at=end` in the address: `openedRunHash`, `pickedRunHash`), with the whole picture at once and "Play from the start" one click away. A hand-typed `#/run/<id>`, an explicit `?at=` and a play link keep the start of the log; a live run opens at its head either way; the store is unchanged (`ee045c1`).
+5. **Console.** Only React Flow's "hiding the attribution" line, and only in the dev server: the library prints it when `NODE_ENV` is `development` (`@xyflow/system` `handleAttributionWarning`). Not in a build.
+6. **Where it helps / Ablation.** The outcome's headline had a gap before its comma (three flex items in a gap-ed row; now one item). Ablation's form was a centred 960 px column while the Evidence pages are left-aligned, so the title jumped sideways between the tabs; it keeps the left edge now.
+
+#### Not mine (reported to the coordinator)
+- W6: `home/home.css` `.home-extract__mark[data-lit]`, `--text-inverse` on `--accent`, 4.30:1 in the light theme (AA needs 4.5). `styles/contrast.test.ts` has a `REPORTED` list for findings in files that are not this worker's: the entry is checked for staleness, so the guard fails the day the finding is fixed.
+- W5: `#/arena` with no pair on record is nearly empty and its text is for developers ("open #/arena/<swarm run>/<rival run> ... POST /api/arena ..."); with a pair on record it is polished. The Director page shifts by 0.06-0.16 when its list arrives.
+- `tests/unit/test_home_data.py` failed on this branch until arena `175bc4f` (the digest of `bench/REPORT.md`); green after the merge.
+
+#### Checks at `ee045c1` (the first merge point of this slot)
+- `uv run pytest -m 'not promptguard'` in chunks, scratch runs dir and ledger, `FRACTALSWARM_ALLOW_UI_REAL` unset: unit 1093 (28 s); integration a-c 318 (5:40), d-l 289 (5:00), m-r 107 (4:36), s-z 186 (1:19); the 13 strict-mode-rules tests of `test_planning.py` + `test_intake_flow.py` pass; whole collection 1994 of 1997 (3 promptguard deselected): 1093 + 900 + 1 whole-suite-only `[IntakeOutput]` = 1994.
+- `fractalswarm demo --verify --no-serve --no-browser`: `MATCH backup: 8177 events, head b052b4bc33cfe1b54c7b6ceb2872de26`.
+- `scripts/refs/record_refs.ps1` (scratch dir, 125 s) and `compare_refs.py` against `arena-c2b5e08`: 43 of 43 runs have identical event bodies.
+- Web: `tsc --noEmit` clean; vitest single worker green (118 files, 1815 tests at `461cdf6`; the last commits add and change a handful: see the merge_ready).
+
+#### Deviations (this part)
+- Primary button look (inverted neutral), the open-at-end rule and the contrast guard's `REPORTED` list are the three things that change what the app looks like or does outside my files' own area; the first two are the coordinator's decisions.
+- No change to `store.ts`, to any event model, or to `web/src/home/**`, `web/src/static/**`, `web/src/arena/**` (except `arena/helps/**`, mine) or `director/**`.
+
+#### Still to do in this slot
+1920x1080 light, the empty and error states, keyboard walks, the dimmed text on dead tree cards (`deadtext.mjs`), the theme and run-opening flashes (`flash.mjs`), frame times on a scratch build (`frames.mjs`), a last `merge_ready`.
