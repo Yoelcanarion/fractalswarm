@@ -626,3 +626,32 @@ chasing the log after 20 pages") against a server that reads `last_seq` at a sec
    `lcrow` fix: see The GO window).
 3. (done in the window) W2's merge is in arena (24995b5): the chip against the real endpoint ("Takeover OK ✓ 7 hand-overs" with
    MATCH) and the Verify button against the guard (JSON 200, bare 415).
+
+## Round 2 (polish, arena spec §M.2): where it stands at Yoel's STOP (Oct 30, about 12:00 CET)
+
+Branch `Yoelcanarion/arena-ui-core`, last code commit `e95864c`, nothing pushed. The heartbeat loop is ended; no background command of mine is running.
+
+### Done (committed)
+- `6d3ddd0` the API serves recorded hero sets (the one granted change under `src/fractalswarm`: the `HERO_SETS` lookup in `api/app.py`); `846d802` the rivals-gate set; `1e2ee91` Charts on recorded sets (R5 "In-process supervisor"), never a fixture shown as measured.
+- `c35ef31` shared Tooltip, glossary `Term`, `PageHeader`, `EmptyState`, `Skeleton` and the title helper in `components/ui`.
+- `0ba8b4e` the Runs catalogue (`components/catalogue/`, `lib/catalogue.ts`, `lib/factsLoader.ts`): states in words, live runs apart, sort and filter, a replay check per run, and the New task form with help text. `05e5f0a` merges arena `d8e8d28`.
+- `c18f901` Results, Plan, Panels, Security and Events open with a name and one sentence of purpose; one gate for "no run / loading (skeleton) / failed (try again, open the runs)"; a first-visit guide on the Run page that explains the playhead; hints through the shared tooltip; no "spec §" on screen.
+- `e95864c` the type scale held: 22 rules moved from 12px to the 14px body size, `.mono` never under it, guarded by `styles/typescale.test.ts`; the intake reads the optional `approved.proposal` and starts a reopened approved intake from the approved rows.
+- Checks at `e95864c`: `tsc --noEmit` clean, vitest 84 files / 1296 tests green (single worker). `merge_ready` #1 went out for `05e5f0a` (msg_25dde0f8dd5f); `c18f901` and `e95864c` are not announced yet.
+
+### Half done or not started
+- **Never seen in a browser** (no RELEASE came while the paid block ran): no audit screenshots (1920x1080 and 1366x768, dark and light, real log and empty state), so no ranked audit list, no before/after paths, no frame-time reading (the run page was 37 fps at 20x) and no console check. Unchecked by eye: tooltip placement, the Charts range bands, the Runs page, the Run page at 1366x768 with the compact head and the guide strip, the light theme.
+- **App shell** (brief priority 1: four main places, run views only inside a run, a way home, `document.title`, no flash) is not started: it waits for the coordinator's word on `App.tsx`.
+- Keyboard: the Events view opens a row from the keyboard; the clickable `<tr>` rows in `intake/ReviewTables.tsx` are not checked; there is no `outline: none` in my sheets. Reduced motion was audited and is already covered (global rule in `styles.css`, `lib/motion.ts`), so nothing changed.
+- Intake, ablation and where-it-helps: their heads are still `h2` in their own styles, they have no loading skeleton or failed state with a way out yet, and some native `title=` hints are left.
+- Not run (they need a SLOT): `demo --verify --no-serve --no-browser` and `uv run pytest -m 'not promptguard' -q`.
+
+### Next step
+1. Read the mailbox: a RELEASE, the `App.tsx` go-ahead, or a HOLD.
+2. With a RELEASE: start the audit harness (`serve_audit.ps1` for the API on 8796, `node pw/dev.mjs` on 5176; playwright-core scripts in the session scratchpad, `...\9e97009a-a246-4f4b-9410-64146e824692\scratchpad\pw\`, not in git, so recreate them if it is gone), run `audit.mjs` in chunks under 10 minutes, look at the shots, write the ranked list here, send its top as a `status`, then fix in small commits.
+3. Without one: the `App.tsx` shell if allowed (code and vitest only), then heads and states for intake, ablation and helps.
+4. Then the frame-time reading, `demo --verify`, the pytest merge check, a `merge_ready` for `05e5f0a..HEAD`, and `worker_done`.
+
+### Deviations (round 2)
+- The Runs components live in `components/catalogue/`, not `components/runs/`: `.gitignore:13` ignores any directory named `runs/`.
+- `store.runsLoaded` is a new store flag (the skeleton shows until the first listing arrives); the old `.runs` grid CSS was removed from `styles.css`.
