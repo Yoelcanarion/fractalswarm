@@ -51,6 +51,9 @@ LOOPBACK = "http://127.0.0.1"
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 # What a run adds to the log's own size: read routes of ``/api/runs/{id}/<route>``.
 RUN_ROUTES = ("feasibility", "takeover", "recovery", "metrics", "calls", "models", "disputes")
+# What a build leaves at the top of ``--out`` (the app, its data, the Pages marker). A folder with
+# anything else in it is not ours to empty.
+OUTPUT_NAMES = {"index.html", "assets", "favicon.svg", DATA, ".nojekyll"}
 TEXT_SUFFIXES = {".json", ".html", ".js", ".css", ".svg", ".txt", ".map", ".md"}
 # Files of a run that the site may read. Nothing else is copied out of a run directory.
 RUN_FILES = ("events.jsonl", "cassette.jsonl", "HEAD")
@@ -507,6 +510,21 @@ def build_web(out: Path) -> None:
         raise Refused(f"vite did not write {out / 'index.html'}")
 
 
+def check_out(out: Path) -> None:
+    """The build empties ``out`` first. Only a folder that is empty, or holds an earlier build of
+    this script, may be emptied: a mistyped ``--out`` must not wipe a repo or a home folder."""
+    if not out.exists():
+        return
+    if not out.is_dir():
+        raise Refused(f"{out} is a file, not a folder")
+    foreign = sorted(path.name for path in out.iterdir() if path.name not in OUTPUT_NAMES)
+    if foreign:
+        raise Refused(
+            f"{out} holds {', '.join(foreign[:4])}, which a build of this script does not write, "
+            "so it will not be emptied: name a new folder"
+        )
+
+
 def finish(out: Path) -> None:
     """What GitHub Pages needs next to the app: no Jekyll, so no file or folder is skipped."""
     (out / ".nojekyll").write_text("", encoding="utf-8")
@@ -636,6 +654,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.require_clean and provenance.dirty:
             raise Refused("the working tree has uncommitted changes; commit them to publish")
         out: Path = args.out.resolve()
+        check_out(out)
         if args.web_dist is None and not args.no_build:
             build_web(out)
         elif args.web_dist is not None:

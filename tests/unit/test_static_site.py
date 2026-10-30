@@ -507,6 +507,43 @@ class TestBenchResults:
         assert json.loads(build.public_bench(live.encode()))["source"] == "fixture"
 
 
+class TestTheFolderItEmpties:
+    def test_a_new_folder_an_empty_one_and_an_earlier_build_may_be_written(
+        self, tmp_path: Path
+    ) -> None:
+        build.check_out(tmp_path / "does-not-exist")
+        (tmp_path / "empty").mkdir()
+        build.check_out(tmp_path / "empty")
+        (tmp_path / "earlier" / "data").mkdir(parents=True)
+        (tmp_path / "earlier" / "assets").mkdir()
+        for name in ("index.html", "favicon.svg", ".nojekyll"):
+            (tmp_path / "earlier" / name).write_text("", encoding="utf-8")
+        build.check_out(tmp_path / "earlier")  # also the half of a build that stopped on a refusal
+
+    def test_any_other_folder_is_refused_rather_than_emptied(self, tmp_path: Path) -> None:
+        (tmp_path / "mine").mkdir()
+        (tmp_path / "mine" / "thesis.docx").write_text("precious", encoding="utf-8")
+        with pytest.raises(build.Refused, match="will not be emptied"):
+            build.check_out(tmp_path / "mine")
+        with pytest.raises(build.Refused, match="will not be emptied"):
+            build.check_out(REPO)
+
+    def test_a_file_is_refused(self, tmp_path: Path) -> None:
+        (tmp_path / "file").write_text("x", encoding="utf-8")
+        with pytest.raises(build.Refused, match="is a file"):
+            build.check_out(tmp_path / "file")
+
+    def test_the_command_leaves_such_a_folder_alone(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        monkeypatch.setenv("FRACTALSWARM_RUNS_DIR", str(tmp_path / "runs"))
+        (tmp_path / "mine").mkdir()
+        (tmp_path / "mine" / "thesis.docx").write_text("precious", encoding="utf-8")
+        assert build.main(["--runs", TOY, "--out", str(tmp_path / "mine"), "--no-build"]) == 1
+        assert "will not be emptied" in capsys.readouterr().err
+        assert (tmp_path / "mine" / "thesis.docx").read_text(encoding="utf-8") == "precious"
+
+
 class TestTheCommand:
     def test_it_writes_the_data_and_says_what_it_wrote(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
