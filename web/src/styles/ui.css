@@ -236,6 +236,11 @@ textarea:focus-visible {
   display: block;
 }
 
+.skeleton-group--stack {
+  display: grid;
+  gap: var(--space-4);
+}
+
 @keyframes shimmer {
   to {
     background-position: -200% 0;

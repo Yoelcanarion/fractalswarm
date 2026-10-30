@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { PageHeader, Term } from "../components/ui";
 import { useRunStore } from "../store";
 import "./intake.css";
 import { createIntakeApi, type Approval, type IntakeApi, type IntakeState } from "./api";
@@ -10,7 +11,7 @@ import { formProblems, readingBody, requestFor, type Backend, type ReadingForm }
 import { forget, remember, rememberedForm } from "./memory";
 import type { Proposal } from "./proposal";
 import { diffProposal } from "./provenance";
-import { Reading, Stopped } from "./ReadingView";
+import { LoadingReading, Reading, Stopped } from "./ReadingView";
 import { ReviewScreen } from "./ReviewScreen";
 import { rowId } from "./ReviewTables";
 import { intakeHash, type IntakeRoute } from "./route";
@@ -55,6 +56,8 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
 
   const [state, setState] = useState<IntakeState | null>(null);
   const [loadError, setLoadError] = useState<{ message: string; retrying: boolean } | null>(null);
+  // bumped to ask the server again by hand, which starts the asking over
+  const [attempt, setAttempt] = useState(0);
   const [original, setOriginal] = useState<Proposal | null>(null);
   const [working, setWorking] = useState<Proposal | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -97,7 +100,7 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
       stopped = true;
       window.clearTimeout(timer);
     };
-  }, [api, intakeId]);
+  }, [api, intakeId, attempt]);
 
   // Muse's reading, the first time it is there: it is both what the rows are compared against and where the person starts.
   useEffect(() => {
@@ -169,13 +172,16 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
 
   return (
     <div className="intake">
-      <header className="intake__head">
-        <div>
-          <h2 className="intake__title">New task (live)</h2>
-          <p className="intake__lead">Paste the talks and the emails or notes. Muse reads them into the program’s shape, you check each row against the text it came from, and only then does anything run.</p>
-        </div>
-        <Steps current={stepOf(phase)} />
-      </header>
+      <PageHeader
+        className="intake__head"
+        title="New task (live)"
+        lead={
+          <>
+            Paste the talks and the emails or notes. <Term id="muse">Muse</Term> reads them into the program’s shape, you check each row against the text it came from, and only then does anything run.
+          </>
+        }
+        actions={<Steps current={stepOf(phase)} />}
+      />
       {!canStart && (
         <p className="intake__notice" role="status">
           This server does not start runs from the API (the static demo bundle, for one), so reading and running live text needs <code>fractalswarm serve</code>.
@@ -218,13 +224,15 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
         />
       )}
 
-      {(phase.name === "loading" || phase.name === "reading") && loadError === null && <Reading state={phase.name === "reading" ? phase.state : null} />}
+      {phase.name === "loading" && loadError === null && <LoadingReading />}
+      {phase.name === "reading" && loadError === null && <Reading state={phase.state} />}
       {(phase.name === "loading" || phase.name === "reading") && loadError !== null && (
         <Stopped
           headline="The reading could not be fetched."
           details={[loadError.message, ...(loadError.retrying ? [`Asking again every ${RETRY_MS / 1000} seconds.`] : [])]}
           scans={[]}
           onStartOver={() => go(intakeHash(null))}
+          onRetry={() => setAttempt((n) => n + 1)}
         />
       )}
       {phase.name === "stopped" && <Stopped headline={phase.headline} details={phase.details} scans={phase.state.scans} onStartOver={() => go(intakeHash(null))} />}

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { AblationStatus, Note, Result, Tally } from "./model";
 import { appliedCaveats, caveatLabel, compare, FILTER_WORDS, FILTERS, filterNotes, headlineParts, percent, scoreParts, SPLIT_WORDS, SPLITS, soFarCounts, splitCounts, statusLine, type Filter, type Split } from "./view";
 
@@ -150,10 +152,12 @@ export interface AblationViewProps {
   run: AblationStatus;
   filter: Filter;
   onFilter: (filter: Filter) => void;
+  /** What the page puts above the headline: its head, and a note when asking the server has failed. */
+  top?: ReactNode;
 }
 
 /** The ablation: the same notes through the regex parser and through Muse, each reading set against the approved one. */
-export function AblationView({ run, filter, onFilter }: AblationViewProps) {
+export function AblationView({ run, filter, onFilter, top }: AblationViewProps) {
   const { result } = run;
   const differing = new Set(result?.differences ?? []);
   const shown = filterNotes(run.notes, filter, differing);
@@ -161,6 +165,7 @@ export function AblationView({ run, filter, onFilter }: AblationViewProps) {
   const sizeOf = (which: Filter): number => (which === "all" ? run.notes.length : which === "differ" ? differing.size : counts[which]);
   return (
     <div className="abl">
+      {top}
       <Headline run={run} />
       <Caveats result={result} />
       {result !== null && <Breakdown result={result} />}

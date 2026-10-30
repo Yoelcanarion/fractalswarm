@@ -104,6 +104,11 @@ export const GLOSSARY = {
     term: "AIMD quota",
     says: "A request-rate quota for one model. It starts at 50% of the limit, gains 5 points after a clean epoch and is multiplied by 0.7 after a 429.",
   },
+  // reading pasted text (the intake and the ablation)
+  muse: {
+    term: "Muse",
+    says: "Meta's model family. Here it is the reader: it turns messy pasted text into rows (talks, speakers, tracks) that a person checks before anything runs.",
+  },
   // runs (the clocks, src/fractalswarm/runs.py)
   playhead: {
     term: "Playhead",

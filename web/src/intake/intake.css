@@ -10,24 +10,9 @@
   margin: 0 auto;
 }
 
-.intake__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-5);
-  flex-wrap: wrap;
-}
-
-.intake__title {
-  margin: 0 0 var(--space-1);
-  font-size: var(--fs-title);
-}
-
-.intake__lead {
-  margin: 0;
-  max-width: 78ch;
-  color: var(--text-secondary);
-  line-height: var(--lh-body);
+/* The shared page head (components/ui PageHeader): the page's flex gap already spaces it from what follows. */
+.intake > .intake__head {
+  margin-bottom: 0;
 }
 
 .intake__notice {
@@ -354,8 +339,10 @@
   color: var(--text-secondary);
 }
 
-.stopped .btn {
-  align-self: flex-start;
+.stopped__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .spinner {

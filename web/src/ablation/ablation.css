@@ -14,27 +14,15 @@
   max-width: 960px;
 }
 
-.abl__page {
-  display: flex;
-  flex-direction: column;
-}
-
-.abl__bar-head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-5) 0;
-}
-
-.abl__back {
-  color: var(--accent-text);
+/* The shared page head (components/ui PageHeader): the page's flex gap already spaces it from what follows. */
+.abl > .pagehead {
+  margin-bottom: 0;
 }
 
 .abl__runid {
   color: var(--text-muted);
 }
 
-.abl__lead,
 .abl__hint {
   margin: 0;
   color: var(--text-muted);
@@ -76,12 +64,20 @@
 }
 
 .abl__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
   margin: 0;
   padding: var(--space-3);
   border: 1px solid var(--danger-border);
   background: var(--danger-bg);
   color: var(--danger-text);
   border-radius: var(--radius-2);
+}
+
+.abl__error p {
+  margin: 0;
 }
 
 .abl__list {

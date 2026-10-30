@@ -1,7 +1,7 @@
 // Where the panel gets honesty.json: GET /api/bench/honesty, the committed file as it is. There is no
 // bundled copy to fall back on, because a copy could drift from the committed results.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { parseHonesty, type Honesty } from "./honesty";
 
@@ -39,14 +39,20 @@ export async function loadHonesty(get: (url: string) => Promise<Fetched> = fetch
   return parsed.ok ? { status: "ready", honesty: parsed.honesty } : { status: "invalid", reason: parsed.reason };
 }
 
-export function useHonesty(): HonestyState {
-  const [state, setState] = useState<HonestyState>({ status: "loading" });
+const LOADING: HonestyState = { status: "loading" };
+
+/** The file's state, and a way to ask the server for it again: after "not there yet" or a failure, a person should not have to reload the page. */
+export function useHonesty(): { state: HonestyState; reload: () => void } {
+  const [state, setState] = useState<HonestyState>(LOADING);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
+    setState(LOADING);
     void loadHonesty().then((next) => live && setState(next));
     return () => {
       live = false;
     };
-  }, []);
-  return state;
+  }, [attempt]);
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
+  return { state, reload };
 }

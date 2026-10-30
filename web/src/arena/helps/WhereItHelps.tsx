@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
+import { PageHeader } from "../../components/ui";
 import { systemName } from "../assumptions";
 import "./helps.css";
 import { CLAIMS, claimsToShow, type Claim, type Claims } from "./claims";
@@ -92,6 +93,18 @@ function Rules({ honesty }: { honesty: Honesty }) {
   );
 }
 
+/** The head of the page: the same whether the verdicts are there or not, so a stranger knows where they are before anything loads. */
+export function HelpsHead({ actions }: { actions?: ReactNode }) {
+  return (
+    <PageHeader
+      className="helps__head"
+      title="Where it helps"
+      lead="The swarm against each rival, at every setting the bench ran. Wins, ties and losses, as the bench counted them."
+      actions={actions}
+    />
+  );
+}
+
 export interface WhereItHelpsProps {
   honesty: Honesty;
   /** The rival the map and the per-process view start on: the one the outcome is read against by default. */
@@ -109,12 +122,8 @@ export function WhereItHelps({ honesty, rival: start, open: startOpen = null, cl
   const [open, setOpen] = useState<OpenList | null>(startOpen);
   return (
     <section className="helps" aria-label="Where it helps">
-      <header className="helps__head">
-        <div className="helps__titles">
-          <h2 className="helps__title">Where it helps</h2>
-          <p className="helps__lead">The swarm against each rival, at every setting the bench ran. Wins, ties and losses, as the bench counted them.</p>
-        </div>
-        <div className="helps__controls">
+      <HelpsHead
+        actions={
           <label className="helps__field">
             <span className="helps__field-label">Map and per-process against</span>
             <select value={rival} onChange={(event) => setRival(event.target.value)}>
@@ -125,8 +134,8 @@ export function WhereItHelps({ honesty, rival: start, open: startOpen = null, cl
               ))}
             </select>
           </label>
-        </div>
-      </header>
+        }
+      />
       <OutcomeStrip honesty={honesty} claims={claims} />
       <div className="helps__body">
         <RegimeMap honesty={honesty} rival={rival} />

@@ -135,6 +135,12 @@ describe("Card and Skeleton", () => {
     expect(out).toContain("Loading run…");
     expect(out.match(/class="skeleton /g)).toHaveLength(4); // 3 lines and the circle
     expect(out).toContain("skeleton--circle");
+    expect(out).toContain('class="skeleton-group"');
+  });
+
+  it("takes a class to space its placeholders, and keeps its own", () => {
+    const out = html(createElement(SkeletonGroup, { label: "Loading", className: "skeleton-group--stack", children: createElement(Skeleton, { height: 20 }) }));
+    expect(out).toContain('class="skeleton-group skeleton-group--stack"');
   });
 });
 

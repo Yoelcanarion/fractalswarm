@@ -14,7 +14,7 @@ import { FIELD_WORDS } from "./highlight";
 import { IntakeFlow, type IntakeFlowProps } from "./IntakePage";
 import { IntakeForm, type IntakeFormProps } from "./IntakeForm";
 import { DEFAULT_CHOICE, emptyForm, scenarioLabel } from "./launch";
-import { Reading, Stopped } from "./ReadingView";
+import { LoadingReading, Reading, Stopped } from "./ReadingView";
 import { phaseOf } from "./flow";
 import { diffProposal } from "./provenance";
 import { ReviewScreen, type ReviewScreenProps } from "./ReviewScreen";
@@ -290,6 +290,26 @@ describe("reading and stopping", () => {
     expect(text).toContain("Notes block");
     expect(text).toContain("Nothing was sent to a model.");
     expect(text).toContain("Back to the form");
+    expect(text).not.toContain("Try again");
+  });
+
+  it("offers to ask the server again when a reading could not be fetched, next to the way back", () => {
+    const markup = html(Stopped, { headline: "The reading could not be fetched.", details: ["502 Bad Gateway"], scans: [], onStartOver: nothing, onRetry: nothing });
+    const text = plainText(markup);
+    expect(text).toContain("The reading could not be fetched.");
+    expect(text).toContain("502 Bad Gateway");
+    expect(text).toContain("Try again");
+    expect(text).toContain("Back to the form");
+    expect(markup).toContain('role="alert"');
+    expect(markup.indexOf("Try again")).toBeLessThan(markup.indexOf("Back to the form"));
+  });
+
+  it("holds the place of the reading while the server is asked which state it is in, and does not say it is reading", () => {
+    const markup = html(LoadingReading, {});
+    expect(plainText(markup)).toContain("Loading the reading…");
+    expect(plainText(markup)).not.toContain("Reading your text");
+    expect(markup).toContain('role="status"');
+    expect(markup).toContain("skeleton");
   });
 });
 
@@ -398,8 +418,18 @@ describe("the flow", () => {
 
   it("waits on the server for a reading in the address, at the second step", () => {
     const markup = flow({ intakeId: "intake-1" });
-    expect(plainText(markup)).toContain("Reading your text…");
+    expect(plainText(markup)).toContain("Loading the reading…");
     expect(markup).toMatch(/aria-current="step"[^>]*><span[^>]*>2<\/span>Read/);
+  });
+
+  it("opens every address with the same head: the page's one h1, what it is for, and the steps beside it", () => {
+    for (const markup of [flow(), flow({ intakeId: "intake-1" })]) {
+      expect(markup.match(/<h1/g)).toHaveLength(1);
+      expect(markup).toContain('<h1 class="pagehead__title">New task (live)</h1>');
+      expect(plainText(markup)).toContain("Paste the talks and the emails or notes.");
+      expect(markup).toContain('<span class="term">Muse</span>');
+      expect(markup).toMatch(/pagehead__actions[^]*aria-current="step"/);
+    }
   });
 
   it("says when the server does not start runs", () => {

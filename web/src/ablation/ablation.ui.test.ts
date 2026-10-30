@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { occurrences, plainText } from "../arena/helps/testing";
 import type { RunListing } from "../lib/types";
-import { AblationFlow, Launcher } from "./AblationPage";
+import { AblationBanner, AblationFailed, AblationFlow, Launcher } from "./AblationPage";
 import { AblationView, type AblationViewProps } from "./AblationView";
 import { createAblationApi } from "./api";
 import { ablationOf, fixture } from "./testing";
@@ -210,7 +210,27 @@ describe("starting and picking an ablation", () => {
     expect(markup).toContain('<a href="#/ablation/ablation-sample">ablation-sample</a>');
     expect(markup).not.toContain("demo-toy");
     expect(plainText(launcher([]))).toContain("No ablation has been recorded on this server yet.");
-    expect(plainText(launcher(null))).toContain("Loading…");
+    expect(plainText(launcher(null))).toContain("Loading the ablations on record…");
+  });
+
+  it("says when the runs could not be listed, instead of saying none were recorded, and offers to ask again", () => {
+    const markup = html(Launcher, { api: never, runs: null, listError: "502 Bad Gateway", onRetryList: nothing });
+    const text = plainText(markup);
+    expect(text).toContain("Could not list the ablations on record (502 Bad Gateway).");
+    expect(text).toContain("Try again");
+    expect(text).not.toContain("No ablation has been recorded");
+    expect(markup).toContain('role="alert"');
+    expect(plainText(html(Launcher, { api: never, runs: null, listError: "502 Bad Gateway" }))).not.toContain("Try again");
+  });
+
+  it("opens with the page's head: what an ablation is, with Muse defined where it is named", () => {
+    const markup = launcher([]);
+    expect(markup.match(/<h1/g)).toHaveLength(1);
+    expect(markup).toContain('<h1 class="pagehead__title">Ablation</h1>');
+    expect(plainText(markup)).toContain("The same messy notes, read by a regex parser and by Muse");
+    expect(plainText(markup)).toContain(", each reading scored against the one a person approved.");
+    expect(markup).toContain('<span class="term">Muse</span>');
+    expect(markup).toContain("Meta&#x27;s model family");
   });
 });
 
@@ -220,9 +240,42 @@ describe("the flow", () => {
   it("opens the launcher with no run, and waits on the server with one", () => {
     expect(plainText(flow(null))).toContain("Run the ablation");
     const waiting = flow("ablation-sample");
-    expect(plainText(waiting)).toContain("Loading…");
+    expect(plainText(waiting)).toContain("Loading the ablation…");
     expect(waiting).toContain('href="#/ablation"');
     expect(plainText(waiting)).toContain("ablation-sample");
+  });
+
+  it("keeps the head while it waits, and holds the result's place with a skeleton so the page does not jump", () => {
+    const waiting = flow("ablation-sample");
+    expect(waiting).toContain('<h1 class="pagehead__title">Ablation</h1>');
+    expect(waiting).toContain("skeleton-group--stack");
+    expect(waiting).toContain('role="status"');
+    expect(waiting).toContain("All ablations");
+  });
+
+  it("says when an ablation could not be loaded, and says how to go on", () => {
+    const markup = html(AblationFailed, { problem: { message: "no such run", retrying: false }, onRetry: nothing });
+    expect(plainText(markup)).toContain("This ablation could not be loaded");
+    expect(plainText(markup)).toContain("no such run");
+    expect(plainText(markup)).not.toContain("Asking again");
+    expect(plainText(markup)).toContain("Try again");
+    expect(markup).toContain('href="#/ablation"');
+    expect(markup).toContain('role="alert"');
+    const restarting = html(AblationFailed, { problem: { message: "the server is not reachable", retrying: true }, onRetry: nothing });
+    expect(plainText(restarting)).toContain("Asking again every 2 seconds.");
+  });
+
+  it("keeps what was loaded when asking again fails, with the reason above it", () => {
+    const stopped = html(AblationBanner, { problem: { message: "the server stopped", retrying: false }, onRetry: nothing });
+    expect(plainText(stopped)).toContain("the server stopped");
+    expect(plainText(stopped)).toContain("Try again");
+    const going = html(AblationBanner, { problem: { message: "the server stopped", retrying: true }, onRetry: nothing });
+    expect(plainText(going)).toContain("Asking again every 2 seconds.");
+    expect(plainText(going)).not.toContain("Try again");
+    const top = view({ ...sample }, "all");
+    expect(top).not.toContain("pagehead");
+    const withTop = html(AblationView, { run: sample, filter: "all", onFilter: nothing, top: createElement("p", { className: "marker" }, "above") });
+    expect(withTop.indexOf("above")).toBeLessThan(withTop.indexOf('aria-label="Headline"'));
   });
 });
 

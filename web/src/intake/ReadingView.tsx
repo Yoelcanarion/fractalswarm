@@ -1,3 +1,4 @@
+import { Skeleton, SkeletonGroup, SkeletonText } from "../components/ui";
 import type { IntakeState, Scan } from "./api";
 
 const BOX_WORDS: Record<string, string> = { conference: "Conference", talks: "Talks", notes: "Notes" };
@@ -18,6 +19,18 @@ export function ScanList({ scans }: { scans: Scan[] }) {
   );
 }
 
+/** Asking the server which state the reading is in (a link opened, a page reloaded): the shape of the panel that follows, so it does not jump. */
+export function LoadingReading() {
+  return (
+    <section className="panel reading" aria-label="Loading the reading">
+      <SkeletonGroup label="Loading the reading" className="skeleton-group--stack">
+        <Skeleton width={240} height={22} />
+        <SkeletonText lines={2} />
+      </SkeletonGroup>
+    </section>
+  );
+}
+
 /** The reading is going: the reader is filling in the program's shape, and the scan is already known. */
 export function Reading({ state }: { state: IntakeState | null }) {
   return (
@@ -32,8 +45,17 @@ export function Reading({ state }: { state: IntakeState | null }) {
   );
 }
 
+export interface StoppedProps {
+  headline: string;
+  details: string[];
+  scans: Scan[];
+  onStartOver: () => void;
+  /** Ask the server again: for a reading that could not be fetched, which a refusal or a failure of the reader is not. */
+  onRetry?: () => void;
+}
+
 /** The reading stopped, and why. The text is still in the form, so the person can change it and read again. */
-export function Stopped({ headline, details, scans, onStartOver }: { headline: string; details: string[]; scans: Scan[]; onStartOver: () => void }) {
+export function Stopped({ headline, details, scans, onStartOver, onRetry }: StoppedProps) {
   return (
     <section className="panel stopped" role="alert" aria-label="Reading stopped">
       <h3 className="stopped__title">{headline}</h3>
@@ -43,9 +65,16 @@ export function Stopped({ headline, details, scans, onStartOver }: { headline: s
         </p>
       ))}
       <ScanList scans={scans} />
-      <button type="button" className="btn btn--on" onClick={onStartOver}>
-        Back to the form
-      </button>
+      <div className="stopped__actions">
+        {onRetry && (
+          <button type="button" className="btn btn--on" onClick={onRetry}>
+            Try again
+          </button>
+        )}
+        <button type="button" className={onRetry ? "btn" : "btn btn--on"} onClick={onStartOver}>
+          Back to the form
+        </button>
+      </div>
     </section>
   );
 }
