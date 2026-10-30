@@ -14,12 +14,13 @@ import { parseArenaRoute, type ArenaRoute } from "./arena/route";
 import { AblationPage } from "./ablation/AblationPage";
 import { parseAblationRoute, type AblationRoute } from "./ablation/route";
 import { RunStrip } from "./components/RunStrip";
+import { Guide, useGuide } from "./components/shell/Guide";
 import { DirectorPage } from "./director/DirectorPage";
 import { parseDirectorRoute, type DirectorRoute } from "./director/route";
 import { IntakePage } from "./intake/IntakePage";
 import { parseIntakeRoute, type IntakeRoute } from "./intake/route";
 import { TopBar } from "./components/shell/TopBar";
-import { namedRunId, openingRun } from "./lib/address";
+import { defaultRunId, namedRunId, openingRun } from "./lib/address";
 import { SPEEDS } from "./lib/playback";
 import { pickedRunHash, RUN_VIEWS, type RunView } from "./lib/shell";
 import { ChartsPage } from "./pages/ChartsPage";
@@ -95,6 +96,7 @@ export function App() {
   const loadRuns = useRunStore((s) => s.loadRuns);
   const loadCapabilities = useRunStore((s) => s.loadCapabilities);
   const openRun = useRunStore((s) => s.openRun);
+  const guide = useGuide();
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash(window.location.hash));
@@ -104,15 +106,16 @@ export function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, [loadRuns, loadCapabilities]);
 
-  // Open the run named in the URL, or else the first listed one (the demo bundle first).
+  // Open the run named in the URL, or else the final run, at its end: a bare #/run is what a newcomer lands on, and a page of zeros is
+  // not a first sight.
   useEffect(() => {
     if (route.page !== "run") return;
-    const wanted = route.runId ?? runs[0]?.id ?? null;
+    const wanted = route.runId ?? defaultRunId(runs);
     if (wanted && wanted !== runId) {
       void openRun(wanted).then(() => {
         const s = store.getState();
         if (s.live || s.runId !== wanted) return;
-        applyPlayback(store, route.playback);
+        applyPlayback(store, route.runId === null && route.playback.at === null ? { ...route.playback, at: "end" } : route.playback);
         void s.runVerify();
       });
     }
@@ -135,10 +138,12 @@ export function App() {
         scenario={scenario}
         blocked={blocked}
         opening={opening}
+        guide={guide}
         onPickRun={(id) => {
           window.location.hash = pickedRunHash(id, route.page === "run" ? route.view : "overview");
         }}
       />
+      <Guide guide={guide} />
       {/* the strip's place is held from the first paint: it is there before the run is open, and the page below does not jump down when it fills */}
       {route.page === "run" && loadError === null && (runId ? <RunStrip /> : opening && <div className="runstrip" aria-hidden />)}
       <main className="content" id="main" tabIndex={-1}>

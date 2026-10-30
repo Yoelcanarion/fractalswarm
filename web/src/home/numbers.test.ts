@@ -31,10 +31,10 @@ describe("what the page reads from the story", () => {
     expect(heroSetting(FIXTURE_STORY)).toEqual({ task: "t2_conference", real: true, seeds: 7, crashes: 5, profile: "C3" });
   });
 
-  it("reads the crash counts of the gate's two profiles from the hero chart, and none where it has no points", () => {
+  it("reads the crash counts of the gate's two profiles from the failure profiles, and none where they are missing", () => {
     expect(gateCrashes(FIXTURE_STORY)).toEqual([3, 5]);
     expect(gateCrashes(null)).toEqual([]);
-    expect(gateCrashes({ ...FIXTURE_STORY, hero: { ...FIXTURE_STORY.hero, series: {} } })).toEqual([]);
+    expect(gateCrashes({ ...FIXTURE_STORY, profiles: { ...FIXTURE_STORY.profiles, items: {} } })).toEqual([]);
   });
 
   it("counts the facts of the example", () => {
@@ -90,7 +90,7 @@ describe("what the page reads from the story", () => {
 
   it("keeps the real runs' false deaths apart: they belong to R4's setting, not to R3's figures", () => {
     expect(failures(FIXTURE_STORY).falseDeaths.some((item) => /real model/.test(item.label))).toBe(false);
-    expect(realFalseDeaths(FIXTURE_STORY)).toEqual({ perRun: 2.5, runs: 3 });
+    expect(realFalseDeaths(FIXTURE_STORY)).toEqual({ perRun: 2.5, runs: 10 });
     expect(realFalseDeaths(bundledStory)?.runs).toBe(bundledStory.headline?.seedCount);
   });
 
@@ -143,7 +143,7 @@ describe("the story's claims", () => {
   });
 
   it("walk a dotted path and stop at the first gap", () => {
-    expect(slice(FIXTURE_STORY, "hero.series.swarm.points")).toHaveLength(4);
+    expect(slice(FIXTURE_STORY, "hero.series.swarm.points")).toHaveLength(2);
     expect(slice(FIXTURE_STORY, "hero.series.nobody.points")).toBeUndefined();
     expect(slice(null, "a")).toBeUndefined();
   });

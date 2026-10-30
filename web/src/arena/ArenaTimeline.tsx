@@ -6,6 +6,7 @@ import type { Clock } from "../lib/clock";
 import { SPEEDS } from "../lib/playback";
 import { fraction, MARK_TONE } from "../lib/timeline";
 import type { RunStoreApi } from "../store";
+import { useRoving } from "../components/useRoving";
 import { laneOf, sharedEnd, type Lane } from "./bands";
 
 const BAND_ROW = 13; // px of a band row: the band and its gap
@@ -13,12 +14,15 @@ const BAND_ROW = 13; // px of a band row: the band and its gap
 const seconds = (ms: number): string => `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
 
 function LaneTrack({ clock, lane, end, label, noun }: { clock: Clock; lane: Lane; end: number; label: string; noun: string }) {
+  // a lane is one tab stop, the bands and then the marks along it: Tab lands on one, the arrow keys move between them
+  const roving = useRoving(".band, .mark");
+  const count = lane.bands.length + lane.marks.length;
   return (
     <>
       <span className="lane__name">{label}</span>
-      <div className="lane__track" style={{ minHeight: lane.rows * BAND_ROW + 18 }}>
+      <div className="lane__track" style={{ minHeight: lane.rows * BAND_ROW + 18 }} role="group" aria-label={`${label}: outages and crashes, jump to one`} onKeyDown={roving.onKeyDown}>
         <div className="lane__bands" style={{ height: Math.max(1, lane.rows) * BAND_ROW }}>
-          {lane.bands.map((band) => {
+          {lane.bands.map((band, index) => {
             const from = fraction(band.since, end);
             const to = fraction(band.until, end);
             const what = band.source === "supervisor" ? "restarting" : "down";
@@ -30,6 +34,7 @@ function LaneTrack({ clock, lane, end, label, noun }: { clock: Clock; lane: Lane
                 style={{ left: `${from * 100}%`, width: `${(to - from) * 100}%`, top: band.row * BAND_ROW }}
                 title={`${band.coordinator} ${what}: ${seconds(band.since)} to ${band.open ? "the end of the run" : seconds(band.until)}`}
                 aria-label={`${noun}: ${band.coordinator} ${what} from ${seconds(band.since)}: jump here`}
+                {...roving.stop(index, count)}
                 onClick={() => {
                   clock.setPlaying(false);
                   clock.seekTime(band.since);
@@ -39,7 +44,7 @@ function LaneTrack({ clock, lane, end, label, noun }: { clock: Clock; lane: Lane
           })}
         </div>
         <div className="lane__marks">
-          {lane.marks.map((mark) => (
+          {lane.marks.map((mark, index) => (
             <button
               key={mark.seq}
               type="button"
@@ -47,6 +52,7 @@ function LaneTrack({ clock, lane, end, label, noun }: { clock: Clock; lane: Lane
               style={{ left: `${fraction(mark.ts, end) * 100}%` }}
               title={mark.label}
               aria-label={`${mark.label}: jump here`}
+              {...roving.stop(lane.bands.length + index, count)}
               onClick={() => {
                 clock.setPlaying(false);
                 clock.seekTime(mark.ts);
@@ -91,13 +97,16 @@ export function ArenaTimeline({ clock, left, right }: ArenaTimelineProps) {
           {playing ? "❚❚" : "▶"}
         </button>
         <span ref={readout} className="tl__readout mono" />
-        <div className="speeds" role="group" aria-label="replay speed">
-          {SPEEDS.map((s) => (
-            <button key={s} className={`btn btn--seg ${s === speed ? "btn--on" : ""}`} onClick={() => clock.setSpeed(s)}>
-              {s}×
-            </button>
-          ))}
-        </div>
+        <label className="speedpick">
+          Speed
+          <select value={speed} onChange={(event) => clock.setSpeed(Number(event.target.value))} aria-label="replay speed">
+            {SPEEDS.map((s) => (
+              <option key={s} value={s}>
+                {s}×
+              </option>
+            ))}
+          </select>
+        </label>
         <button className="btn" onClick={() => clock.seekTime(end)} title="jump to the end" aria-label="jump to the end">
           ⏭
         </button>

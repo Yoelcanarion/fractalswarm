@@ -146,14 +146,14 @@ export const COPY = {
     hero: { lead: "Waiting and extra cost, as coordinators die." },
     tie: { word: "Tie.", note: "Stall time and extra cost, one dot per seed, against an ideal durable supervisor." },
     helps: {
-      lead: "Where it helps.",
+      lead: "Locality ties too.",
       // `crashes` is read from the data ("three and five"), so the sentence follows the pre-registered profiles.
       gate: (crashes: string) => `With a fake model, at our pre-registered gate, this measure tied at ${crashes} crashes.`,
-      cost: "What it costs: its failure detector declared live coordinators dead on these runs.",
+      cost: "One loss: its failure detector declared live coordinators dead on these runs.",
       perRun: "false deaths per run",
     },
     fails: {
-      lead: "Where it does not.",
+      lead: "Where it does worse.",
       wins: "Here the supervisor wins.",
       fast: "A fast external restart",
       times: "×",

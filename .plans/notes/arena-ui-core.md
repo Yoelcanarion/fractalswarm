@@ -736,3 +736,110 @@ Arena `7452747` (W6) merged at `961c413`, arena `86f2951` (the looping hero) at 
 - Checks: web suite green at 14ba712 (125 files, 1913 tests); intake 9 files / 168 tests green at e8c1365; Python, `demo --verify` and the references as at ee045c1 (not re-run since).
 - Frame times, production scratch build, 1920x1080, 20x, the first 6 s while playing, three passes: 32.8, 28.5 (`lite=shadow`), 27.4 fps. The machine was busy and identical passes drifted by 6 fps, so this does not compare with the quiet-window 37.3 of Oct 29. Theme before the bundle: right in the four cases on the build. Tooltips: 14 bubbles at 1366x768, none outside the viewport or over its trigger.
 - Left: the one-run launch in a browser; a 1920x1080 dark pass after these fixes; the run view's tree text (about 5 px at 1080p: 17 leaf cards make a width-limited fit); W5's Arena page with no pair on record; W6's `.home-extract__mark[data-lit]` (4.30:1 light).
+
+
+## Round 3: the redesign of the app (Oct 30 night; `redesign.md`, "The app")
+
+Yoel found the app too full: too many functions, buttons and information ("yo sabria como usarlo pero si alguien quiere probarlo, no"). No feature is removed; what a stranger does not need at first moved under one fold. Branch `Yoelcanarion/arena-ui-core`, from `Yoelcanarion/arena` `3b22208`.
+
+### The rules every page now follows
+- **One line** that says what the page is for (the `PageHeader` lead, plain words, a term keeps its tooltip), **one main action** (the one `btn btn--on`), and the essentials. Everything else is in **`Details`** (`components/ui/Details.tsx`), the one fold of the app: a native `<details>`, so it is a fold for the keyboard and for a screen reader. It opens by a prop (`open`), or from the address (`?details=<id>[,<id>]`, `lib/details.ts`: `withDetails(hash, id)`), also when the address changes while the page is open. `menu` makes a short list that floats under its summary (closes on Escape, on a click elsewhere and when the address changes); `inline` is the same fold inside a card.
+- **No bare page.** Every page-level empty state names what to do next with a button: Arena (Start a pair, Open the runs), Runs (Start a run), Run (Open the runs), Charts and Helps (Try again, Open the charts/runs), Ablation. A bare `#/run` opens `demo-final` at its end (`lib/address.ts`: `defaultRunId`, the first listed run on a server without it); `#/arena` alone opens the newest public pair behind a skeleton. The small "Nothing" notes inside the cards of Plan, Panels, Results and Security say what the card would hold; they are not pages.
+- **The 3-step guide** (`lib/guide.ts`, `components/shell/Guide.tsx`; the "Guide" button of the top bar): 1 choose a run (Open the final run), 2 kill half the brains, 3 verify the replay. Open the first time, dismissible ("Got it"), reopened by the same button, never blocking (it sits above the page, not over it). The seen flag is `fractalswarm.guide.seen` in `localStorage`, every read and write in try/catch. Honest about a recorded run: step 2 says that in the final run half of the coordinators were killed on purpose and Play shows the rest taking over, that **a recording cannot be changed**, and that to kill some yourself you start a run (button "Start a run"); step 3 says a recorded run checks itself when it opens.
+- One tab stop for a row of small buttons (`components/useRoving.ts`): the tree's cards, the run bar's marks, each arena lane's bands and marks. Tab lands on one, the arrow keys, Home and End move along the row. This is why the old "Skip the tree" button is gone.
+
+### Checklist: every control that moved (each is at most two clicks away)
+Fold ids are the `?details=` values. "1 click" is the fold's summary; a menu or a select adds one.
+
+| Page | Control | Now | Clicks |
+|---|---|---|---|
+| Every page | Guide | "Guide" button in the top bar (new) | 1 |
+| Run, Plan, Results, Panels, Security, Events | Plan, Panels, Security, Events tabs | menu "More views" (`views`) in the run bar; the open view is always a tab; Run and Results stay tabs; the blocked count of Security is the menu's hint | 2 |
+| `#/run` | Skip the tree | removed: the tree is one tab stop | 0 |
+| `#/run` | The old guide panel | the shell Guide, the lead of the page, and "Play from the start" | 1 |
+| `#/run` | Replay speeds 1×, 2×, 5×, 10×, 20× | one select "Speed" in the bar | 2 |
+| `#/run` | Kill half the brains (live) | in view, the main action of a live run | 1 |
+| `#/run` | The other chaos controls (live) | "More ways to break it" (`chaos`) | 2 |
+| `#/run` | The chaos controls on a recorded run | "Chaos controls, live runs only" (`chaos`), all disabled, under a sentence that says why and a link to start a run | 1 |
+| `#/runs` | Search, state and workflow filters, sort, refresh, check all | "All N runs" (`all`) | 1 |
+| `#/runs` | The table of runs and "How to read this table" | "All N runs" (`all`), the key a fold inside it | 1, 2 |
+| `#/runs` | Start a run (the form) | "Start a run of your own" (`start`); the empty list's button opens it by address | 1 |
+| `#/runs` | Open a recorded run | the final run is the main action; the final run and up to three finished runs are in view (`FeaturedRuns`) | 1 |
+| `#/arena` | Swarm and Rival selects | menu "Choose the two runs yourself" (`runs`); the Pair select stays in view | 2 |
+| `#/arena` | Replay speeds | one select "Speed" | 2 |
+| `#/arena` | Play both | "Play both from the start" in view (new, the main action) | 1 |
+| `#/new` | Emails or notes, Conference, Rooms (add, remove), the speakers' names switch | "Add emails, notes, rooms or a conference name" (`more`); it opens by itself when any holds text, e.g. after "Use the sample text" | 1 |
+| `#/new` | Clear | "Clear everything", inside the same fold | 2 |
+| `#/new` | Reader (practice reader or Muse) | "Reader" (`reader`), open when Muse is chosen; its hint says which one is chosen | 1 |
+| `#/new` | The advice of the approval | "N things to know", the shared inline fold | 1 |
+| `#/charts` | Workflow toggles (hide or show one in every chart) | "Hide a workflow, show the band of seeds, or read every number" (`more`); in view the key is only a legend | 1 |
+| `#/charts` | "Show the lowest to highest seed" | the same fold | 1 |
+| `#/charts` | Table of every number | the same fold (it had a fold of its own) | 1 |
+| `#/helps` | The full count: wins, ties and losses per setting and rival, and the buttons that list each result | "The full count" (`table`); it also opens by `open` (a cell asked for) and by the prop `unfold` | 1 |
+| `#/helps` | How a result is decided, Conditions the decision rule names | inline folds (`rules`), under the map | 1 |
+| `#/ablation` | Emails, Abstracts, Seed | "Change the notes or the seed" (`more`); it opens by itself when the form has a problem | 1 |
+| `#/ablation` | The ablations on record | the newest four in view; "All N ablations on record" (`all`) when there are more | 1 |
+| `#/ablation` | The six note filters | one select "Show", each option with its count; the definition of "where they differ" is still the hover of the select | 2 |
+| Plan, Results | The raw plan, the raw report | the shared inline fold (`raw`) | 1 |
+| Plan | Reason, Approve plan, Reject (disabled on a recording) | in view only while a run waits for a person; otherwise "Approve or reject the plan" (`approval`) | 1 |
+| Events | Search, Hide the noise, the group chips | "Filter the events" (`filter`); its hint says whether the noise is hidden | 1 |
+| Run strip, Results, Panels, Events, Plan | The tooltips of the proof chips, of the terms in the views' lines and of the plan's track ids | hover only, no tab stop: the bubble and a copy for a screen reader stay in the page | 0 |
+
+Kept in view on purpose: the Pair select on Arena; the set picker of Charts; the rival select of Helps (it changes the map); the talks box and "Use the sample text" on New; the replay bar's play, step and scrub; the run picker and the proof chips of the strip.
+
+### For W5 (director anchors; `director/targets.ts` is untouched)
+- **Moved under a fold: `[data-helps="table"]` only.** It is inside "The full count" (`table`) on `#/helps`. A scene that points at it has to open the fold: the director's frame renders `<HelpsPage />` (`director/StageViews.tsx:48`) with no address of its own, so pass **`<HelpsPage unfold />`** there for the `table` scene (or any scene that needs the list buttons). `?details=table` in a real address does the same; `WhereItHelps`, `HelpsView` and `HelpsPage` all take `unfold`. `outcome`, `map` and `process` are in view.
+- **In view, unchanged:** the arena anchors (`.side--swarm`, `.side--rival`, `.side__head`, `.side__proof`, `.side__board`, `.status`, `.work`, `.score`, `.arena__assumptions`), the run anchors (`.run__tree .react-flow__node`, `.run__grid`, `.meter`, `.runstrip__proof`, `.lens`, `.counters`, `.run__side`), `.tl, .timeline`, `.abl__head`, `.abl__caveats`, `.abl__break`, `.abl__notes`, `.metric[data-row]`, `[data-actor]`.
+- Things a scene may have clicked or read that changed: the speeds are a select (`select[aria-label="replay speed"]`, on the run bar and the arena bar) instead of five `.speeds button`; the arena picker's Swarm and Rival selects are inside the `runs` menu; the ablation's filters are a select. The director and the home do not use the old selectors (searched `director/**` and `home/**`).
+- `web/src/arena/**` stays mine until W5 comes back: `ArenaPage`, `ArenaTimeline` and `PairPicker` changed as in the table; `ArenaBoard` and the bands are untouched.
+
+### Decisions and deviations
+- The "Skip the tree" button is gone, not folded: the tree is one tab stop now, which solves what it was for.
+- The lens's own nested folds (`lens-fold`: what the model was given, the answer as written, a piece's label) are native `<details>` and were not moved to the shared component: they only appear once a model call is selected and they nest three deep. Listed so nobody thinks it was missed.
+- `#/helps` is one column: the table no longer sits beside the map (it was the part with 18+ buttons).
+- The Charts key lost its toggles in view; a hidden workflow is still told to a screen reader.
+- The guide's trailer for steps 1 and 2 are links ("Open the final run", "Start a run"); no step is a modal, a tour or a lock.
+- No event model, `store.ts`, or any file under `home/` or `director/` changed.
+
+### Counts and checks (RELEASE, Oct 30 night, `ee52fe1` plus this note)
+How: one script (`controls.mjs`, in my scratchpad, outside the repo) on both builds, Playwright Chromium 130, exactly 1920x1080, dark, a fresh browser context per page, 2.5 to 5 s to settle. The new code is my dev server on 5176; the baseline is the committed arena bundle on 8765; both read the same API (8765, 33 runs), so the data is the same. Read-only: nothing was clicked that starts a run.
+
+What is counted, in the window only (a control is counted when it is rendered, not inside a closed fold, and is the topmost thing at its centre):
+- **controls**: links, buttons, inputs, selects, textareas, summaries and the `role=button`, `tab`, `switch`, `menuitem`, `checkbox`, `radio`, `slider`. A tree card, a mark of the bar and a band of a lane are each one control here, although each row is one tab stop.
+- **tab stops**: what Tab walks through (`tabindex >= 0`, not disabled); a tooltip trigger with `tabindex=0` is one.
+- The chrome of every app page is 7 (the brand, the four places, Guide, the theme); a run page adds 5 (the picker, Run, Results, More views, the meter). "First visit" has the guide open (4 more controls); "returning" has its flag set.
+
+| Page | Baseline: controls in view / whole page | Baseline: tab stops | New, first visit (guide open): controls / tab stops | New, returning: controls in view / whole page | New, returning: tab stops | Words in view, baseline -> new |
+|---|---|---|---|---|---|---|
+| `#/run/demo-final?at=end` | 70 / 85 | 71 | 63 / 28 | 60 / 74 | 25 | 525 -> 490 |
+| `#/run` (bare; the new one opens the final run, the old one opened the first listed) | 45 / 54 | 48 | 63 / 28 | 60 / 74 | 25 | 257 -> 490 |
+| `#/runs` | 49 / 86 | 50 | 17 / 18 | 14 / 15 | 15 | 466 -> 105 |
+| `#/arena/<swarm>/<rival>` | 49 / 55 | 49 | 22 / 21 | 46 / 52 | 19 | 209 -> 241 |
+| `#/arena` (bare) | 44 / 50 | 44 | 14 / 17 | 27 / 47 | 18 | 208 -> 239 |
+| `#/new` | 16 / 17 | 14 | 15 / 15 | 12 / 13 | 12 | 243 -> 188 |
+| `#/charts` | 19 / 21 | 29 | 16 / 25 | 13 / 15 | 23 | 246 -> 241 |
+| `#/helps` | 73 / 94 | 53 | 14 / 14 | 11 / 15 | 11 | 611 -> 409 |
+| `#/ablation` | 13 / 14 | 14 | 15 / 16 | 12 / 13 | 13 | 87 -> 85 |
+| `.../plan` | 44 / 47 | 49 | 42 / 30 | 39 / 42 | 27 | 468 -> 459 |
+| `.../results` | 41 / 44 | 44 | 38 / 24 | 35 / 38 | 21 | 312 -> 302 |
+| `.../panels` | 43 / 46 | 49 | 41 / 30 | 38 / 41 | 27 | 650 -> 641 |
+| `.../security` | 41 / 44 | 43 | 39 / 24 | 36 / 39 | 21 | 290 -> 281 |
+| `.../events` | 106 / 773 | 109 | 98 / 84 | 103 / 768 | 89 | 336 -> 327 |
+
+The coordinator's baseline (`#/run` 53, `#/runs` 50 (87 in all), `#/arena` 50, `#/new` 17, `#/charts` 20, `#/helps` 74 (94 in all, 981 words)) is close to this script's for every page but `#/run`, which counted differently (this script counts the 22 tree cards and 18 marks as controls). `#/helps` has 981 words by `innerText` in the baseline, as the brief says; it is 783 now with the count folded.
+
+Reading it, without dressing it up:
+- Runs, Where it helps, New task and Charts are at about the brief's size once the 7 of the chrome are taken out (`#/runs` 14 in all: 7 chrome + Open the final run + 4 runs + 2 folds; `#/helps` 11: 7 + the rival select + 3).
+- Run and Arena went from 71 and 49 tab stops to 25 and 19. Their controls stay at 60 and 46 only because each tree card, mark and band is still a button to click; each row is one tab stop.
+- **Not much changed on Plan, Results, Panels, Security, Events** (21 to 27 tab stops, 89 on Events, whose list rows are buttons). Their first view is the chrome (12), the replay bar (5) and the cards; Plan also shows three disabled approval controls on a recorded run, and eight tooltip triggers are tab stops. Those views are one "More views" menu away now and were not part of the baseline list.
+- The run page's visuals (the counters, the schedule grid, the event log) are what the page is for and are unchanged: its words in view went 525 -> 490.
+
+The acceptance walk in the browser (`walk.mjs`), 22 of 22 passed: a first visit opens the guide (3 steps) and a bare `#/run` opens `demo-final` at its end (event 8771 / 8771); "Got it" closes it and stores `fractalswarm.guide.seen`; a later visit keeps it closed; the Guide button reopens it (`aria-expanded`); "Play from the start" moves the clock from event 0 (t = 2.65 s, event 325 after 2.5 s); "More views" lists Plan, Escape closes it, and Plan opens in two clicks; `?details=table` (helps), `?details=all` and `?details=start` (runs), `?details=more` (charts, ablation) and `?details=reader` (new) open their folds; a recorded run says why it cannot be killed and links to start a run, with its chaos controls folded; no page errors.
+
+Found while checking, not mine: `t2-real-c3-swarm-seed1b` and `t2-real-c3-central-seed1` (the pair the arena page opens by address) show "Replay MISMATCH at seq 9" and "at seq 18" on the 8765 server. `POST /api/runs/<id>/verify` says the same: `first_divergence` 9 and 18, "effect.started differs in payload" on a `firewall` effect. Those two older recordings no longer replay under the current code; `demo-final` verifies (hash `a199a768072b`, `bundle_head_ok`). The page shows it as it is.
+
+### The five More views (after the merge at `5f4519e`; the coordinator's go: fold the approval of a recording, tooltips out of the tab order, fold the events filter, a line for each view)
+- Done as listed, commit `75db2e4`: Plan's approval is a fold unless the plan awaits a person; Events' filter is one fold; the proof chips, the terms in the views' lines (playhead, breakers, AIMD quota, market epoch, task spec) and the plan's track hints are no tab stops. `components/lens/lens.ui.test.ts` had a test that the takeover chip is a tab stop; it now says the chip carries the server's words as a hover and as text for a screen reader, and is none.
+- A line that says what each view is for was already there (`RunFrame` asks for a `lead`): Plan "The plan the root proposed for this task, who approved it, and what the approved plan lets a subgoal do."; Results "What the run reported, how each goal was checked and what it spent, as they stood at the playhead."; Panels "Money, rate limits, breakers, memory, booking conflicts and escalations, as they stood at the playhead."; Security "Emails are scanned before any agent reads them, and every subgoal has to be a node of the approved plan. This is what was stopped, and why."; Events "Every event in the run's log up to the playhead, newest first. Press a row for its payload, or its number to move the playhead there." Not changed.
+- Tab stops in the first view, returning visitor, before -> after (same script, same data): Run 25 -> 23, Plan 27 -> 20, Results 21 -> 18, Panels 27 -> 22, Security 21 -> 19, Events 89 -> 64. What is left is the chrome (12), the replay bar (5) and the page's own content: the events' rows are buttons (that is the list), and Panels still has the cap and the kill switch, three disabled controls on a recording, which were not on the list.
+- The replay check's wording (the coordinator's "One more", commit `9620d4e`): when verify answers `ok` false with `chain_ok` true, the badge on the run strip and on both arena sides, and the Runs table, say "Log intact. This code does not reproduce this recording: first difference at seq N." in amber (`badge--warn`) instead of "Replay MISMATCH" in red; with no divergence number the sentence ends after "recording". `chain_ok` false stays red, as it was. It says nothing about the recording's age or version, which the check cannot know. One place makes the words (`lib/catalogue.ts`: `notReproduced`, `notReproducedWords`), used by `VerifyBadge` and `verifyWords`. Looked at in a browser on the two old arena recordings: the amber chip fits in the strip, and on an arena side it squeezes the run id next to the title (an ellipsis); no horizontal overflow.

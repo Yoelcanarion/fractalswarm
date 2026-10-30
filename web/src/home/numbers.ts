@@ -54,7 +54,7 @@ export interface Setting {
   profile: string | null;
 }
 
-/** The setting of the hero chart's readings (the first real matrix): its task and model, its seeds, the failures at its last point. */
+/** The setting of the hero chart's readings: its task and model, its seeds, the failures at its last point. */
 export function heroSetting(story: Story | null): Setting {
   const hero = story?.hero;
   const reading = heroReading(story, "swarm");
@@ -67,7 +67,7 @@ export function heroSetting(story: Story | null): Setting {
   };
 }
 
-/** The setting of the 3-seed rows (`headline`): the same task and failures as the hero chart's last point, counted over their own seeds. */
+/** The setting of the per-seed rows (`headline`): the same task and failures as the hero chart's last point, counted over their own seeds. */
 export function headlineSetting(story: Story | null): Setting {
   const rows = story?.headline;
   const base = heroSetting(story);
@@ -76,11 +76,11 @@ export function headlineSetting(story: Story | null): Setting {
 
 const GATE_PROFILES = ["C2", "C3"] as const;
 
-/** The crash counts of the two profiles the $0 gate tied at (C2 and C3), read from the hero chart's own points: three and five. */
+/** The crash counts of the two profiles the $0 gate tied at (C2 and C3), read from the failure profiles: three and five. */
 export function gateCrashes(story: Story | null): number[] {
-  const points = story?.hero?.series?.swarm?.points ?? [];
+  const items = story?.profiles?.items ?? {};
   return GATE_PROFILES.flatMap((profile) => {
-    const crashes = num(points.find((point) => point.profile === profile)?.x);
+    const crashes = num(items[profile]?.coordinatorCrashes);
     return crashes === null ? [] : [crashes];
   });
 }
@@ -105,7 +105,7 @@ export function settingText(story: Story | null, setting: Setting): string {
   return [taskName(story, setting.task), crashes, model, seeds].join(" · ");
 }
 
-/** The setting of a result drawn from `hero` (the first real matrix) or from `headline` (the 3-seed rows). */
+/** The setting of a result drawn from `hero` or from `headline` (the per-seed rows). */
 export const captionFor = (story: Story | null, source: "hero" | "headline"): string =>
   settingText(story, source === "hero" ? heroSetting(story) : headlineSetting(story));
 

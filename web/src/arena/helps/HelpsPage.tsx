@@ -23,11 +23,13 @@ export interface HelpsViewProps {
   state: HonestyState;
   /** Ask the server for the file again. Without it a state offers no button for that. */
   onRetry?: () => void;
+  /** Show the full count (the table under Details) open from the start: for a frame that points at it and has no address of its own. */
+  unfold?: boolean;
 }
 
 /** The panel for each state of the file: loading, not there, unreachable, unreadable (said in words, nothing half shown) or there.
  * None of the states without verdicts is a dead end: each says what happened and offers the next step. */
-export function HelpsView({ state, onRetry }: HelpsViewProps) {
+export function HelpsView({ state, onRetry, unfold = false }: HelpsViewProps) {
   switch (state.status) {
     case "loading":
       return (
@@ -73,12 +75,12 @@ export function HelpsView({ state, onRetry }: HelpsViewProps) {
         </Frame>
       );
     case "ready":
-      return <WhereItHelps honesty={state.honesty} />;
+      return <WhereItHelps honesty={state.honesty} unfold={unfold} />;
   }
 }
 
-/** `#/helps`: the panel on its own page. */
-export function HelpsPage() {
+/** `#/helps`: the panel on its own page. `unfold` opens the full count, which is under Details (`?details=table` does the same). */
+export function HelpsPage({ unfold = false }: { unfold?: boolean }) {
   const { state, reload } = useHonesty();
-  return <HelpsView state={state} onRetry={reload} />;
+  return <HelpsView state={state} onRetry={reload} unfold={unfold} />;
 }

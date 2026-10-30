@@ -38,7 +38,7 @@ export function BreakersPanel({ view }: { view: ViewState }) {
     .slice(0, 6);
 
   return (
-    <Card title={<Term id="breaker">Breakers</Term>} hint="what stopped calls, and when it let them through again">
+    <Card title={<Term id="breaker" focusable={false}>Breakers</Term>} hint="what stopped calls, and when it let them through again">
       <div className="pstats">
         <PStat label="breakers" value={rows.length + quiet.length} />
         <PStat label="not closed" value={open} tone={open > 0 ? "bad" : ""} />

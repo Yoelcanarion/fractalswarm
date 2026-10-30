@@ -81,9 +81,11 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 # The first file found wins; bench/charts.py writes one of these.
 HERO_FILES = ("hero_chart.json", "hero.json", "charts.json")
 # The recorded results as committed, one hero chart per matrix (bench/results/<set>/). Every one
-# that exists is offered as a set, so the Charts page can show the 2-seed rivals matrix, the 3-seed
-# headline and the $0 gate (fake LLM) apart. Which of them is real is for the page to say.
+# that exists is offered as a set, so the Charts page can show the ten seeds the claims quote, the
+# 2-seed rivals matrix, the 3-seed headline and the $0 gate (fake LLM) apart. Which of them is real
+# is for the page to say.
 HERO_SETS = {
+    "headline-10": "headline-10/hero-t2_conference.json",
     "v1": "v1/hero-t2_conference.json",
     "headline": "headline/hero-t2_conference.json",
     "rivals-gate": "rivals-gate/hero-t2_conference.json",

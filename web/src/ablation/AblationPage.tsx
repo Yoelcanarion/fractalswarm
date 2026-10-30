@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { EmptyState, PageHeader, Skeleton, SkeletonGroup, SkeletonText, Term } from "../components/ui";
+import { Details, EmptyState, PageHeader, Skeleton, SkeletonGroup, SkeletonText, Term } from "../components/ui";
 import { listRuns } from "../lib/api";
 import type { RunListing } from "../lib/types";
 import "./ablation.css";
@@ -10,6 +10,9 @@ import { defaultLauncher, launcherProblems, MAX_NOTES, requestOf, type LauncherF
 import type { AblationStatus } from "./model";
 import { ablationHash, type AblationRoute } from "./route";
 import { ablationRuns, type Filter } from "./view";
+
+/** The ablations on record that a stranger sees at once: the newest. The rest are under Details. */
+const RECENT = 4;
 
 const POLL_MS = 1000;
 const RETRIES = 20;
@@ -67,26 +70,31 @@ export function Launcher({ api, runs, listError = null, onRetryList }: LauncherP
       <AblationHead />
       <section className="panel abl__start" aria-label="Start an ablation">
         <h3 className="panel__title">Run the ablation</h3>
-        <div className="abl__fields">
-          <label className="abl__field">
-            <span>Emails</span>
-            <input inputMode="numeric" value={form.emails} onChange={(event) => set("emails", event.target.value)} aria-describedby="abl-limits" />
-          </label>
-          <label className="abl__field">
-            <span>Abstracts</span>
-            <input inputMode="numeric" value={form.abstracts} onChange={(event) => set("abstracts", event.target.value)} aria-describedby="abl-limits" />
-          </label>
-          <label className="abl__field">
-            <span>Seed</span>
-            <input inputMode="numeric" value={form.seed} onChange={(event) => set("seed", event.target.value)} />
-          </label>
-        </div>
-        <p id="abl-limits" className="abl__hint">
-          The generator’s notes, 0 to {MAX_NOTES} of each kind. This starts the practice backend, which costs nothing; the result says what that does and does not show.
+        <p className="abl__hint">
+          This starts the practice backend, which costs nothing; the result says what that does and does not show.
         </p>
         <button type="button" className="btn btn--on" disabled={busy || problems.length > 0} onClick={() => void start()}>
           {busy ? "Starting…" : "Run at no cost"}
         </button>
+        <Details inline id="more" summary="Change the notes or the seed" hint="emails, abstracts, seed" open={problems.length > 0}>
+          <div className="abl__fields">
+            <label className="abl__field">
+              <span>Emails</span>
+              <input inputMode="numeric" value={form.emails} onChange={(event) => set("emails", event.target.value)} aria-describedby="abl-limits" />
+            </label>
+            <label className="abl__field">
+              <span>Abstracts</span>
+              <input inputMode="numeric" value={form.abstracts} onChange={(event) => set("abstracts", event.target.value)} aria-describedby="abl-limits" />
+            </label>
+            <label className="abl__field">
+              <span>Seed</span>
+              <input inputMode="numeric" value={form.seed} onChange={(event) => set("seed", event.target.value)} />
+            </label>
+          </div>
+          <p id="abl-limits" className="abl__hint">
+            The generator’s notes, 0 to {MAX_NOTES} of each kind.
+          </p>
+        </Details>
         {problems.length > 0 && (
           <ul className="abl__problems">
             {problems.map((problem) => (
@@ -118,13 +126,26 @@ export function Launcher({ api, runs, listError = null, onRetryList }: LauncherP
         ) : runs.length === 0 ? (
           <p className="abl__hint">No ablation has been recorded on this server yet.</p>
         ) : (
-          <ul className="abl__list">
-            {runs.map((run) => (
-              <li key={run.id}>
-                <a href={ablationHash(run.id)}>{run.id}</a> <span className="abl__hint">{run.status}</span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="abl__list">
+              {runs.slice(0, RECENT).map((run) => (
+                <li key={run.id}>
+                  <a href={ablationHash(run.id)}>{run.id}</a> <span className="abl__hint">{run.status}</span>
+                </li>
+              ))}
+            </ul>
+            {runs.length > RECENT && (
+              <Details inline id="all" summary={`All ${runs.length} ablations on record`}>
+                <ul className="abl__list">
+                  {runs.slice(RECENT).map((run) => (
+                    <li key={run.id}>
+                      <a href={ablationHash(run.id)}>{run.id}</a> <span className="abl__hint">{run.status}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Details>
+            )}
+          </>
         )}
       </section>
     </div>

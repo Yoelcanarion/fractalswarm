@@ -25,10 +25,9 @@ Slices (camelCase keys; seconds are floats rounded to 3 places, money to 6, time
     lanes        work lanes of a run of ``central`` at C3 (not in git: carried over when absent) and
                  of the demo bundle: one lane per actor, one bar per LLM call
     hashes       a sample of the bundle's events with their real hashes, its head, the verification
-    hero         stall time and extra cost against coordinators killed, per workflow
-    headline     the headline runs, per seed
-    headline10   the same for ``bench/results/headline-10`` when it exists (else null)
-    verdicts     the pre-registered verdicts on the headline runs (``bench verdicts``)
+    hero         stall time and extra cost against coordinators killed, per workflow, at ten seeds
+    headline     the ten-seed headline runs, per seed
+    verdicts     the pre-registered rules read on those runs (``bench verdicts``)
     gate         where locality tied at $0 (bench/results/honesty.json)
     regime       does locality hold, tie or fail at each assumption of the rival
     perProcess   the per-process reading; falseDeaths: what the failure detector got wrong
@@ -76,9 +75,7 @@ DEFAULT_BUNDLE = "demo/final"
 DEFAULT_CENTRAL_ID = "central__t2_conference__C3__s1"
 V1 = "bench/results/v1"
 HEADLINE = "bench/results/headline"
-HEADLINE_10 = "bench/results/headline-10"
-# The reading the hero chart and the figures beside R5 come from: v1 until the page says otherwise.
-HERO_SETS = {"v1": V1, "headline-10": HEADLINE_10}
+HEADLINE_10 = "bench/results/headline-10"  # what the claims quote, so what the page draws
 HONESTY = "bench/results/honesty.json"
 REGIME = "bench/results/regime.json"
 SCHEMA = 1
@@ -382,10 +379,11 @@ def validity(rows: list[dict[str, Any]]) -> dict[str, Any]:
 def numbers_slice(
     v1: list[dict[str, Any]],
     head: list[dict[str, Any]],
+    head10: list[dict[str, Any]],
     structure: dict[str, Any],
-    head10: list[dict[str, Any]] | None = None,
 ):
-    """The figures the claims quote, each recomputed from the result rows."""
+    """The figures the claims quote, each recomputed from the result rows. The ten seeds hold the
+    three of ``head``, so a count of all the real runs adds ``v1`` and ``head10`` only."""
 
     def cell_mean(rows: list[dict[str, Any]], workflow: str, task: str, profile: str, key: str):
         values = [
@@ -404,32 +402,34 @@ def numbers_slice(
         pairs = [(c["C0"], c["C3"]) for c in by_seed.values() if "C0" in c and "C3" in c]
         return mean([(c3 - c0) / c0 * 100 for c0, c3 in pairs]) if pairs else None
 
-    r5 = {}
-    for key, task in (("t1", "t1_extraction"), ("t2", "t2_conference")):
-        r5[key] = {
+    task = "t2_conference"
+    seeds = len({x["seed"] for x in head10 if x["workflow"] == "swarm"})
+
+    def stall(workflow: str) -> float | None:
+        return r(cell_mean(head10, workflow, task, "C3", "stall_s"), 1)
+
+    def extra_pct(workflow: str) -> float | None:
+        return r(extra(head10, workflow, task), 1)
+
+    r5 = {
+        "t2": {
             "task": task,
-            "seeds": len({x["seed"] for x in v1 if x["task"] == task and x["workflow"] == "swarm"}),
-            "swarmStallS": r(cell_mean(v1, "swarm", task, "C3", "stall_s"), 1),
-            "centralStallS": r(cell_mean(v1, "central", task, "C3", "stall_s"), 1),
-            "swarmExtraPct": r(extra(v1, "swarm", task), 1),
-            "centralExtraPct": r(extra(v1, "central", task), 1),
+            "seeds": seeds,
+            "swarmStallS": stall("swarm"),
+            "centralStallS": stall("central"),
+            "swarmExtraPct": extra_pct("swarm"),
+            "centralExtraPct": extra_pct("central"),
         }
-
-    def head_mean(workflow: str, profile: str, key: str, places: int = 2):
-        return r(cell_mean(head, workflow, "t2_conference", profile, key), places)
-
-    def head_extra(workflow: str) -> float | None:
-        return r(extra(head, workflow, "t2_conference"), 1)
-
-    r2 = {
-        "task": "t2_conference",
-        "seeds": len({x["seed"] for x in head if x["workflow"] == "swarm"}),
-        "swarmStallS": head_mean("swarm", "C3", "stall_s", 1),
-        "durableMaxStallS": head_mean("durable-max", "C3", "stall_s", 1),
-        "swarmExtraPct": head_extra("swarm"),
-        "durableMaxExtraPct": head_extra("durable-max"),
     }
-    everything = v1 + head
+    r2 = {
+        "task": task,
+        "seeds": seeds,
+        "swarmStallS": stall("swarm"),
+        "durableMaxStallS": stall("durable-max"),
+        "swarmExtraPct": extra_pct("swarm"),
+        "durableMaxExtraPct": extra_pct("durable-max"),
+    }
+    everything = v1 + head10
     completed = sum(1 for x in everything if x["completed"])
     swarm_c3 = [x for x in everything if x["workflow"] == "swarm" and x["profile"] == "C3"]
     return {
@@ -448,10 +448,10 @@ def numbers_slice(
         "validity": {
             "v1": validity(v1),
             "headline": validity(head),
-            "headline10": validity(head10) if head10 is not None else None,
+            "headline10": validity(head10),
         },
         "structure": structure,
-        "source": [f"{V1}/results.json", f"{HEADLINE}/results.json"],
+        "source": [f"{V1}/results.json", f"{HEADLINE_10}/results.json"],
     }
 
 
@@ -1552,30 +1552,26 @@ def build(
     bundle_arg: str,
     central_dir: Path | None,
     previous: dict[str, Any] | None,
-    hero_set: str = "v1",
 ) -> dict[str, Any]:
-    hero_dir = HERO_SETS[hero_set]
-    hero = hero_slice(hero_dir)
-    if hero is None:
-        raise SystemExit(
-            f"{hero_dir}/hero-t2_conference.json does not exist: "
-            f"the {hero_set} reading cannot be the hero yet"
-        )
+    hero = hero_slice(HEADLINE_10)
     bundle = (REPO / bundle_arg).resolve()
     events = load_bundle(bundle)
     report = check_run(bundle)
     claims = claims_slice()
     v1_rows = result_rows(V1)
     head_rows = result_rows(HEADLINE)
-    assert v1_rows is not None and head_rows is not None, (
-        "bench/results/v1 and headline are required"
-    )
+    head10_rows = result_rows(HEADLINE_10)
+    verdicts = verdicts_slice(HEADLINE_10)
+    assert (
+        v1_rows is not None
+        and head_rows is not None
+        and head10_rows is not None
+        and hero is not None
+        and verdicts is not None
+    ), "bench/results/v1, headline and headline-10 are required"
     swarm_lanes = lanes_slice(events, report.run_id)
     central, central_source = central_lanes(central_dir, previous)
     gate_regime = gate_regime_slices()
-    head10 = headline_slice(HEADLINE_10)
-    verdicts = verdicts_slice(HEADLINE)
-    assert verdicts is not None, "bench/results/headline is required"
 
     # Each visual draws one slice and nothing else: the tree's holds all it needs.
     finish = finish_slice(report, events, bundle)
@@ -1619,13 +1615,9 @@ def build(
         },
         "lanesCentral": central_source,
         "claims": source_record("docs/claims.md"),
-        "hero": source_record(f"{hero_dir}/hero-t2_conference.json"),
+        "hero": source_record(f"{HEADLINE_10}/hero-t2_conference.json"),
         "v1": source_record(f"{V1}/results.json"),
-        "headline": source_record(f"{HEADLINE}/results.json"),
-        "headline10": {
-            **source_record(f"{HEADLINE_10}/results.json"),
-            "present": head10 is not None,
-        },
+        "headline": source_record(f"{HEADLINE_10}/results.json"),
         "honesty": source_record(HONESTY),
         "regime": source_record(REGIME),
         "assumptions": source_record("bench/REPORT.md"),
@@ -1639,7 +1631,7 @@ def build(
         "tasks": TASKS,
         "workflows": WORKFLOWS,
         "profiles": profiles_slice(),
-        "numbers": numbers_slice(v1_rows, head_rows, structure, result_rows(HEADLINE_10)),
+        "numbers": numbers_slice(v1_rows, head_rows, head10_rows, structure),
         "facts": facts,
         "tree": tree,
         "takeover": takeover,
@@ -1650,11 +1642,8 @@ def build(
         "extraction": extraction,
         "proof": proof_slice(hashes, bundle),
         "hero": hero,
-        "hero10": hero_slice(HEADLINE_10),
-        "headline": headline_slice(HEADLINE),
-        "headline10": head10,
+        "headline": headline_slice(HEADLINE_10),
         "verdicts": verdicts,
-        "verdicts10": verdicts_slice(HEADLINE_10),
         **gate_regime,
         "failures": failures_slice(gate_regime, verdicts),
         "tokens": tokens_spent(),
@@ -1683,12 +1672,6 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="a recorded run of central at C3, when not in this checkout",
     )
-    parser.add_argument(
-        "--hero-set",
-        choices=sorted(HERO_SETS),
-        default="v1",
-        help="the result set the hero chart and the figures beside R5 are read from",
-    )
     parser.add_argument("--out", type=Path, default=OUT)
     parser.add_argument(
         "--check", action="store_true", help="exit 1 when --out differs from a fresh build"
@@ -1700,7 +1683,7 @@ def main(argv: list[str] | None = None) -> int:
     if central is None:
         default = REPO / V1 / "runs" / DEFAULT_CENTRAL_ID
         central = default if default.is_dir() else None
-    story = build(args.bundle, central, previous, args.hero_set)
+    story = build(args.bundle, central, previous)
     text = dump(story)
     if args.check:
         current = (

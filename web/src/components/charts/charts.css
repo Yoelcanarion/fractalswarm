@@ -114,6 +114,21 @@
   cursor: pointer;
 }
 
+/* in view the key is only a legend: nothing to press */
+.serieskey__item--static {
+  cursor: default;
+}
+
+.serieskey__item--off {
+  background: transparent;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.serieskey__item--off .serieskey__swatch {
+  opacity: 0.35;
+}
+
 .serieskey__item[aria-pressed="false"] {
   background: transparent;
   color: var(--text-muted);
