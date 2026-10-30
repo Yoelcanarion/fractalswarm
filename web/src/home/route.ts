@@ -10,6 +10,14 @@ export function isHomeHash(hash: string): boolean {
   return path === "" || path === "home";
 }
 
+/** `#/home-lab` is W7's lab of the visuals: a page of its own, loaded on demand like the app shell, never part of the home page's bundle. */
+export const isLabHash = (hash: string): boolean => pathOf(hash) === "home-lab";
+
+export type PageName = "home" | "lab" | "app";
+
+/** Which page an address opens: the home page, the lab of the visuals, or the app shell (everything else). */
+export const pageOf = (hash: string): PageName => (isLabHash(hash) ? "lab" : isHomeHash(hash) ? "home" : "app");
+
 export interface HomeAddress {
   /** `#/?at=solution` opens the page at that chapter; `#/?at=tie`, at that beat. */
   target: Target | null;

@@ -9,7 +9,8 @@ import { CHAPTERS } from "./chapters";
 import { COPY, TAGLINE } from "./copy";
 import { HomeView } from "./HomePage";
 import type { Story } from "./data/types";
-import { fixtureClaimText, FIXTURE_STORY } from "./testing";
+import { bundledStory } from "./story";
+import { fixtureClaimText, FIXTURE_STORY, UNIVERSAL } from "./testing";
 
 const render = (story: Story | null, still = false): string => renderToStaticMarkup(createElement(HomeView, { story, still, active: -1 }));
 const plain = (html: string): string =>
@@ -51,7 +52,7 @@ describe("the home page, rendered with a story", () => {
       "T2 conference planning · 5 coordinators crashed (C3) · real model · 7 seeds",
       "T2 conference planning · 5 coordinators crashed (C3) · real model · 5 seeds",
       "T1 extraction · 4 coordinators crashed · fake model · 1 seed",
-      "31 talks, four tracks",
+      "31 talks, four tracks, three days",
       "nine coordinators",
       "o0 → o7 → o8",
       "$4.56",
@@ -75,7 +76,7 @@ describe("the home page, rendered with a story", () => {
     expect(drawn.length).toBeGreaterThan(0);
     for (const claim of drawn) {
       expect(plain(claim.body), claim.id).toContain(fixtureClaimText(claim.id).replace(/`/g, ""));
-      const pending = FIXTURE_STORY.claims[claim.id].status === "pending";
+      const pending = FIXTURE_STORY.claims[claim.id].state === "pending";
       expect(claim.state, claim.id).toBe(pending ? "pending" : "allowed");
       expect(claim.body.includes("home-tag"), `${claim.id} tag`).toBe(pending);
     }
@@ -130,6 +131,15 @@ describe("the home page, rendered with a story", () => {
     expect(text).toContain("T2 conference");
     expect(text).toContain("real model");
     expect(text).toContain("5 seeds");
+    expect(text).toContain(COPY.evidence.helps.cost);
+    expect(text).toContain("2.5");
+  });
+
+  it("keeps the false deaths of the real runs out of R3's figures", () => {
+    const fails = /<article[^>]*aria-labelledby="fails-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
+    expect(plain(fails)).toContain("1.3");
+    expect(plain(fails)).toContain("2.3");
+    expect(plain(fails)).not.toContain("2.5");
   });
 
   it("shows R5 once, with the rival named, the setting and the reason beside it", () => {
@@ -150,8 +160,8 @@ describe("the home page, rendered with a story", () => {
 
   it("types the demo's real output into the terminal", () => {
     const text = plain(html);
-    const { replay, takeover } = FIXTURE_STORY.hashes;
-    for (const printed of [replay.command, replay.line, takeover.command, takeover.line]) {
+    const { command, lines, takeover } = FIXTURE_STORY.proof;
+    for (const printed of [command, ...lines, takeover.command, takeover.line]) {
       expect(printed).toBeTruthy();
       expect(text).toContain(String(printed).replace(/\s+/g, " "));
     }
@@ -166,6 +176,28 @@ describe("the home page, rendered with a story", () => {
   it("reaches no outside address", () => {
     // an svg names its namespace with a URI (the icons do); that is a name, not a request
     expect(html.replace(/xmlns="[^"]*"/g, "")).not.toMatch(/https?:\/\//);
+  });
+});
+
+describe("the home page, rendered with the real story", () => {
+  const html = render(bundledStory);
+  const outsideClaims = plain(html.replace(/<p class="home-claim[^"]*"[^>]*>[\s\S]*?<\/p>/g, " "));
+
+  it("prints no gap where the data has none", () => {
+    expect(plain(html)).not.toMatch(/undefined|NaN|\bnull\b/);
+  });
+
+  it("says nothing of its own that reads as every run being valid", () => {
+    for (const [pattern, name] of UNIVERSAL) expect(pattern.test(outsideClaims), `"${name}" outside a claim`).toBe(false);
+  });
+
+  it("lets only R6 say it, in the row's words, with the setting and the link to R2 and R3 beside it", () => {
+    for (const claim of claims(html)) {
+      if (UNIVERSAL.some(([pattern]) => pattern.test(plain(claim.body)))) expect(claim.id, "a claim that says every run").toBe("R6");
+    }
+    const hero = /<section[^>]*class="home-hero"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+    expect(plain(hero)).toContain("(C3) · real model");
+    expect(hero).toContain('href="#/?at=tie"');
   });
 });
 

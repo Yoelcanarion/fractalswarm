@@ -10,6 +10,7 @@ export const TAGLINE = "Kill half the brains. It still finishes.";
 export interface Facts {
   talks: number | null;
   tracks: number | null;
+  days: number | null;
   sessions: number | null;
   orchestrators: number | null;
   agents: number | null;
@@ -20,6 +21,8 @@ const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "e
 /** `3` is "three"; anything the list does not cover stays a digit, and a missing number is a dash. */
 export const word = (n: number | null | undefined): string =>
   typeof n !== "number" || !Number.isFinite(n) ? "—" : Number.isInteger(n) && n >= 0 && n < WORDS.length ? WORDS[n] : String(n);
+
+const plural = (n: number | null | undefined, one: string, many: string = `${one}s`): string => (n === 1 ? one : many);
 
 export const COPY = {
   title: "FractalSwarm: kill half the brains, it still finishes",
@@ -45,7 +48,7 @@ export const COPY = {
     eyebrow: "The problem",
     title: "A team that depends on one coordinator.",
     example: (f: Facts) =>
-      `Take a real job: plan a conference from messy emails. ${f.talks ?? "—"} talks, ${word(f.tracks)} tracks. A team of AI agents reads the emails and places the talks.`,
+      `Take a real job: plan a conference from messy emails. ${f.talks ?? "—"} talks, ${word(f.tracks)} tracks, ${word(f.days)} ${plural(f.days, "day")}. A team of AI agents reads the emails and places the talks.`,
     visual: "Work lanes of a real run of an in-process supervisor: one lane per agent, one bar per model call, on a shared clock.",
     steps: {
       team: { lead: "A team of AI agents usually has one coordinator.", more: "It plans, assigns and checks the work." },
@@ -61,7 +64,7 @@ export const COPY = {
       },
     },
     parts: { supervisor: "Supervisor", standby: "Standby", watcher: "Watcher", workers: "Workers" },
-    waiting: "the work is waiting",
+    waiting: "the work is waiting, in this recorded run",
     question: "Can a team recover without one?",
   },
 
@@ -81,7 +84,7 @@ export const COPY = {
       heir: { more: "Each survivor works it out alone. No arrows between the panels: nothing was sent." },
       adopt: { lead: "The heir adopts the work, and every result already in the log.", more: "Its subtree re-wires to the heir." },
       again: { lead: "Again.", more: "A session, a track, another session, another track. The root moves from one brain to the next." },
-      done: { lead: "It still finishes." },
+      done: { lead: "This run still finishes." },
     },
     finish: { placed: "talks placed", violations: "hard violations", duplicates: "duplicate calls", cost: "cost" },
   },
@@ -120,7 +123,12 @@ export const COPY = {
     },
     hero: { lead: "Waiting and extra cost, as coordinators die." },
     tie: { word: "Tie.", note: "Stall time and extra cost, one dot per seed, against an ideal durable supervisor." },
-    helps: { lead: "Where it helps.", gate: "At the $0 gate, locality ties against durable-max (T2, C2 and C3)." },
+    helps: {
+      lead: "Where it helps.",
+      gate: "At the $0 gate, locality ties against durable-max (T2, C2 and C3).",
+      cost: "What it costs: its failure detector declared live coordinators dead on these runs.",
+      perRun: "false deaths per run",
+    },
     fails: {
       lead: "Where it does not.",
       wins: "Here the supervisor wins.",
@@ -154,7 +162,7 @@ export function allCopy(): string[] {
     if (typeof value === "string") out.push(value);
     else if (typeof value === "function") {
       // with no data: a sentence that needs a number takes it from the story, and shows a dash without one
-      out.push((value as (facts: Facts) => string)({ talks: null, tracks: null, sessions: null, orchestrators: null, agents: null }));
+      out.push((value as (facts: Facts) => string)({ talks: null, tracks: null, days: null, sessions: null, orchestrators: null, agents: null }));
     } else if (Array.isArray(value)) value.forEach(visit);
     else if (value && typeof value === "object") Object.values(value).forEach(visit);
   };

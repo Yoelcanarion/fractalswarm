@@ -9,7 +9,7 @@ import { Claim, PendingTag } from "../parts/Claim";
 import { segmentEmail, spanOf } from "../parts/emailSegments";
 import { Figure } from "../parts/Figure";
 import { Reveal } from "../parts/Reveal";
-import { useStory } from "../story";
+import { slice, useStory } from "../story";
 import { Viz } from "../visuals";
 
 // Colour is never the only cue: every row names its model in words. The dot is the model's own token.
@@ -109,7 +109,7 @@ export function Models() {
           <div ref={bars} className="home-tokens">
             <p className="home-label">{COPY.models.tokens}</p>
             <div className="home-tokens__bar">
-              <Viz name="TokenBar" progress={barsProgress} still={still} />
+              <Viz name="TokenBar" data={slice(story, "tokensByModel")} progress={barsProgress} still={still} />
             </div>
             <p className="home-tokens__ledger">
               <span>

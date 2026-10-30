@@ -3,13 +3,13 @@ import { useMemo } from "react";
 
 import { COPY } from "../copy";
 import { count, usd } from "../format";
-import { bundleSetting, facts, finish, settingText, takeover, treeBeats } from "../numbers";
+import { facts, finish, runSetting, settingText, takeover, treeBeats } from "../numbers";
 import { ChapterHead, Setting, StepText } from "../parts/Chapter";
 import { Claim } from "../parts/Claim";
 import { Figure } from "../parts/Figure";
 import { Stage, type StageStep } from "../scroll/Stage";
 import { clamp01 } from "../scroll/timeline";
-import { useStory } from "../story";
+import { slice, useStory, type Story } from "../story";
 import { Viz } from "../visuals";
 import { TREE_KEYFRAMES } from "../viz/keyframes";
 
@@ -23,7 +23,7 @@ export function Solution() {
   const kf = BEATS;
   const result = finish(story);
   const run = takeover(story);
-  const setting = settingText(story, bundleSetting(story));
+  const setting = settingText(story, runSetting(story));
 
   const steps: StageStep[] = useMemo(() => {
     const s = COPY.solution.steps;
@@ -52,7 +52,7 @@ export function Solution() {
           </>
         ),
       },
-      { id: "kill", at: kf.verdict1, weight: 0.9, content: <StepText lead={s.kill.lead} more={s.kill.more} /> },
+      { id: "kill", at: kf.kill1, weight: 0.9, content: <StepText lead={s.kill.lead} more={s.kill.more} /> },
       {
         id: "heir",
         at: kf.heir1,
@@ -68,7 +68,7 @@ export function Solution() {
         ),
       },
       { id: "adopt", at: kf.adopt1, weight: 0.8, content: <StepText lead={s.adopt.lead} more={s.adopt.more} /> },
-      { id: "again", at: kf.killLast, weight: 1.3, hold: 0.1, content: <StepText lead={s.again.lead} more={chain} /> },
+      { id: "again", at: kf.kill5, weight: 1.3, hold: 0.1, content: <StepText lead={s.again.lead} more={chain} /> },
       {
         id: "done",
         at: kf.settled,
@@ -77,7 +77,7 @@ export function Solution() {
           <>
             <StepText lead={s.done.lead} />
             <div className="home-figures">
-              <Figure value={result?.placed} format={count} label={COPY.solution.finish.placed} tone="swarm" size="stat" />
+              <Figure value={result?.talksPlaced} format={count} label={COPY.solution.finish.placed} tone="swarm" size="stat" />
               <Figure value={result?.hardViolations} format={count} label={COPY.solution.finish.violations} tone="ok" size="stat" />
               <Figure value={result?.duplicateCalls} format={count} label={COPY.solution.finish.duplicates} tone="plain" size="stat" />
               <Figure value={result?.costUsd} format={(n) => usd(n)} label={COPY.solution.finish.cost} tone="plain" size="stat" />
@@ -97,36 +97,39 @@ export function Solution() {
         id="solution-stage"
         label={COPY.solution.visual}
         steps={steps}
-        visual={({ progress, position, still }) => <SolutionVisual progress={progress} position={position} still={still} />}
+        visual={({ progress, position, still }) => <SolutionVisual story={story} progress={progress} position={position} still={still} />}
       />
     </section>
   );
 }
 
 function SolutionVisual({
+  story,
   progress,
   position,
   still,
 }: {
+  story: Story | null;
   progress: MotionValue<number>;
   position: MotionValue<number>;
   still: boolean;
 }) {
-  // The survivors' panels take the tree's place while they work out the heir, then give it back.
-  const hrwProgress = useTransform(progress, (v) => clamp01((v - BEATS.verdict1) / Math.max(BEATS.adopt1 - BEATS.verdict1, 1e-6)));
+  // The survivors' panels take the tree's place while they work out the heir (the tree's clock holds from the verdict to
+  // the heir), then give it back.
+  const hrwProgress = useTransform(progress, (v) => clamp01((v - BEATS.verdict1) / Math.max(BEATS.heir1 - BEATS.verdict1, 1e-6)));
   const hrwOpacity = useTransform(position, [3.5, 3.95, 4.45, 4.9], [0, 1, 1, 0]);
   const treeOpacity = useTransform(position, [3.5, 3.95, 4.45, 4.9], [1, 0.12, 0.12, 1]);
   const stripOpacity = useTransform(position, [1.3, 2], [0, 1]);
   return (
     <div className="home-solution">
       <m.div className="home-solution__tree" style={{ opacity: still ? 1 : treeOpacity }}>
-        <Viz name="SwarmTree" progress={progress} still={still} pacing="story" />
+        <Viz name="SwarmTree" data={slice(story, "tree")} progress={progress} still={still} pacing="story" />
       </m.div>
       <m.div className="home-solution__hrw" style={{ opacity: still ? 0 : hrwOpacity }}>
-        <Viz name="HrwPanels" progress={hrwProgress} still={still} />
+        <Viz name="HrwPanels" data={slice(story, "hrw")} progress={hrwProgress} still={still} />
       </m.div>
       <m.div className="home-solution__strip" style={{ opacity: still ? 1 : stripOpacity }}>
-        <Viz name="HashStrip" progress={progress} still={still} />
+        <Viz name="HashStrip" data={slice(story, "hashes")} progress={progress} still={still} />
       </m.div>
     </div>
   );

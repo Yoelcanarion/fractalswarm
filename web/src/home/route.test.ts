@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { BEATS, chapterAt, CHAPTERS, isChapterId, isTarget } from "./chapters";
-import { targetHash, isHomeHash, parseHomeAddress } from "./route";
+import { isHomeHash, isLabHash, pageOf, parseHomeAddress, targetHash } from "./route";
 
 describe("the home route", () => {
   it("is the empty hash, the bare slash and the home alias", () => {
@@ -24,6 +24,19 @@ describe("the home route", () => {
       "#/director/s1-arena-open",
     ];
     for (const hash of links) expect(isHomeHash(hash)).toBe(false);
+  });
+});
+
+describe("the page an address opens", () => {
+  it("is the lab at #/home-lab, the home page for its own hashes, and the app shell for the rest", () => {
+    expect(pageOf("#/home-lab")).toBe("lab");
+    expect(pageOf("#/home-lab?x=1")).toBe("lab");
+    expect(isLabHash("#/home-lab/")).toBe(true);
+    expect(pageOf("")).toBe("home");
+    expect(pageOf("#/home")).toBe("home");
+    expect(pageOf("#/arena")).toBe("app");
+    expect(isHomeHash("#/home-lab")).toBe(false);
+    expect(isLabHash("#/home")).toBe(false);
   });
 });
 

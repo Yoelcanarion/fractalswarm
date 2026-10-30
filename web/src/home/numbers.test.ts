@@ -3,14 +3,15 @@ import { describe, expect, it } from "vitest";
 import { figure, percent, seconds } from "./format";
 import {
   assumptions,
-  bundleSetting,
   captionFor,
   facts,
   failures,
   heroReading,
+  heroSetting,
   lanesBeats,
   proofSteps,
-  settingOf,
+  realFalseDeaths,
+  runSetting,
   settingText,
   takeover,
   taskName,
@@ -18,9 +19,8 @@ import {
   treeBeats,
   waitedSeconds,
 } from "./numbers";
-import { bundledStory, claimState, resolveClaim } from "./story";
+import { bundledStory, claimState, resolveClaim, slice } from "./story";
 import { fixtureClaimText, FIXTURE_STORY } from "./testing";
-import type { Keyframe, KeyframeKind } from "./viz/tree/timeline";
 import { TREE_KEYFRAMES } from "./viz/keyframes";
 
 const ascending = (values: number[]) => expect(values).toEqual([...values].sort((a, b) => a - b));
@@ -32,26 +32,27 @@ describe("what the page reads from the story", () => {
     expect(heroReading(FIXTURE_STORY, "central").extraCostPct).toBe(77.7);
   });
 
-  it("knows the task, the model, the seeds and the failures of a hero chart", () => {
-    expect(settingOf(FIXTURE_STORY, "v1")).toEqual({ task: "t2_conference", real: true, seeds: 7, crashes: 5, profile: "C3" });
+  it("knows the task, the model, the seeds and the failures of the hero chart", () => {
+    expect(heroSetting(FIXTURE_STORY)).toEqual({ task: "t2_conference", real: true, seeds: 7, crashes: 5, profile: "C3" });
   });
 
-  it("counts the facts of the example from the tree", () => {
-    expect(facts(FIXTURE_STORY)).toEqual({ talks: 31, tracks: 4, sessions: 5, orchestrators: 9, agents: 11 });
+  it("counts the facts of the example", () => {
+    expect(facts(FIXTURE_STORY)).toEqual({ talks: 31, tracks: 4, days: 3, sessions: 5, orchestrators: 9, agents: 11 });
   });
 
   it("has nothing, not a guess, where the story has no data", () => {
     expect(heroReading(null, "swarm")).toEqual({ stallS: null, extraCostPct: null, crashes: null, seeds: null, profile: null });
     expect(heroReading(FIXTURE_STORY, "nobody").stallS).toBeNull();
-    expect(facts(null)).toEqual({ talks: null, tracks: null, sessions: null, orchestrators: null, agents: null });
-    expect(settingOf(null, "v1")).toEqual({ task: null, real: null, seeds: null, crashes: null, profile: null });
-    expect(bundleSetting(null)).toEqual({ task: null, real: null, seeds: null, crashes: null, profile: null });
+    expect(facts(null)).toEqual({ talks: null, tracks: null, days: null, sessions: null, orchestrators: null, agents: null });
+    expect(heroSetting(null)).toEqual({ task: null, real: null, seeds: null, crashes: null, profile: null });
+    expect(runSetting(null)).toEqual({ task: null, real: null, seeds: null, crashes: null, profile: null });
     expect(failures(null)).toEqual({ fastRestart: [], falseDeaths: [], perProcess: null });
-    expect(takeover(null)).toEqual({ killed: null, rootChain: [], verdictS: null });
+    expect(realFalseDeaths(null)).toBeNull();
+    expect(takeover(null)).toEqual({ killed: null, rootChain: [] });
     expect(tokens(null)).toEqual({ coordination: null, recovery: null });
     expect(proofSteps(null)).toEqual([]);
     expect(assumptions(null)).toEqual([]);
-    expect(waitedSeconds(null, 0.5)).toBeNull();
+    expect(Number.isNaN(waitedSeconds(null, lanesBeats(null), 0.5))).toBe(true);
   });
 
   it("writes the setting of a result with its task, failures, model and seeds", () => {
@@ -66,29 +67,39 @@ describe("what the page reads from the story", () => {
   });
 
   it("names the setting of each chart from its own seeds", () => {
-    expect(captionFor(FIXTURE_STORY, "v1")).toBe("T2 conference planning · 5 coordinators crashed (C3) · real model · 7 seeds");
-    expect(captionFor(FIXTURE_STORY, "headline-rows")).toBe("T2 conference planning · 5 coordinators crashed (C3) · real model · 5 seeds");
+    expect(captionFor(FIXTURE_STORY, "hero")).toBe("T2 conference planning · 5 coordinators crashed (C3) · real model · 7 seeds");
+    expect(captionFor(FIXTURE_STORY, "headline")).toBe("T2 conference planning · 5 coordinators crashed (C3) · real model · 5 seeds");
   });
 
-  it("reads the setting of the demo bundle from the name of its run", () => {
-    expect(bundleSetting(FIXTURE_STORY)).toEqual({ task: "t1_extraction", real: false, seeds: 1, crashes: 4, profile: null });
-    expect(bundleSetting(bundledStory)).toMatchObject({ task: "t2_conference", real: true, seeds: 1 });
+  it("reads the setting of the demo run from the finish slice, and who the run killed from the takeover", () => {
+    expect(runSetting(FIXTURE_STORY)).toEqual({ task: "t1_extraction", real: false, seeds: 1, crashes: 4, profile: null });
+    expect(runSetting(bundledStory)).toMatchObject({ task: "t2_conference", real: true, seeds: 1 });
   });
 
   it("reads who held the root, and what the swarm says about its own failures", () => {
-    expect(takeover(FIXTURE_STORY)).toEqual({ killed: 4, rootChain: ["o0", "o7", "o8"], verdictS: 5.5 });
+    expect(takeover(FIXTURE_STORY)).toEqual({ killed: 4, rootChain: ["o0", "o7", "o8"] });
     const found = failures(FIXTURE_STORY);
-    expect(found.fastRestart.map((item) => item.value)).toEqual([13.4, 5.9]);
-    expect(found.falseDeaths.map((item) => item.value)).toEqual([1.3, 2.3, 2.5]);
+    expect(found.fastRestart.map((item) => [item.value, item.decimals])).toEqual([
+      [13.4, 1],
+      [5.9, 1],
+    ]);
+    expect(found.falseDeaths.map((item) => item.value)).toEqual([1.3, 2.3]);
     expect(found.perProcess?.value).toBe(0.91);
     expect(tokens(FIXTURE_STORY)).toEqual({ coordination: 7, recovery: 9 });
   });
 
-  it("lists the commands of the proof with the one line each printed", () => {
+  it("keeps the real runs' false deaths apart: they belong to R4's setting, not to R3's figures", () => {
+    expect(failures(FIXTURE_STORY).falseDeaths.some((item) => /real model/.test(item.label))).toBe(false);
+    expect(realFalseDeaths(FIXTURE_STORY)).toEqual({ perRun: 2.5, runs: 3 });
+    expect(realFalseDeaths(bundledStory)?.runs).toBe(bundledStory.headline?.seedCount);
+  });
+
+  it("lists the commands of the proof with the lines each printed", () => {
     const steps = proofSteps(bundledStory);
     expect(steps).toHaveLength(2);
-    expect(steps.map((step) => step.command)).toEqual([bundledStory.hashes.replay.command, bundledStory.hashes.takeover.command]);
-    for (const step of steps) expect(step.lines).toHaveLength(1);
+    expect(steps.map((step) => step.command)).toEqual([bundledStory.proof.command, bundledStory.proof.takeover.command]);
+    expect(steps[0].lines).toEqual(bundledStory.proof.lines);
+    expect(steps[1].lines).toEqual([bundledStory.proof.takeover.line]);
   });
 });
 
@@ -114,55 +125,50 @@ describe("the numbers the page prints beside a claim are the numbers of its word
 });
 
 describe("where the text sits in the visuals' progress", () => {
-  const frame = (kind: KeyframeKind, p: number, extra: Partial<Keyframe> = {}): Keyframe => ({ id: `${kind}@${p}`, kind, label: kind, tMs: 0, p, pEnd: p, ...extra });
-
-  it("names the moments of the tree's story from its keyframes", () => {
-    const beats = treeBeats([
-      frame("assign", 0.1),
-      frame("kill", 0.3, { node: "o0" }),
-      frame("verdict", 0.4, { node: "o0" }),
-      frame("remap", 0.45, { pEnd: 0.55 }),
-      frame("kill", 0.8, { node: "o1" }),
-      frame("end", 1),
-    ]);
-    expect(beats).toEqual({ grown: 0.1, log: 0.2, kill1: 0.3, verdict1: 0.4, heir1: 0.45, adopt1: 0.55, killLast: 0.8, settled: 1 });
+  it("takes the beats of the lanes from the data, in order", () => {
+    const beats = lanesBeats(bundledStory);
+    expect(beats).toEqual(bundledStory.lanes.central.keyframes);
+    ascending([beats.filled, beats.crash, beats.restart, beats.redone, beats.end]);
   });
 
-  it("follows the verdict of the first kill, not the first verdict", () => {
-    const beats = treeBeats([frame("assign", 0), frame("verdict", 0.2, { node: "o9" }), frame("kill", 0.3, { node: "o0" }), frame("verdict", 0.5, { node: "o0" })]);
-    expect(beats.verdict1).toBe(0.5);
+  it("falls back to ordered defaults where the data names no beat", () => {
+    const beats = lanesBeats(null);
+    ascending([beats.filled, beats.crash, beats.restart, beats.redone, beats.end]);
   });
 
-  it("puts the moments of the real kill sequence in order, and the takeover is a hold", () => {
+  it("counts the stall of the run up from the crash to the restart, and holds it", () => {
+    const beats = { filled: 0.2, crash: 0.4, restart: 0.6, redone: 0.8, end: 1 };
+    expect(waitedSeconds(100, beats, 0)).toBe(0);
+    expect(waitedSeconds(100, beats, 0.4)).toBe(0);
+    expect(waitedSeconds(100, beats, 0.5)).toBeCloseTo(50, 9);
+    expect(waitedSeconds(100, beats, 0.6)).toBe(100);
+    expect(waitedSeconds(100, beats, 1)).toBe(100);
+    expect(Number.isNaN(waitedSeconds(null, beats, 0.5))).toBe(true);
+    expect(waitedSeconds(100, { ...beats, restart: 0.4 }, 0.5)).toBe(100);
+  });
+
+  it("ends the real count on the stall time of the real run", () => {
+    const beats = lanesBeats(bundledStory);
+    expect(waitedSeconds(bundledStory.lanes.central.stallS, beats, 1)).toBe(bundledStory.lanes.central.stallS);
+  });
+
+  it("puts the moments of the real kill sequence in order, under the names the text uses", () => {
     const beats = treeBeats(TREE_KEYFRAMES);
-    ascending([beats.grown, beats.log, beats.kill1, beats.verdict1, beats.heir1, beats.adopt1, beats.killLast, beats.settled]);
-    expect(beats.heir1).toBeLessThan(beats.adopt1);
+    for (const name of Object.keys(beats)) expect(TREE_KEYFRAMES, name).toHaveProperty(name);
+    ascending([beats.grown, beats.log, beats.kill1, beats.verdict1, beats.heir1, beats.adopt1, beats.kill5, beats.settled]);
     expect(beats.settled).toBeLessThanOrEqual(1);
   });
 
-  it("stays a number when the tree has no keyframes", () => {
-    for (const value of Object.values(treeBeats([]))) expect(Number.isFinite(value)).toBe(true);
-  });
-
-  it("puts the moments of the real in-process run in order, on the clock of the run", () => {
-    const lanes = bundledStory.lanes.central;
-    const beats = lanesBeats(lanes);
-    ascending([beats.filled, beats.crash, beats.restart, beats.redone, beats.end]);
-    const crash = lanes.marks.find((mark) => mark.kind === "crash");
-    expect(beats.crash).toBeCloseTo((crash?.atMs ?? Number.NaN) / lanes.durationMs, 9);
-  });
-
-  it("counts the seconds the work stood still up to a point of the run", () => {
-    const lanes = bundledStory.lanes.central;
-    expect(waitedSeconds(lanes, 0)).toBe(0);
-    expect(waitedSeconds(lanes, 1)).toBeCloseTo(lanes.stall.totalMs / 1000, 6);
-    expect(waitedSeconds(lanes, 0.4)!).toBeLessThanOrEqual(waitedSeconds(lanes, 0.8)!);
-    expect(waitedSeconds(lanes, 7)).toBe(waitedSeconds(lanes, 1));
+  it("lets W7 name a moment and keeps its own default for the rest", () => {
+    expect(treeBeats({ kill1: 0.5, bogus: 3 }).kill1).toBe(0.5);
+    expect(treeBeats({}).settled).toBe(1);
+    expect(treeBeats({ kill1: Number.NaN }).kill1).toBe(treeBeats({}).kill1);
+    for (const value of Object.values(treeBeats({}))) expect(Number.isFinite(value)).toBe(true);
   });
 });
 
 describe("the story's claims", () => {
-  it("resolve to the row's own words and the state its status gives", () => {
+  it("resolve to the row's own words and the state the generator gave", () => {
     expect(resolveClaim(FIXTURE_STORY, "R2")).toEqual({ id: "R2", text: fixtureClaimText("R2"), state: "allowed" });
     expect(resolveClaim(FIXTURE_STORY, "S5")?.state).toBe("pending");
     expect(resolveClaim(FIXTURE_STORY, "R1")?.state).toBe("refused");
@@ -170,11 +176,18 @@ describe("the story's claims", () => {
     expect(resolveClaim(null, "R2")).toBeNull();
   });
 
-  it("never treat a status nobody has classified as allowed", () => {
+  it("never treat a state nobody has classified as allowed", () => {
     expect(claimState("")).toBe("pending");
     expect(claimState("maybe")).toBe("pending");
+    expect(claimState("toString")).toBe("pending");
     expect(claimState("allowed")).toBe("allowed");
     expect(claimState("pending")).toBe("pending");
     expect(claimState("not-claimed")).toBe("refused");
+  });
+
+  it("walk a dotted path and stop at the first gap", () => {
+    expect(slice(FIXTURE_STORY, "hero.series.swarm.points")).toHaveLength(4);
+    expect(slice(FIXTURE_STORY, "hero.series.nobody.points")).toBeUndefined();
+    expect(slice(null, "a")).toBeUndefined();
   });
 });

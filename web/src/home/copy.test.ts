@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { allCopy, COPY, TAGLINE, word } from "./copy";
-import { sources } from "./testing";
+import { sources, UNIVERSAL } from "./testing";
 
 // The words docs/claims.md forbids ("Rules", "Not claimed") and the second half of the old tagline.
 const BANNED: [RegExp, string][] = [
@@ -22,6 +22,12 @@ describe("the page's own words", () => {
   it("never use a word the claims rules forbid", () => {
     for (const sentence of allCopy()) {
       for (const [pattern, name] of BANNED) expect(pattern.test(sentence), `"${name}" in: ${sentence}`).toBe(false);
+    }
+  });
+
+  it("never say that every run was valid: only a claim of docs/claims.md may, in its words and with its setting", () => {
+    for (const sentence of allCopy()) {
+      for (const [pattern, name] of UNIVERSAL) expect(pattern.test(sentence), `"${name}" in: ${sentence}`).toBe(false);
     }
   });
 

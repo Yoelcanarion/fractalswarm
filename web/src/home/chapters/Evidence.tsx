@@ -3,14 +3,14 @@ import { useRef, type ReactNode } from "react";
 import { COPY } from "../copy";
 import { figure } from "../format";
 import { useEnterProgress, useStill } from "../hooks";
-import { assumptions, captionFor, failures, proofSteps, type FailureFigure } from "../numbers";
+import { assumptions, captionFor, failures, proofSteps, realFalseDeaths, type FailureFigure } from "../numbers";
 import { ChapterHead, Setting } from "../parts/Chapter";
 import { Claim, PendingTag } from "../parts/Claim";
 import { Figure } from "../parts/Figure";
 import { Inline } from "../parts/Inline";
 import { Reveal } from "../parts/Reveal";
 import { Terminal } from "../parts/Terminal";
-import { useStory } from "../story";
+import { slice, useStory } from "../story";
 import { Viz, type VizName } from "../visuals";
 
 export function Evidence() {
@@ -43,14 +43,15 @@ function Beat({ id, lead, children }: { id: string; lead: ReactNode; children: R
   );
 }
 
-/** A chart of W7's that draws itself once, when it comes into view. */
-function Chart({ name, duration, className = "" }: { name: VizName; duration: number; className?: string }) {
+/** A chart of W7's that draws itself once, when it comes into view. `path` names the slice of the story it draws. */
+function Chart({ name, path, duration, className = "" }: { name: VizName; path: string; duration: number; className?: string }) {
+  const story = useStory();
   const still = useStill();
   const ref = useRef<HTMLDivElement>(null);
   const progress = useEnterProgress(ref, still, { duration });
   return (
     <div ref={ref} className={`home-chart ${className}`.trim()}>
-      <Viz name={name} progress={progress} still={still} />
+      <Viz name={name} data={slice(story, path)} progress={progress} still={still} />
     </div>
   );
 }
@@ -82,9 +83,9 @@ function FairFight() {
               </tr>
             ) : (
               rows.map((row) => (
-                <tr key={row.assumption}>
+                <tr key={row.id}>
                   <th scope="row">
-                    <Inline text={row.assumption} />
+                    <Inline text={row.label} />
                   </th>
                   <td>
                     <Inline text={row.value} />
@@ -106,8 +107,8 @@ function HeroChart() {
   const story = useStory();
   return (
     <Beat id="hero-chart" lead={COPY.evidence.hero.lead}>
-      <Chart name="LineDraw" duration={2.2} className="home-chart--hero" />
-      <Setting>{captionFor(story, "v1")}</Setting>
+      <Chart name="LineDraw" path="hero" duration={2.2} className="home-chart--hero" />
+      <Setting>{captionFor(story, "hero")}</Setting>
     </Beat>
   );
 }
@@ -120,9 +121,9 @@ function Tie() {
         <Claim id="R2" className="home-claim--lead" />
         <Claim id="R3" className="home-claim--small" />
       </Reveal>
-      <Chart name="DotPlot" duration={1.8} />
+      <Chart name="DotPlot" path="headline" duration={1.8} />
       <Setting>
-        {COPY.evidence.tie.note} {captionFor(story, "headline-rows")}
+        {COPY.evidence.tie.note} {captionFor(story, "headline")}
       </Setting>
     </Beat>
   );
@@ -130,15 +131,24 @@ function Tie() {
 
 function Helps() {
   const story = useStory();
+  const cost = realFalseDeaths(story);
   return (
     <Beat id="helps" lead={COPY.evidence.helps.lead}>
       <Reveal delay={60}>
         <Claim id="R4" className="home-claim--lead" />
       </Reveal>
-      <Chart name="PairedBars" duration={1.6} />
+      <Chart name="PairedBars" path="verdicts" duration={1.6} />
       <Setting>
-        {captionFor(story, "headline-rows")} {"·"} {COPY.evidence.helps.gate}
+        {captionFor(story, "headline")} {"·"} {COPY.evidence.helps.gate}
       </Setting>
+      {cost && (
+        <Reveal delay={100}>
+          <p className="home-beat__verdict">{COPY.evidence.helps.cost}</p>
+          <div className="home-figures">
+            <Figure value={cost.perRun} format={(n) => figure(n)} label={COPY.evidence.helps.perRun} tone="loss" size="stat" />
+          </div>
+        </Reveal>
+      )}
     </Beat>
   );
 }
@@ -175,7 +185,7 @@ function Fails() {
           <p className="home-limit">{COPY.solution.steps.log.limit}</p>
         </div>
       </Reveal>
-      <Chart name="RegimeStrip" duration={1.6} />
+      <Chart name="RegimeStrip" path="regime" duration={1.6} />
     </Beat>
   );
 }
@@ -187,7 +197,7 @@ function Proof() {
       <Reveal delay={60}>
         <Claim id="S5" className="home-claim--lead" />
       </Reveal>
-      <Chart name="HashStrip" duration={2.4} className="home-chart--strip" />
+      <Chart name="HashStrip" path="hashes" duration={2.4} className="home-chart--strip" />
       <Reveal delay={60}>
         <Terminal steps={steps} label={COPY.evidence.proof.terminal} />
       </Reveal>

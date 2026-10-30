@@ -9,7 +9,7 @@ import { Claim } from "../parts/Claim";
 import { Reveal } from "../parts/Reveal";
 import { targetHash } from "../route";
 import { scrollToTarget } from "../scrollTo";
-import { useStory } from "../story";
+import { slice, useStory } from "../story";
 import { Viz } from "../visuals";
 import { TREE_HERO_SECONDS } from "../viz/keyframes";
 
@@ -38,7 +38,7 @@ export function Hero() {
     return () => running.stop();
   }, [still, play]);
 
-  const setting = captionFor(story, "v1");
+  const setting = captionFor(story, "hero");
 
   return (
     <section ref={section} className="home-hero" aria-labelledby="home-title">
@@ -74,7 +74,7 @@ export function Hero() {
         </Reveal>
       </m.div>
       <m.figure className="home-hero__object" aria-label={COPY.hero.object} style={still ? undefined : { scale: objectScale, opacity: objectOpacity }}>
-        <Viz name="SwarmTree" progress={play} still={still} pacing="hero" />
+        <Viz name="SwarmTree" data={slice(story, "tree")} progress={play} still={still} pacing="hero" />
       </m.figure>
     </section>
   );

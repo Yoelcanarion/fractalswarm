@@ -1,6 +1,7 @@
 // The way in to W7's visuals (web/src/home/viz). This file is not called viz.tsx so that no import of "./viz" can be
-// read as that folder. Every visual is a pure component of `{ progress, data, still }`, and `data` is the whole story:
-// each picks its own slice. The page owns the beats and decides what drives `progress`; a visual knows only that.
+// read as that folder. Every visual is a pure component of `{ progress, data, still }`, and `data` is the one slice of
+// the story it draws (the chapter hands it over with `slice(story, "tree")`). The page owns the beats and decides what
+// drives `progress`; a visual knows only that.
 //
 // A visual that W7 has not written yet draws as a labelled placeholder that shows its progress, so the page scrolls
 // end to end before they all exist. To add one: import it here and put it in REGISTRY.
@@ -8,8 +9,6 @@
 import { useMotionValueEvent, type MotionValue } from "motion/react";
 import { useEffect, useRef, type ComponentType } from "react";
 
-import type { Story } from "./data/types";
-import { useStory } from "./story";
 // From the files, not from viz/index.ts: the index also exports the lab (a page of its own, with its own styles), which
 // the bundle of the home page should not carry.
 import { HashStrip } from "./viz/hash/HashStrip";
@@ -33,12 +32,12 @@ export type VizName = (typeof VIZ_NAMES)[number];
 
 interface DrawnProps {
   progress: MotionValue<number>;
-  data: Story;
+  data: unknown;
   still?: boolean;
   [extra: string]: unknown;
 }
 
-// Each visual types its own extra props (pacing, round, door ...); the page hands them through.
+// Each visual types its own slice and extra props (pacing, round, door ...); the page hands them through.
 type VizComponent = ComponentType<DrawnProps>;
 
 const REGISTRY: Partial<Record<VizName, VizComponent>> = {
@@ -73,13 +72,12 @@ function Placeholder({ name, note, progress }: { name: string; note: string; pro
   );
 }
 
-export type VizUse = { name: VizName; progress: MotionValue<number>; still?: boolean } & Record<string, unknown>;
+export type VizUse = { name: VizName; data: unknown; progress: MotionValue<number>; still?: boolean } & Record<string, unknown>;
 
-/** A visual of W7's, or a placeholder while it is not written yet or while there is no story to draw. */
-export function Viz({ name, progress, still = false, ...extra }: VizUse) {
-  const story = useStory();
+/** A visual of W7's, or a placeholder while it is not written yet or while its slice is not in the data. */
+export function Viz({ name, data, progress, still = false, ...extra }: VizUse) {
   const Drawn = REGISTRY[name];
-  if (!story) return <Placeholder name={name} note="no data yet" progress={progress} />;
+  if (data === undefined || data === null) return <Placeholder name={name} note="no data yet" progress={progress} />;
   if (!Drawn) return <Placeholder name={name} note="waiting for the visual" progress={progress} />;
-  return <Drawn {...extra} progress={progress} data={story} still={still} />;
+  return <Drawn {...extra} progress={progress} data={data} still={still} />;
 }

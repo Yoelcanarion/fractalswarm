@@ -72,12 +72,12 @@ describe("the story the page ships with (data/story.json)", () => {
     }
   });
 
-  it("gives each claim the status its row has, and no status the page would read as allowed by mistake", () => {
+  it("gives each claim the state its row has, and no state the page would read as allowed by mistake", () => {
     for (const [id, claim] of Object.entries(bundledStory.claims)) {
       const row = rowOf(id);
       expect(row, `${id} is in data/story.json but not in docs/claims.md`).toBeDefined();
-      expect(claim.status, id).toBe(statusOfCell(row!.status));
-      expect(claimState(claim.status) === "allowed", id).toBe(claim.status === "allowed");
+      expect(claim.state, id).toBe(statusOfCell(row!.status));
+      expect(claimState(claim.state) === "allowed", id).toBe(claim.state === "allowed");
     }
   });
 });

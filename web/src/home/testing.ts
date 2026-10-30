@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { REPO_ROOT } from "../lib/testing";
-import type { ClaimStatus, FalseDeathRow, Story } from "./data/types";
+import type { ClaimState, Story } from "./data/types";
 import { bundledStory } from "./story";
 
 /** The folder of the home page. */
@@ -46,7 +46,7 @@ export function claimRows(): ClaimRow[] {
 export const claimWords = (text: string): string => text.replace(/^"|"$/g, "");
 
 /** What a Status cell says, read the way the table writes it; null for wording nobody has classified. */
-export function statusOfCell(cell: string): ClaimStatus | null {
+export function statusOfCell(cell: string): ClaimState | null {
   const plain = cell.replace(/[*_`]/g, "").trim().toLowerCase();
   if (plain.startsWith("not claimed")) return "not-claimed";
   if (plain.includes("pending")) return "pending";
@@ -57,13 +57,22 @@ export function statusOfCell(cell: string): ClaimStatus | null {
 /** Markdown marks and the spacing around them taken out, to compare the words of two renderings of one cell. */
 export const bare = (text: string): string => text.replace(/[*_`"]/g, "").replace(/\s+/g, " ").trim();
 
+/** Wording that says every run was valid. A first invalid real run is on record (swarm__t2_conference__C0__s5, no chaos,
+ * 40 of 48 talks placed), so the page may say it only through a claim of docs/claims.md: in the row's own words, with
+ * its setting beside it (S7 and R6 speak of C3). Nothing in the page's own copy may. */
+export const UNIVERSAL: [RegExp, string][] = [
+  [/\bvalid\b/i, "valid"],
+  [/\b(every|each|all)\b[^.]{0,40}\bruns?\b[^.]{0,40}\b(finish|complet|succe|surviv)/i, "every run finished"],
+  [/\balways (finish|complete|succeed)/i, "always finishes"],
+];
+
 const must = <T>(value: T | null | undefined, what: string): T => {
   if (value === null || value === undefined) throw new Error(`the bundled story has no ${what}`);
   return value;
 };
 
-// Statuses as docs/claims.md words them on Oct 30: three rows still pending, one not claimed.
-const FIXTURE_STATUS: Record<string, ClaimStatus> = {
+// States as docs/claims.md words them on Oct 30: three rows still pending, one not claimed.
+const FIXTURE_STATE: Record<string, ClaimState> = {
   S1: "pending",
   S2: "pending",
   S3: "allowed",
@@ -89,45 +98,46 @@ export const fixtureClaimText = (id: string): string =>
 function madeUp(): Story {
   const story = structuredClone(bundledStory);
 
-  story.claims = Object.fromEntries(
-    Object.entries(FIXTURE_STATUS).map(([id, status]) => [id, { text: fixtureClaimText(id), status, statusText: status }]),
-  );
+  story.claims = Object.fromEntries(Object.entries(FIXTURE_STATE).map(([id, state]) => [id, { text: fixtureClaimText(id), status: state, state }]));
 
   // the two workflows of the problem chapter, at the heaviest failure profile of the first real matrix
-  const v1 = must(story.hero.v1, "hero.v1");
-  const last = (workflow: string) => must(v1.series.find((series) => series.id === workflow)?.points.at(-1), `a last point for ${workflow}`);
+  const last = (workflow: string) => must(story.hero.series[workflow]?.points.at(-1), `a last point for ${workflow}`);
   const seeds = ["1", "2", "3", "4", "5", "6", "7"];
-  Object.assign(last("swarm"), { stallS: 7.7, extraPct: 3.3, seeds });
-  Object.assign(last("central"), { stallS: 91.1, extraPct: 77.7, seeds });
-  v1.seedCount = seeds.length;
-  must(story.headline, "headline").seeds = ["1", "2", "3", "4", "5"];
-  must(story.hero.headline, "hero.headline").seedCount = 5;
+  Object.assign(last("swarm"), { stall_s: 7.7, extra_cost_pct: 3.3, seeds });
+  Object.assign(last("central"), { stall_s: 91.1, extra_cost_pct: 77.7, seeds });
+  story.hero.seedCount = seeds.length;
+  const headline = must(story.headline, "headline");
+  headline.seeds = ["1", "2", "3", "4", "5"];
+  headline.seedCount = 5;
 
-  Object.assign(story.finish, { placed: 31, expected: 31, costUsd: 4.56 });
-  Object.assign(story.tree.counts, { orchestrators: 9, agents: 11, tracks: 4, sessions: 5 });
-  story.takeover.killCount = 4;
-  story.takeover.chains["root"] = ["o0", "o7", "o8"];
-  story.takeover.detection.meanS = 5.5;
-  story.sources.bundle.runId = "t1-fake-killhalf-seed3";
+  Object.assign(story.facts, { talks: 31, tracks: 4, days: 3, sessions: 5, orchestrators: 9, agents: 11 });
+  Object.assign(story.finish, { task: "t1_extraction", real: false, seeds: 1, talksPlaced: 31, talksTotal: 31, costUsd: 4.56 });
+  story.takeover.killed = 4;
+  story.takeover.rootChain = ["o0", "o7", "o8"];
 
-  const fast = must(
-    story.regime.rows.find((row) => row.axis === "rival_recovery_ms"),
-    "the fast external restart row of the regime",
+  story.failures = {
+    fastRestart: [
+      { value: 13.4, label: "the supervisor detects and restarts in 0.5 s, the swarm keeps 5 s" },
+      { value: 5.9, label: "the supervisor detects and restarts in 1 s, the swarm keeps 5 s" },
+    ],
+    falseDeaths: [
+      { value: 1.3, label: "per run at C2, fake model, 4 runs" },
+      { value: 2.3, label: "per run at C3, fake model, 4 runs" },
+      { value: 2.5, label: "per run at C3, real model, 3 seeds" },
+    ],
+    perProcess: { value: 0.91, label: "each coordinator process failing at the same rate", decimals: 2 },
+  };
+  const real = must(
+    must(story.verdicts, "verdicts").falseDeaths.find((row) => row.workflow === "swarm" && row.profile === "C3"),
+    "the swarm's false deaths at C3 in the verdicts",
   );
-  [13.4, 5.9].forEach((ratio, i) => (fast.points[i].cdtRatio = ratio));
-  const swarm = (rows: FalseDeathRow[], profile: string, value: number) =>
-    (must(rows.find((row) => row.workflow === "swarm" && row.profile === profile), `swarm ${profile} false deaths`).remapsPerRun = value);
-  swarm(story.falseDeaths.rows, "C2", 1.3);
-  swarm(story.falseDeaths.rows, "C3", 2.3);
-  swarm(must(story.verdicts, "verdicts").falseDeaths, "C3", 2.5);
-  story.perProcess.ratio["cdt_s"] = 0.91;
+  real.remapsPerRun = 2.5;
 
-  story.tokensByModel.coordinationTokens = 7;
-  story.tokensByModel.recoveryTokens = 9;
-  story.hashes.replay.line = "MATCH  1234 events, head abc123";
-  story.assumptions.items = [
-    { assumption: "Failure detection", value: "5 s", why: "Same detector for both", checkedBy: "A sweep" },
-    { assumption: "The rival's own calls", value: "`durable-max`: survive", why: "Two variants bound the range", checkedBy: "Both rows" },
+  story.tokens = { coordination: 7, recovery: 9 };
+  story.proof.lines = ["MATCH  backup: 1234 events, head abc123"];
+  story.assumptions = [
+    { id: "detection", label: "Failure detection", value: "5 s", why: "Same detector for both", checkedBy: "A sweep" },
+    { id: "calls", label: "The rival's own calls", value: "`durable-max`: survive", why: "Two variants bound the range", checkedBy: "Both rows" },
   ];
   return story;
 }
