@@ -215,6 +215,38 @@
   vector-effect: non-scaling-stroke;
 }
 
+/* the ambient layer (tree/ambient.ts): what keeps the tree alive between the recorded events. Decoration, drawn apart from
+   the recorded layer in quieter shapes (soft round pulses, not the recorded messages' bright dashes) and with no text. */
+.hv-amb {
+  pointer-events: none;
+}
+.hv-amb-glow {
+  fill: var(--accent);
+  fill-opacity: 0.22;
+}
+.hv-amb-tail {
+  fill: var(--accent-text);
+}
+.hv-amb-tail--far {
+  fill-opacity: 0.3;
+}
+.hv-amb-tail--near {
+  fill-opacity: 0.6;
+}
+.hv-amb-head {
+  fill: var(--accent-text);
+}
+.hv-amb-ping {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.hv-amb-halo {
+  pointer-events: none;
+}
+
 /* ---- the survivors computing the heir ------------------------------------------------------ */
 
 .hv-hrw {

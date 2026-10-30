@@ -1,11 +1,19 @@
-import { useCallback, useId, useLayoutEffect, useMemo, useRef } from "react";
+import type { MotionValue } from "motion/react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef } from "react";
+import { prefersReducedMotion } from "../../../lib/motion";
 import type { TreeSlice } from "../../data/types";
 import { fx, useProgress, type VizProps } from "../shared";
+import { onFrame } from "../ticker";
 import "../viz.css";
-import { treePlayer } from "./frame";
+import { whileVisible } from "../visible";
+import { Ambient } from "./ambient";
+import { treePlayer, type TreeFrame } from "./frame";
 import type { KillInfo, NodeInfo, TreeModel } from "./model";
-import { collectTree, MAX_DASHES, paintTree, SCORE_WIDTH, U, type TreeRig } from "./paint";
+import { collectTree, MAX_DASHES, paintAmbient, paintTree, SCORE_WIDTH, U, type TreeRig } from "./paint";
 import type { Pacing } from "./timeline";
+
+/** The ambient layer reads the frame the loop has just painted, so it runs after it (see ticker.ts). */
+const AMBIENT_ORDER = 10;
 
 export interface SwarmTreeProps extends VizProps<TreeSlice> {
   /** "story" (the default, the one TREE_KEYFRAMES describe): slow enough to read, for a scroll.
@@ -15,6 +23,14 @@ export interface SwarmTreeProps extends VizProps<TreeSlice> {
   labels?: "ids" | "names" | "none";
   /** The run clock in the corner. */
   clock?: boolean;
+  /**
+   * The ambient layer (ambient.ts): pulses along the live edges, a halo breathing round each live brain, a ring pinging round
+   * each working agent. It runs on a clock of its own, only while the tree is on screen and the person has not asked for less
+   * motion, adds no number and no label, and leaves the recorded layer as it is.
+   */
+  ambient?: boolean;
+  /** How much of the tree is drawn, 0..1 (1 when absent): the hero's loop grows it from the root and folds it back. */
+  appear?: MotionValue<number>;
 }
 
 /** Where the missed-heartbeat dots sit around the top of a dead brain, in degrees (SVG, y down). */
@@ -25,11 +41,12 @@ const crack = (R: number): string => {
   return `M${p(0.42, -0.93)}L${p(0.57, -0.68)}L${p(0.34, -0.5)}L${p(0.5, -0.22)}`;
 };
 
-function BrainNode({ info, kill, labels }: { info: NodeInfo; kill: KillInfo | undefined; labels: SwarmTreeProps["labels"] }) {
+function BrainNode({ info, kill, labels, glow }: { info: NodeInfo; kill: KillInfo | undefined; labels: SwarmTreeProps["labels"]; glow: string | null }) {
   const R = info.size * U;
   const names = labels === "names";
   return (
     <g className="hv-node" data-node={info.id} data-kind="brain" data-role={info.role}>
+      {glow && <circle className="hv-amb-halo" r={fx(R * 1.75)} fill={`url(#${glow})`} opacity="0" />}
       <circle className="hv-flash" r={R} opacity="0" />
       <circle className="hv-pulse" r={R} opacity="0" />
       <circle className="hv-crown" r={R + 3} opacity="0" />
@@ -84,10 +101,11 @@ function BrainNode({ info, kill, labels }: { info: NodeInfo; kill: KillInfo | un
   );
 }
 
-function AgentNode({ info, labels }: { info: NodeInfo; labels: SwarmTreeProps["labels"] }) {
+function AgentNode({ info, labels, ping }: { info: NodeInfo; labels: SwarmTreeProps["labels"]; ping: boolean }) {
   const s = info.size * U;
   return (
     <g className="hv-node" data-node={info.id} data-kind="agent">
+      {ping && <rect className="hv-amb-ping" x={fx(-s)} y={fx(-s)} width={fx(2 * s)} height={fx(2 * s)} rx="3" opacity="0" />}
       <rect className="hv-square" x={fx(-s)} y={fx(-s)} width={fx(2 * s)} height={fx(2 * s)} rx="3" />
       {labels === "ids" || labels === "names" ? (
         <text className="hv-id" y={fx(s + 15)} textAnchor="middle">
@@ -109,12 +127,15 @@ function describe(model: TreeModel): string {
   );
 }
 
-export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", labels = "ids", clock = true }: SwarmTreeProps) {
+export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", labels = "ids", clock = true, ambient = false, appear }: SwarmTreeProps) {
   const player = useMemo(() => treePlayer(data, pacing), [data, pacing]);
   const { model } = player;
   const svg = useRef<SVGSVGElement>(null);
   const rig = useRef<TreeRig | null>(null);
+  /** The frame the recorded layer shows now, for the ambient layer to read. */
+  const shown = useRef<TreeFrame | null>(null);
   const uid = useId();
+  const glow = ambient ? `${uid.replace(/:/g, "")}-glow` : null;
 
   const sizes = useMemo(
     () => Object.fromEntries(model.ids.map((id) => [id, { size: model.node[id]?.size ?? 0.2, brain: model.node[id]?.kind === "brain" }])),
@@ -122,14 +143,36 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
   );
   useLayoutEffect(() => {
     rig.current = svg.current ? collectTree(svg.current, sizes) : null;
-  }, [sizes, labels, clock]);
+  }, [sizes, labels, clock, ambient]);
   const apply = useCallback(
     (p: number) => {
-      if (rig.current) paintTree(rig.current, player.frame(p));
+      if (!rig.current) return;
+      // A still frame (or less motion) shows the whole tree: how much of it is drawn belongs to the loop, which is not running.
+      const drawn = still || prefersReducedMotion() ? 1 : (appear?.get() ?? 1);
+      const frame = player.frame(p, drawn);
+      shown.current = frame;
+      paintTree(rig.current, frame);
     },
-    [player],
+    [player, appear, still],
   );
   useProgress(progress, apply, still, stillAt);
+  useLayoutEffect(() => {
+    if (!appear || still || prefersReducedMotion()) return undefined;
+    return appear.on("change", () => apply(progress.get()));
+  }, [appear, apply, progress, still]);
+
+  useEffect(() => {
+    const element = svg.current;
+    if (!ambient || still || prefersReducedMotion() || !element) return undefined;
+    const layer = new Ambient(model);
+    return whileVisible(element, () =>
+      onFrame((dt) => {
+        if (!shown.current || !rig.current) return;
+        layer.step(dt, shown.current);
+        paintAmbient(rig.current, layer);
+      }, AMBIENT_ORDER),
+    );
+  }, [ambient, still, model]);
 
   const b = model.bounds;
   const memorialY = Math.max(...Object.values(model.memorial).map((s) => s.y));
@@ -146,6 +189,15 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
     >
       <title id={`${uid}-t`}>The swarm tree</title>
       <desc id={`${uid}-d`}>{describe(model)}</desc>
+      {glow && (
+        <defs>
+          <radialGradient id={glow}>
+            <stop offset="0.5" style={{ stopColor: "var(--accent)", stopOpacity: 0 }} />
+            <stop offset="0.66" style={{ stopColor: "var(--accent)", stopOpacity: 0.5 }} />
+            <stop offset="1" style={{ stopColor: "var(--accent)", stopOpacity: 0 }} />
+          </radialGradient>
+        </defs>
+      )}
       <g className="hv-memorial" opacity="0">
         <line className="hv-memorial-rule" x1={fx((b.x0 + 0.2) * U)} x2={fx((b.x1 - 0.2) * U)} y1={fx((memorialY - 0.95) * U)} y2={fx((memorialY - 0.95) * U)} />
         {labels !== "none" && (
@@ -164,12 +216,24 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
           <line key={i} className="hv-dash" data-dash={i} x1="-7" x2="7" y1="0" y2="0" opacity="0" />
         ))}
       </g>
+      {ambient && (
+        <g className="hv-amb" aria-hidden="true">
+          {model.ids.map((id) => (
+            <g key={id} className="hv-amb-dot" data-amb-dot={id} opacity="0">
+              <circle className="hv-amb-glow" r="8" />
+              <circle className="hv-amb-tail hv-amb-tail--far" r="1.5" />
+              <circle className="hv-amb-tail hv-amb-tail--near" r="2.1" />
+              <circle className="hv-amb-head" r="2.7" />
+            </g>
+          ))}
+        </g>
+      )}
       <g>
         {brains.map((id) => (
-          <BrainNode key={id} info={model.node[id] as NodeInfo} kill={model.killOf[id]} labels={labels} />
+          <BrainNode key={id} info={model.node[id] as NodeInfo} kill={model.killOf[id]} labels={labels} glow={glow} />
         ))}
         {agents.map((id) => (
-          <AgentNode key={id} info={model.node[id] as NodeInfo} labels={labels} />
+          <AgentNode key={id} info={model.node[id] as NodeInfo} labels={labels} ping={ambient} />
         ))}
       </g>
       {clock && (

@@ -1,7 +1,8 @@
 // Copies a TreeFrame onto the SVG. The only place the tree touches the DOM per frame: every write
 // goes through a Pen, which skips attributes whose value has not changed.
 
-import { fx } from "../shared";
+import { fx, smoothstep, span } from "../shared";
+import { COMET, type Ambient } from "./ambient";
 import { edgePath, type DashFrame, type EdgeFrame, type NodeFrame, type TreeFrame } from "./frame";
 
 /** Layout units to viewBox units: about a pixel each at the width of the home page's hero. */
@@ -44,6 +45,9 @@ export interface NodeRig {
   score: Pen<SVGGElement> | null;
   scoreBar: Pen<SVGRectElement> | null;
   scoreText: Pen<SVGTextElement> | null;
+  /** The ambient layer's parts, when the tree is drawn with one: a brain's halo, an agent's ring. */
+  halo?: Pen<SVGCircleElement> | null;
+  ping?: Pen<SVGRectElement> | null;
 }
 
 export interface TreeRig {
@@ -52,6 +56,8 @@ export interface TreeRig {
   dashes: Pen<SVGLineElement>[];
   clock: Pen<SVGTextElement> | null;
   memorial: Pen<SVGGElement> | null;
+  /** The ambient layer's pulse on each node's edge, by the id of the node: its group, and its four circles (glow, tail, tail, head). */
+  dots?: Record<string, { group: Pen<SVGGElement>; parts: Pen<SVGCircleElement>[] }>;
 }
 
 const pen = <E extends Element>(root: Element, selector: string): Pen<E> | null => {
@@ -83,21 +89,30 @@ export function collectTree(svg: SVGSVGElement, sizes: Record<string, { size: nu
       score: pen(g, ".hv-score"),
       scoreBar: pen(g, ".hv-score-bar"),
       scoreText: pen(g, ".hv-score-text"),
+      halo: pen(g, ".hv-amb-halo"),
+      ping: pen(g, ".hv-amb-ping"),
     };
   }
   const edges: Record<string, Pen<SVGPathElement>> = {};
   for (const el of svg.querySelectorAll<SVGPathElement>("[data-edge]")) edges[el.dataset["edge"] ?? ""] = new Pen(el);
+  const dots: NonNullable<TreeRig["dots"]> = {};
+  for (const el of svg.querySelectorAll<SVGGElement>("[data-amb-dot]")) {
+    dots[el.dataset["ambDot"] ?? ""] = { group: new Pen(el), parts: [...el.querySelectorAll<SVGCircleElement>("circle")].map((c) => new Pen(c)) };
+  }
   return {
     nodes,
     edges,
     dashes: [...svg.querySelectorAll<SVGLineElement>("[data-dash]")].map((el) => new Pen(el)),
     clock: pen(svg, ".hv-clock"),
     memorial: pen(svg, ".hv-memorial"),
+    dots,
   };
 }
 
 function paintNode(rig: NodeRig, f: NodeFrame): void {
-  rig.g.set("transform", `translate(${fx(f.x * U)} ${fx(f.y * U)})`);
+  const place = `translate(${fx(f.x * U)} ${fx(f.y * U)})`;
+  // A node that is growing (or folding back) is a little smaller than it will be.
+  rig.g.set("transform", f.appear < 1 ? `${place} scale(${fx(0.78 + 0.22 * f.appear, 3)})` : place);
   rig.g.set("opacity", f.opacity);
   rig.g.set("data-state", f.state);
   rig.g.set("data-busy", f.busy ? "true" : "false");
@@ -161,5 +176,40 @@ export function paintTree(rig: TreeRig, frame: TreeFrame): void {
   for (const [id, pen] of Object.entries(rig.edges)) paintEdge(pen, byChild.get(id));
   rig.dashes.forEach((pen, i) => paintDash(pen, frame.dashes[i]));
   rig.clock?.text(`${(frame.tMs / 1000).toFixed(1)} s`);
-  rig.memorial?.set("opacity", frame.killed > 0 ? 1 : 0);
+  rig.memorial?.set("opacity", frame.killed > 0 ? smoothstep(span(frame.appear, 0.7, 1)) : 0);
+}
+
+/** Copies the ambient layer onto the SVG: a pulse on each edge, a halo on each brain, a ring on each working agent. */
+export function paintAmbient(rig: TreeRig, layer: Ambient): void {
+  if (rig.dots) {
+    for (const id in rig.dots) {
+      const dot = rig.dots[id];
+      const i = layer.indexOf(id);
+      if (!dot) continue;
+      const opacity = i < 0 ? 0 : (layer.dot.opacity[i] ?? 0);
+      if (opacity > 0.01) {
+        // glow and head ride together; the two tails trail them
+        const at = (k: number): string => `translate(${fx((layer.dot.x[i * COMET + k] ?? 0) * U)} ${fx((layer.dot.y[i * COMET + k] ?? 0) * U)})`;
+        const [glow, far, near, head] = dot.parts;
+        glow?.set("transform", at(0));
+        far?.set("transform", at(2));
+        near?.set("transform", at(1));
+        head?.set("transform", at(0));
+        dot.group.set("opacity", opacity);
+      } else {
+        dot.group.set("opacity", 0);
+      }
+    }
+  }
+  for (const id in rig.nodes) {
+    const node = rig.nodes[id];
+    const i = layer.indexOf(id);
+    if (!node || i < 0) continue;
+    node.halo?.set("opacity", layer.halo[i] ?? 0);
+    if (node.ping) {
+      const opacity = layer.ping.opacity[i] ?? 0;
+      if (opacity > 0.01) node.ping.set("transform", `scale(${fx(layer.ping.scale[i] ?? 1, 3)})`);
+      node.ping.set("opacity", opacity > 0.01 ? opacity : 0);
+    }
+  }
 }
