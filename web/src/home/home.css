@@ -542,10 +542,10 @@ body:has(.home) {
 }
 
 /* ---- the problem: the film of the work lanes ---- */
+/* the film sets its own height (W7's .hv-film: 44vw between 320 and 560 px); the figure wraps it */
 .home-film {
   position: relative;
   width: 100%;
-  height: clamp(280px, 50svh, 540px);
 }
 
 /* ---- the solution: three cards that play on hover, then the click demo ---- */
