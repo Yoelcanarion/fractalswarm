@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+from pydantic import BaseModel, Field
 
 from fractalswarm.bench.tasks.t2_conference.generator import generate
 from fractalswarm.bench.tasks.t2_conference.task import (
@@ -12,6 +13,7 @@ from fractalswarm.bench.tasks.t2_conference.task import (
     TrackPlan,
     normalize_track,
 )
+from fractalswarm.intake.schema import IntakeOutput
 from fractalswarm.planning.contracts import Contract
 from fractalswarm.planning.dag import Dag, DagError
 from fractalswarm.planning.planner import compose, parse_json, read_blocks, scope_token
@@ -45,6 +47,21 @@ def test_schemas_meet_the_strict_mode_rules(model) -> None:
     for node in objects(schema):
         assert node["additionalProperties"] is False
         assert node["required"] == sorted(node["properties"])
+
+
+def test_a_field_named_like_a_dropped_keyword_stays() -> None:
+    """Annotations go, but a field called `title` is part of the answer. Dropping it left the real
+    intake with no talk titles: strict mode forbids a field the schema does not name."""
+
+    class Talk(BaseModel):
+        title: str = Field(description="what it is called")
+        default: int = 0
+
+    schema = strict_schema(Talk)
+    assert sorted(schema["properties"]) == ["default", "title"]
+    assert "title" not in schema and "title" not in schema["properties"]["title"]
+    assert "default" not in schema["properties"]["default"]
+    assert "title" in strict_schema(IntakeOutput)["properties"]["talks"]["items"]["properties"]
 
 
 def test_taskspec_defaults_and_params(tmp_path: Path) -> None:
