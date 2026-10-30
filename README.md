@@ -12,7 +12,7 @@ uv run fractalswarm demo --verify    # no API key needed
 
 ## The problem
 
-A team of LLM agents usually depends on one coordinator: it plans, assigns and checks the work. When it crashes, the team waits, or does the work again.
+A team of LLM agents often depends on one coordinator: it plans, assigns and checks the work. When it crashes, the team waits, or does the work again.
 
 In the simplest setup the workers run inside the coordinator's process and die with it, so their calls are paid for twice. A durable supervisor fixes that: its workers survive and a standby takes over. But then you run a supervisor, a standby and something to watch them, and even an ideal one has to stop to recover.
 
