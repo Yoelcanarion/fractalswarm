@@ -37,8 +37,11 @@ export function Problem() {
         ),
       },
       { id: "team", at: kf.filled, weight: 0.9, content: <StepText lead={s.team.lead} more={s.team.more} /> },
-      { id: "crash", at: kf.crash, weight: 0.9, content: <StepText lead={s.crash.lead} more={s.crash.more} /> },
-      { id: "twice", at: kf.redone, weight: 0.9, content: <StepText lead={s.twice.lead} more={s.twice.more} /> },
+      // Between the crash and the redone calls the lanes spend about a quarter of their time on the five crash cycles and
+      // two thirds on the one long coordinator call (W7), and the waiting counter runs through it: these two steps are
+      // tall, with a short hold, so that stretch gets about a screen and a half of scroll instead of half a screen.
+      { id: "crash", at: kf.crash, weight: 1.6, hold: 0.2, content: <StepText lead={s.crash.lead} more={s.crash.more} /> },
+      { id: "twice", at: kf.redone, weight: 2.2, hold: 0.3, content: <StepText lead={s.twice.lead} more={s.twice.more} /> },
       {
         id: "numbers",
         at: kf.end,
