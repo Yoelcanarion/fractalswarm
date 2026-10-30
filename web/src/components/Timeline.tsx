@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import { useClockFrame } from "../lib/clockHooks";
 import { SPEEDS } from "../lib/playback";
@@ -30,6 +30,17 @@ export function Timeline() {
   });
 
   const marks = useMemo(() => marksOf(events), [events]);
+  // the marks are one tab stop (the bar has a few dozen of them): Tab lands on one, the arrow keys move along them
+  const [mark, setMark] = useState(0);
+  const moveAlongMarks = (event: KeyboardEvent<HTMLDivElement>) => {
+    const all = [...event.currentTarget.querySelectorAll<HTMLElement>(".mark")];
+    const at = all.indexOf(event.target as HTMLElement);
+    const towards: Record<string, number> = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: all.length - 1 };
+    const to = towards[event.key];
+    if (at < 0 || to === undefined || to < 0 || to >= all.length) return;
+    event.preventDefault();
+    all[to].focus();
+  };
 
   return (
     <div className="timeline">
@@ -51,11 +62,13 @@ export function Timeline() {
           }}
           aria-label="replay position"
         />
-        <div className="timeline__marks">
-          {marks.map((m) => (
+        <div className="timeline__marks" role="group" aria-label="Kills and takeovers on the bar" onKeyDown={moveAlongMarks}>
+          {marks.map((m, index) => (
             <button
               key={m.seq}
               type="button"
+              tabIndex={index === Math.min(mark, marks.length - 1) ? 0 : -1}
+              onFocus={() => setMark(index)}
               className={`mark mark--${m.kind} mark--${MARK_TONE[m.kind]}`}
               style={{ left: `${fraction(m.ts, end) * 100}%` }}
               title={m.label}
@@ -74,13 +87,16 @@ export function Timeline() {
           event {cursor} / {events.length}
         </div>
       </div>
-      <div className="speeds" role="group" aria-label="replay speed">
-        {SPEEDS.map((s) => (
-          <button key={s} className={`btn btn--seg ${s === speed ? "btn--on" : ""}`} onClick={() => setSpeed(s)}>
-            {s}×
-          </button>
-        ))}
-      </div>
+      <label className="speedpick">
+        Speed
+        <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="replay speed">
+          {SPEEDS.map((s) => (
+            <option key={s} value={s}>
+              {s}×
+            </option>
+          ))}
+        </select>
+      </label>
       {live ? (
         <button className={`btn ${following ? "btn--on" : ""}`} onClick={() => seek(events.length)}>
           ● LIVE

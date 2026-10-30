@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { easeOutCubic, formatNumber, tween } from "../../lib/motion";
-import { Card, EmptyState, Hint, ModelBadge, modelFamily, PageHeader, Skeleton, SkeletonGroup, SkeletonText, Stat, Term, Tooltip } from "./index";
+import { Card, Details, EmptyState, Hint, ModelBadge, modelFamily, PageHeader, Skeleton, SkeletonGroup, SkeletonText, Stat, Term, Tooltip } from "./index";
 
 const html = (element: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(element);
 
@@ -229,5 +229,28 @@ describe("EmptyState", () => {
     expect(out).toContain('role="alert"');
     expect(out).toContain("emptystate--bad");
     expect(out).not.toContain("emptystate__body");
+  });
+});
+
+describe("Details", () => {
+  it("is a closed fold that says Details, with what is inside it in the markup", () => {
+    const out = html(createElement(Details, { children: createElement("p", {}, "the rest") }));
+    expect(out).toContain('<details class="disclosure">');
+    expect(out).toContain('<span class="disclosure__label">Details</span>');
+    expect(out).toContain("the rest");
+    expect(out).not.toMatch(/<details[^>]* open/);
+  });
+
+  it("says what is inside in a few words, with a quieter hint after, and carries the id the address opens it by", () => {
+    const out = html(createElement(Details, { summary: "All 22 runs", hint: "with filters", id: "all", children: "x" }));
+    expect(out).toContain('<details id="all" class="disclosure">');
+    expect(out).toContain("All 22 runs");
+    expect(out).toContain('<span class="disclosure__hint">with filters</span>');
+  });
+
+  it("opens when the page says so, and has its inline and menu forms", () => {
+    expect(html(createElement(Details, { open: true, children: "x" }))).toMatch(/<details[^>]* open=""/);
+    expect(html(createElement(Details, { inline: true, children: "x" }))).toContain("disclosure disclosure--inline");
+    expect(html(createElement(Details, { menu: true, children: "x" }))).toContain("disclosure disclosure--menu");
   });
 });

@@ -10,14 +10,15 @@ import {
   PLACES,
   placeOf,
   RUN_VIEW_TITLES,
-  RUN_VIEWS,
   runViewHash,
+  runViewsShown,
   SITE_NAME,
   type EvidenceView,
   type RunView,
   type Where,
 } from "../../lib/shell";
-import { Hint, StatusBadge, ThemeToggle } from "../ui";
+import { Details, Hint, StatusBadge, ThemeToggle } from "../ui";
+import { GuideButton, type GuideState } from "./Guide";
 import "./shell.css";
 
 export interface TopBarProps {
@@ -33,11 +34,27 @@ export interface TopBarProps {
    * to load, there is no status to wait for and no badge. */
   opening?: boolean;
   onPickRun: (id: string) => void;
+  /** The guide, when the page has one: its button is at the end of the bar, on every page. */
+  guide?: GuideState;
+}
+
+function RunTab({ name, view, runId, blocked }: { name: RunView; view: RunView; runId: string | null; blocked: number }) {
+  return (
+    <a className={name === view ? "tab tab--on" : "tab"} href={runViewHash(runId, name)} aria-current={name === view ? "page" : undefined}>
+      {RUN_VIEW_TITLES[name]}
+      {name === "security" && blocked > 0 && (
+        <Hint label="quarantined emails and blocked subgoals">
+          <span className="tab__count">{blocked}</span>
+        </Hint>
+      )}
+    </a>
+  );
 }
 
 function RunBar({ view, runId, runs, runStatus, scenario, blocked, opening = false, onPickRun }: Omit<TopBarProps, "where"> & { view: RunView }) {
   // the run that is open is an option from the first paint, before the list of runs has arrived
   const options = runId === null || runs.some((run) => run.id === runId) ? runs : [{ id: runId }, ...runs];
+  const { shown, more } = runViewsShown(view);
   return (
     <div className="subnav">
       {runId !== null && (
@@ -50,16 +67,16 @@ function RunBar({ view, runId, runs, runStatus, scenario, blocked, opening = fal
         </select>
       )}
       <nav className="tabs" aria-label="Views of this run">
-        {RUN_VIEWS.map((name) => (
-          <a key={name} className={name === view ? "tab tab--on" : "tab"} href={runViewHash(runId, name)} aria-current={name === view ? "page" : undefined}>
-            {RUN_VIEW_TITLES[name]}
-            {name === "security" && blocked > 0 && (
-              <Hint label="quarantined emails and blocked subgoals">
-                <span className="tab__count">{blocked}</span>
-              </Hint>
-            )}
-          </a>
+        {shown.map((name) => (
+          <RunTab key={name} name={name} view={view} runId={runId} blocked={blocked} />
         ))}
+        {more.length > 0 && (
+          <Details menu id="views" summary="More views" hint={blocked > 0 && more.includes("security") ? <span className="tab__count">{blocked}</span> : undefined}>
+            {more.map((name) => (
+              <RunTab key={name} name={name} view={view} runId={runId} blocked={blocked} />
+            ))}
+          </Details>
+        )}
       </nav>
       <div className="subnav__context">
         {scenario && <span className="mono muted">{scenario.split(":").at(-1)}</span>}
@@ -85,7 +102,7 @@ function EvidenceBar({ current }: { current: EvidenceView }) {
 
 /** The top of the app. The brand is the way home; the four places follow, with the one the person is in marked; and under them, only
  * where the place has views of its own, a second row: a run's (with the run picked and its status) or the evidence's. */
-export function TopBar({ where, ...run }: TopBarProps) {
+export function TopBar({ where, guide, ...run }: TopBarProps) {
   const place = placeOf(where);
   useDocumentTitle(pageTitle(where, run.runId));
   return (
@@ -112,6 +129,7 @@ export function TopBar({ where, ...run }: TopBarProps) {
           })}
         </nav>
         <div className="topbar__right">
+          {guide && <GuideButton guide={guide} />}
           <ThemeToggle />
         </div>
       </header>

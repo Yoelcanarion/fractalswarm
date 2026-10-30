@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AT_END, namedRunId, openedRunHash, openingRun } from "./address";
+import { AT_END, defaultRunId, FINAL_RUN, namedRunId, openedRunHash, openingRun } from "./address";
 
 describe("the run an address names", () => {
   it.each([
@@ -43,9 +43,23 @@ describe("what a run page is about to show", () => {
     expect(state({ runsLoaded: true })).toBeNull();
   });
 
-  it("leaves a run that is already open alone on a bare address", () => {
-    expect(state({ runId: "other", runs, runsLoaded: true })).toBeNull();
+  it("leaves a run that is already open on screen until the list has answered, on a bare address", () => {
     expect(state({ runId: "other" })).toBeNull();
+  });
+
+  it("opens the final run for a bare address, whatever else is open, and is done once it is", () => {
+    const listed = [{ id: "demo-backup" }, { id: FINAL_RUN }, { id: "demo-toy" }];
+    expect(state({ runs: listed, runsLoaded: true })).toEqual({ kind: "run", id: FINAL_RUN });
+    expect(state({ runId: "other", runs: listed, runsLoaded: true })).toEqual({ kind: "run", id: FINAL_RUN });
+    expect(state({ runId: FINAL_RUN, runs: listed, runsLoaded: true })).toBeNull();
+  });
+});
+
+describe("the run a bare address opens", () => {
+  it("is the final run wherever it is listed, else the first listed one, else none", () => {
+    expect(defaultRunId([{ id: "demo-backup" }, { id: "demo-final" }])).toBe("demo-final");
+    expect(defaultRunId([{ id: "a" }, { id: "b" }])).toBe("a");
+    expect(defaultRunId([])).toBeNull();
   });
 });
 

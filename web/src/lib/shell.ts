@@ -6,6 +6,15 @@ import { AT_END } from "./address";
 export const RUN_VIEWS = ["overview", "plan", "panels", "security", "results", "events"] as const;
 export type RunView = (typeof RUN_VIEWS)[number];
 
+/** The views a run's row always shows. The others are in its "More views" menu, which is one click away. */
+export const MAIN_RUN_VIEWS: readonly RunView[] = ["overview", "results"];
+
+/** The views the row shows (the main ones, and the one the person is on) and the ones in the menu, each in the order of `RUN_VIEWS`. */
+export function runViewsShown(current: RunView): { shown: RunView[]; more: RunView[] } {
+  const shown = RUN_VIEWS.filter((view) => MAIN_RUN_VIEWS.includes(view) || view === current);
+  return { shown, more: RUN_VIEWS.filter((view) => !shown.includes(view)) };
+}
+
 export const RUN_VIEW_TITLES: Record<RunView, string> = {
   overview: "Run",
   plan: "Plan",
