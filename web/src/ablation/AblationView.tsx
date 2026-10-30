@@ -183,14 +183,19 @@ export function AblationView({ run, filter, onFilter, top }: AblationViewProps) 
       <Caveats result={result} />
       {result !== null && <Breakdown result={result} />}
       <section className="abl__notes" aria-label="The notes">
-        <div className="abl__filters" role="group" aria-label="Which notes to show">
-          {FILTERS.map((which) => (
-            <Hint key={which} label={which === "differ" ? result?.definitions.differences : undefined}>
-              <button type="button" className={`abl__filter${which === filter ? " abl__filter--on" : ""}`} aria-pressed={which === filter} disabled={which === "differ" && result === null} onClick={() => onFilter(which)}>
-                {FILTER_WORDS[which]} <span className="abl__count">{sizeOf(which)}</span>
-              </button>
-            </Hint>
-          ))}
+        <div className="abl__filters">
+          <Hint label={result?.definitions.differences}>
+            <label className="abl__show">
+              Show
+              <select value={filter} onChange={(event) => onFilter(event.target.value as Filter)} aria-label="Which notes to show">
+                {FILTERS.map((which) => (
+                  <option key={which} value={which} disabled={which === "differ" && result === null}>
+                    {`${FILTER_WORDS[which]} (${sizeOf(which)})`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </Hint>
         </div>
         <table className="abl__table">
           <thead>

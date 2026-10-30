@@ -8,7 +8,7 @@ import type { ViewState } from "../lib/reducer";
 import { ControlButton, useControlState } from "./ControlButton";
 import { KeyValues } from "./KeyValues";
 import { Card, GenericRows, money, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
-import { Hint, Term } from "./ui";
+import { Details, Hint, Term } from "./ui";
 
 interface Props {
   runId: string;
@@ -155,10 +155,9 @@ export function PlanView({ runId, view, live }: Props) {
                   </tbody>
                 </table>
               )}
-              <details className="results__raw">
-                <summary>The raw plan</summary>
+              <Details inline id="raw" summary="The raw plan" className="results__raw">
                 <pre className="mono">{JSON.stringify(proposal.plan, null, 2)}</pre>
-              </details>
+              </Details>
             </>
           )}
         </Card>

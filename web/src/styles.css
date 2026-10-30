@@ -1954,11 +1954,6 @@ textarea {
   margin: 6px 0 0;
 }
 
-.results__raw summary {
-  cursor: pointer;
-  color: var(--text-secondary);
-}
-
 /* a payload as a table (the feasibility report) */
 .kv__key {
   width: 36%;
