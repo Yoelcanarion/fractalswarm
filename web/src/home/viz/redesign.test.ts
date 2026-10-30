@@ -2,31 +2,38 @@
 // the page, and the words that must not be there. Their motion is tested where it is made (ease.test.ts, demo/stage.test.ts);
 // here, the markup, the geometry of the chart and the data.
 
+import { readFileSync } from "node:fs";
+
 import { motionValue } from "motion/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { story } from "../data/story";
-import { barShare, proofPanels, proofReading, proofText, type BarsPanel, type SeedsPanel } from "./charts/proof";
+import { HOME } from "../testing";
+import { barShare, proofPanels, proofReading, proofText, type BarsPanel, type ProofPanel, type SeedsPanel } from "./charts/proof";
 import {
   barLength,
   barNumber,
   barsOf,
   clampWidth,
+  COLUMN_W,
   DOT_R,
   dotLinesOf,
   layoutProof,
   MAX_W,
   MIN_W,
+  PAIR_FROM,
+  PAIR_GAP,
   paintProof,
   shareAt,
   STEP,
   TOTAL,
+  type PanelGeo,
   type ProofRig,
 } from "./charts/proofLayout";
-import { ProofBars } from "./charts/ProofBars";
-import { KillDemo } from "./demo/KillDemo";
+import { ProofBars, ProofDrawing } from "./charts/ProofBars";
+import { KillDemo, crashLine } from "./demo/KillDemo";
 import { createStage } from "./demo/stage";
 import { DOOR_IDS } from "./doors/doors";
 import { DoorThumb } from "./doors/DoorThumb";
@@ -100,6 +107,13 @@ describe("the click demo's markup", () => {
     expect(html).toMatch(/class="hv-demo-btn"[^>]*disabled=""[^>]*>Reset</);
     expect(html).not.toContain('class="btn');
     expect(html).toMatch(/--demo-aspect:\d\.\d{3}/);
+  });
+
+  it("says that one heir takes over and two or more take over, with the names of the heirs", () => {
+    expect(crashLine("Data (o1)", ["AI (o2)"])).toBe("Data (o1) crashed. AI (o2) takes over, picked by the same rule on every survivor, so there is no election.");
+    expect(crashLine("Root (o0)", ["AI (o2)", "HCI (o3)"])).toContain("AI (o2) and HCI (o3) take over,");
+    expect(crashLine("Root (o0)", ["a", "b", "c"])).toContain("a, b and c take over,");
+    expect(crashLine("Root (o0)", ["a", "b"])).not.toContain("takes");
   });
 
   it("draws the shelf of the dead from the start, faintly, and the hero's tree does not", () => {
@@ -189,23 +203,29 @@ describe("the Proof's data", () => {
 
 describe("the Proof's geometry", () => {
   const panels = proofPanels(story);
-  const widths = [260, 300, 375, 420, 559, 560, 640, 720, 840, 1200, 1700];
+  const widths = [260, 300, 375, 420, 559, 560, 640, 720, 840, 999, 1000, 1200, 1700];
 
-  it("keeps the width between what a phone gives it and what reads well", () => {
+  it("keeps the width between what a phone gives it and what reads well: one column up to 840, two columns from a thousand", () => {
     expect(clampWidth(0)).toBe(MIN_W);
     expect(clampWidth(100000)).toBe(MAX_W);
     expect(clampWidth(Number.NaN)).toBeGreaterThanOrEqual(MIN_W);
     expect(layoutProof(panels, 100000, "FractalSwarm").width).toBe(MAX_W);
+    expect(clampWidth(900)).toBe(COLUMN_W);
+    expect(clampWidth(PAIR_FROM - 1)).toBe(COLUMN_W);
+    expect(clampWidth(PAIR_FROM)).toBe(PAIR_FROM);
+    expect(clampWidth(1224)).toBe(1224);
   });
 
-  it("puts every part inside the box it is drawn in, at every width", () => {
+  it("puts every part inside the box it is drawn in, at every width, and inside its own panel", () => {
     for (const width of widths) {
       const geo = layoutProof(panels, width, "FractalSwarm");
-      const inside = (x: number, what: string): void => {
-        expect(x, `${what} at ${width}`).toBeGreaterThanOrEqual(-0.001);
-        expect(x, `${what} at ${width}`).toBeLessThanOrEqual(geo.width + 0.001);
-      };
       for (const panel of geo.panels) {
+        expect(panel.x, `panel at ${width}`).toBeGreaterThanOrEqual(0);
+        expect(panel.x + panel.w, `panel at ${width}`).toBeLessThanOrEqual(geo.width + 0.001);
+        const inside = (x: number, what: string): void => {
+          expect(x, `${what} at ${width}`).toBeGreaterThanOrEqual(-0.001);
+          expect(x, `${what} at ${width}`).toBeLessThanOrEqual(panel.w + 0.001);
+        };
         for (const row of panel.rows) {
           if (row.chip) {
             inside(row.chip.x, "chip start");
@@ -243,12 +263,84 @@ describe("the Proof's geometry", () => {
     expect(wide.height).toBeLessThan(narrow.height);
   });
 
-  it("keeps the lines apart: no two share a place, and each is below the last", () => {
+  it("keeps the lines apart: in a column no two share a place and each is below the last, and the two columns stand side by side", () => {
     for (const width of widths) {
       const geo = layoutProof(panels, width, "FractalSwarm");
-      const ys = geo.panels.flatMap((p) => p.rows.flatMap((r) => r.lines.map((l) => l.track.y)));
-      for (let i = 1; i < ys.length; i++) expect(ys[i]! - ys[i - 1]!, `line ${i} at ${width}`).toBeGreaterThanOrEqual(24);
-      expect(geo.height).toBeGreaterThan(Math.max(...ys));
+      const columns = geo.columns === 2 ? geo.panels.map((p) => [p]) : [geo.panels];
+      for (const column of columns) {
+        const ys = column.flatMap((p) => p.rows.flatMap((r) => r.lines.map((l) => l.track.y)));
+        for (let i = 1; i < ys.length; i++) expect(ys[i]! - ys[i - 1]!, `line ${i} at ${width}`).toBeGreaterThanOrEqual(24);
+        expect(geo.height, `height at ${width}`).toBeGreaterThan(Math.max(...ys));
+      }
+    }
+  });
+
+  it("stands the two panels side by side from a thousand pixels, in equal columns with 48 between them, and one above the other below", () => {
+    const below = layoutProof(panels, PAIR_FROM - 1, "FractalSwarm");
+    expect([below.columns, below.width]).toEqual([1, COLUMN_W]);
+    expect(below.panels.map((p) => p.x)).toEqual([0, 0]);
+    const top = (geo: typeof below, i: number): number => geo.panels[i]!.rows[0]!.lines[0]!.track.y;
+    expect(top(below, 1)).toBeGreaterThan(top(below, 0));
+    for (const width of [PAIR_FROM, 1100, 1224, MAX_W, 1700]) {
+      const geo = layoutProof(panels, width, "FractalSwarm");
+      const whole = Math.min(MAX_W, width);
+      expect([geo.columns, geo.width], `${width}`).toEqual([2, whole]);
+      const [left, right] = geo.panels as [PanelGeo, PanelGeo];
+      expect(left.x).toBe(0);
+      expect(left.w).toBeCloseTo((whole - PAIR_GAP) / 2, 9);
+      expect(right.w).toBe(left.w);
+      expect(right.x - (left.x + left.w)).toBeCloseTo(PAIR_GAP, 9);
+      expect(right.x + right.w).toBeCloseTo(whole, 9);
+      // the rows of the two panels are level with each other, and as tall as each other
+      left.rows.forEach((row, i) => row.lines.forEach((line, j) => expect(right.rows[i]!.lines[j]!.track.y, `${width} row ${i} line ${j}`).toBe(line.track.y)));
+      // one drawing grows from left to right: every line of the first panel starts before every line of the second
+      expect(Math.max(...left.rows.flatMap((r) => r.lines.map((l) => l.order)))).toBeLessThan(Math.min(...right.rows.flatMap((r) => r.lines.map((l) => l.order))));
+    }
+  });
+
+  it("puts the names beside the lines when a panel is wide enough for it, which a column of a thousand pixels is not and one of twelve hundred is", () => {
+    expect(layoutProof(panels, PAIR_FROM, "FractalSwarm").inline).toBe(false);
+    expect(layoutProof(panels, 1200, "FractalSwarm").inline).toBe(true);
+    expect(layoutProof(panels, MAX_W, "FractalSwarm").inline).toBe(true);
+  });
+
+  it("says a setting that the two panels share once, small, under them, and each panel's own where they differ or where they are stacked", () => {
+    const [a, b] = panels as [BarsPanel, SeedsPanel];
+    const same: ProofPanel[] = [
+      { ...a, setting: "One setting" },
+      { ...b, setting: "One setting" },
+    ];
+    const differ: ProofPanel[] = [
+      { ...a, setting: "One setting" },
+      { ...b, setting: "Another" },
+    ];
+    const together = layoutProof(same, 1200, "FractalSwarm");
+    expect(together.setting?.text).toBe("One setting");
+    expect(together.panels.map((p) => p.setting)).toEqual(["", ""]);
+    const lowest = Math.max(...together.panels.flatMap((p) => p.rows.flatMap((r) => r.lines.map((l) => l.track.y + l.track.h))));
+    expect(together.setting!.at.y).toBeGreaterThan(lowest);
+    expect(together.height).toBeGreaterThan(together.setting!.at.y);
+    expect(together.height).toBeGreaterThan(layoutProof(differ, 1200, "FractalSwarm").height);
+    const apart = layoutProof(differ, 1200, "FractalSwarm");
+    expect(apart.setting).toBeNull();
+    expect(apart.panels.map((p) => p.setting)).toEqual(["One setting", "Another"]);
+    const stacked = layoutProof(same, 720, "FractalSwarm");
+    expect(stacked.setting).toBeNull();
+    expect(stacked.panels.map((p) => p.setting)).toEqual(["One setting", "One setting"]);
+  });
+
+  it("has a dot for every seed on a line of ten, inside its track, at a thousand pixels and at a phone's width", () => {
+    for (const width of [390, PAIR_FROM, 1200, MAX_W]) {
+      const geo = layoutProof(panels, width, "FractalSwarm");
+      const lines = dotLinesOf(geo);
+      expect(lines, `${width}`).toHaveLength(4);
+      for (const line of lines) {
+        expect(line.dots, `${width} ${line.who}`).toHaveLength(story.numbers.r2.seeds);
+        for (const dot of line.dots) {
+          expect(dot.cx).toBeGreaterThanOrEqual(line.track.x + DOT_R - 0.001);
+          expect(dot.cx).toBeLessThanOrEqual(line.track.x + line.track.w - DOT_R + 0.001);
+        }
+      }
     }
   });
 
@@ -402,6 +494,40 @@ describe("the Proof's markup", () => {
   });
 });
 
+describe("the Proof's drawing in two columns", () => {
+  const panels = proofPanels(story);
+  const reading = proofReading(panels, "FractalSwarm");
+  const draw = (list: ProofPanel[], width: number): string => render(ProofDrawing, { geo: layoutProof(list, width, "FractalSwarm"), reading, at: Infinity, id: "p" });
+
+  it("moves the second panel over by a column and its gap, and leaves the first where it is", () => {
+    const html = draw(panels, 1200);
+    const right = layoutProof(panels, 1200, "FractalSwarm").panels[1]!;
+    expect(html).toContain(`<g data-panel="${right.id}" transform="translate(${fx(right.x)} 0)">`);
+    expect(html).toContain(`<g data-panel="${panels[0]!.id}">`);
+    expect(draw(panels, 720)).not.toMatch(/<g data-panel="[^"]+" transform=/);
+  });
+
+  it("keeps every bar, number and dot of the stacked drawing, and a rival's name for each panel", () => {
+    const html = draw(panels, 1200);
+    expect(html.match(/data-bar=""/g)).toHaveLength(4);
+    expect(html.match(/data-num=""/g)).toHaveLength(4);
+    expect(html.match(/class="hv-proof-dot"/g)).toHaveLength(2 * 2 * story.numbers.r2.seeds);
+    for (const panel of panels) expect(html).toContain(`>${panel.rival}</text>`);
+    expect(html).toContain(">tie</text>");
+  });
+
+  it("writes a shared setting once, and each panel's own where they differ", () => {
+    const [a, b] = panels as [BarsPanel, SeedsPanel];
+    const once = draw([{ ...a, setting: "One setting" }, { ...b, setting: "One setting" }], 1200);
+    expect(once.match(/>One setting<\/text>/g)).toHaveLength(1);
+    const each = draw([{ ...a, setting: "One setting" }, { ...b, setting: "Another" }], 1200);
+    expect(each.match(/>One setting<\/text>/g)).toHaveLength(1);
+    expect(each.match(/>Another<\/text>/g)).toHaveLength(1);
+    expect(draw([{ ...a, setting: "One setting" }, { ...b, setting: "One setting" }], 720).match(/>One setting<\/text>/g)).toHaveLength(2);
+    expect(words(once)).toEqual([]);
+  });
+});
+
 describe("a number that grows", () => {
   it("is nothing at the start, the number at the end, and never past it or back", () => {
     expect(grown(92.6, 0, 0, 1.6)).toBe(0);
@@ -451,6 +577,17 @@ describe("the Solution's drawings", () => {
       expect(render(StepDrawing, { step, active: true })).toContain('data-on="true"');
       expect(render(StepDrawing, { step, active: false, still: true })).toContain('data-on="true"');
     }
+  });
+
+  it("draw their lines on with a dash as long as the path, which a stroke that does not scale would measure in pixels instead", () => {
+    const css = readFileSync(`${HOME}/viz/viz.css`, "utf-8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const rule = /\.hv-step \.hv-st-draw,\s*\.hv-step \.hv-st-new\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(rule).toMatch(/stroke-dasharray:\s*1;/);
+    expect(rule).toMatch(/stroke-dashoffset:\s*1;/);
+    expect(rule).not.toContain("non-scaling-stroke");
+    // and each of those paths counts its length as 1, which is what the dash is
+    const markup = [render(StepDrawing, { step: "log", active: false }), render(StepDrawing, { step: "adopt", active: false })].join("");
+    for (const name of ["hv-st-draw", "hv-st-new"]) expect(markup).toMatch(new RegExp(`class="${name}"[^>]*pathLength="1"`));
   });
 
   it("draw the heir's bars from the recorded round, best first, with no number", () => {
