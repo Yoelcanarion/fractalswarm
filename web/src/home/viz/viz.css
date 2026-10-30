@@ -1511,15 +1511,18 @@
 
 /* ---- the Problem film, the Proof's bars, the Solution's three drawings, the doors' thumbnails -------------------------- */
 
-/* The film has no counter over its top left, so the lanes start 24 px down, where the crash marks need room. The lanes need 338 px at least
-   (24 + 20 + 14 rows of 12 + 126 for the axis, the key and the caption); 400 leaves them their bars. */
+/* The film is the lanes in their plain form: a band of captions on top, the lanes (no names), a key of two. The lanes need about 340 px
+   at least (the captions' band, 20 for the crash marks, 14 rows of 12, 80 for the axis and the key); 400 leaves them their bars. */
 .hv-film {
   position: relative;
   width: 100%;
   height: clamp(400px, 44vw, 460px);
 }
-.hv-film .hv-ln-probe {
-  height: 24px;
+.hv.hv-lanes .hv-ln-moment {
+  fill: var(--text-primary);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.012em;
 }
 
 .hv-proof {

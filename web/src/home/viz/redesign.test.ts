@@ -29,7 +29,7 @@ import { ProofBars } from "./charts/ProofBars";
 import { KillDemo } from "./demo/KillDemo";
 import { DOOR_IDS } from "./doors/doors";
 import { DoorThumb } from "./doors/DoorThumb";
-import { ProblemFilm } from "./film/ProblemFilm";
+import { FILM_MOMENTS, ProblemFilm } from "./film/ProblemFilm";
 import { grown, GrowNumber, MISSING } from "./parts/GrowNumber";
 import { fx } from "./shared";
 import { STEP_IDS, StepDrawing } from "./steps/StepDrawing";
@@ -439,6 +439,20 @@ describe("the film and the doors' thumbnails", () => {
     expect(html).toContain("hv-film");
     expect(html).toContain("work lanes");
     expect(html).not.toMatch(/NaN|undefined|Infinity/);
+  });
+
+  it("say what happens in three captions, in the svg, and in the lanes' plain form: no lane names, a key of two, no setting", () => {
+    const html = render(ProblemFilm, { play: 0 });
+    expect(FILM_MOMENTS).toEqual(["It crashes.", "The work waits.", "The work is paid for again."]);
+    for (const text of FILM_MOMENTS) expect(html).toContain(`>${text}</text>`);
+    expect(html.match(/data-moment="/g)).toHaveLength(3);
+    expect(html).not.toContain("hv-ln-label");
+    expect(html).not.toContain("hv-ln-caption");
+    expect(html.match(/hv-ln-swatch/g)).toHaveLength(2);
+    expect(html).toContain('data-swatch="cut"');
+    expect(html).toContain('data-swatch="again"');
+    expect(html).not.toContain('data-swatch="counted"');
+    expect(html).not.toContain("no agent working");
   });
 
   it("draw one glyph for each of the six doors, named by a string as the page names them", () => {

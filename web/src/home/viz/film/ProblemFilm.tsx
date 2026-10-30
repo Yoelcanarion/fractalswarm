@@ -12,11 +12,16 @@ import { whileVisible } from "../visible";
 /** Seconds each way of the cut a repeat makes. */
 const CUT = 0.2;
 
+/** What the film says as the playhead reaches each moment: the crash, the wait, the work paid for again. Drawn in the film's svg. */
+export const FILM_MOMENTS = ["It crashes.", "The work waits.", "The work is paid for again."] as const;
+
 export interface ProblemFilmProps {
   /** 0 is not yet (the lanes at rest); each increment plays the film again from its start. */
   play: number;
   /** The lanes to play: the recorded run of an in-process supervisor when absent. */
   data?: LanesSlice;
+  /** The three captions, one for each moment: the film's own when absent. */
+  moments?: readonly string[];
   /** Standing still, which the page says through its own context when this is absent: the last frame, and no film. */
   still?: boolean | undefined;
   className?: string;
@@ -25,10 +30,11 @@ export interface ProblemFilmProps {
 /**
  * The Problem section's film: one recorded run with an in-process supervisor, drawn as work lanes, that crashes and stalls. It plays
  * by itself, once for each increment of `play`, as one playhead of about seven seconds run through the page's one ease, from the
- * first call to the end. It runs only while it is on screen and the tab is visible, and picks up where it left off. A repeat
+ * first call to the end. Three large captions say what happened as it happens (the crash, the wait, the work paid for again) and
+ * stay; the lanes have no names and the key has two items. It runs only while it is on screen and the tab is visible, and picks up where it left off. A repeat
  * fades the old picture out and the new one in (0.2 s each way) instead of jumping to the start.
  */
-export function ProblemFilm({ play, data, still, className }: ProblemFilmProps) {
+export function ProblemFilm({ play, data, moments = FILM_MOMENTS, still, className }: ProblemFilmProps) {
   const progress = useMotionValue(0);
   const host = useRef<HTMLDivElement>(null);
   const calm = useCalm(still);
@@ -74,7 +80,7 @@ export function ProblemFilm({ play, data, still, className }: ProblemFilmProps) 
 
   return (
     <div ref={host} className={className ? `hv-film ${className}` : "hv-film"}>
-      {lanes && <WorkLanes progress={progress} data={lanes} still={calm} />}
+      {lanes && <WorkLanes progress={progress} data={lanes} still={calm} moments={moments} />}
     </div>
   );
 }

@@ -6,7 +6,13 @@ import { LABEL_W, READOUT_W, layoutFor, textWidth } from "./layout";
 import { lanesModel, lifeTracks, timeMap, type Bar, type LanesModel } from "./model";
 import { collectLanes, paintLanes, seconds, usd, type LanesRig } from "./paint";
 
-export type WorkLanesProps = VizProps<LanesSlice>;
+export type WorkLanesProps = VizProps<LanesSlice> & {
+  /**
+   * The film's plain form: these captions are written over the lanes, one as the playhead reaches each moment of the run, and the
+   * lanes lose their names, keep a key of two (cut off, paid again) and print no setting. Without them, the lanes as the lab shows them.
+   */
+  moments?: readonly string[] | undefined;
+};
 
 /** What the box is before it is measured (and on the server): the size of the page's frame at 1920 wide. */
 const DEFAULT_BOX = { width: 820, height: 700, top: 180 };
@@ -50,7 +56,8 @@ const LEDGER = [
   { key: "idle", label: "no agent working" },
 ] as const;
 
-export function WorkLanes({ progress, data, still, stillAt, className }: WorkLanesProps) {
+export function WorkLanes({ progress, data, still, stillAt, className, moments }: WorkLanesProps) {
+  const plain = (moments?.length ?? 0) > 0;
   const model = useMemo(() => lanesModel(data), [data]);
   const map = useMemo(() => timeMap(model), [model]);
   const captions = useMemo(() => captionsFor(data), [data]);
@@ -60,7 +67,7 @@ export function WorkLanes({ progress, data, still, stillAt, className }: WorkLan
   const probe = useRef<HTMLDivElement>(null);
   const svg = useRef<SVGSVGElement>(null);
   const [box, setBox] = useState(DEFAULT_BOX);
-  const layout = useMemo(() => layoutFor(model, box.width, box.height, box.top, captions), [model, box, captions]);
+  const layout = useMemo(() => layoutFor(model, box.width, box.height, box.top, captions, { moments }), [model, box, captions, moments]);
 
   const live = useRef({ model, map, layout });
   live.current = { model, map, layout };
@@ -123,7 +130,7 @@ export function WorkLanes({ progress, data, still, stillAt, className }: WorkLan
 
   return (
     <div ref={root} className={className ? `hv hv-lanes ${className}` : "hv hv-lanes"} role="img" aria-label={summary}>
-      <div ref={probe} className="hv-ln-probe" aria-hidden="true" />
+      {!plain && <div ref={probe} className="hv-ln-probe" aria-hidden="true" />}
       <svg ref={svg} className="hv-ln-svg" width={L.width} height={L.height} viewBox={`0 0 ${L.width} ${L.height}`} aria-hidden="true">
         {/* the rows and the minutes behind everything */}
         <g className="hv-ln-back">
@@ -136,11 +143,12 @@ export function WorkLanes({ progress, data, still, stillAt, className }: WorkLan
           <line className="hv-ln-rule" x1={fx(L.x0)} x2={fx(L.x1)} y1={fx(L.lanes[0]!.y + L.lanes[0]!.h)} y2={fx(L.lanes[0]!.y + L.lanes[0]!.h)} />
         </g>
 
-        {model.lanes.map((lane) => (
-          <text key={lane.id} className="hv-ln-label" data-lane-label={lane.index} data-brain={lane.brain} x={LABEL_W} y={fx(mid(lane.index))}>
-            {lane.label}
-          </text>
-        ))}
+        {!plain &&
+          model.lanes.map((lane) => (
+            <text key={lane.id} className="hv-ln-label" data-lane-label={lane.index} data-brain={lane.brain} x={LABEL_W} y={fx(mid(lane.index))}>
+              {lane.label}
+            </text>
+          ))}
 
         {/* the time nobody worked */}
         <g className="hv-ln-stalls">
@@ -221,7 +229,7 @@ export function WorkLanes({ progress, data, still, stillAt, className }: WorkLan
 
         {/* what was paid for, by kind of call */}
         <g className="hv-ln-ledger">
-          {LEDGER.map((entry, i) => {
+          {(plain ? LEDGER.filter((entry) => entry.key === "cut" || entry.key === "again") : LEDGER).map((entry, i) => {
             const c = L.ledger[i]!;
             return (
               <g key={entry.key}>
@@ -238,6 +246,15 @@ export function WorkLanes({ progress, data, still, stillAt, className }: WorkLan
           <text className="hv-ln-caption" x="8" y={fx(L.captionY)}>
             {L.caption}
           </text>
+        )}
+        {L.moments && moments && (
+          <g className="hv-ln-moments">
+            {moments.map((text, i) => (
+              <text key={i} className="hv-ln-moment" data-moment={i} x={fx(L.moments!.at[i]!.x)} y={fx(L.moments!.at[i]!.y)} opacity="0" style={{ fontSize: L.moments!.size }}>
+                {text}
+              </text>
+            ))}
+          </g>
         )}
       </svg>
     </div>
