@@ -2,7 +2,7 @@
 // declared dead, who takes over, which messages cross it and when each node is busy. Nothing
 // here is typed in: the layout is derived from the log's adoptions and the rest is lookups.
 
-import type { AdoptionData, HrwRound, Story } from "../../data/types";
+import type { AdoptionData, HrwRound, TreeSlice } from "../../data/types";
 import { boundsOf, buildEpochs, burialTimes, memorialSlots, remapTimes, type Bounds, type Epoch, type Slot } from "./layout";
 
 export interface NodeInfo {
@@ -57,7 +57,7 @@ export interface Beat {
 }
 
 export interface TreeModel {
-  story: Story;
+  tree: TreeSlice;
   /** Render order: brains from the root down, then agents. */
   ids: string[];
   node: Record<string, NodeInfo>;
@@ -79,18 +79,17 @@ export interface TreeModel {
 
 const SIZE = [0.5, 0.42, 0.34, 0.2] as const;
 
-const cache = new WeakMap<Story, TreeModel>();
+const cache = new WeakMap<TreeSlice, TreeModel>();
 
-export function treeModel(story: Story): TreeModel {
-  const hit = cache.get(story);
+export function treeModel(tree: TreeSlice): TreeModel {
+  const hit = cache.get(tree);
   if (hit) return hit;
-  const model = build(story);
-  cache.set(story, model);
+  const model = build(tree);
+  cache.set(tree, model);
   return model;
 }
 
-function build(story: Story): TreeModel {
-  const { tree, takeover, traffic } = story;
+function build(tree: TreeSlice): TreeModel {
   const node: Record<string, NodeInfo> = {};
   for (const n of tree.nodes) {
     node[n.id] = {
@@ -104,17 +103,17 @@ function build(story: Story): TreeModel {
   }
   const ids = tree.nodes.map((n) => n.id);
 
-  const epochs = buildEpochs(story);
-  const memorial = memorialSlots(story, epochs);
-  const buried = burialTimes(story);
+  const epochs = buildEpochs(tree);
+  const memorial = memorialSlots(tree, epochs);
+  const buried = burialTimes(tree);
 
-  const interval = traffic.heartbeat.intervalMs;
+  const interval = tree.heartbeat.intervalMs;
   const beats: Record<string, Beat> = {};
-  for (const [id, s] of Object.entries(traffic.heartbeat.senders)) {
+  for (const [id, s] of Object.entries(tree.heartbeat.senders)) {
     beats[id] = { firstMs: s.firstMs, lastMs: s.lastMs, intervalMs: s.ticks > 1 ? (s.lastMs - s.firstMs) / (s.ticks - 1) : interval };
   }
 
-  const kills: KillInfo[] = takeover.kills.map((k, i) => ({
+  const kills: KillInfo[] = tree.kills.map((k, i) => ({
     id: k.target,
     i,
     atMs: k.atMs,
@@ -127,35 +126,29 @@ function build(story: Story): TreeModel {
   }));
   const killOf = Object.fromEntries(kills.map((k) => [k.id, k]));
 
-  const groups: RemapGroup[] = remapTimes(story).map((atMs, index) => {
-    const adoptions = takeover.adoptions.filter((a) => a.atMs === atMs);
+  const groups: RemapGroup[] = remapTimes(tree).map((atMs, index) => {
+    const adoptions = tree.adoptions.filter((a) => a.atMs === atMs);
     return {
       index,
       atMs,
       epoch: index + 1,
       adoptions,
-      rounds: story.hrw.rounds.filter((r) => r.atMs === atMs),
+      rounds: tree.rounds.filter((r) => r.atMs === atMs),
       dead: [...new Set(adoptions.map((a) => a.dead))],
       root: adoptions.some((a) => a.goal === "root"),
     };
   });
 
-  const messages: Msg[] = traffic.messages.map(([tMs, from, to, kind]) => ({ tMs, from, to, kind: kind as Msg["kind"] }));
+  const messages: Msg[] = tree.messages.map(([tMs, from, to, kind]) => ({ tMs, from, to, kind: kind as Msg["kind"] }));
   const activeFromMs: Record<string, number> = { [tree.root]: 0 };
   for (const m of messages) {
     if (m.kind <= 1 && activeFromMs[m.to] === undefined) activeFromMs[m.to] = m.tMs;
   }
 
-  const lanes = story.lanes.swarm;
-  const busy: Record<string, [number, number][]> = {};
-  for (const [lane, start, end] of lanes.bars) {
-    const id = lanes.lanes[lane]?.id;
-    if (id === undefined) continue;
-    (busy[id] ??= []).push([start, end]);
-  }
+  const busy: Record<string, [number, number][]> = tree.busy;
 
   return {
-    story,
+    tree,
     ids,
     node,
     epochs,
@@ -168,8 +161,8 @@ function build(story: Story): TreeModel {
     beats,
     activeFromMs,
     busy,
-    detector: { intervalMs: interval, suspectAfter: traffic.heartbeat.suspectAfter, deadAfter: traffic.heartbeat.deadAfter },
-    durationMs: takeover.durationMs,
+    detector: { intervalMs: interval, suspectAfter: tree.heartbeat.suspectAfter, deadAfter: tree.heartbeat.deadAfter },
+    durationMs: tree.durationMs,
   };
 }
 

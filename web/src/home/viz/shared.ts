@@ -4,14 +4,13 @@
 
 import { useLayoutEffect } from "react";
 import type { MotionValue } from "motion/react";
-import type { Story } from "../data/types";
 import { prefersReducedMotion } from "../../lib/motion";
 
-export interface VizProps {
+export interface VizProps<D = unknown> {
   /** 0..1. Driven by time (the hero) or by the scroll position (a beat). */
   progress: MotionValue<number>;
-  /** The home page's data file; every number a visual draws comes from it. */
-  data: Story;
+  /** The slice of the home page's data file this visual draws; every number it shows comes from it. */
+  data: D;
   /** Draw the final state once and never subscribe: reduced motion, a thumbnail, a print. */
   still?: boolean;
   /** The progress a still frame shows. 1 (the end state) unless a beat says otherwise. */

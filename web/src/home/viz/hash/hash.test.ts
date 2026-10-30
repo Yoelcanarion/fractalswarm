@@ -51,7 +51,7 @@ describe("HashStrip markup", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("draws every sampled event, its marks, the head and the verdict of the replay", () => {
-    const html = renderToStaticMarkup(createElement(HashStrip, { progress: motionValue(0), data: story, still: true }));
+    const html = renderToStaticMarkup(createElement(HashStrip, { progress: motionValue(0), data: story.hashes, still: true }));
     expect(html.match(/<article/g)).toHaveLength(story.hashes.events.length);
     for (const mark of Object.values(story.hashes.marks)) expect(html).toContain(mark.label);
     expect(html).toContain(story.hashes.head);

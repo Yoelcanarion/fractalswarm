@@ -14,7 +14,7 @@ describe("SwarmTree markup", () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  const html = renderToStaticMarkup(createElement(SwarmTree, { progress: motionValue(0), data: story, still: true }));
+  const html = renderToStaticMarkup(createElement(SwarmTree, { progress: motionValue(0), data: story.tree, still: true }));
 
   it("draws every brain and agent of the bundle, an edge slot for each, and a pool of dashes", () => {
     expect(html.match(/data-node="/g)).toHaveLength(story.tree.counts.orchestrators + story.tree.counts.agents);
@@ -25,13 +25,13 @@ describe("SwarmTree markup", () => {
 
   it("has a text alternative built from the data, and no number that is not a number", () => {
     expect(html).toContain("<title");
-    expect(html).toContain(`${story.takeover.killCount} of the ${story.tree.counts.orchestrators} orchestrators are killed`);
-    expect(html).toContain(`${story.finish.placed} of ${story.finish.expected} talks`);
+    expect(html).toContain(`${story.takeover.killed} of the ${story.tree.counts.orchestrators} orchestrators are killed`);
+    expect(html).toContain(`${story.finish.talksPlaced} of ${story.finish.talksTotal} talks`);
     expect(html).not.toMatch(/NaN|undefined|Infinity/);
   });
 
   it("names each killed brain's time of death", () => {
-    for (const k of story.takeover.kills) expect(html).toContain(`† ${(k.atMs / 1000).toFixed(1)} s`);
+    for (const k of story.tree.kills) expect(html).toContain(`† ${(k.atMs / 1000).toFixed(1)} s`);
   });
 });
 
@@ -51,7 +51,7 @@ function fake<E extends Element>(log: Map<object, Record<string, string>>): Pen<
 }
 
 describe("paintTree", () => {
-  const player = treePlayer(story, "story");
+  const player = treePlayer(story.tree, "story");
   const log = new Map<object, Record<string, string>>();
   const nodes: Record<string, NodeRig> = {};
   for (const id of player.model.ids) {
@@ -99,7 +99,7 @@ describe("paintTree", () => {
 
   it("ends on the run clock at the end of the log and the memorial shown", () => {
     paintTree(rig, player.frame(1));
-    expect(log.get(rig.clock!.el)?.["#text"]).toBe(`${(story.takeover.durationMs / 1000).toFixed(1)} s`);
+    expect(log.get(rig.clock!.el)?.["#text"]).toBe(`${(story.tree.durationMs / 1000).toFixed(1)} s`);
     expect(log.get(rig.memorial!.el)?.opacity).toBe("1.00");
   });
 });

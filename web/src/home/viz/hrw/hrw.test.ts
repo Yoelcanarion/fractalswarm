@@ -49,7 +49,7 @@ describe("HrwPanels markup", () => {
 
   it("draws one panel per survivor of the round, each with every candidate's real score", () => {
     for (const [i, round] of story.hrw.rounds.entries()) {
-      const html = renderToStaticMarkup(createElement(HrwPanels, { progress: motionValue(0), data: story, still: true, round: i }));
+      const html = renderToStaticMarkup(createElement(HrwPanels, { progress: motionValue(0), data: story.hrw, still: true, round: i }));
       expect(html.match(/data-panel="/g)).toHaveLength(round.survivors.length);
       expect(html.match(/data-row="/g)).toHaveLength(round.survivors.length * round.pool.length);
       for (const s of round.scores) expect(html).toContain(groupHex(s.score));
