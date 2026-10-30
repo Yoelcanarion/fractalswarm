@@ -1,0 +1,52 @@
+/*
+ * The hero's own rules (the rest of its layout is in home.css): the figure with its line, and the hand-over to the next chapter.
+ * Colours and curves come from tokens.css only.
+ */
+
+/* the tree and, under it, the line that says what it is */
+.home-hero__object {
+  display: grid;
+  align-content: center;
+  gap: var(--space-4);
+}
+
+.home-hero__note {
+  display: grid;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* The hand-over: when little of the hero is left on screen, its text and its tree let go. A state change on a clock, run
+   by the compositor, never a style computed from the scroll position. */
+.home-hero__copy,
+.home-hero__object {
+  transition:
+    opacity var(--dur-slow) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
+}
+
+.home-hero[data-leaving] .home-hero__copy {
+  opacity: 0;
+  transform: translateY(-2svh);
+}
+
+.home-hero[data-leaving] .home-hero__object {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero__copy,
+  .home-hero__object {
+    transition: opacity var(--dur-slow) var(--ease-out);
+  }
+
+  .home-hero[data-leaving] .home-hero__copy,
+  .home-hero[data-leaving] .home-hero__object {
+    transform: none;
+  }
+}
