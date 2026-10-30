@@ -1142,10 +1142,13 @@ body:has(.home) {
    split: the words beside the chart;
    over:  the lead, the words and an aside in one row, over a chart that is drawn for the whole width;
    wide:  one column, for a chart or a row of figures that wants the whole width. */
+/* One column as wide as the cell, never as wide as its content: without it the track of the hash strip (61 cards in a row) made the
+   column 11,500 px wide, and the strip was cut by the edge of the page instead of fading at its own. */
 .home-beat__text,
 .home-beat__aside,
 .home-beat__body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
   align-content: start;
   justify-items: start;
