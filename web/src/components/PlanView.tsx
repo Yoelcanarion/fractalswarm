@@ -56,6 +56,19 @@ export function PlanView({ runId, view, live }: Props) {
     }
   };
 
+  // Nothing to decide on a recording or an approved plan: the buttons are then a fold, so a page of dead buttons is not what a stranger meets.
+  const decision = (
+    <div className="plan__buttons">
+      <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="reason (optional)" aria-label="reason" disabled={!decidable || !approveControl.enabled} />
+      <ControlButton control="approve" className="btn" disabled={!decidable} onClick={() => void decide(true)}>
+        Approve plan
+      </ControlButton>
+      <ControlButton control="approve" className="btn btn--danger" disabled={!decidable} onClick={() => void decide(false)}>
+        Reject
+      </ControlButton>
+    </div>
+  );
+
   const other = proposal ? Object.entries(proposal.plan).filter(([key]) => !["tracks", "feasibility", "limitations"].includes(key)) : [];
   const limitations = proposal && Array.isArray(proposal.plan.limitations) ? proposal.plan.limitations.map(String) : [];
 
@@ -73,15 +86,13 @@ export function PlanView({ runId, view, live }: Props) {
                 ? `proposed by ${proposal.actor} at t = ${virtualSeconds(proposal.ts)}`
                 : "the root proposes a plan first (plan.proposed)"}
           </div>
-          <div className="plan__buttons">
-            <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="reason (optional)" aria-label="reason" disabled={!decidable || !approveControl.enabled} />
-            <ControlButton control="approve" className="btn" disabled={!decidable} onClick={() => void decide(true)}>
-              Approve plan
-            </ControlButton>
-            <ControlButton control="approve" className="btn btn--danger" disabled={!decidable} onClick={() => void decide(false)}>
-              Reject
-            </ControlButton>
-          </div>
+          {status === "awaiting" ? (
+            decision
+          ) : (
+            <Details inline id="approval" summary="Approve or reject the plan" hint="only while a run waits for a person" className="plan__fold">
+              {decision}
+            </Details>
+          )}
         </div>
         <div className="pstats">
           <PStat label="tracks" value={tracks.length} />
@@ -93,7 +104,7 @@ export function PlanView({ runId, view, live }: Props) {
         </div>
         {approval?.by === "auto" && (
           <div className="pevent">
-            Approved automatically: the <Term id="taskSpec">task spec</Term> asked for it (<span className="mono">auto_approve</span>). A run that waits for a
+            Approved automatically: the <Term id="taskSpec" focusable={false}>task spec</Term> asked for it (<span className="mono">auto_approve</span>). A run that waits for a
             person enables the buttons above.
           </div>
         )}
@@ -122,7 +133,7 @@ export function PlanView({ runId, view, live }: Props) {
                     {tracks.map((track) => (
                       <tr key={track.id}>
                         <td className="mono">
-                          <Hint focusable label={track.acceptance}>
+                          <Hint label={track.acceptance}>
                             <span>{track.id}</span>
                           </Hint>
                         </td>

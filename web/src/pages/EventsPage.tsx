@@ -12,7 +12,7 @@ export function EventsPage() {
       title="Events"
       lead={
         <>
-          Every event in the run's log up to the <Term id="playhead">playhead</Term>, newest first. Press a row for its payload, or its number to move the
+          Every event in the run's log up to the <Term id="playhead" focusable={false}>playhead</Term>, newest first. Press a row for its payload, or its number to move the
           playhead there.
         </>
       }

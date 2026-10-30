@@ -26,7 +26,7 @@ export function VerifyBadge() {
       const { report } = verify;
       if (report.ok && report.bundle_head_ok) {
         return (
-          <Hint focusable label={`${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head}`}>
+          <Hint label={`${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head}`}>
             <span className="badge badge--good badge--big">
               Replay verified ✓ hash match <span className="mono verify__head">{report.replayed_head.slice(0, 12)}</span>
             </span>
@@ -34,7 +34,7 @@ export function VerifyBadge() {
         );
       }
       return (
-        <Hint focusable label={report.detail}>
+        <Hint label={report.detail}>
           <span className="badge badge--bad badge--big">✕ Replay MISMATCH at seq {report.first_divergence ?? "?"}</span>
         </Hint>
       );

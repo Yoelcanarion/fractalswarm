@@ -2010,6 +2010,15 @@ textarea {
   gap: 8px;
 }
 
+/* the approval of a recording, folded: it sits at the end of the row and opens under its words */
+.plan__fold {
+  margin-left: auto;
+}
+
+.plan__fold .plan__buttons {
+  margin-left: 0;
+}
+
 .plan__cols {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr);

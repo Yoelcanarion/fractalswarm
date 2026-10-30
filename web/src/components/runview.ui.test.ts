@@ -323,3 +323,33 @@ describe("the keyboard on the run page", () => {
     expect(source).toMatch(/onKeyDown=\{roving\.onKeyDown\}/);
   });
 });
+
+describe("what the views of a run keep out of their first view", () => {
+  it("has the approval of a recording as a fold, not a row of buttons that cannot be pressed", async () => {
+    const out = render(await opened(), createElement(PlanPage));
+    expect(out).toContain('<details id="approval" class="disclosure disclosure--inline plan__fold">');
+    expect(text(out)).toContain("Approve or reject the plan only while a run waits for a person");
+    expect(out.indexOf('<details id="approval"')).toBeLessThan(out.indexOf("Approve plan"));
+  });
+
+  it("has the events filter as one fold: the search, the noise switch and the groups", async () => {
+    const out = render(await opened(), createElement(EventsPage));
+    expect(out).toContain('<details id="filter" class="disclosure disclosure--inline">');
+    expect(out.indexOf('<details id="filter"')).toBeLessThan(out.indexOf('aria-label="search events"'));
+    expect(out.indexOf('<details id="filter"')).toBeLessThan(out.indexOf('aria-label="event groups"'));
+    expect(out.indexOf('aria-label="event groups"')).toBeLessThan(out.indexOf('<ol class="evlist__rows">'));
+  });
+
+  it("says the words of a view's line with their definitions on hover, not as tab stops", async () => {
+    const store = await opened();
+    for (const page of [ResultsPage, EventsPage, PanelsPage]) {
+      const out = render(store, createElement(page));
+      expect(out).toMatch(/<span class="tip"(?![^>]*tabindex)[^>]*><span class="term">playhead<\/span>/);
+    }
+  });
+
+  it("has the two proofs of the strip as text with their hint, and no tab stop", async () => {
+    const out = render(await opened(), createElement(RunPage));
+    expect(out).not.toMatch(/<span class="tip"[^>]*tabindex="0"[^>]*><span class="badge/);
+  });
+});

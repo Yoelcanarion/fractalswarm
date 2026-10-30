@@ -90,7 +90,7 @@ export function MarketPanel({ view }: { view: ViewState }) {
         <>
           {view.marketEpoch > 0 && (
             <>
-              <Term id="marketEpoch">market epoch</Term> {view.marketEpoch} ·{" "}
+              <Term id="marketEpoch" focusable={false}>market epoch</Term> {view.marketEpoch} ·{" "}
             </>
           )}
           {economy.settled} calls settled · {economy.cancelled} cancelled in flight
