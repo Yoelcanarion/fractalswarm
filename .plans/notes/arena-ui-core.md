@@ -798,5 +798,39 @@ Kept in view on purpose: the Pair select on Arena; the set picker of Charts; the
 - The guide's trailer for steps 1 and 2 are links ("Open the final run", "Start a run"); no step is a modal, a tour or a lock.
 - No event model, `store.ts`, or any file under `home/` or `director/` changed.
 
-### Counts and checks
-First-view control counts at 1920x1080 against the baseline (`#/run` 53, `#/runs` 50 (87 in all), `#/arena` 50, `#/new` 17, `#/charts` 20, `#/helps` 74 (94 in all, 981 words)): **to be filled at RELEASE** (browser on 5176, the baseline measured with the same script on 8765).
+### Counts and checks (RELEASE, Oct 30 night, `ee52fe1` plus this note)
+How: one script (`controls.mjs`, in my scratchpad, outside the repo) on both builds, Playwright Chromium 130, exactly 1920x1080, dark, a fresh browser context per page, 2.5 to 5 s to settle. The new code is my dev server on 5176; the baseline is the committed arena bundle on 8765; both read the same API (8765, 33 runs), so the data is the same. Read-only: nothing was clicked that starts a run.
+
+What is counted, in the window only (a control is counted when it is rendered, not inside a closed fold, and is the topmost thing at its centre):
+- **controls**: links, buttons, inputs, selects, textareas, summaries and the `role=button`, `tab`, `switch`, `menuitem`, `checkbox`, `radio`, `slider`. A tree card, a mark of the bar and a band of a lane are each one control here, although each row is one tab stop.
+- **tab stops**: what Tab walks through (`tabindex >= 0`, not disabled); a tooltip trigger with `tabindex=0` is one.
+- The chrome of every app page is 7 (the brand, the four places, Guide, the theme); a run page adds 5 (the picker, Run, Results, More views, the meter). "First visit" has the guide open (4 more controls); "returning" has its flag set.
+
+| Page | Baseline: controls in view / whole page | Baseline: tab stops | New, first visit (guide open): controls / tab stops | New, returning: controls in view / whole page | New, returning: tab stops | Words in view, baseline -> new |
+|---|---|---|---|---|---|---|
+| `#/run/demo-final?at=end` | 70 / 85 | 71 | 63 / 28 | 60 / 74 | 25 | 525 -> 490 |
+| `#/run` (bare; the new one opens the final run, the old one opened the first listed) | 45 / 54 | 48 | 63 / 28 | 60 / 74 | 25 | 257 -> 490 |
+| `#/runs` | 49 / 86 | 50 | 17 / 18 | 14 / 15 | 15 | 466 -> 105 |
+| `#/arena/<swarm>/<rival>` | 49 / 55 | 49 | 22 / 21 | 46 / 52 | 19 | 209 -> 241 |
+| `#/arena` (bare) | 44 / 50 | 44 | 14 / 17 | 27 / 47 | 18 | 208 -> 239 |
+| `#/new` | 16 / 17 | 14 | 15 / 15 | 12 / 13 | 12 | 243 -> 188 |
+| `#/charts` | 19 / 21 | 29 | 16 / 25 | 13 / 15 | 23 | 246 -> 241 |
+| `#/helps` | 73 / 94 | 53 | 14 / 14 | 11 / 15 | 11 | 611 -> 409 |
+| `#/ablation` | 13 / 14 | 14 | 15 / 16 | 12 / 13 | 13 | 87 -> 85 |
+| `.../plan` | 44 / 47 | 49 | 42 / 30 | 39 / 42 | 27 | 468 -> 459 |
+| `.../results` | 41 / 44 | 44 | 38 / 24 | 35 / 38 | 21 | 312 -> 302 |
+| `.../panels` | 43 / 46 | 49 | 41 / 30 | 38 / 41 | 27 | 650 -> 641 |
+| `.../security` | 41 / 44 | 43 | 39 / 24 | 36 / 39 | 21 | 290 -> 281 |
+| `.../events` | 106 / 773 | 109 | 98 / 84 | 103 / 768 | 89 | 336 -> 327 |
+
+The coordinator's baseline (`#/run` 53, `#/runs` 50 (87 in all), `#/arena` 50, `#/new` 17, `#/charts` 20, `#/helps` 74 (94 in all, 981 words)) is close to this script's for every page but `#/run`, which counted differently (this script counts the 22 tree cards and 18 marks as controls). `#/helps` has 981 words by `innerText` in the baseline, as the brief says; it is 783 now with the count folded.
+
+Reading it, without dressing it up:
+- Runs, Where it helps, New task and Charts are at about the brief's size once the 7 of the chrome are taken out (`#/runs` 14 in all: 7 chrome + Open the final run + 4 runs + 2 folds; `#/helps` 11: 7 + the rival select + 3).
+- Run and Arena went from 71 and 49 tab stops to 25 and 19. Their controls stay at 60 and 46 only because each tree card, mark and band is still a button to click; each row is one tab stop.
+- **Not much changed on Plan, Results, Panels, Security, Events** (21 to 27 tab stops, 89 on Events, whose list rows are buttons). Their first view is the chrome (12), the replay bar (5) and the cards; Plan also shows three disabled approval controls on a recorded run, and eight tooltip triggers are tab stops. Those views are one "More views" menu away now and were not part of the baseline list.
+- The run page's visuals (the counters, the schedule grid, the event log) are what the page is for and are unchanged: its words in view went 525 -> 490.
+
+The acceptance walk in the browser (`walk.mjs`), 22 of 22 passed: a first visit opens the guide (3 steps) and a bare `#/run` opens `demo-final` at its end (event 8771 / 8771); "Got it" closes it and stores `fractalswarm.guide.seen`; a later visit keeps it closed; the Guide button reopens it (`aria-expanded`); "Play from the start" moves the clock from event 0 (t = 2.65 s, event 325 after 2.5 s); "More views" lists Plan, Escape closes it, and Plan opens in two clicks; `?details=table` (helps), `?details=all` and `?details=start` (runs), `?details=more` (charts, ablation) and `?details=reader` (new) open their folds; a recorded run says why it cannot be killed and links to start a run, with its chaos controls folded; no page errors.
+
+Found while checking, not mine: `t2-real-c3-swarm-seed1b` and `t2-real-c3-central-seed1` (the pair the arena page opens by address) show "Replay MISMATCH at seq 9" and "at seq 18" on the 8765 server. `POST /api/runs/<id>/verify` says the same: `first_divergence` 9 and 18, "effect.started differs in payload" on a `firewall` effect. Those two older recordings no longer replay under the current code; `demo-final` verifies (hash `a199a768072b`, `bundle_head_ok`). The page shows it as it is.
