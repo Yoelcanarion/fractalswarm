@@ -255,21 +255,44 @@ class TestARouteThatRaises:
     def test_the_site_keeps_the_500_the_live_server_gives_and_says_so(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # The takeover route of a supervisor's log (the central rival) raises; uvicorn answers 500.
+        # A read route that raises is answered 500 by uvicorn. (A supervisor's log used to make the
+        # takeover route raise; the API now answers 501 for it, see the next class.)
         from fractalswarm.verify import takeover
 
-        def refuse(run: Any, **_: Any) -> None:
-            raise takeover.SupervisorLog("supervisor log: use `fractalswarm recovery`")
+        def broken(run: Any, **_: Any) -> None:
+            raise RuntimeError("the check broke")
 
-        monkeypatch.setattr(takeover, "check_run", refuse)
+        monkeypatch.setattr(takeover, "check_run", broken)
         site = export(tmp_path, sources=(TOY,))
         routes = site.manifest["runs"]["demo-toy"]["routes"]
         assert routes["takeover"] == {"status": 500, "body": {"error": "Internal Server Error"}}
         assert routes["recovery"]["status"] == 200  # the other routes are not touched
         notes = site.report.runs[0].notes
         assert len(notes) == 1
-        assert "GET takeover raised SupervisorLog" in notes[0] and "answers 500" in notes[0]
+        assert "GET takeover raised RuntimeError" in notes[0] and "answers 500" in notes[0]
         assert f"note: {notes[0]}" in build.describe(site.report)
+
+
+class TestATakeoverThatIsNotOffered:
+    def test_a_supervisors_run_keeps_the_501_the_api_answers_with_no_note(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The central rival's log has no takeovers to check: /recovery is its check (arena e688aad).
+        from fractalswarm.verify import takeover
+
+        def supervisor_log(run: Any, **_: Any) -> None:
+            raise takeover.SupervisorLog("supervisor log: use `fractalswarm recovery`")
+
+        monkeypatch.setattr(takeover, "check_run", supervisor_log)
+        site = export(tmp_path, sources=(TOY,))
+        entry = site.manifest["runs"]["demo-toy"]["routes"]["takeover"]
+        live = site.live.get("/api/runs/demo-toy/takeover")
+        assert live.status_code == 501
+        assert answer_of(site, entry) == (501, live.json())
+        assert "recovery" in entry["body"]["error"]
+        assert (
+            site.report.runs[0].notes == []
+        )  # an answer the server gives on purpose needs no note
 
 
 class TestPairsAndTheRunsTheyNeed:

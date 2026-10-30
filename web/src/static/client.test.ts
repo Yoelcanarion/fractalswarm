@@ -25,7 +25,7 @@ import {
 } from "../lib/api";
 import { readManifest } from "./manifest";
 import { createStaticFetch } from "./shim";
-import { BASE, passthrough } from "./testing";
+import { BASE, BETA, makeSite, passthrough } from "./testing";
 
 const SITE = fileURLToPath(new URL("./fixtures/site/", import.meta.url));
 const read = (file: string): Buffer => readFileSync(`${SITE}data/${file}`);
@@ -130,6 +130,19 @@ describe("opening a run", () => {
   it("reads the escalations, or none", async () => {
     install();
     await expect(fetchDisputes(TOY)).resolves.not.toBeUndefined();
+  });
+});
+
+describe("a supervisor's run", () => {
+  it("keeps the 501 the API gives for its takeover, which the takeover chip reads as not offered", async () => {
+    const site = makeSite();
+    const refusal = { error: "supervisor log: use `fractalswarm recovery`" };
+    site.manifest.runs[BETA].routes.takeover = { status: 501, body: refusal };
+    vi.stubGlobal("fetch", createStaticFetch({ manifest: site.manifest, base: BASE, load: site.load, passthrough: passthrough().fetch }));
+    const reply = await fetch(`api/runs/${BETA}/takeover`);
+    expect(reply.status).toBe(501);
+    expect(await reply.json()).toEqual(refusal);
+    await expect(fetchTakeover(BETA)).resolves.toBeNull();
   });
 });
 
