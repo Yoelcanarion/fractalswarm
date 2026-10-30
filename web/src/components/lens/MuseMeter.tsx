@@ -13,7 +13,7 @@ import { foldMeter, formatPercent, formatTokens, formatUsd, type ModelRow } from
 import { formatNumber } from "../../lib/motion";
 import { useLens, useLensStoreApi } from "../../lensStore";
 import { useRunStore } from "../../store";
-import { Hint, ModelBadge, Skeleton, Tooltip } from "../ui";
+import { Details, Hint, ModelBadge, Skeleton, Tooltip } from "../ui";
 
 const COORDINATION = "Input and output tokens of calls whose role is coordinator, supervisor, router or recovery, or whose tag starts with coord:";
 const RECOVERY = "Input and output tokens of calls whose role is recovery or whose tag starts with recovery:";
@@ -22,7 +22,14 @@ function modelHint(row: ModelRow): string {
   return `${row.model}: ${row.calls} calls · input ${formatNumber(row.input_tokens)} (cached ${formatNumber(row.cached_tokens)}) · output ${formatNumber(row.output_tokens)} (reasoning ${formatNumber(row.reasoning_tokens)})`;
 }
 
-export function MuseMeter() {
+export interface MuseMeterProps {
+  /** In the run strip: the meter is a fold, "What the models cost", that floats under its summary, so the strip is one row of the two proofs and
+   * a person who does not ask for the models' cost is not shown it. The address opens it (`?details=meter`); `open` does too. */
+  fold?: boolean;
+  open?: boolean;
+}
+
+export function MuseMeter({ fold = false, open = false }: MuseMeterProps = {}) {
   const lens = useLensStoreApi();
   const status = useLens((s) => s.status);
   const error = useLens((s) => s.error);
@@ -60,7 +67,7 @@ export function MuseMeter() {
   const zero = totals.coordination_tokens === 0 && totals.recovery_tokens === 0;
   const lost = totals.lost_to_cancellation;
   const byModel = new Map(now.models.map((row) => [row.model, row]));
-  return (
+  const meter = (
     <div className="meter" role="group" aria-label="Muse meter">
       <button type="button" className="meter__open" onClick={() => lens.getState().openRun()} title="Open every LLM call of this run">
         Muse meter <ChevronRight size={16} aria-hidden />
@@ -94,10 +101,16 @@ export function MuseMeter() {
       {lost.calls > 0 && (
         <Tooltip placement="bottom-end" label="Calls that were cut off before they completed. They are billed the benchmark's estimate.">
           <span className="meter__lost">
-            <span className="mono">{formatNumber(lost.calls)}</span> calls lost · <span className="mono">{formatUsd(lost.cost_usd)}</span>
+            <span className="mono">{formatNumber(lost.calls)}</span> {lost.calls === 1 ? "call" : "calls"} lost · <span className="mono">{formatUsd(lost.cost_usd)}</span>
           </span>
         </Tooltip>
       )}
     </div>
+  );
+  if (!fold) return meter;
+  return (
+    <Details menu id="meter" className="meter-fold" summary="What the models cost" hint="each model, its tokens and the cache" open={open}>
+      {meter}
+    </Details>
   );
 }

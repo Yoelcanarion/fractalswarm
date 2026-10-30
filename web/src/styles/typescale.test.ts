@@ -16,7 +16,6 @@ const OWN_DIRS = ["components", "pages", "intake", "ablation"];
  * schedule grid, a tick of the ladder, a count on a tab) where 14px does not fit. */
 const IN_A_DRAWING = new Set([
   ".react-flow__edge-text",
-  ".actor__meta",
   ".actor__duty",
   ".actor__adopted",
   ".actor__state",

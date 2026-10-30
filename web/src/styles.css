@@ -295,18 +295,6 @@ textarea {
   font-size: var(--fs-body);
 }
 
-/* The counters take the row; the button that opens the guide sits at its end and costs no height. */
-.run__top {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-.run__top > .counters {
-  flex: 1;
-  min-width: 0;
-}
-
 /* The body of a run view while it loads, so the page keeps its size. */
 .run__sk-body {
   flex: 1;
@@ -336,6 +324,119 @@ textarea {
   min-height: 300px;
   border-radius: var(--radius-2);
   overflow: hidden;
+}
+
+/* The run page: the tree is the page. It takes the width and the height the page has left, so that its labels can be read; the fold of
+   the counters, the schedule and the logs sits under it, and the replay bar stays at the foot of the window however far the page is
+   scrolled (the page is as tall as its content, and no taller than it needs to be). */
+.run--overview {
+  height: auto;
+  min-height: 100%;
+}
+
+.run--overview .run__tree {
+  flex: 1 0 auto;
+  min-height: clamp(300px, 44vh, 680px);
+  padding: 0;
+  overflow: hidden;
+}
+
+/* The page is as tall as its content, so the canvas has no definite height for the pane's 100% to be a share of: the pane sits in a box
+   that fills the canvas by position, which has one. (React Flow sets its own width, height and position inline.) */
+.run--overview .run__canvas {
+  position: relative;
+  min-height: 0;
+  border-radius: 0;
+}
+
+.run__fill {
+  position: absolute;
+  inset: 0;
+}
+
+.run--overview > .timeline {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-shadow: 0 12px 0 0 var(--bg);
+}
+
+.run__more {
+  margin-top: 0;
+}
+
+/* The key of the tree, in its corner. */
+.run__legend {
+  margin: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+  color: var(--text-muted);
+  font-size: var(--fs-body);
+}
+
+/* The line a run page opens with: the state of the run in words, and the three numbers that are its claim. */
+.runstate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+
+.runstate__line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 1 1 360px;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-lead);
+  line-height: var(--lh-body);
+  color: var(--text-primary);
+}
+
+.runstate__head {
+  font-weight: 700;
+}
+
+.runstate__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 0.5em;
+  border-radius: var(--radius-pill);
+  background: var(--text-muted);
+}
+
+.runstate__line--live .runstate__dot {
+  background: var(--accent);
+}
+
+.runstate__line--good .runstate__dot {
+  background: var(--ok);
+}
+
+.runstate__line--warn .runstate__dot {
+  background: var(--warn);
+}
+
+.counters--headline {
+  flex: none;
+  flex-wrap: nowrap;
+}
+
+.counters--headline .stat {
+  min-width: 0;
+  padding: 4px 14px;
+}
+
+.counters--headline .stat__value {
+  font-size: var(--fs-title);
+}
+
+.counters--headline .stat--hero .stat__value {
+  font-size: var(--fs-stat);
 }
 
 .run__grid {
@@ -460,9 +561,9 @@ textarea {
 
 .actor {
   position: relative;
-  width: 150px;
-  padding: 10px 12px;
-  border-radius: var(--radius-3);
+  width: 100px; /* keep in sync with lib/layout.ts */
+  padding: 6px 8px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
   border: 2px solid var(--owner);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--owner) 14%, transparent);
@@ -474,28 +575,31 @@ textarea {
 }
 
 .actor--leaf {
-  width: 112px;
-  padding: 7px 8px;
+  width: 84px;
+  padding: 4px 6px;
+}
+
+/* A dead brain that handed over everything it held, in the row under the tree. */
+.actor--fallen {
+  width: 76px;
+  padding: 3px 6px;
+  box-shadow: none;
 }
 
 .actor__id {
   font-weight: 700;
-  font-size: var(--fs-base);
+  font-size: var(--fs-lead);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .actor--leaf .actor__id {
-  font-size: var(--fs-body);
+  font-size: var(--fs-base);
 }
 
-.actor__meta {
-  font-size: var(--fs-label);
-  color: var(--text-muted);
-  display: flex;
-  gap: 4px;
-  justify-content: center;
+.actor--fallen .actor__id {
+  font-size: var(--fs-body);
 }
 
 .actor__duty {
@@ -511,7 +615,14 @@ textarea {
 }
 
 .actor__adopted {
-  margin-top: 4px;
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  white-space: nowrap;
   font-size: var(--fs-label);
   /* the owner's track colour, pulled toward the text colour: the colour itself is 4.4:1 on the card for some tracks */
   color: color-mix(in srgb, var(--owner) 60%, var(--text-primary));
@@ -585,16 +696,9 @@ textarea {
 }
 
 .actor__x {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: var(--fs-display);
+  margin-right: 0.3em;
   font-weight: 800;
   color: var(--danger);
-  text-shadow: var(--text-halo);
-  animation: pop 400ms cubic-bezier(0.2, 1.6, 0.4, 1);
-  pointer-events: none;
 }
 
 .actor__handle {

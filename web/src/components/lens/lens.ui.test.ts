@@ -10,6 +10,7 @@ import { readCallDetail, readCalls, readMeter, type CallDetail } from "../../lib
 import { loadFixture, renderCurrent, Stream } from "../../lib/testing";
 import type { RunEvent } from "../../lib/types";
 import { createRunStore, RunStoreProvider, type RunApi, type RunStoreApi } from "../../store";
+import { RunStrip } from "../RunStrip";
 import { TakeoverChip } from "../TakeoverChip";
 import { CallView } from "./CallView";
 import { LensDock } from "./LensDock";
@@ -120,6 +121,30 @@ describe("the Muse meter", () => {
     const t = text(render(run, MuseMeter));
     expect(t).toContain("27 calls lost · $0.1458");
     expect(t).toContain("coordination tokens 0 · recovery tokens 0");
+  });
+
+  it("says one call lost in the singular", async () => {
+    const calls = readCalls(central.calls);
+    // every call settles but one that was lost, and the playhead is past them all
+    const lost = calls.calls.find((call) => call.status === "cancelled" && call.ended_ts !== null)!;
+    calls.calls = calls.calls.map((call) => (call === lost ? call : { ...call, status: "ok" as const }));
+    const { run } = await opened(central, { calls: async () => calls, meter: async () => null });
+    run.getState().seek(3);
+    run.setState({ playhead: Number.MAX_SAFE_INTEGER });
+    const t = text(render(run, MuseMeter));
+    expect(t).toMatch(/ 1 call lost · \$/);
+    expect(t).not.toContain("1 calls lost");
+  });
+
+  it("is a fold in the run strip, under words a first view can read, so the strip is one row of the two proofs", async () => {
+    const { run } = await opened(demo);
+    run.getState().seek(3);
+    const html = render(run, RunStrip);
+    expect(html).toMatch(/<details id="meter" class="disclosure disclosure--menu meter-fold">/);
+    expect(text(html)).toContain("What the models cost");
+    expect(html).toContain("runstrip__proof");
+    // inside it the meter is what it was
+    expect(text(html)).toContain("Muse meter");
   });
 
   it("warns when a run spent tokens on coordination", async () => {

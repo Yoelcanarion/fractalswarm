@@ -29,12 +29,15 @@
   .runstrip .meter {
     column-gap: 12px;
   }
-  .meter__tok,
-  .meter > :has(> .meter__cache),
-  .meter__sep:has(+ * > .meter__cache),
   .verify__head {
     display: none;
   }
+}
+
+/* The meter in the strip is a fold that floats under "What the models cost": wide enough for its row of models and chips. */
+.meter-fold > .disclosure__body {
+  width: max-content;
+  max-width: min(980px, calc(100vw - 40px));
 }
 
 /* ---- the Muse meter ---- */
