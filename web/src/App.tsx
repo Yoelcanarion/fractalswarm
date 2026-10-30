@@ -1,3 +1,11 @@
+// The app shell is a lazy chunk (home/Root.tsx): the styles only it needs are imported here, so the
+// home page's first load carries neither them nor recharts and React Flow.
+import "@xyflow/react/dist/style.css";
+import "./styles.css";
+import "./styles/ui.css";
+import "./styles/lens.css";
+import "./styles/lite.css";
+
 import { useEffect, useState } from "react";
 
 import { ArenaPage } from "./arena/ArenaPage";
