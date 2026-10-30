@@ -100,7 +100,15 @@ export const GLOSSARY = {
     term: "Breaker",
     says: "A circuit breaker. It opens after repeated failures, so calls go to another model or wait. After a pause it lets a probe call through and closes again if the probe succeeds.",
   },
+  aimd: {
+    term: "AIMD quota",
+    says: "A request-rate quota for one model. It starts at 50% of the limit, gains 5 points after a clean epoch and is multiplied by 0.7 after a 429.",
+  },
   // runs (the clocks, src/fractalswarm/runs.py)
+  playhead: {
+    term: "Playhead",
+    says: "The marker on the timeline at the bottom of a run page. Every view shows the run as it was at that moment. Drag it, press play, or press an event's number in the Events view to move it.",
+  },
   virtualTime: {
     term: "Virtual time",
     says: "The run's own clock. A live clock follows real time at the speed the run was started with; a simulated clock jumps ahead as fast as the machine can go.",

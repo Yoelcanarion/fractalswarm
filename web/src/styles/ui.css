@@ -330,6 +330,28 @@ textarea:focus-visible {
   line-height: var(--lh-body);
 }
 
+/* The head of a run's views: the title and its sentence on one line, so the page keeps its height. */
+.pagehead--compact {
+  align-items: baseline;
+  margin-bottom: 0;
+}
+
+.pagehead--compact .pagehead__text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-4);
+}
+
+.pagehead--compact .pagehead__title {
+  font-size: var(--fs-lead);
+}
+
+.pagehead--compact .pagehead__lead {
+  margin: 0;
+  font-size: var(--fs-body);
+}
+
 .pagehead__actions {
   display: flex;
   flex-wrap: wrap;

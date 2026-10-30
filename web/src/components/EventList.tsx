@@ -4,6 +4,7 @@ import { NOISE_GROUPS, recent, summarize, tone, type EventFilter } from "../lib/
 import type { RunEvent } from "../lib/types";
 import { useRunStore } from "../store";
 import { LensButton } from "./lens/LensButton";
+import { Tooltip } from "./ui";
 
 const PAGE = 300;
 
@@ -41,7 +42,7 @@ export function EventList({ events, cursor, groups }: Props) {
       <header className="panel__title">
         Event log
         <span className="panel__hint">
-          {cursor.toLocaleString("en")} events so far · newest first · click a row for its payload, its seq to rewind
+          {cursor.toLocaleString("en")} events so far · newest first
         </span>
       </header>
       <div className="evlist__bar">
@@ -55,13 +56,11 @@ export function EventList({ events, cursor, groups }: Props) {
           }}
           aria-label="search events"
         />
-        <button
-          className="btn"
-          onClick={() => setHidden(noiseHidden ? new Set() : new Set(NOISE_GROUPS))}
-          title="heartbeats, network frames, timers and network faults"
-        >
-          {noiseHidden ? "Show the noise" : "Hide the noise"}
-        </button>
+        <Tooltip label="Heartbeats, network frames, timers and network faults: the events that fill the log without saying what the run did." placement="bottom">
+          <button className="btn" onClick={() => setHidden(noiseHidden ? new Set() : new Set(NOISE_GROUPS))}>
+            {noiseHidden ? "Show the noise" : "Hide the noise"}
+          </button>
+        </Tooltip>
       </div>
       <div className="evlist__chips" role="group" aria-label="event groups">
         {names.map((name) => (
@@ -85,13 +84,24 @@ export function EventList({ events, cursor, groups }: Props) {
                   e.stopPropagation();
                   seek(event.seq);
                 }}
-                title="rewind the replay to this event"
+                title="Move the playhead to this event"
+                aria-label={`Move the playhead to event ${event.seq}`}
               >
                 {event.seq}
               </button>
               <span className="evrow__t mono">{(event.ts_virtual / 1000).toFixed(2)}s</span>
               <span className="evrow__type">
-                {event.type}
+                <button
+                  type="button"
+                  className="evrow__toggle"
+                  aria-expanded={open === event.seq}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpen(open === event.seq ? null : event.seq);
+                  }}
+                >
+                  {event.type}
+                </button>
                 <LensButton effectId={event.payload?.effect_id} />
               </span>
               <span className="evrow__actor">{event.actor}</span>

@@ -62,7 +62,7 @@ export function EscalationsPanel({ view, runId }: { view: ViewState; runId?: str
     <Card
       title="Escalations"
       wide
-      hint="the replanning ladder: retry → reassign → squad replan → parent → human (spec §5.5)"
+      hint="the ladder a failing contract climbs: retry → reassign → squad replan → parent → human"
     >
       <div className="pstats">
         <PStat label="1 · retries" value={steps.retry} title="same agent, with the verifier's feedback" />

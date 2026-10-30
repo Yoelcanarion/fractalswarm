@@ -173,6 +173,13 @@ describe("PageHeader", () => {
     expect(full).toContain("Every recorded run.");
     expect(full).toContain("pagehead__actions");
   });
+
+  it("can sit on one line for a page that needs its height", () => {
+    const compact = html(createElement(PageHeader, { title: "Plan", lead: "The plan the root proposed.", compact: true }));
+    expect(compact).toContain("pagehead pagehead--compact");
+    expect(compact.match(/<h1/g)).toHaveLength(1);
+    expect(html(createElement(PageHeader, { title: "Plan" }))).not.toContain("pagehead--compact");
+  });
 });
 
 describe("EmptyState", () => {

@@ -10,7 +10,7 @@ export function MemoryPanel({ view }: { view: ViewState }) {
   const reuse = memory.hits > 0 ? memory.crossSquadHits / memory.hits : null;
 
   return (
-    <Card title="Memory" hint="the shared blackboard (anti-silo)">
+    <Card title="Memory" hint="facts the squads publish for each other to find">
       <div className="pstats">
         <PStat label="facts" value={memory.order.length} />
         <PStat label="published" value={memory.published} title="every publication, new versions included" />

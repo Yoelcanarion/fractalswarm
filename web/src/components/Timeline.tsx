@@ -4,6 +4,7 @@ import { useClockFrame } from "../lib/clockHooks";
 import { SPEEDS } from "../lib/playback";
 import { fraction, MARK_TONE, marksOf } from "../lib/timeline";
 import { useRunStoreApi, useRunStoreShallow } from "../store";
+import { Tooltip } from "./ui";
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
 
@@ -84,9 +85,11 @@ export function Timeline() {
           ● LIVE
         </button>
       ) : (
-        <button className="btn" onClick={() => seek(events.length)} title="jump to the end">
-          ⏭
-        </button>
+        <Tooltip label="Jump to the end of the run" placement="top-end">
+          <button className="btn" onClick={() => seek(events.length)} aria-label="Jump to the end of the run">
+            ⏭
+          </button>
+        </Tooltip>
       )}
     </div>
   );

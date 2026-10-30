@@ -8,6 +8,7 @@ import { useFirstDraw } from "../lib/chartMotion";
 import { compact } from "../lib/generic";
 import type { ViewState } from "../lib/reducer";
 import { Card, GenericRows, money, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
+import { Term } from "./ui";
 
 const AXIS = axis(12);
 
@@ -18,7 +19,7 @@ const LEVELS: Record<LadderLevel, { label: string; tone: "good" | "warn" | "bad"
   stop: { label: "stop", tone: "bad", what: "partial result" },
 };
 
-// What each level changes (spec §7.4).
+// What each level of the budget ladder changes.
 const LADDER_MEANING: Record<LadderLevel, string> = {
   L0: "full models, speculative execution allowed",
   L1: "cheaper model or effort, no speculative execution, scale down",
@@ -85,7 +86,11 @@ export function MarketPanel({ view }: { view: ViewState }) {
       wide
       hint={
         <>
-          {view.marketEpoch > 0 ? `market epoch ${view.marketEpoch} · ` : ""}
+          {view.marketEpoch > 0 && (
+            <>
+              <Term id="marketEpoch">market epoch</Term> {view.marketEpoch} ·{" "}
+            </>
+          )}
           {economy.settled} calls settled · {economy.cancelled} cancelled in flight
         </>
       }

@@ -10,7 +10,7 @@ export function CollisionsPanel({ view }: { view: ViewState }) {
   const rows = [...collisions.rows].reverse();
 
   return (
-    <Card title="Collisions log" hint="spec §6">
+    <Card title="Collisions log" hint="booking conflicts between squads, and who resolved them">
       <div className="pstats">
         <PStat label="collisions" value={collisions.rows.length} tone={collisions.rows.length > 0 ? "warn" : ""} />
         <PStat label="open" value={open} tone={open > 0 ? "bad" : ""} />

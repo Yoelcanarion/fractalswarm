@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { GenericEntry } from "../lib/generic";
+import { Tooltip } from "./ui";
 
 export const money = (value: number, digits = 4): string => `$${value.toFixed(digits)}`;
 export const virtualSeconds = (ms: number): string => `${(ms / 1000).toFixed(1)} s`;
@@ -8,17 +9,32 @@ export const percent = (share: number): string => `${Math.round(share * 100)}%`;
 
 type Tone = "good" | "bad" | "warn" | "";
 
+/** What a hint is made of: a bubble for a pointer, and the same words for a screen reader. Not a tab stop: a page of
+ * stat tiles would otherwise be a page of tab stops. */
+function Hinted({ hint, children }: { hint?: string; children: ReactNode }) {
+  if (!hint) return <>{children}</>;
+  return (
+    <Tooltip label={hint}>
+      {children}
+      <span className="sr-only"> {hint}</span>
+    </Tooltip>
+  );
+}
+
+/** A number and what it counts. ``title`` is the hint on what the number means. */
 export function PStat({ label, value, tone = "", title }: { label: string; value: ReactNode; tone?: Tone; title?: string }) {
   return (
-    <div className={`pstat ${tone ? `pstat--${tone}` : ""}`} title={title}>
-      <div className="pstat__value">{value}</div>
-      <div className="pstat__label">{label}</div>
-    </div>
+    <Hinted hint={title}>
+      <div className={`pstat ${tone ? `pstat--${tone}` : ""}`}>
+        <div className="pstat__value">{value}</div>
+        <div className="pstat__label">{label}</div>
+      </div>
+    </Hinted>
   );
 }
 
 /** A horizontal bar: ``share`` of the track is filled, 0..1. */
-export function Meter({ share, label, detail, tone = "" }: { share: number | null; label: string; detail?: string; tone?: Tone }) {
+export function Meter({ share, label, detail, tone = "" }: { share: number | null; label: ReactNode; detail?: string; tone?: Tone }) {
   return (
     <div className="meter">
       <div className="meter__head">
@@ -34,9 +50,9 @@ export function Meter({ share, label, detail, tone = "" }: { share: number | nul
 
 export function Pill({ tone = "", children, title }: { tone?: Tone | "muted"; children: ReactNode; title?: string }) {
   return (
-    <span className={`badge ${tone ? `badge--${tone}` : ""}`} title={title}>
-      {children}
-    </span>
+    <Hinted hint={title}>
+      <span className={`badge ${tone ? `badge--${tone}` : ""}`}>{children}</span>
+    </Hinted>
   );
 }
 
@@ -78,7 +94,7 @@ export function Card({
   wide,
   children,
 }: {
-  title: string;
+  title: ReactNode;
   hint?: ReactNode;
   wide?: boolean;
   children: ReactNode;
