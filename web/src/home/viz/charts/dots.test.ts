@@ -117,6 +117,20 @@ function checkLayout(layout: DotLayout, label: string, m = model): void {
       });
     }
     expect(textWidth("−13.9%"), label).toBeLessThanOrEqual(panel.meanX - panel.right);
+    // the header of a panel stops short of the "mean" over its column, which ends at the column's edge
+    expect(panel.left + textWidth(panel.title, 13) + 8 + textWidth(panel.sub) + 8, `${label} head vs mean`).toBeLessThanOrEqual(panel.meanX - textWidth("mean"));
+    // the grid is drawn through the rows of each group and not through the band with its title
+    expect(panel.spans, `${label} grid`).toHaveLength(layout.shown);
+    panel.spans.forEach((s, gi) => {
+      const rows = panel.rows.filter((r) => r.group === gi);
+      expect(s.top, `${label} grid ${gi}`).toBeLessThan(rows[0]!.y);
+      expect(s.bottom, `${label} grid ${gi}`).toBeGreaterThan(rows[rows.length - 1]!.y);
+      for (const g of panel.groups) {
+        expect(s.top >= g.y + 7 || s.bottom <= g.y - 7, `${label} the grid of group ${gi} crosses the title of group ${g.group}`).toBe(true);
+      }
+    });
+    // a title ends before the mean column
+    if (panel.labels) for (const g of panel.groups) expect(panel.labelX + textWidth(g.title), `${label} title`).toBeLessThanOrEqual(panel.meanX - 8);
     // the axis is under the last row, the key under the axis
     const lastRow = panel.rows[panel.rows.length - 1]!;
     expect(panel.axisY, label).toBeGreaterThan(lastRow.y);
@@ -138,6 +152,25 @@ describe("the dot plot's layout", () => {
       checkLayout(dotLayout(model, width, height, captions), `${width}x${height}`);
     });
   }
+
+  it("keeps its header off the mean column and its grid off the groups' titles at every width from a phone's to a wide screen's, below a thousand pixels as above", () => {
+    for (const height of [340, 388, 420, 460, 560]) {
+      for (let width = 350; width <= 1700; width += 10) checkLayout(dotLayout(model, width, height, captions), `${width}x${height}`);
+    }
+    // the widths a tablet and a small laptop give the chart, one by one
+    for (const width of [944, 960, 980, 1000, 1040]) {
+      const layout = dotLayout(model, width, 420, captions);
+      expect(layout.stacked, `${width}`).toBe(false);
+      checkLayout(layout, `${width}x420`);
+    }
+  });
+
+  it("gives a panel the long form of its subtitle only where the whole header fits before the mean column", () => {
+    const wide = dotLayout(model, 1480, 460, captions);
+    expect(wide.panels.map((p) => p.sub)).toEqual(["seconds with no agent working", "% against the run with no failures"]);
+    const tablet = dotLayout(model, 820, 420, captions);
+    expect(tablet.panels.map((p) => p.sub)).toEqual(["seconds", "% extra"]);
+  });
 
   it("sets the two panels side by side with the claims' names where there is room, and stacks them, with the failures only, where there is not", () => {
     const wide = dotLayout(model, 1480, 460, captions);
