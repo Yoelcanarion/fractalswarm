@@ -43,9 +43,10 @@ from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, JSONResponse
+from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
+from starlette.types import Scope
 
 from fractalswarm.api import arena, jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
@@ -89,6 +90,17 @@ HERO_SETS = {
 }
 BUDGET_LEVELS = ("contract", "squad", "run", "project")
 MAX_PAGE = 5000
+
+
+class BuiltPage(StaticFiles):
+    """The built app. Its assets carry a hash in their names and may be cached, but ``index.html``
+    names them, so a browser must ask for it each time or a new build stays hidden."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        if path in (".", "index.html"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
 
 
 def create_app(
@@ -681,7 +693,7 @@ def create_app(
         Route("/api/runs/{run_id}/escalations/{eid}", answer_escalation, methods=["POST"]),
     ]
     if (static_dir / "index.html").is_file():
-        routes.append(Mount("/", StaticFiles(directory=static_dir, html=True)))
+        routes.append(Mount("/", BuiltPage(directory=static_dir, html=True)))
     else:
         routes.append(Route("/", ui))
     return Starlette(
