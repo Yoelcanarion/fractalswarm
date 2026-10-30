@@ -40,6 +40,16 @@
   max-width: min(980px, calc(100vw - 40px));
 }
 
+/* A phone: the strip says it in the fold's name alone, and the drawer clears a replay bar of two rows. */
+@media (max-width: 760px) {
+  .meter-fold .disclosure__hint {
+    display: none;
+  }
+  .run {
+    --timeline-h: 112px;
+  }
+}
+
 /* ---- the Muse meter ---- */
 .meter {
   display: flex;

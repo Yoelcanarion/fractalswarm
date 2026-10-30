@@ -144,6 +144,21 @@ describe("the five views of a run", () => {
     expect(out).toContain('class="sr-only"');
   });
 
+  it("folds the budget shock and the kill switch away on a recording, the way the plan's approval is, and shows them on a live run", async () => {
+    const store = await opened();
+    const recorded = render(store, createElement(PanelsPage));
+    expect(recorded).toMatch(/<details id="controls" class="disclosure disclosure--inline controls__fold">/);
+    expect(text(recorded)).toContain("Budget shock and kill switch only on a live run");
+    // what the fold says is still in view: the page is a recording
+    expect(text(recorded)).toContain("recorded run: controls available on live runs");
+    store.setState({ runStatus: "running" });
+    const live = render(store, createElement(PanelsPage));
+    expect(live).not.toContain('id="controls"');
+    expect(text(live)).toContain("Apply cap");
+    expect(text(live)).toContain("Kill switch");
+    expect(text(live)).toContain("live run: these act on it");
+  });
+
   it("explains the jargon of the panels in place", async () => {
     const out = render(await opened(), createElement(PanelsPage));
     expect(out).toContain('<span class="term">Breakers</span>');

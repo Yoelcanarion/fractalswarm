@@ -71,6 +71,38 @@
   }
 }
 
+/* A phone: the bars wrap instead of running off the screen. The brand, the guide and the theme are one row; the four places are the next
+   (their own row, wrapping if they must); and under them a run's picker, its views and its status each take the width they need. */
+@media (max-width: 760px) {
+  .shell .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 52px;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-2) 16px;
+  }
+
+  .shell .topbar > .tabs {
+    order: 3;
+    flex: 1 1 100%;
+  }
+
+  .shell .tabs {
+    flex-wrap: wrap;
+  }
+
+  .shell .subnav {
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-2) 16px;
+  }
+
+  .shell .subnav select {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
+
 /* The guide: three steps under the bars, in the flow, so nothing is covered. */
 .guide {
   display: flex;
