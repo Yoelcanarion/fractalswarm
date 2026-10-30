@@ -11,7 +11,7 @@ commit `8bd4f1f`, read only for me); its contract is its `.plans/notes/arena-hom
   types in `web/src/home/data/types.ts`; `tests/unit/test_home_data.py` (14 tests). The file follows W6's contract: claims
   `{text,status,state}`, facts, hero (the v1 file's own shape), headline, finish, takeover, failures, assumptions rows, tokens,
   proof, and one self-contained slice per visual (tree, lanes.central, hrw, hashes). `extraction` and `ablation` are NOT in it
-  (no source I can use without a real call); the page keeps its PENDING tags.
+  yet; the page keeps its PENDING tags (the coordinator's decision is Next, step 0).
   Regenerate: `uv run python -I -X utf8 scripts/build_home_data.py --central-run C:/Users/yogar/orca/workspaces/work-orquestrator/arena-coord2/bench/results/v1/runs/central__t2_conference__C3__s1`
 - **SwarmTree** (`viz/tree/*`, pure frame function plus a DOM painter, default pacing `story`, optional `hero`),
   **`viz/keyframes.ts`** (`TREE_KEYFRAMES` under W6's names, `TREE_HERO_KEYFRAMES`, `TREE_HERO_SECONDS` 9.1,
@@ -31,6 +31,12 @@ commit `8bd4f1f`, read only for me); its contract is its `.plans/notes/arena-hom
 
 ## Next, in order
 
+0. **Extraction slice, decided by the coordinator** (msg_d946f75595eb, Oct 30, 11:52 CET, read after the stop): yes, take it
+   from the recorded bundle `demo/backup`: one email and the facts Muse Spark drew from it, each with its source span, read from
+   the `effect.started` prompt and the `effect.completed` output of that call. Pick the messiest email that gives 2 or 3
+   constraints (the generator's emails are synthetic, so no PII). **Do not build `ablation`:** it stays absent and its door keeps
+   the PENDING tag. The coordinator forwards my six points to W6. It gives no order between this and WorkLanes; my plan is this
+   first, as a small data task whose slice W6's page reads. "Keep going with WorkLanes, then the charts" is steps 2 and 3 below.
 1. Export `HrwPanels`, `HashStrip` from `viz/index.ts`; add their lab sections (slider per visual, `story.hrw`, `story.hashes`).
 2. **WorkLanes** (canvas, data `lanes.central`: 14 lanes, 118 bars `[lane,startMs,endMs,kind,costMicroUsd,cause]`, kinds
    counted 0 / cutOff 1 / again 2 / other 3, causes none 0 / crash 1 / kill 2 / other 3, duration 345.3 s, crashes at
