@@ -94,6 +94,35 @@ A visual that draws from `progress` reads it with `useTransform`/`useMotionValue
 37. **Copy was cut to fit the word budget** (213 words in view before W7's drawings, whose svg text is not counted): the Solution's sentence lost its first clause, the cards read "One shared log", "Everyone finds the same heir", "The heir takes over", the Proof's check is "Check it:", the Enter line is "Watch recorded runs, or break one." and the demo's title is read by screen readers only. If W7's drawings or a fold open by default push the count over 230, the next cuts are the hero sentence and the door purposes.
 38. **Files of W7's that I touched, and what to expect at the merge.** `chapters/Hero.tsx`, `chapters/hero.css`, `chapters/hero.test.ts` (31) and `viz/drivers.test.ts` (the door-hover entry removed: the page no longer drives a hover). W7's branch changed `drivers.test.ts` too, in other hunks (an import and a new `describe`: "no driver of the page eases", which reads every file of the page for an `animate(` without `ease: "linear"` and allows `parts/Figure.tsx`). On my tree it passes: the only `animate(` calls are `useEnterProgress` (linear) and `Figure` (its count-up). `Figure` still eases with the strong ease-out of `lib/motion` over 1.2 s; once W7's `viz/ease.ts` is in my branch it should use the shared ease (open).
 39. **W7's components.** `ProblemFilm`, `StepDrawing`, `KillDemo`, `ProofBars` and `DoorThumb` are drawn from W7's files. For one stretch I kept a placeholder for `ProofBars`, because W7's first version drew the swarm against the ideal durable supervisor as two mean bars, which would show a tie (R2) as a win (W7 said so themselves); their rebuild (885cfe2) draws that panel as one dot per seed with the data's "tie" beside it and bars only against the in-process supervisor, with the rival names and the setting inside the svg, so it adds no counted word, and the placeholder file went. The test helper that finds a section in the markup stops at the next top-level section, not at the first `</section>`, because W7's drawings hold sections of their own. The test that the still page shows the animated page's words ignores figures: a number that grows reads as zero in the markup of the page that plays it.
+40. **Four layout fixes from the first browser pass (22:45).** The step drawing takes the height of its box instead of its own 2:1 height, so it cannot grow over the card's title. The film's wrapper sets `--fs-figure: 0px`, which turns the band W7's lanes reserve for a counter (`.hv-ln-probe`, `--fs-figure` plus 52 px) into 52 px, because this page draws no counter over the film; the film's own height (W7's rule, 44vw between 320 and 560 px) is overridden here to 44vw between 380 and 440 px. The click demo is at most 1080 px wide and centred, so the tree is about 540 px tall at 1920 and not 700. These are page rules in `home.css`; W7's `viz.css` is untouched. Open for W7: the band could be zero when the page says so, instead of through a token.
+
+## State on Oct 30, 22:50 (the RELEASE pass: browser, frames; merge_ready sent)
+
+A scratch build (`npx vite build --outDir <scratch>/dist-frames`) served by `vite preview` on 127.0.0.1:5174, looked at with `web/scripts/home-capture.mjs` in Chromium and Firefox at 1920x1080. Fake data only, nothing paid. The numbers, from the page as W7's six components draw it:
+
+| Width | `#/` height | Words in view (folds closed) | `#/evidence` height | Words |
+| --- | --- | --- | --- | --- |
+| 390 | 6,084 px | 220 | 8,783 px | 1,744 |
+| 1366 | 4,925 px | 222 | 5,833 px | 1,746 |
+| 1920 | 5,650 px | 222 | 6,626 px | 1,746 |
+
+Nothing is pinned but the bar and the skip link, nothing overflows sideways, and no outside or `/api` request is made (`layout`). Frame times, 1920x1080, each animation in a fresh page (`frames`), taken just before the four CSS fixes below (they only make the film's and the cards' boxes smaller). The Firefox machine's display runs at 165 Hz, so a frame is 6.1 ms there and 16.7 ms in Chromium:
+
+| Animation | Firefox p50 / p95 / p99 / max (ms) | >17 ms | Chromium p50 / p95 / p99 / max (ms) |
+| --- | --- | --- | --- |
+| hero loop, one pass | 6.1 / 6.1 / 6.1 / 12.1 | 0.0% | 16.7 / 16.8 / 16.8 / 16.8 |
+| film on arrival | 6.1 / 6.1 / 6.1 / 6.1 | 0.0% | 16.7 / 16.7 / 16.8 / 16.8 |
+| film from Repeat | 6.1 / 6.1 / 6.1 / 8.1 | 0.0% | 16.7 / 16.7 / 16.8 / 16.8 |
+| step cards, hover x3 | 6.1 / 12.1 / 12.1 / 12.1 | 0.0% | 16.7 / 16.7 / 16.8 / 16.8 |
+| proof bars and numbers | 6.1 / 6.1 / 6.1 / 12.1 | 0.0% | 16.7 / 16.7 / 16.8 / 16.8 |
+| click demo, a takeover | 6.1 / 12.1 / 12.1 / 18.2 | 0.2% | 16.7 / 16.7 / 16.8 / 16.8 |
+| door thumbnails, idle | 6.1 / 6.1 / 6.1 / 6.1 | 0.0% | 16.7 / 16.7 / 16.8 / 16.8 |
+| door thumbnail, hover x3 | 6.1 / 6.1 / 6.1 / 12.1 | 0.0% | 16.7 / 16.7 / 16.8 / 16.8 |
+| the page, a wheel at 1800 px/s | 6.1 / 6.1 / 12.1 / 12.1 | 0.0% | 16.7 / 16.7 / 16.8 / 33.3 (one frame, 0.2%) |
+
+No page errors in either browser. What the first look at the shots found, and what changed in `home.css` (decision 40): the three step drawings are 2:1 and were taller than their 16 svh box, so they ran over their titles (the svg now takes the box's height); W7's lanes keep a band at the top as tall as `--fs-figure` for a counter this page does not draw, which left 200 px of nothing above the film at 1920 (`--fs-figure: 0px` on `.home-film`, and the film is `clamp(380px, 44vw, 440px)` so the title, the film and Repeat show together on one screen); the click demo is 1080 px wide at most, centred; at 390 the lanes need more than 320 px, so Repeat covered their caption (380 px minimum).
+
+Looked at in the shots: 1920 dark, every section; 1920 light, the proof; 390 dark, the problem and the solution. Not looked at: the light theme of the other sections, 1366, the doors at 390, the evidence page's shots, the hover states of the cards and the doors (their frame times are measured, their look is not), and the lanes at 820-1000 px.
 
 ## State on Oct 30, night (the redesign; HOLD until the coordinator's RELEASE, about 22:10)
 
