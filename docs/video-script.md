@@ -1,6 +1,6 @@
-# Video script — v0.2 (3:00, English voice-over)
+# Video script — v0.3 (3:00, English voice-over)
 
-**Status:** draft v0.2. The decision gate (Oct 29, with Yoel) chose **outcome B**, so Act 3 has only version B; version A is removed.
+**Status:** draft v0.3, with the ten-seed claims. The decision gate (Oct 29, with Yoel) chose **outcome B**, so Act 3 has only version B; version A is removed.
 - Every `{{placeholder}}` left is filled from `docs/claims.md` once the final runs exist.
 - Every number and claim must have a row in `docs/claims.md` before recording.
 - The tagline is settled (Yoel, Oct 30; `docs/claims.md` S7): "Kill half the brains. It still finishes." Only that sentence. Numbers go under it, each with its rival named, never as part of it.
@@ -19,7 +19,7 @@ Anything that doesn't answer one of them stays out of the video.
 - The scenes come from director mode (`#/director/<scene-id>`), captured by `scripts/record_scenes.*` at 1920×1080.
 - **Exceptions:** `s2-intake` is recorded from the real live session, and `s9-close` is a real terminal capture (OBS, or Win+Alt+R).
 - Record the voice per scene. Light editing joins the clips.
-- **On-screen notes:** whenever a replay is shown, the frame says "Replay of a real recorded run · real cost ${{run_cost}}".
+- **On-screen notes:** whenever a replay is shown, the frame says "Replay of a real recorded run · real cost $0.48" (`demo/final`; another run shows its own cost).
 
 ---
 
@@ -35,11 +35,11 @@ Anything that doesn't answer one of them stays out of the video.
 
 **Voice-over (≈ 74 words):**
 > Teams of AI agents often depend on one coordinator. It plans, assigns and checks the work. When it crashes, the team waits, or does the work again.
-> Even an ideal supervisor has to stop to recover. Can a team recover without one?
+> A better supervisor helps: its workers survive, and a standby takes over. Can a team recover without one?
 > On the right: the strongest supervisor we could build. On the left: FractalSwarm, ten small coordinators in a tree. Same task, same models, same failures.
 > Now we kill half the brains.
 
-**Key points:** agent teams depend on one coordinator · even an ideal one stops to recover · the strongest rival we could build, against ten small coordinators · same task, models and failures · kill half the brains.
+**Key points:** agent teams depend on one coordinator · a better supervisor helps · can a team recover without one · the strongest rival we could build, against ten small coordinators · same task, models and failures · kill half the brains.
 
 ---
 
@@ -74,14 +74,14 @@ Anything that doesn't answer one of them stays out of the video.
 - The lens opens on a Spark extraction: "muse-spark-1.3 · effort high · {{tokens_in}} in ({{tokens_cached}} cached) · ${{call_cost}} · {{call_latency}} s", with the fact next to its highlighted email sentence.
 - Then Wonder's root plan.
 - [If arbitration is merged] a Wonder ruling card: two agents disagreed, and Wonder decided, with the emails as evidence.
-- **The Muse meter** in the top bar: "coordination tokens 0 · recovery tokens 0".
+- **The Muse meter**, opened from "What the models cost" in the strip: "coordination tokens 0 · recovery tokens 0".
 
 **Voice-over (≈ 48 words; +14 if arbitration is shown):**
 > Then the team works. Muse Wonder plans. Muse Spark agents read the emails, place the talks and check the results.
 > [If arbitration] When two agents disagree, Wonder settles it, with the emails as evidence.
-> Click any call to see the model, the tokens, the cost, and the sentence behind the decision. Coordination and recovery cost zero tokens: every token goes to the problem.
+> Click any call to see the model, the tokens, the cost, and the sentence behind the decision. Zero LLM tokens spent on coordination: the tokens go to the problem.
 
-**Key points:** Wonder plans; Spark reads, places and checks · [Wonder arbitrates] · every call is inspectable · zero tokens on coordination and recovery.
+**Key points:** Wonder plans; Spark reads, places and checks · [Wonder arbitrates] · every call is inspectable · zero LLM tokens spent on coordination.
 
 ---
 
@@ -96,42 +96,42 @@ Anything that doesn't answer one of them stays out of the video.
 - **Lower third:** "Shared log, not shared brain."
 
 **Voice-over (≈ 52 words):**
-> How does a team without a boss recover? Every coordinator reads the same log. When one stops sending heartbeats, each survivor computes the same heir, with a hash. No vote, no election, no extra tokens.
+> How does a team without a boss recover? Every coordinator reads the same log. When one stops sending heartbeats, each survivor computes the same heir from the log, with one rule, so there is no election.
 > The heir adopts the dead coordinator's work, and every result already in the log. Even the root can die.
 
-**Key points:** one shared log · the same heir computed everywhere · no vote, no election, zero tokens · the heir adopts the work and the logged results · even the root.
+**Key points:** one shared log · the same heir computed everywhere · no election · the heir adopts the work and the logged results · even the root.
 
 ### s6-fair-fight (1:44–2:14)
 **On screen:**
 - The arena, mid-run, with crash markers on the shared timeline.
-- **Right:** at each crash, a "supervisor down · 12 agents waiting" band for {{rival_down_s}} s.
+- **Right:** at each crash, a "supervisor down · 12 agents waiting" band for 5 s.
 - **Left:** only one subtree pauses.
 - **Face-to-face counters:** idle agent-seconds, time to recover, cost, duplicated work and reassignments.
 - **Caption, always visible:** "Rival: ideal durable supervisor — 5 s detection · 0 s restart · workers survive · same log".
 
 **Voice-over (outcome B; ≈ 68 words):**
 > Is that better than a good supervisor? We built the strongest rival we could implement fairly: its workers survive, it loses nothing, and it restarts the moment it detects the crash.
-> Under the same failures, it matched us: the same work, the same cost. So our claim is narrower, and still useful: resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism.
+> Under the same failures, over ten seeds, it tied with us on stall time and on extra cost. So our claim is narrower, and still useful: resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism.
 
-**Key points:** the strongest rival we could implement fairly · it matched us on work and cost · the claim, in R2's words (`docs/claims.md`).
+**Key points:** the strongest rival we could implement fairly · it tied on stall time and extra cost · the claim, in R2's words (`docs/claims.md`).
 **Not said here:** that recovery stays local, or that the swarm waits less (R1 is not claimed under B). The on-screen run may show one subtree pausing, which is what that run did; the voice-over does not generalize it.
 
 ### s7-where-it-helps (2:14–2:26)
 **On screen:** the "where it helps" panel: the regime map (detection latency × coordination density), the wins/ties/losses table, and the per-process line.
 
-**Voice-over (outcome B; ≈ 38 words):**
-> It helps when a supervisor is slow to restart a coordinator. Against a fast external restart it loses, and in our main setting it ties. This panel shows exactly where it helps, where it ties and where it loses.
+**Voice-over (outcome B; ≈ 30 words):**
+> It helps when a supervisor is slow to restart a coordinator. It ties in our main setting. It loses to a fast external restart, and its detector raises false alarms.
 
-**Key points:** helps when the supervisor restarts slowly · loses against a fast external restart · ties in the main setting · both failure models shown (`docs/claims.md` R3).
+**Key points:** helps when the supervisor restarts slowly · ties in the main setting · loses against a fast external restart · false deaths · both failure models shown (`docs/claims.md` R3).
 
 ### s8-proof (2:26–2:36)
 **On screen:**
 - The verify badge, "Replay verified ✓", with a short hash.
-- The takeover chip, as the UI words it: "Takeover OK ✓ {{heirs}} hand-overs", and its hover, "the heir of each, recomputed from the log, is the one the run used" (swarm).
+- The takeover chip, as the UI words it: "Takeover OK ✓ 7 hand-overs" (`demo/final`), and its hover, "the heir of each, recomputed from the log, is the one the run used" (swarm).
 - The recovery report (supervisor).
 
-**Voice-over (≈ 27 words):**
-> And you don't have to trust us. Every run replays bit for bit from a hash-chained log, and a checker recomputes every heir from that log.
+**Voice-over (≈ 25 words):**
+> And you don't have to trust us. Every run we ship replays bit for bit from a hash-chained log, and a checker recomputes every heir from it.
 
 **Key points:** bit-for-bit replay · hash-chained log · every heir recomputed by a checker.
 
@@ -156,11 +156,8 @@ Anything that doesn't answer one of them stays out of the video.
 
 | Placeholder | Source |
 |---|---|
-| `{{run_cost}}` | `final_report` of the replayed run |
 | `{{ablation_parser}}`, `{{ablation_muse}}`, `{{ablation_total}}` | The ablation result on the live input |
 | `{{tokens_in}}`, `{{tokens_cached}}`, `{{call_cost}}`, `{{call_latency}}` | The lens, on the chosen call |
-| `{{rival_down_s}}` | The arena pair's chaos plan and recovery report |
-| `{{heirs}}` | `fractalswarm takeover` on the replayed swarm run |
 
 ## Checks before recording
 - [x] The outcome has been decided with Yoel (B, Oct 29), and only that version is in the script.
