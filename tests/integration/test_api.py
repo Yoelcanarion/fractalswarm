@@ -3,6 +3,7 @@
 Everything here reads recorded bundles or a temp log; nothing calls a model.
 """
 
+import asyncio
 import json
 import shutil
 import threading
@@ -15,6 +16,7 @@ from typer.testing import CliRunner
 
 from fractalswarm.api import ws
 from fractalswarm.api.app import create_app
+from fractalswarm.api.catalog import Catalog
 from fractalswarm.cli import app as cli
 from fractalswarm.kernel.events import Event
 from fractalswarm.kernel.store import COLUMNS, EventStore, _to_row
@@ -69,6 +71,37 @@ def test_lists_and_summarizes_the_demo_bundle(client: TestClient) -> None:
     assert summary["chain"]["ok"] and summary["recorded_head"] == TOY_HEAD
     assert summary["counts"]["actor.spawned"] == 3
     assert client.get("/api/runs/nope").status_code == 404
+
+
+def test_reads_of_the_log_stay_off_the_event_loop(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A full page is about 170 ms of sqlite and pydantic, and a whole log the best part of a
+    second: on the event loop that would hold up every live stream."""
+    on_the_loop = []
+
+    def spied(name: str):
+        real = getattr(Catalog, name)
+
+        def read(self, *args, **kwargs):
+            try:
+                asyncio.get_running_loop()
+                on_the_loop.append(name)
+            except RuntimeError:
+                pass
+            return real(self, *args, **kwargs)
+
+        return read
+
+    for name in ("page", "read", "last", "listing"):
+        monkeypatch.setattr(Catalog, name, spied(name))
+
+    assert client.get("/api/runs/demo-toy/events?limit=5").status_code == 200
+    with client.websocket_connect("/api/runs/demo-toy/events?pace=none") as socket:
+        while socket.receive_json()["kind"] != "end":
+            pass
+
+    assert on_the_loop == []
 
 
 def test_events_are_paged_by_seq(client: TestClient) -> None:

@@ -15,6 +15,7 @@ import asyncio
 from itertools import groupby
 from typing import Any
 
+import anyio
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from fractalswarm.api.catalog import Catalog
@@ -39,10 +40,13 @@ async def stream_events(ws: WebSocket, catalog: Catalog) -> None:
         speed = min(max(speed, MIN_SPEED), MAX_SPEED)
         paced = ws.query_params.get("pace", "replay") != "none"
 
-        last = catalog.last(entry)
-        await ws.send_json({"kind": "hello", "run": catalog.listing(entry), "speed": speed})
+        # Reads of the log leave the event loop: a whole log takes the best part of a second.
+        last = await anyio.to_thread.run_sync(catalog.last, entry)
+        listing = await anyio.to_thread.run_sync(catalog.listing, entry)
+        await ws.send_json({"kind": "hello", "run": listing, "speed": speed})
         if last is not None and last["type"] == "run.completed":
-            sent = await _replay(ws, catalog.read(entry, from_seq), speed, paced)
+            events = await anyio.to_thread.run_sync(catalog.read, entry, from_seq)
+            sent = await _replay(ws, events, speed, paced)
         else:
             sent = await _tail(ws, catalog, entry, from_seq)
         await ws.send_json({"kind": "end", "last_seq": sent})
@@ -65,7 +69,7 @@ async def _replay(ws: WebSocket, events: list[dict[str, Any]], speed: float, pac
 async def _tail(ws: WebSocket, catalog: Catalog, entry, from_seq: int) -> int:
     next_seq, last_seq = from_seq, from_seq - 1
     while True:
-        batch = catalog.read(entry, next_seq, TAIL_BATCH)
+        batch = await anyio.to_thread.run_sync(catalog.read, entry, next_seq, TAIL_BATCH)
         if batch:
             await ws.send_json({"kind": "events", "events": batch})
             last_seq = batch[-1]["seq"]

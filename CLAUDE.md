@@ -1,6 +1,6 @@
 # FractalSwarm — CLAUDE.md
 
-> **Kill half the brains. It still finishes — without stalling or paying twice. Verify it yourself.**
+> **Kill half the brains. It still finishes.**
 
 A multi-agent LLM runtime for the Meta Global AI Developer Hackathon (Indie track, "Push the Frontier").
 - Orchestrators form a fractal tree: root → tracks → sessions.
