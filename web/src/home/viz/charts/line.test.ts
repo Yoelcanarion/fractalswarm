@@ -201,6 +201,19 @@ describe("the hero chart's layout", () => {
     expect(stall!.xTicks.map((t) => [t.count, t.profile])).toEqual(model.xs.map((x, i) => [String(x), model.profiles[i]]));
   });
 
+  it("names the basis of the extra cost in its header, in the long form where the header fits the panel and in the short one where it does not", () => {
+    for (let width = 292; width <= 1700; width += 4) {
+      const [stall, extra] = lineLayout(model, width, 456, captions).panels;
+      expect(extra!.sub, `${width}`).toContain("pre-registered basis");
+      // a header never runs out of its panel
+      for (const panel of [stall!, extra!]) {
+        expect(textWidth(panel.metric.title, 13) + 8 + textWidth(panel.sub), `${width} ${panel.metric.key}`).toBeLessThanOrEqual(panel.w + 0.001);
+      }
+    }
+    expect(lineLayout(model, 1480, 520, captions).panels[1]!.sub).toBe("pre-registered basis: against its own run with no failures");
+    expect(lineLayout(model, 390, 456, captions).panels[1]!.sub).toBe("pre-registered basis");
+  });
+
   it("is a true scale in x when the data has points between: 1 to 3 killed is twice the distance of 0 to 1", () => {
     const four = lineModel(synthetic(lcg(7)));
     expect(four.xs).toEqual(data.x);

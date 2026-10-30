@@ -201,9 +201,10 @@ export interface DotLayout {
   key: { kind: "dot" | "mean" | "range" | "ring"; x: number; label: string }[];
 }
 
-const METRIC_INFO: Record<DotMetric, { title: string; sub: string; subShort: string }> = {
-  stall: { title: "Stall time", sub: "seconds with no agent working", subShort: "seconds" },
-  extra: { title: "Extra cost", sub: "% against the run with no failures", subShort: "% extra" },
+/** What a panel's header says after its title, longest first: the first that fits before the mean column is written, and the last always is. */
+const METRIC_INFO: Record<DotMetric, { title: string; subs: readonly string[] }> = {
+  stall: { title: "Stall time", subs: ["seconds with no agent working", "seconds"] },
+  extra: { title: "Extra cost", subs: ["% against the run with no failures, pre-registered basis", "pre-registered basis", "% extra"] },
 };
 
 function domainOf(model: DotModel, metric: DotMetric, groups: number): { min: number; max: number; step: number; values: number[] } {
@@ -298,6 +299,8 @@ export function dotLayout(model: DotModel, width: number, height: number, captio
     const domain = domainOf(model, metric, shown);
     const xAt = linear(domain.min, domain.max, left, right);
     const info = METRIC_INFO[metric];
+    const headRoom = right + MEAN_W - textWidth(MEAN_HEAD) - HEAD_GAP - left;
+    const sub = info.subs.find((s) => textWidth(info.title, 13) + 8 + textWidth(s) <= headRoom) ?? info.subs[info.subs.length - 1] ?? "";
 
     // the groups and their rows, from the top
     let y = top + HEAD_H;
@@ -340,7 +343,7 @@ export function dotLayout(model: DotModel, width: number, height: number, captio
     return {
       metric,
       title: info.title,
-      sub: textWidth(info.title, 13) + 8 + textWidth(info.sub) <= right + MEAN_W - textWidth(MEAN_HEAD) - HEAD_GAP - left ? info.sub : info.subShort,
+      sub,
       labels: stacked || index === 0,
       labelX: PAD,
       left,
