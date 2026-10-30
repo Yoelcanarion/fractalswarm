@@ -6,6 +6,7 @@ import type { ViewState } from "../lib/reducer";
 import { cellCollision, cellKey, openCollisions, rulingsEnd, type Cell, type Collision } from "../lib/schedule";
 import { useRunStore } from "../store";
 import { ClockScope } from "./ClockScope";
+import { Term } from "./ui";
 
 function squadColor(view: ViewState, squad: string, squads: string[]): string {
   if (view.actors[squad]) return colorOf(view, squad);
@@ -88,7 +89,7 @@ export function ScheduleGrid({ view }: { view: ViewState }) {
   if (schedule.rooms.length === 0 || schedule.slots.length === 0) {
     return (
       <div className="empty">
-        No schedule in this run yet. The T2 grid fills in as sessions place talks (
+        No schedule in this run yet. The <Term id="t2">T2</Term> grid fills in as sessions place talks (
         <code>schedule.placed</code>).
       </div>
     );

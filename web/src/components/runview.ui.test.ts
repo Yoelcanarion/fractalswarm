@@ -147,6 +147,8 @@ describe("the five views of a run", () => {
     const out = render(await opened(), createElement(PanelsPage));
     expect(out).toContain('<span class="term">Breakers</span>');
     expect(out).toContain("A circuit breaker. It opens after repeated failures");
+    // and in the page's own sentence about what the view holds
+    expect(out).toMatch(/<span class="term"[^>]*>breakers<\/span>/);
   });
 
   it("gives the events view a way to open a row from the keyboard", async () => {
