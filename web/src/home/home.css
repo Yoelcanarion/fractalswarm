@@ -479,7 +479,7 @@ body:has(.home) {
 
 .home-chapter--calm,
 .home-chapter--enter {
-  padding-block: 14svh;
+  padding-block: 9svh;
 }
 
 .home-chapter__head {
@@ -530,8 +530,8 @@ body:has(.home) {
 .home-closer {
   display: grid;
   place-items: center;
-  min-height: 80svh;
-  padding: 12svh var(--home-pad);
+  min-height: 50svh;
+  padding: 8svh var(--home-pad);
   text-align: center;
 }
 
@@ -600,6 +600,23 @@ body:has(.home) {
   inset: 0;
 }
 
+/* A layer takes its opacity from the step (scroll/Stage.tsx writes it when the step changes) and fades there on its own
+   clock: it is a transition, so a step change in the middle of a fade turns it round from where it is. A layer that is
+   not shown at all is also `visibility: hidden` once its fade is over (and from the first instant when it comes back):
+   it is not painted, not hit and not read out while nobody can see it. */
+.home-layer {
+  transition:
+    opacity var(--dur-step) var(--ease-out),
+    visibility 0s;
+}
+
+.home-layer[data-off] {
+  visibility: hidden;
+  transition:
+    opacity var(--dur-step) var(--ease-out),
+    visibility 0s linear var(--dur-step);
+}
+
 .home-problem__parts {
   display: grid;
   place-items: center;
@@ -644,15 +661,30 @@ body:has(.home) {
   height: 14%;
 }
 
+/* A step is a block at least `--w` screens tall (a card taller than that makes it taller) with its card in the middle.
+   The card of the step that is current is at full strength and the others stay legible, a little back: which one is
+   current is an attribute the stage writes when the reading line crosses into the block, never a function of the scroll. */
 .home-step {
   display: flex;
   align-items: center;
-  min-height: calc(var(--w, 1) * 100svh);
+  min-height: calc(var(--w, 0.5) * 100svh);
 }
 
 .home-step__card {
   max-width: 544px;
-  padding-block: var(--space-6);
+  padding-block: var(--space-5);
+  opacity: 0.38;
+  transition: opacity var(--dur-step) var(--ease-out);
+}
+
+.home-step[data-active] .home-step__card {
+  opacity: 1;
+}
+
+/* a stage that has just been put on its step (a page opened half way down, a jump from the rail) does not fade there */
+.home-stage[data-snap] .home-layer,
+.home-stage[data-snap] .home-step__card {
+  transition: none;
 }
 
 .home-step__count {
@@ -719,6 +751,10 @@ body:has(.home) {
   min-height: 0;
 }
 
+.home-stage--still .home-step__card {
+  opacity: 1;
+}
+
 @media (max-width: 899px) {
   .home-stage {
     display: block;
@@ -736,6 +772,12 @@ body:has(.home) {
 
   .home-stage__frame {
     height: 100%;
+  }
+
+  /* below the pinned visual there is about half a screen for the text: a block is its card and no more, so that one is
+     always in view */
+  .home-step {
+    min-height: calc(var(--w, 0.5) * 50svh);
   }
 
   .home-stage--still .home-stage__visual {
@@ -892,6 +934,12 @@ body:has(.home) {
   align-content: start;
 }
 
+/* the two sides of a pair are about 250 px wide, and the six characters of "92.6 s" are 3.6 em in a mono face: a figure
+   in a pair has to be smaller than one on its own */
+.home-pair .home-figure--figure .home-figure__number {
+  font-size: clamp(40px, 3.6vw, 64px);
+}
+
 .home-pair__who {
   font-family: var(--font-mono);
   font-size: var(--fs-label);
@@ -941,7 +989,7 @@ body:has(.home) {
 /* ---- the models chapter ---- */
 .home-chapter--calm .home-wrap {
   display: grid;
-  gap: var(--space-10);
+  gap: var(--space-8);
 }
 
 .home-extract {
@@ -1082,16 +1130,15 @@ body:has(.home) {
 
 /* ---- the evidence chapter ---- */
 .home-chapter:has(.home-beat) .home-chapter__head {
-  padding-top: 14svh;
+  padding-top: 8svh;
 }
 
 .home-beat {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-5);
   align-content: center;
   justify-items: start;
-  min-height: 88svh;
-  padding-block: 12svh;
+  padding-block: 7svh;
 }
 
 .home-beat__lead {
@@ -1210,15 +1257,15 @@ body:has(.home) {
 .home-chart {
   position: relative;
   width: 100%;
-  height: clamp(280px, 46svh, 460px);
+  height: clamp(260px, 40svh, 400px);
 }
 
 .home-chart--hero {
-  height: clamp(320px, 54svh, 520px);
+  height: clamp(300px, 46svh, 460px);
 }
 
 .home-chart--strip {
-  height: clamp(120px, 20svh, 200px);
+  height: clamp(110px, 16svh, 170px);
 }
 
 .home-fails {
