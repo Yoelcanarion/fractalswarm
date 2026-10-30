@@ -10,6 +10,11 @@
  * grey = waiting; ok = verified.
  */
 
+/* The one ease of the page's animations (ease.ts holds the same curve and the test of its two limits). */
+:root {
+  --ease-play: cubic-bezier(0.3, 0.05, 0.7, 0.95);
+}
+
 .hv {
   display: block;
   width: 100%;
