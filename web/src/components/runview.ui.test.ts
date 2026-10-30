@@ -319,6 +319,7 @@ describe("the keyboard on the run page", () => {
     expect(out).toContain('<select aria-label="replay speed">');
     expect(out).not.toContain("btn--seg");
     const source = readFileSync(REPO_ROOT + "web/src/components/Timeline.tsx", "utf-8");
-    expect(source).toMatch(/tabIndex=\{index === Math\.min\(mark, marks\.length - 1\) \? 0 : -1\}/);
+    expect(source).toMatch(/\{\.\.\.roving\.stop\(index, marks\.length\)\}/);
+    expect(source).toMatch(/onKeyDown=\{roving\.onKeyDown\}/);
   });
 });

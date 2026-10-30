@@ -959,11 +959,6 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
-.speeds {
-  display: flex;
-  gap: 4px;
-}
-
 .speedpick {
   display: flex;
   align-items: center;

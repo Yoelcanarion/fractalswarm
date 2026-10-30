@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useMemo, useRef } from "react";
 
 import { useClockFrame } from "../lib/clockHooks";
 import { SPEEDS } from "../lib/playback";
 import { fraction, MARK_TONE, marksOf } from "../lib/timeline";
 import { useRunStoreApi, useRunStoreShallow } from "../store";
 import { Tooltip } from "./ui";
+import { useRoving } from "./useRoving";
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
 
@@ -31,16 +32,7 @@ export function Timeline() {
 
   const marks = useMemo(() => marksOf(events), [events]);
   // the marks are one tab stop (the bar has a few dozen of them): Tab lands on one, the arrow keys move along them
-  const [mark, setMark] = useState(0);
-  const moveAlongMarks = (event: KeyboardEvent<HTMLDivElement>) => {
-    const all = [...event.currentTarget.querySelectorAll<HTMLElement>(".mark")];
-    const at = all.indexOf(event.target as HTMLElement);
-    const towards: Record<string, number> = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: all.length - 1 };
-    const to = towards[event.key];
-    if (at < 0 || to === undefined || to < 0 || to >= all.length) return;
-    event.preventDefault();
-    all[to].focus();
-  };
+  const roving = useRoving(".mark");
 
   return (
     <div className="timeline">
@@ -62,13 +54,12 @@ export function Timeline() {
           }}
           aria-label="replay position"
         />
-        <div className="timeline__marks" role="group" aria-label="Kills and takeovers on the bar" onKeyDown={moveAlongMarks}>
+        <div className="timeline__marks" role="group" aria-label="Kills and takeovers on the bar" onKeyDown={roving.onKeyDown}>
           {marks.map((m, index) => (
             <button
               key={m.seq}
               type="button"
-              tabIndex={index === Math.min(mark, marks.length - 1) ? 0 : -1}
-              onFocus={() => setMark(index)}
+              {...roving.stop(index, marks.length)}
               className={`mark mark--${m.kind} mark--${MARK_TONE[m.kind]}`}
               style={{ left: `${fraction(m.ts, end) * 100}%` }}
               title={m.label}
