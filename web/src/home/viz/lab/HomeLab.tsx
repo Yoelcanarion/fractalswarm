@@ -381,7 +381,7 @@ function DemoSection({ still }: { still: boolean }) {
       note="The click demo: crash a coordinator and the survivors pick an heir by the run's own rule, computed in the browser. An illustration, not a run."
     >
       <div className="lab-stage">
-        <KillDemo key={String(still)} still={still} />
+        <KillDemo key={String(still)} still={still} note />
       </div>
     </Section>
   );

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
-import { prefersReducedMotion } from "../../../lib/motion";
 import type { TreeSlice } from "../../data/types";
-import { story } from "../../data/story";
+import { bundledStory, useStory } from "../../story";
 import { SECONDS } from "../ease";
+import { useCalm } from "../page";
 import { onFrame } from "../ticker";
 import { Ambient } from "../tree/ambient";
 import { treeModel, type TreeModel } from "../tree/model";
@@ -19,15 +19,17 @@ const HALF = 5;
 const IDLE_MS = 16000;
 const DOWN_MS = 4500;
 
-const INTRO = "Click a coordinator to crash it, or press “Kill half”.";
+const INTRO = "Click a coordinator to crash it.";
 const BACK = "Everything is back. Click a coordinator to crash it.";
 const NOBODY = "Everyone has crashed. There is nobody left to take over.";
 
 export interface KillDemoProps {
   /** The tree to draw; the recorded run's own when absent. */
   data?: TreeSlice;
-  /** A still page, or a person who asked for less motion: every change is made at once and nothing runs by itself. */
-  still?: boolean;
+  /** Standing still, which the page says through its own context when this is absent: every change is made at once and nothing runs by itself. */
+  still?: boolean | undefined;
+  /** Print the sentence that says this is an illustration, not a run. The page that holds the demo prints it itself, above it. */
+  note?: boolean;
   className?: string;
 }
 
@@ -49,10 +51,11 @@ function joined(names: string[]): string {
   return names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
-export function KillDemo({ data, still = false, className }: KillDemoProps) {
-  const tree = data ?? story.tree;
+export function KillDemo({ data, still, note = false, className }: KillDemoProps) {
+  const page = useStory();
+  const tree = data ?? page?.tree ?? bundledStory.tree;
   const model = useMemo(() => demoModel(tree), [tree]);
-  const reduced = still || prefersReducedMotion();
+  const reduced = useCalm(still);
   const sizes = useMemo(
     () => Object.fromEntries(model.ids.map((id) => [id, { size: model.node[id]?.size ?? 0.2, brain: model.node[id]?.kind === "brain" }])),
     [model],
@@ -288,7 +291,7 @@ export function KillDemo({ data, still = false, className }: KillDemoProps) {
         <button ref={again} type="button" className="btn hv-demo-btn" disabled>
           Reset
         </button>
-        <p className="hv-demo-note">An illustration in your browser, not a real run.</p>
+        {note && <p className="hv-demo-note">An illustration in your browser, not a real run.</p>}
       </div>
     </figure>
   );

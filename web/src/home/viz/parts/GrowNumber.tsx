@@ -1,13 +1,14 @@
 import { useEffect, useRef } from "react";
-import { prefersReducedMotion } from "../../../lib/motion";
 import { playhead, SECONDS } from "../ease";
+import { useCalm } from "../page";
 import { Pen } from "../tree/paint";
 import { onFrame } from "../ticker";
 import "../viz.css";
 import { whileVisible } from "../visible";
 
 export interface GrowNumberProps {
-  value: number;
+  /** The number it grows to; one the data does not have is written as a dash and does not grow. */
+  value: number | null | undefined;
   /** How the number is written. Its end form is kept from the first frame (tabular digits), so nothing around it moves. */
   format?: (value: number) => string;
   /** 0 is not yet, and the number shows its start; each increment grows it again from there. */
@@ -15,12 +16,15 @@ export interface GrowNumberProps {
   /** Seconds before it starts and how long it grows: a group's numbers start evenly apart and end together with its bars. */
   delay?: number;
   seconds?: number;
-  /** A still page, or a person who asked for less motion: the number it is, at once. */
-  still?: boolean;
+  /** Standing still, which the page says through its own context when this is absent: the number it is, at once. */
+  still?: boolean | undefined;
   className?: string;
 }
 
 const plain = (value: number): string => String(value);
+
+/** What stands where the data has no number. */
+export const MISSING = "—";
 
 /** The number `value` makes at `elapsed` seconds into a growth of `seconds` that starts after `delay`: one playhead, eased once. */
 export const grown = (value: number, elapsed: number, delay: number, seconds: number): number => value * playhead(elapsed - delay, seconds);
@@ -30,15 +34,17 @@ export const grown = (value: number, elapsed: number, delay: number, seconds: nu
  * written into one text node by one shared frame loop that runs only while the number is on screen. A screen reader is given the
  * end number and never the growth.
  */
-export function GrowNumber({ value, format = plain, play, delay = 0, seconds = SECONDS.grow, still = false, className }: GrowNumberProps) {
+export function GrowNumber({ value, format = plain, play, delay = 0, seconds = SECONDS.grow, still, className }: GrowNumberProps) {
   const live = useRef<HTMLSpanElement>(null);
-  const end = format(value);
+  const calm = useCalm(still);
+  const known = typeof value === "number" && Number.isFinite(value);
+  const end = known ? format(value) : MISSING;
 
   useEffect(() => {
     const element = live.current;
-    if (!element) return undefined;
+    if (!element || typeof value !== "number" || !Number.isFinite(value)) return undefined;
     const pen = new Pen(element);
-    if (still || prefersReducedMotion()) {
+    if (calm) {
       pen.text(format(value));
       return undefined;
     }
@@ -58,7 +64,7 @@ export function GrowNumber({ value, format = plain, play, delay = 0, seconds = S
       return () => off?.();
     });
     return stop;
-  }, [play, value, format, delay, seconds, still]);
+  }, [play, value, format, delay, seconds, calm]);
 
   return (
     <span className={className ? `hv hv-count ${className}` : "hv hv-count"}>
@@ -66,7 +72,7 @@ export function GrowNumber({ value, format = plain, play, delay = 0, seconds = S
         {end}
       </span>
       <span ref={live} className="hv-count__live" aria-hidden>
-        {still ? end : format(0)}
+        {calm || !known ? end : format(0)}
       </span>
       <span className="hv-sr">{end}</span>
     </span>

@@ -1,5 +1,6 @@
-import { prefersReducedMotion } from "../../../lib/motion";
-import { story } from "../../data/story";
+import type { Story } from "../../data/types";
+import { useStory } from "../../story";
+import { useCalm } from "../page";
 import "../viz.css";
 
 export type StepId = "log" | "heir" | "adopt";
@@ -18,16 +19,16 @@ export interface StepDrawingProps {
   active: boolean;
   /** The score of each candidate as a share of the range, best first; the recorded run's first round when absent. */
   scores?: number[];
-  /** A still page, or a person who asked for less motion: the drawing in its end state, whatever the card is doing. */
-  still?: boolean;
+  /** Standing still, which the page says through its own context when this is absent: the drawing in its end state, whatever the card is doing. */
+  still?: boolean | undefined;
   className?: string;
 }
 
 const ROWS = [0, 1, 2, 3, 4];
 
 /** The recorded run's first round, which is the one the page tells: the pool's scores, best first. */
-function recordedScores(): number[] {
-  return (story.hrw.rounds[0]?.scores ?? []).map((s) => s.fraction);
+function recordedScores(story: Story | null): number[] {
+  return (story?.hrw.rounds[0]?.scores ?? []).map((s) => s.fraction);
 }
 
 function Log() {
@@ -92,8 +93,9 @@ function Adopt() {
  * has a transition in the page's one ease, their delays spread evenly across it so that they land one after another and the whole
  * takes about nine tenths of a second; leaving the card eases it back from wherever it has got to, and never snaps.
  */
-export function StepDrawing({ step, active, scores, still = false, className }: StepDrawingProps) {
-  const on = still || prefersReducedMotion() || active;
+export function StepDrawing({ step, active, scores, still, className }: StepDrawingProps) {
+  const story = useStory();
+  const on = useCalm(still) || active;
   return (
     <svg
       className={className ? `hv hv-step ${className}` : "hv hv-step"}
@@ -104,7 +106,7 @@ export function StepDrawing({ step, active, scores, still = false, className }: 
       data-on={on ? "true" : "false"}
     >
       {step === "log" && <Log />}
-      {step === "heir" && <Heir scores={scores ?? recordedScores()} />}
+      {step === "heir" && <Heir scores={scores ?? recordedScores(story)} />}
       {step === "adopt" && <Adopt />}
     </svg>
   );

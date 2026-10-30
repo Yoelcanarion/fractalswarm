@@ -1,10 +1,10 @@
 import { useMotionValue } from "motion/react";
 import { useEffect, useRef } from "react";
-import { prefersReducedMotion } from "../../../lib/motion";
-import { story } from "../../data/story";
 import type { LanesSlice } from "../../data/types";
+import { useStory } from "../../story";
 import { playhead, SECONDS } from "../ease";
 import { WorkLanes } from "../lanes/WorkLanes";
+import { useCalm } from "../page";
 import { onFrame } from "../ticker";
 import "../viz.css";
 import { whileVisible } from "../visible";
@@ -14,8 +14,8 @@ export interface ProblemFilmProps {
   play: number;
   /** The lanes to play: the recorded run of an in-process supervisor when absent. */
   data?: LanesSlice;
-  /** A still page, or a person who asked for less motion: the last frame, and no film. */
-  still?: boolean;
+  /** Standing still, which the page says through its own context when this is absent: the last frame, and no film. */
+  still?: boolean | undefined;
   className?: string;
 }
 
@@ -24,10 +24,12 @@ export interface ProblemFilmProps {
  * by itself, once for each increment of `play`, as one playhead of about seven seconds run through the page's one ease, from the
  * first call to the end. It runs only while it is on screen and the tab is visible, and picks up where it left off.
  */
-export function ProblemFilm({ play, data, still = false, className }: ProblemFilmProps) {
+export function ProblemFilm({ play, data, still, className }: ProblemFilmProps) {
   const progress = useMotionValue(0);
   const host = useRef<HTMLDivElement>(null);
-  const calm = still || prefersReducedMotion();
+  const calm = useCalm(still);
+  const story = useStory();
+  const lanes = data ?? story?.lanes.central;
 
   useEffect(() => {
     if (calm) {
@@ -50,7 +52,7 @@ export function ProblemFilm({ play, data, still = false, className }: ProblemFil
 
   return (
     <div ref={host} className={className ? `hv-film ${className}` : "hv-film"}>
-      <WorkLanes progress={progress} data={data ?? story.lanes.central} still={calm} />
+      {lanes && <WorkLanes progress={progress} data={lanes} still={calm} />}
     </div>
   );
 }

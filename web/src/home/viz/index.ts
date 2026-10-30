@@ -35,6 +35,6 @@ export { cssEase, ease, playhead, SECONDS } from "./ease";
 export { ProblemFilm, type ProblemFilmProps } from "./film/ProblemFilm";
 export { StepDrawing, STEP_IDS, STEP_LABELS, type StepDrawingProps, type StepId } from "./steps/StepDrawing";
 export { ProofBars, type ProofBarsProps } from "./charts/ProofBars";
-export { proofPanels, proofText, type ProofPanel, type ProofRow } from "./charts/proof";
+export { proofPanels, proofText, type ProofPanel } from "./charts/proof";
 export { GrowNumber, type GrowNumberProps } from "./parts/GrowNumber";
 export { DoorThumb, type DoorThumbProps } from "./doors/DoorThumb";
