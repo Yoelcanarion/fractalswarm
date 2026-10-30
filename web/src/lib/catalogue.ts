@@ -3,6 +3,7 @@
 // last event of the log, which the page reads lazily. Pure, so it is tested without a browser.
 
 import { systemKind } from "../arena/assumptions";
+import { FINAL_RUN } from "./address";
 import { asRunStatus, type RunStatus } from "./controls";
 import { profileTerm, type TermId } from "./glossary";
 import { workflowLabel } from "./hero";
@@ -120,6 +121,13 @@ export interface CatalogueRow {
   workflow: { id: string; label: string };
   /** Null until the first and last event have been read. */
   facts: RunFacts | null;
+}
+
+/** The runs a page that cannot list them all opens with: the final run, then the other finished runs in the server's order (newest
+ * first). A live run has its own strip and an empty one has nothing to open. */
+export function featuredRows(rows: readonly CatalogueRow[], limit = 4): CatalogueRow[] {
+  const finished = rows.filter((row) => row.state !== "live" && row.state !== "empty");
+  return [...finished.filter((row) => row.listing.id === FINAL_RUN), ...finished.filter((row) => row.listing.id !== FINAL_RUN)].slice(0, limit);
 }
 
 export const rowOf = (listing: RunListing, facts: RunFacts | null = null, index = 0): CatalogueRow => ({

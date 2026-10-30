@@ -1,12 +1,12 @@
 import { BILLING, STATE_ORDER, STATES } from "../../lib/catalogue";
 import { GLOSSARY } from "../../lib/glossary";
+import { Details } from "../ui";
 
 /** What the columns mean, once and as plain text. The table's own hints open on hover; this is for everyone else, and it
  * is where the words that repeat down a column (C0 to C3) are defined. */
 export function RunsKey() {
   return (
-    <details className="runskey">
-      <summary>How to read this table</summary>
+    <Details inline summary="How to read this table">
       <dl className="runskey__list">
         <dt>What ran</dt>
         <dd>The workflow that recorded the run, the task it was given and its random seed.</dd>
@@ -53,6 +53,6 @@ export function RunsKey() {
           {GLOSSARY.replay.says} Each check replays the whole run, so it happens when you ask for it.
         </dd>
       </dl>
-    </details>
+    </Details>
   );
 }
