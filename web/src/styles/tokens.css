@@ -33,6 +33,19 @@
   --lh-tight: 1.2;
   --lh-body: 1.45;
 
+  /* display type of the home page (home/home.css): Inter drawn for large sizes, scaled with the window */
+  --font-display: "Inter Opsz", var(--font-sans);
+  --fs-display-xl: clamp(48px, 5.8vw, 108px); /* the title */
+  --fs-display-l: clamp(36px, 4.2vw, 76px); /* a chapter's title */
+  --fs-h2: clamp(28px, 3vw, 52px);
+  --fs-step: clamp(22px, 1.9vw, 32px); /* the lead sentence of one step */
+  --fs-lead-l: clamp(17px, 1.25vw, 21px);
+  --fs-figure: clamp(56px, 7vw, 128px); /* a number that is the point of its screen */
+  --fs-stat-l: clamp(36px, 3.6vw, 64px);
+  --track-display: -0.035em;
+  --track-tight: -0.012em;
+  --track-label: 0.08em;
+
   /* spacing (4px grid) */
   --space-1: 4px;
   --space-2: 8px;
@@ -41,6 +54,9 @@
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 144px;
 
   /* radius: an outer radius is the inner radius plus the padding between them */
   --radius-1: 4px;
@@ -63,6 +79,7 @@
   --dur-fast: 100ms;
   --dur-base: 150ms;
   --dur-slow: 300ms;
+  --dur-reveal: 700ms; /* a block of the home page coming into view */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* mirrors EASE_OUT in lib/motion.ts */
 }
