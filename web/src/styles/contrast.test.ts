@@ -148,9 +148,7 @@ function sheets(dir: string): string[] {
 
 /** Findings in files that are not this worker's to change, reported to their owner through the coordinator. Each is listed under the
  * name the first test prints for it; remove it once it is fixed (the second test fails until then). */
-const REPORTED: Record<string, string> = {
-  "home/home.css  .home-extract__mark[data-lit]: --text-inverse on --accent (light)": "W6, Oct 30: 4.30:1, the lit word of the extract visual",
-};
+const REPORTED: Record<string, string> = {};
 
 const all = sheets(SRC).flatMap((path) => pairsOf(readFileSync(path, "utf-8"), path.slice(SRC.length + 1)));
 
