@@ -106,7 +106,7 @@ export function tokenModel(data: TokensSlice): TokenModel {
 
 export function tokenSummary(m: TokenModel): string {
   const models = m.rows.map((r) => `${r.name} ${grouped(r.tokens)} tokens, ${percent(r.share)} (${grouped(r.input)} read and ${grouped(r.output)} written, ${grouped(r.reasoning)} of those written while reasoning; ${r.calls} ${r.calls === 1 ? "call" : "calls"})`);
-  const guard = m.guard ? ` ${m.guard.name} read the inputs first: ${m.guard.text}, and spent no tokens.` : "";
+  const guard = m.guard ? ` ${m.guard.name} read the inputs before any model did: ${m.guard.text}, and spent no tokens.` : "";
   return `Tokens by model in the recorded run, ${grouped(m.total)} in all: ${models.join("; ")}.${guard} Coordination tokens ${grouped(m.coordination)}, recovery tokens ${grouped(m.recovery)}.`;
 }
 
