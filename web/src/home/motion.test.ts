@@ -21,8 +21,8 @@ const files = sources();
 
 describe("the m components of the home page", () => {
   it("have a LazyMotion with a renderer above them, on the page's view", () => {
-    const users = files.filter(usesM);
-    expect(users.length, "a stage draws its cards with m").toBeGreaterThan(0);
+    // Since the clock stage and the looping hero nothing draws with m: the guard is for the day something does.
+    if (!files.some(usesM)) return;
     const view = read(`${HOME}/HomePage.tsx`);
     expect(view).toMatch(/<LazyMotion\s+features=\{(domMin|domAnimation|domMax)\}/);
     // the provider wraps the page: it opens before the chapters and closes after them
