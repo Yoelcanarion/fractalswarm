@@ -9,14 +9,13 @@ describe("the places", () => {
     for (const place of PLACES) expect(place.href).toMatch(/^#\//);
   });
 
-  it("put a run in Runs, the three evidence pages in Evidence, and the home page in none", () => {
+  it("put a run in Runs, and the three evidence pages in Evidence", () => {
     expect(placeOf({ page: "run", runId: "r1", view: "plan" })).toBe("runs");
     expect(placeOf({ page: "run", runId: null, view: "overview" })).toBe("runs");
     expect(placeOf({ page: "runs" })).toBe("runs");
     expect(placeOf({ page: "arena" })).toBe("arena");
     expect(placeOf({ page: "intake" })).toBe("new");
     for (const page of EVIDENCE_VIEWS) expect(placeOf({ page })).toBe("evidence");
-    expect(placeOf({ page: "home" })).toBeNull();
   });
 
   it("send Evidence to its first page, and every evidence page has a hash", () => {
@@ -44,8 +43,7 @@ describe("a run's views", () => {
 });
 
 describe("the page's name and the tab's title", () => {
-  const cases: [Where, string | null, string | null, string][] = [
-    [{ page: "home" }, null, null, "FractalSwarm"],
+  const cases: [Where, string | null, string, string][] = [
     [{ page: "arena" }, null, "Arena", "Arena · FractalSwarm"],
     [{ page: "intake" }, null, "New task", "New task · FractalSwarm"],
     [{ page: "runs" }, null, "Runs", "Runs · FractalSwarm"],

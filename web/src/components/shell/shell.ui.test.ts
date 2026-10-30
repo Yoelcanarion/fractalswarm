@@ -38,12 +38,10 @@ describe("the places", () => {
     expect(nav(bar({ page: "charts" }), "Main")).toContain('aria-current="page">Evidence</a>');
   });
 
-  it("are one current place at a time, and none on the home page", () => {
+  it("are one current place at a time", () => {
     for (const where of [{ page: "arena" }, { page: "runs" }, { page: "intake" }, inRun, { page: "ablation" }] as Where[]) {
       expect(occurrences(nav(bar(where), "Main"), "aria-current")).toBe(1);
     }
-    expect(occurrences(nav(bar({ page: "home" }), "Main"), "aria-current")).toBe(0);
-    expect(nav(bar({ page: "home" }), "Main")).not.toContain("tab--on");
   });
 
   it("have a theme switch at the end, and a way past the bars for the keyboard", () => {
@@ -85,7 +83,7 @@ describe("a run's own views", () => {
   });
 
   it("are not in the other places", () => {
-    for (const where of [{ page: "arena" }, { page: "runs" }, { page: "intake" }, { page: "home" }] as Where[]) {
+    for (const where of [{ page: "arena" }, { page: "runs" }, { page: "intake" }] as Where[]) {
       expect(bar(where)).not.toContain("subnav");
     }
   });
@@ -115,9 +113,5 @@ describe("the announcement", () => {
 
   it("names the run that is open when the address names none", () => {
     expect(bar({ page: "run", runId: null, view: "overview" })).toContain('role="status">Run · demo</p>');
-  });
-
-  it("says nothing on the home page, which is named by the site", () => {
-    expect(bar({ page: "home" })).toContain('<p class="sr-only" role="status"></p>');
   });
 });

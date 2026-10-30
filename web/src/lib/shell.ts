@@ -47,20 +47,18 @@ export const PLACES: readonly PlaceLink[] = [
   { place: "evidence", label: "Evidence", href: EVIDENCE_HASHES.charts, page: "charts" },
 ];
 
-/** Where the person is, as far as the top bar cares: the page and, in a run, which run and which of its views. */
+/** Where the person is inside the app, as far as the top bar cares: the page and, in a run, which run and which of its views. The home
+ * page is not here: home/Root.tsx tells it apart from the app before the app (and its top bar) is loaded. */
 export type Where =
-  | { page: "home" }
   | { page: "arena" }
   | { page: "intake" }
   | { page: "runs" }
   | { page: "run"; runId: string | null; view: RunView }
   | { page: EvidenceView };
 
-/** Which of the four places the person is in. A run is in Runs; the home page is in none. */
-export function placeOf(where: Where): Place | null {
+/** Which of the four places the person is in. A run is in Runs. */
+export function placeOf(where: Where): Place {
   switch (where.page) {
-    case "home":
-      return null;
     case "arena":
       return "arena";
     case "intake":
@@ -82,10 +80,8 @@ export const SITE_NAME = "FractalSwarm";
 
 /** What the page is called, for a screen reader's announcement and the tab's title: a run's view says which run. The route
  * `#/run/` names none and opens the first listed one, so the open run fills in. */
-export function pageName(where: Where, openRunId: string | null): string | null {
+export function pageName(where: Where, openRunId: string | null): string {
   switch (where.page) {
-    case "home":
-      return null;
     case "arena":
       return "Arena";
     case "intake":
@@ -105,6 +101,5 @@ export function pageName(where: Where, openRunId: string | null): string | null 
 
 /** The tab's title: the page first, so a row of tabs tells them apart. */
 export function pageTitle(where: Where, openRunId: string | null): string {
-  const name = pageName(where, openRunId);
-  return name === null ? SITE_NAME : `${name} · ${SITE_NAME}`;
+  return `${pageName(where, openRunId)} · ${SITE_NAME}`;
 }
