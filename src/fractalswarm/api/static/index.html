@@ -10,8 +10,25 @@
       content="Kill half the brains. It still finishes. FractalSwarm is a multi-agent runtime on Muse Spark and Muse Wonder. Scroll through the problem, the design and the evidence, then step into the simulation."
     />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <script type="module" crossorigin src="./assets/index-DXgxMLRN.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/theme-D43o3nF8.js">
+    <script>
+      // The saved or requested theme goes on before the first paint, so a light page never starts dark. It mirrors initTheme() in
+      // src/lib/theme.ts (src/lib/theme.test.ts keeps the two the same). The meta above is the dark default; this keeps it with the theme.
+      (function () {
+        var wanted = null;
+        try {
+          var asked = new URLSearchParams(window.location.search).get("theme");
+          wanted = asked !== null ? asked : window.localStorage.getItem("fractalswarm.theme");
+        } catch (error) {
+          wanted = null;
+        }
+        var light = wanted === "light";
+        if (light) document.documentElement.setAttribute("data-theme", "light");
+        var meta = document.querySelector('meta[name="color-scheme"]');
+        if (meta) meta.setAttribute("content", light ? "light" : "dark");
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-DiHaFIFn.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/theme-CpxcyI6B.js">
     <link rel="stylesheet" crossorigin href="./assets/index-QjhLGRdJ.css">
   </head>
   <body>
