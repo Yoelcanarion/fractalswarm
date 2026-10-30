@@ -332,6 +332,8 @@ textarea {
 .run--overview {
   height: auto;
   min-height: 100%;
+  /* the Muse lens is as tall as the window leaves it, under the bars above the page and over the replay bar, not as tall as the page */
+  --lens-max-h: max(320px, calc(100vh - 163px - var(--timeline-h) - 36px));
 }
 
 .run--overview .run__tree {
