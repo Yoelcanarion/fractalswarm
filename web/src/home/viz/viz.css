@@ -1312,6 +1312,11 @@
 .hv-dg-ink--fine {
   stroke-width: 1.5;
 }
+.hv-dg-chip {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.25;
+}
 .hv-dg-node {
   fill: var(--accent);
 }

@@ -479,7 +479,7 @@ body:has(.home) {
 
 .home-chapter--calm,
 .home-chapter--enter {
-  padding-block: 14svh;
+  padding-block: 6svh;
 }
 
 .home-chapter__head {
@@ -530,8 +530,8 @@ body:has(.home) {
 .home-closer {
   display: grid;
   place-items: center;
-  min-height: 80svh;
-  padding: 12svh var(--home-pad);
+  min-height: 42svh;
+  padding: 6svh var(--home-pad);
   text-align: center;
 }
 
@@ -600,6 +600,23 @@ body:has(.home) {
   inset: 0;
 }
 
+/* A layer takes its opacity from the step (scroll/Stage.tsx writes it when the step changes) and fades there on its own
+   clock: it is a transition, so a step change in the middle of a fade turns it round from where it is. A layer that is
+   not shown at all is also `visibility: hidden` once its fade is over (and from the first instant when it comes back):
+   it is not painted, not hit and not read out while nobody can see it. */
+.home-layer {
+  transition:
+    opacity var(--dur-step) var(--ease-out),
+    visibility 0s;
+}
+
+.home-layer[data-off] {
+  visibility: hidden;
+  transition:
+    opacity var(--dur-step) var(--ease-out),
+    visibility 0s linear var(--dur-step);
+}
+
 .home-problem__parts {
   display: grid;
   place-items: center;
@@ -644,15 +661,30 @@ body:has(.home) {
   height: 14%;
 }
 
+/* A step is a block at least `--w` screens tall (a card taller than that makes it taller) with its card in the middle.
+   The card of the step that is current is at full strength and the others stay legible, a little back: which one is
+   current is an attribute the stage writes when the reading line crosses into the block, never a function of the scroll. */
 .home-step {
   display: flex;
   align-items: center;
-  min-height: calc(var(--w, 1) * 100svh);
+  min-height: calc(var(--w, 0.5) * 100svh);
 }
 
 .home-step__card {
   max-width: 544px;
-  padding-block: var(--space-6);
+  padding-block: var(--space-5);
+  opacity: 0.38;
+  transition: opacity var(--dur-step) var(--ease-out);
+}
+
+.home-step[data-active] .home-step__card {
+  opacity: 1;
+}
+
+/* a stage that has just been put on its step (a page opened half way down, a jump from the rail) does not fade there */
+.home-stage[data-snap] .home-layer,
+.home-stage[data-snap] .home-step__card {
+  transition: none;
 }
 
 .home-step__count {
@@ -719,6 +751,10 @@ body:has(.home) {
   min-height: 0;
 }
 
+.home-stage--still .home-step__card {
+  opacity: 1;
+}
+
 @media (max-width: 899px) {
   .home-stage {
     display: block;
@@ -736,6 +772,12 @@ body:has(.home) {
 
   .home-stage__frame {
     height: 100%;
+  }
+
+  /* below the pinned visual there is about half a screen for the text: a block is its card and no more, so that one is
+     always in view */
+  .home-step {
+    min-height: calc(var(--w, 0.5) * 50svh);
   }
 
   .home-stage--still .home-stage__visual {
@@ -827,6 +869,14 @@ body:has(.home) {
   overflow-wrap: anywhere;
 }
 
+/* a command in a sentence is not broken at its hyphens ("--" and "verify" on two lines); a phone's column is too narrow
+   for that, and there it may wrap */
+@media (min-width: 900px) {
+  .home-claim .home-code {
+    white-space: nowrap;
+  }
+}
+
 .home-figures {
   display: flex;
   flex-wrap: wrap;
@@ -892,6 +942,12 @@ body:has(.home) {
   align-content: start;
 }
 
+/* the two sides of a pair are about 250 px wide, and the six characters of "92.6 s" are 3.6 em in a mono face: a figure
+   in a pair has to be smaller than one on its own */
+.home-pair .home-figure--figure .home-figure__number {
+  font-size: clamp(40px, 3.6vw, 64px);
+}
+
 .home-pair__who {
   font-family: var(--font-mono);
   font-size: var(--fs-label);
@@ -941,7 +997,7 @@ body:has(.home) {
 /* ---- the models chapter ---- */
 .home-chapter--calm .home-wrap {
   display: grid;
-  gap: var(--space-10);
+  gap: var(--space-8);
 }
 
 .home-extract {
@@ -1010,6 +1066,20 @@ body:has(.home) {
 .home-ablation,
 .home-muse {
   max-width: 896px;
+}
+
+/* the question and the answer's parts: one above the other, and on a wide screen side by side */
+.home-models-pair {
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .home-models-pair {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: clamp(32px, 4vw, 72px);
+  }
 }
 
 .home-roles {
@@ -1082,16 +1152,58 @@ body:has(.home) {
 
 /* ---- the evidence chapter ---- */
 .home-chapter:has(.home-beat) .home-chapter__head {
-  padding-top: 14svh;
+  padding-top: 5svh;
 }
 
 .home-beat {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-5);
   align-content: center;
   justify-items: start;
-  min-height: 88svh;
-  padding-block: 12svh;
+  padding-block: 5svh;
+}
+
+/* The words of a beat and what they speak of: one above the other, and on a wide screen
+   split: the words beside the chart;
+   over:  the lead, the words and an aside in one row, over a chart that is drawn for the whole width;
+   wide:  one column, for a chart or a row of figures that wants the whole width. */
+.home-beat__text,
+.home-beat__aside,
+.home-beat__body {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+  justify-items: start;
+  min-width: 0;
+}
+
+.home-beat__body {
+  width: 100%;
+}
+
+@media (min-width: 1280px) {
+  .home-beat--split {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: var(--space-8);
+    align-items: start;
+    justify-items: stretch;
+  }
+
+  .home-beat--over {
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--space-7);
+    align-items: start;
+    justify-items: stretch;
+  }
+
+  /* the lead and the words are two cells of the row, not one cell holding both */
+  .home-beat--over .home-beat__text {
+    display: contents;
+  }
+
+  .home-beat--over .home-beat__body {
+    grid-column: 1 / -1;
+  }
 }
 
 .home-beat__lead {
@@ -1176,6 +1288,57 @@ body:has(.home) {
   color: var(--text-muted);
 }
 
+/* the terms past the first few: in the page, and out of sight until the control under the table opens them */
+.home-table tr[hidden] {
+  display: none;
+}
+
+.home-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-more:hover {
+    background: var(--surface-2);
+    border-color: var(--text-muted);
+  }
+}
+
+.home-more:active {
+  transform: scale(0.97);
+}
+
+.home-more__chevron {
+  flex: none;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.home-more[aria-expanded="true"] .home-more__chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-more,
+  .home-more__chevron {
+    transition: none;
+  }
+}
+
 @media (max-width: 899px) {
   /* one block per term: what, its value, why; the column heads stay for screen readers */
   .home-table,
@@ -1210,15 +1373,19 @@ body:has(.home) {
 .home-chart {
   position: relative;
   width: 100%;
-  height: clamp(280px, 46svh, 460px);
+  height: clamp(260px, 40svh, 400px);
 }
 
 .home-chart--hero {
-  height: clamp(320px, 54svh, 520px);
+  height: clamp(300px, 46svh, 460px);
 }
 
 .home-chart--strip {
-  height: clamp(120px, 20svh, 200px);
+  height: clamp(110px, 16svh, 170px);
+}
+
+.home-chart--regime {
+  height: clamp(240px, 32svh, 350px);
 }
 
 .home-fails {
@@ -1244,6 +1411,21 @@ body:has(.home) {
 
 .home-fail .home-figures {
   margin-top: var(--space-2);
+}
+
+/* four groups in a row when the screen has the room */
+@media (min-width: 1280px) {
+  .home-fails {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-6);
+    max-width: none;
+  }
+}
+
+@media (min-width: 1600px) {
+  .home-fails {
+    column-gap: var(--space-7);
+  }
 }
 
 @media (max-width: 899px) {
@@ -1395,7 +1577,7 @@ a.home-door:hover .home-door__go {
 }
 
 .home-footer {
-  padding: var(--space-9) var(--home-pad);
+  padding: var(--space-8) var(--home-pad);
   text-align: center;
   font-family: var(--font-mono);
   font-size: var(--fs-body);

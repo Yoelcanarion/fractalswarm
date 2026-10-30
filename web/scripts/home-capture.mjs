@@ -10,8 +10,9 @@
 // shots   configs are comma-separated "<width>:<theme>:<mode>", default "1920:dark:motion".
 //         width 1920 (x1080), 1366 (x768) or 390 (x844); theme dark | light; mode motion | reduced (reduced motion) |
 //         still (`#/?still`, one image per section). Each config also prints the page errors it saw.
-// frames  scrolls the wheel through each part of the page at 1920x1080 and prints the frame times of lib/perf.ts. It needs
-//         the dev server (or a build made with VITE_FRAME_LOG=1), not a plain build.
+// frames  scrolls the wheel through each part of the page at 1920x1080 and prints the frame times (p50, p95, p99, max and
+//         the share of frames over 17 ms and over 33 ms) from a logger of its own, so any build will do. BROWSER=firefox
+//         runs it in Playwright's Firefox instead of Chromium.
 // net     lists what a browser fetches on the first load of each hash of a served build (`vite preview`), raw and gzip.
 // bundle  lists the files index.html loads at once, and every other asset of a build, raw and gzip.
 //
@@ -27,9 +28,10 @@ import { gzipSync } from "node:zlib";
 const EXE = process.env.CHROMIUM_EXE ?? join(homedir(), "AppData/Local/ms-playwright/chromium-1140/chrome-win/chrome.exe");
 const kb = (n) => (n / 1024).toFixed(1).padStart(9);
 
+// BROWSER=firefox drives Playwright's own Firefox (`node <PW_DIR>/node_modules/playwright-core/cli.js install firefox`).
 const launch = async () => {
-  const { chromium } = createRequire(`${process.env.PW_DIR ?? process.cwd()}/`)("playwright-core");
-  return chromium.launch({ executablePath: EXE, headless: true });
+  const { chromium, firefox } = createRequire(`${process.env.PW_DIR ?? process.cwd()}/`)("playwright-core");
+  return process.env.BROWSER === "firefox" ? firefox.launch({ headless: true }) : chromium.launch({ executablePath: EXE, headless: true });
 };
 
 const watchErrors = (page) => {
@@ -119,20 +121,42 @@ const SEGMENTS = [
   ["enter", "#enter"],
 ];
 
+// A frame logger of its own (every requestAnimationFrame), so that it works on any build and in any browser.
+const frameLogger = () => {
+  const dt = [];
+  let last = 0;
+  const loop = (t) => {
+    if (last) dt.push(t - last);
+    last = t;
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+  window.__frameLog = {
+    reset: () => {
+      dt.length = 0;
+      last = 0;
+    },
+    take: () => dt.slice(),
+  };
+};
+
+const quantile = (sorted, q) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.ceil(q * sorted.length) - 1))] ?? 0;
+
 async function frames(base, speed = "1800") {
   const STEP_MS = 16;
   const step = Math.round((Number(speed) * STEP_MS) / 1000);
   const browser = await launch();
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   const errors = watchErrors(page);
-  await page.goto(`${base}/?frames#/`, { waitUntil: "networkidle" });
+  await page.addInitScript(frameLogger);
+  await page.goto(`${base}/#/`, { waitUntil: "networkidle" });
   await page.waitForTimeout(2000);
-  if (!(await page.evaluate(() => typeof window.__frames !== "undefined"))) throw new Error("window.__frames is missing: use the dev server, not a plain build");
   await page.mouse.move(960, 540);
 
-  console.log(`wheel step ${step} px every ${STEP_MS} ms (about ${Number(speed)} px/s)`);
-  console.log("segment    frames  seconds     fps  mean ms  p50 ms  p95 ms  p99 ms  max ms  >20 ms  >34 ms");
-  const all = [];
+  console.log(`${process.env.BROWSER ?? "chromium"}: wheel step ${step} px every ${STEP_MS} ms (about ${Number(speed)} px/s)`);
+  console.log("segment    frames  seconds     fps  mean ms  p50 ms  p95 ms  p99 ms  max ms   >17 ms   >33 ms");
+  const cell = (value, width) => String(value).padStart(width);
+  const rows = [];
   for (const [name, selector] of SEGMENTS) {
     const { top, bottom, viewport } = await page.evaluate((sel) => {
       const el = document.querySelector(sel);
@@ -143,20 +167,24 @@ async function frames(base, speed = "1800") {
     const to = Math.max(from + step, bottom - viewport);
     await page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), from);
     await page.waitForTimeout(900);
-    await page.evaluate(() => window.__frames.reset());
+    await page.evaluate(() => window.__frameLog.reset());
     for (let travelled = 0; travelled < to - from; travelled += step) {
       await page.mouse.wheel(0, step);
       await page.waitForTimeout(STEP_MS);
     }
     await page.waitForTimeout(300);
-    const r = await page.evaluate(() => window.__frames.report());
-    all.push([name, r]);
-    const cell = (value, width) => String(value).padStart(width);
-    console.log(
-      `${name.padEnd(9)} ${cell(r.frames, 7)} ${cell(r.seconds, 8)} ${cell(r.fps, 7)} ${cell(r.meanMs, 8)} ${cell(r.p50Ms, 7)} ${cell(r.p95Ms, 7)} ${cell(r.p99Ms, 7)} ${cell(r.maxMs, 7)} ${cell(r.over20Ms, 7)} ${cell(r.over34Ms, 7)}`,
-    );
+    const dt = await page.evaluate(() => window.__frameLog.take());
+    const sorted = dt.slice().sort((a, b) => a - b);
+    const total = dt.reduce((a, b) => a + b, 0);
+    const share = (limit) => `${((100 * dt.filter((x) => x > limit).length) / Math.max(1, dt.length)).toFixed(1)}%`;
+    const r = {
+      fps: Math.round((1000 * dt.length) / Math.max(1, total)),
+      row: `${name.padEnd(9)} ${cell(dt.length, 7)} ${cell((total / 1000).toFixed(2), 8)} ${cell(Math.round((1000 * dt.length) / Math.max(1, total)), 7)} ${cell((total / Math.max(1, dt.length)).toFixed(1), 8)} ${cell(quantile(sorted, 0.5).toFixed(1), 7)} ${cell(quantile(sorted, 0.95).toFixed(1), 7)} ${cell(quantile(sorted, 0.99).toFixed(1), 7)} ${cell((sorted.at(-1) ?? 0).toFixed(1), 7)} ${cell(share(17), 8)} ${cell(share(33), 8)}`,
+    };
+    rows.push([name, r]);
+    console.log(r.row);
   }
-  const worst = all.reduce((a, b) => (b[1].fps < a[1].fps ? b : a));
+  const worst = rows.reduce((a, b) => (b[1].fps < a[1].fps ? b : a));
   console.log(`lowest fps: ${worst[1].fps} in ${worst[0]}`);
   console.log(errors.length ? `errors: ${[...new Set(errors)].slice(0, 6).join(" | ")}` : "no page errors");
   await browser.close();

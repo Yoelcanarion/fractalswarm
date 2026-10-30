@@ -120,6 +120,9 @@ export const COPY = {
       lead: "We built the strongest rival we could implement fairly.",
       why: "The rival is an ideal durable supervisor. These are the terms we granted it.",
       columns: { what: "What we grant it", value: "Value", why: "Why" },
+      // the first terms are shown; the control opens the rest, and says how many there are
+      showAll: (count: number) => `Show all ${count} terms`,
+      showFewer: "Show fewer terms",
     },
     hero: { lead: "Waiting and extra cost, as coordinators die." },
     tie: { word: "Tie.", note: "Stall time and extra cost, one dot per seed, against an ideal durable supervisor." },
