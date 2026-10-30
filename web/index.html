@@ -6,6 +6,23 @@
     <meta name="color-scheme" content="dark" />
     <title>FractalSwarm</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      // The saved or requested theme goes on before the first paint, so a light page never starts dark. It mirrors initTheme() in
+      // src/lib/theme.ts (src/lib/theme.test.ts keeps the two the same). The meta above is the dark default; this keeps it with the theme.
+      (function () {
+        var wanted = null;
+        try {
+          var asked = new URLSearchParams(window.location.search).get("theme");
+          wanted = asked !== null ? asked : window.localStorage.getItem("fractalswarm.theme");
+        } catch (error) {
+          wanted = null;
+        }
+        var light = wanted === "light";
+        if (light) document.documentElement.setAttribute("data-theme", "light");
+        var meta = document.querySelector('meta[name="color-scheme"]');
+        if (meta) meta.setAttribute("content", light ? "light" : "dark");
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

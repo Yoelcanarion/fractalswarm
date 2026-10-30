@@ -5,7 +5,8 @@ import { useSyncExternalStore } from "react";
 
 export type Theme = "dark" | "light";
 
-const KEY = "fractalswarm.theme";
+/** The key the choice is kept under: web/index.html reads the same one before the first paint. */
+export const THEME_KEY = "fractalswarm.theme";
 const listeners = new Set<() => void>();
 
 export function currentTheme(): Theme {
@@ -16,6 +17,8 @@ function paint(theme: Theme): void {
   const root = document.documentElement;
   if (theme === "light") root.dataset.theme = "light";
   else delete root.dataset.theme;
+  // the page's colour scheme follows, so the canvas and the browser's own scrollbars and controls match the page
+  document.querySelector('meta[name="color-scheme"]')?.setAttribute("content", theme);
 }
 
 /** Switches theme without a colour transition smearing across the page: transitions are off
@@ -29,7 +32,7 @@ export function setTheme(theme: Theme): void {
   void document.body.offsetHeight;
   requestAnimationFrame(() => requestAnimationFrame(() => calm.remove()));
   try {
-    localStorage.setItem(KEY, theme);
+    localStorage.setItem(THEME_KEY, theme);
   } catch {
     // private window or blocked storage: the theme just does not persist
   }
@@ -40,7 +43,7 @@ export function setTheme(theme: Theme): void {
 export function initTheme(): void {
   let wanted: string | null = null;
   try {
-    wanted = new URLSearchParams(window.location.search).get("theme") ?? localStorage.getItem(KEY);
+    wanted = new URLSearchParams(window.location.search).get("theme") ?? localStorage.getItem(THEME_KEY);
   } catch {
     wanted = null;
   }
