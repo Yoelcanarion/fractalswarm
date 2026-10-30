@@ -72,7 +72,7 @@ from fractalswarm.verify.takeover_models import TakeoverReport  # noqa: E402
 from fractalswarm.verify.takeover_render import render_text  # noqa: E402
 
 OUT = REPO / "web" / "src" / "home" / "data" / "story.json"
-DEFAULT_BUNDLE = "demo/backup"
+DEFAULT_BUNDLE = "demo/final"
 DEFAULT_CENTRAL_ID = "central__t2_conference__C3__s1"
 V1 = "bench/results/v1"
 HEADLINE = "bench/results/headline"

@@ -87,8 +87,8 @@ Replay proves that this code produces the recorded run from the recorded model o
 
 ```sh
 uv run fractalswarm demo --verify                 # replays a real recorded run, opens the UI
-uv run fractalswarm replay demo/backup --verify   # MATCH or MISMATCH, with the head hash
-uv run fractalswarm takeover demo/backup          # recomputes every heir from the log
+uv run fractalswarm replay demo/final --verify    # MATCH or MISMATCH, with the head hash
+uv run fractalswarm takeover demo/final           # recomputes every heir from the log
 ```
 
 ## Run it

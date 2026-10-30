@@ -308,7 +308,7 @@ def test_the_page_finds_what_it_reads(committed: dict):
     assert committed["tokens"] == {"coordination": 0, "recovery": 0}
     proof = committed["proof"]
     assert proof["lines"] == [
-        f"MATCH  backup: {committed['hashes']['count']} events, head {committed['hashes']['head']}"
+        f"MATCH  final: {committed['hashes']['count']} events, head {committed['hashes']['head']}"
     ]
     assert proof["takeover"]["line"] == committed["takeover"]["okLine"]
 
@@ -416,7 +416,7 @@ def test_the_extraction_is_the_email_as_a_recorded_call_read_it(
     assert example["email"] == recorded["email"]["body"]
     first_seq, first_effect, model, args = recorded["readings"][0]
     assert committed["sources"]["extraction"] == {
-        "path": "demo/backup/events.jsonl",
+        "path": "demo/final/events.jsonl",
         "runId": committed["sources"]["bundle"]["runId"],
         "head": committed["hashes"]["head"],
         "effect": first_effect,

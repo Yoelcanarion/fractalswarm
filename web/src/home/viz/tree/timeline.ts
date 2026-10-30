@@ -1,4 +1,4 @@
-// The tree's clock. The recorded run lasts 118.6 s and almost all of it is work nobody needs to
+// The tree's clock. The recorded run lasts two minutes and almost all of it is work nobody needs to
 // watch; what matters happens in a few seconds around each kill. So progress (0..1) does not run
 // at the speed of the log: it runs fast through the quiet stretches, slowly through the stretch
 // from a kill to its takeover, and stops the run clock altogether for the instant a takeover
