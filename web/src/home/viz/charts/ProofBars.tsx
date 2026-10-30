@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState, type RefObject } from "react";
 import { useIsoLayoutEffect } from "../../hooks";
 import { useStory } from "../../story";
 import { useCalm } from "../page";
@@ -20,6 +20,7 @@ import {
   TOTAL,
   type LineGeo,
   type PanelGeo,
+  type ProofGeo,
 } from "./proofLayout";
 
 export interface ProofBarsProps {
@@ -36,8 +37,9 @@ export interface ProofBarsProps {
  * The swarm against each rival on the same task, in one drawing. Against the in-process supervisor: a bar and a number for the swarm
  * and for it, for the stall and for the extra cost. Against the ideal durable supervisor the data's verdict is a tie, and two bars
  * of the means would read as a win, so each seed is a dot on one shared axis with the verdict beside it as the data gives it. The
- * rival's name and the setting are in the drawing. Bars, numbers and dots grow once, together, by one eased share each (1.25 to
- * 1.6 s), written by one frame loop that runs only while the chart is on screen.
+ * rival's name and the setting are in the drawing; the two panels stand side by side from a thousand pixels, and then say a setting
+ * they share once. Bars, numbers and dots grow once, together, by one eased share each (1.25 to 1.6 s), written by one frame loop
+ * that runs only while the chart is on screen.
  */
 export function ProofBars({ play, data, still, className }: ProofBarsProps) {
   const page = useStory();
@@ -100,36 +102,48 @@ export function ProofBars({ play, data, still, className }: ProofBarsProps) {
 
   return (
     <div ref={host} className={className ? `hv-proof ${className}` : "hv-proof"} data-play={calm ? "still" : play > 0 ? "on" : "off"}>
-      {source && (
-        <svg
-          ref={svg}
-          className="hv hv-proof-svg"
-          width={geo.width}
-          height={geo.height}
-          viewBox={`0 0 ${geo.width} ${geo.height}`}
-          role="img"
-          aria-labelledby={`${id}-t ${id}-d`}
-        >
-          <title id={`${id}-t`}>The swarm against two rivals</title>
-          <desc id={`${id}-d`}>{reading}</desc>
-          {geo.panels.map((panel) => (
-            <Panel key={panel.id} panel={panel} at={at} />
-          ))}
-        </svg>
-      )}
+      {source && <ProofDrawing geo={geo} reading={reading} at={at} id={id} svgRef={svg} />}
     </div>
+  );
+}
+
+/** The drawing of a layout, at the moment `at` of its growth (Infinity is whole). */
+export function ProofDrawing({ geo, reading, at, id, svgRef }: { geo: ProofGeo; reading: string; at: number; id: string; svgRef?: RefObject<SVGSVGElement> }) {
+  return (
+    <svg
+      ref={svgRef}
+      className="hv hv-proof-svg"
+      width={geo.width}
+      height={geo.height}
+      viewBox={`0 0 ${geo.width} ${geo.height}`}
+      role="img"
+      aria-labelledby={`${id}-t ${id}-d`}
+    >
+      <title id={`${id}-t`}>The swarm against two rivals</title>
+      <desc id={`${id}-d`}>{reading}</desc>
+      {geo.panels.map((panel) => (
+        <Panel key={panel.id} panel={panel} at={at} />
+      ))}
+      {geo.setting && (
+        <text className="hv-proof-t hv-proof-setting" x={fx(geo.setting.at.x)} y={fx(geo.setting.at.y)}>
+          {geo.setting.text}
+        </text>
+      )}
+    </svg>
   );
 }
 
 function Panel({ panel, at }: { panel: PanelGeo; at: number }) {
   return (
-    <g data-panel={panel.id}>
+    <g data-panel={panel.id} transform={panel.x === 0 ? undefined : `translate(${fx(panel.x)} 0)`}>
       <text className="hv-proof-t hv-proof-rival" x={fx(panel.rivalAt.x)} y={fx(panel.rivalAt.y)}>
         {panel.rival}
       </text>
-      <text className="hv-proof-t hv-proof-setting" x={fx(panel.settingAt.x)} y={fx(panel.settingAt.y)} textAnchor={panel.settingEnd ? "end" : "start"}>
-        {panel.setting}
-      </text>
+      {panel.setting && (
+        <text className="hv-proof-t hv-proof-setting" x={fx(panel.settingAt.x)} y={fx(panel.settingAt.y)} textAnchor={panel.settingEnd ? "end" : "start"}>
+          {panel.setting}
+        </text>
+      )}
       {panel.rows.map((row) => (
         <g key={row.id} data-row={row.id}>
           <text className="hv-proof-t hv-proof-label" x={fx(row.labelAt.x)} y={fx(row.labelAt.y)}>

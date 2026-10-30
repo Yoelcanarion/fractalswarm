@@ -8,9 +8,15 @@ import { Pen } from "../tree/paint";
 import { barShare, proofText, type BarRow, type ProofPanel, type SeedRow, type SeedValue, type Unit } from "./proof";
 
 export const MIN_W = 260;
-export const MAX_W = 840;
+/** The widest the chart is drawn: two columns of panels. */
+export const MAX_W = 1480;
+/** The widest a single column of panels is drawn, which is what reads well from a phone's width up to `PAIR_FROM`. */
+export const COLUMN_W = 840;
 /** What the chart is drawn at before the page has measured it: the server's render and the first one. */
 export const DEFAULT_W = 720;
+/** From this width the panels stand side by side, in two equal columns with `PAIR_GAP` between them. */
+export const PAIR_FROM = 1000;
+export const PAIR_GAP = 48;
 
 /** Below this width a workflow's name sits above its line instead of beside it. */
 const INLINE_FROM = 560;
@@ -28,6 +34,8 @@ const STACK_H = 42;
 const ROW_GAP = 12;
 const PANEL_GAP = 30;
 const CHIP_H = 20;
+/** The line under two columns that share their setting, with the air above it. */
+const SHARED_H = 30;
 
 /** Lines start this many seconds apart and all end together after `TOTAL`, so no two land at once and none waits for the others. */
 export const STEP = 0.05;
@@ -91,8 +99,12 @@ export interface RowGeo {
 export interface PanelGeo {
   id: ProofPanel["id"];
   kind: ProofPanel["kind"];
+  /** Where the panel's own x = 0 is, and how wide it is: everything in it is placed from there. */
+  x: number;
+  w: number;
   rival: string;
   rivalAt: Spot;
+  /** The panel's setting; empty where both panels share one that is written once under them. */
   setting: string;
   settingAt: Spot;
   /** The setting ends at the right edge when it shares the line with the rival's name; under the name it starts at the left. */
@@ -103,11 +115,18 @@ export interface PanelGeo {
 export interface ProofGeo {
   width: number;
   height: number;
+  /** Whether a workflow's name sits beside its line, which depends on the width of a panel and not of the chart. */
   inline: boolean;
+  columns: 1 | 2;
+  /** The setting that both panels share, small under them; null where each panel writes its own. */
+  setting: { text: string; at: Spot } | null;
   panels: PanelGeo[];
 }
 
-export const clampWidth = (width: number): number => Math.round(Math.min(MAX_W, Math.max(MIN_W, Number.isFinite(width) ? width : DEFAULT_W)));
+export const clampWidth = (width: number): number => {
+  const w = Number.isFinite(width) ? width : DEFAULT_W;
+  return Math.round(w >= PAIR_FROM ? Math.min(MAX_W, w) : Math.min(COLUMN_W, Math.max(MIN_W, w)));
+};
 
 /** The width of a chip that says `text`, in the chart's 12 px type. */
 const chipWidth = (text: string): number => 20 + text.length * 7;
@@ -195,19 +214,46 @@ function seedRowGeo(row: SeedRow, rival: string, c: Cursor, env: Env): RowGeo {
 
 export function layoutProof(panels: ProofPanel[], width: number, swarm: string): ProofGeo {
   const w = clampWidth(width);
-  const inline = w >= INLINE_FROM;
-  const env: Env = { w, inline, nameW: inline ? NAME_W : 0, lineH: inline ? LINE_H : STACK_H, swarm };
+  const pair = w >= PAIR_FROM && panels.length === 2;
+  const columnW = pair ? (w - PAIR_GAP) / 2 : w;
+  const inline = columnW >= INLINE_FROM;
+  // two panels that took their numbers from one setting say it once, so that nothing is told twice side by side
+  const first = panels[0]?.setting ?? "";
+  const shared = pair && first !== "" && panels.every((p) => p.setting === first) ? first : null;
+  const env: Env = { w: columnW, inline, nameW: inline ? NAME_W : 0, lineH: inline ? LINE_H : STACK_H, swarm };
   const c: Cursor = { y: 0, order: 0 };
+  let bottom = 0;
   const out: PanelGeo[] = [];
-  for (const panel of panels) {
-    if (out.length > 0) c.y += PANEL_GAP;
+  panels.forEach((panel, index) => {
+    if (pair) c.y = 0;
+    else if (index > 0) c.y += PANEL_GAP;
     const rivalAt = { x: 0, y: c.y + 12 };
-    const settingAt = inline ? { x: w, y: c.y + 12 } : { x: 0, y: c.y + 32 };
-    c.y += inline ? HEAD_H : HEAD_H_NARROW;
+    const settingAt = inline ? { x: columnW, y: c.y + 12 } : { x: 0, y: c.y + 32 };
+    c.y += inline || shared !== null ? HEAD_H : HEAD_H_NARROW;
     const rows = panel.kind === "bars" ? panel.rows.map((row) => barRowGeo(row, panel.rival, c, env)) : panel.rows.map((row) => seedRowGeo(row, panel.rival, c, env));
-    out.push({ id: panel.id, kind: panel.kind, rival: panel.rival, rivalAt, setting: panel.setting, settingAt, settingEnd: inline, rows });
-  }
-  return { width: w, height: Math.max(0, c.y - ROW_GAP + 4), inline, panels: out };
+    bottom = Math.max(bottom, c.y);
+    out.push({
+      id: panel.id,
+      kind: panel.kind,
+      x: pair ? index * (columnW + PAIR_GAP) : 0,
+      w: columnW,
+      rival: panel.rival,
+      rivalAt,
+      setting: shared === null ? panel.setting : "",
+      settingAt,
+      settingEnd: inline,
+      rows,
+    });
+  });
+  const body = Math.max(0, bottom - ROW_GAP + 4);
+  return {
+    width: w,
+    height: shared === null ? body : body + SHARED_H,
+    inline,
+    columns: pair ? 2 : 1,
+    setting: shared === null ? null : { text: shared, at: { x: 0, y: body + SHARED_H / 2 + 4 } },
+    panels: out,
+  };
 }
 
 /** The share of its growth that the line at `order` has reached `elapsed` seconds in: nothing, then one eased motion, then whole. */
