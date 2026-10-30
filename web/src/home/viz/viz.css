@@ -965,6 +965,77 @@
   fill: var(--text-secondary);
 }
 
+/* ---- the regime strip: where locality holds, ties or fails, a strip for each assumption ----- */
+
+.hv-rg-head {
+  fill: var(--text-secondary);
+  dominant-baseline: central;
+}
+.hv-rg-rail {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-rg-band {
+  fill: var(--surface-2);
+}
+.hv-rg-halo {
+  fill: var(--bg);
+}
+.hv-rg-val {
+  fill: var(--text-secondary);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.hv-rg-val--default {
+  fill: var(--text-primary);
+  font-weight: 600;
+}
+.hv-rg-ratio {
+  fill: var(--text-muted);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.hv-rg-holds {
+  fill: var(--accent);
+}
+.hv-rg-ties {
+  fill: var(--bg);
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+}
+.hv-rg-fails {
+  fill: none;
+  stroke: var(--text-primary);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.hv-rg-na {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.hv-rg-ring {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.25;
+  stroke-dasharray: 3 3;
+}
+.hv-rg-caret {
+  fill: var(--text-secondary);
+}
+.hv-rg-glyph--out {
+  opacity: 0.55;
+}
+.hv-rg-hit {
+  fill: transparent;
+}
+.hv-rg-key {
+  fill: var(--text-secondary);
+  dominant-baseline: central;
+}
+
 .hv-hidden {
   position: absolute;
   width: 1px;

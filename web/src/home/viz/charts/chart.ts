@@ -126,3 +126,20 @@ export const seedsText = (n: number): string => `${n} ${n === 1 ? "seed" : "seed
 /** `t2_conference` is "T2 conference": the task as a person says it. */
 export const taskText = (task: string): string => task.replace(/^t(\d+)_/, "T$1 ").replace(/_/g, " ");
 export const taskShort = (task: string): string => task.replace(/^(t\d+)_.*/, (_, t: string) => t.toUpperCase());
+
+/** A text broken at its spaces into lines no wider than `maxWidth`; a word wider than that keeps a line of its own. */
+export function wrapText(text: string, maxWidth: number, size = 12): string[] {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && textWidth(next, size) > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}

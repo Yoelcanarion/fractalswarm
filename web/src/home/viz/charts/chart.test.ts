@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dodge, grouped, linear, niceTicks, polyline, signed, tickLabel, withSign } from "./chart";
+import { dodge, grouped, linear, niceTicks, polyline, signed, textWidth, tickLabel, withSign, wrapText } from "./chart";
 
 describe("linear", () => {
   it("maps the ends of the domain to the ends of the range, in either direction", () => {
@@ -142,5 +142,31 @@ describe("dodge", () => {
 
   it("is empty for nothing", () => {
     expect(dodge([], [], 0, 10)).toEqual([]);
+  });
+});
+
+describe("wrapText", () => {
+  const sentence = "The supervisor detects and restarts in (the swarm keeps 5 s)";
+
+  it("keeps a text that fits on one line, and says nothing of nothing", () => {
+    expect(wrapText(sentence, 1000)).toEqual([sentence]);
+    expect(wrapText("", 100)).toEqual([]);
+    expect(wrapText("   ", 100)).toEqual([]);
+  });
+
+  it("breaks at spaces, loses no word, and fills each line while it can", () => {
+    for (const width of [120, 180, 240, 300, 420]) {
+      const lines = wrapText(sentence, width);
+      expect(lines.join(" ")).toBe(sentence);
+      for (const line of lines) expect(textWidth(line)).toBeLessThanOrEqual(width);
+      lines.slice(0, -1).forEach((line, i) => {
+        const word = lines[i + 1]!.split(" ")[0]!;
+        expect(textWidth(`${line} ${word}`)).toBeGreaterThan(width);
+      });
+    }
+  });
+
+  it("gives a word wider than the line a line of its own", () => {
+    expect(wrapText("a incomprehensibilities b", 60)).toEqual(["a", "incomprehensibilities", "b"]);
   });
 });

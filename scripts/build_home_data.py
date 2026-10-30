@@ -514,6 +514,16 @@ def false_death_rows(found: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
+def sweep_seeds(sources: list[str]) -> list[str]:
+    """The seeds every sweep behind the regime strip ran, read from the sweeps' own result rows."""
+    seeds: set[str] | None = None
+    for source in sources:
+        rows = result_rows(f"bench/results/sweeps/{source}") or []
+        found = {str(row["seed"]) for row in rows}
+        seeds = found if seeds is None else seeds & found
+    return sorted(seeds or (), key=natural)
+
+
 def gate_regime_slices() -> dict[str, Any]:
     honesty = read_json(REPO / HONESTY)
     gate = [
@@ -601,6 +611,7 @@ def gate_regime_slices() -> dict[str, Any]:
             "task": "t2_conference",
             "profile": "C3",
             "model": "fake",
+            "seeds": sweep_seeds(sorted({p["source"] for row in rows for p in row["points"]})),
             "threshold": read_json(REPO / REGIME)["threshold"],
             "defaults": default,
             "rows": rows,
