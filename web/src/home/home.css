@@ -542,17 +542,11 @@ body:has(.home) {
 }
 
 /* ---- the problem: the film of the work lanes ---- */
-/* The film sets its own height (W7's .hv-film: 44vw between 320 and 560 px); the page keeps it under 440 px so the section's title,
-   film and button show together on one screen. Its lanes keep a band at the top for a counter, as tall as --fs-figure: this page
-   draws no counter over the film, so the band is only the marks of the crashes. */
+/* The film sets its own height (W7's .hv-film: 44vw between 400 and 460 px), so the section's title, film and button show together
+   on one screen; the figure only wraps it. */
 .home-film {
-  --fs-figure: 0px;
   position: relative;
   width: 100%;
-}
-
-.home-film .hv-film {
-  height: clamp(380px, 44vw, 440px);
 }
 
 /* ---- the solution: three cards that play on hover, then the click demo ---- */
@@ -621,6 +615,39 @@ body:has(.home) {
   color: var(--text-muted);
 }
 
+/* the click demo's own two buttons, set like the page's other ghost button (Repeat) */
+.home-demo .hv-demo-btn {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  font-weight: 560;
+  cursor: pointer;
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.home-demo .hv-demo-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.home-demo .hv-demo-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-demo .hv-demo-btn:not(:disabled):hover {
+    background: var(--hover-wash);
+    color: var(--text-primary);
+  }
+}
+
 @media (max-width: 899px) {
   .home-steps {
     grid-template-columns: minmax(0, 1fr);
@@ -628,19 +655,33 @@ body:has(.home) {
 }
 
 /* ---- the proof: bars and numbers that grow once, the way to R2 and R3, the command that checks it ---- */
+/* The chart is one svg that is drawn for at most 840 px and scales with its box, so the box stops there until the chart lays its two
+   blocks side by side (then this goes, and the lines under it take the chart's two columns). */
 .home-proof__chart {
   position: relative;
   width: 100%;
   max-width: 840px;
 }
 
-.home-proof__reason {
-  max-width: 640px;
-  margin-top: var(--space-3);
+/* Under the chart: why the in-process supervisor's numbers are so far apart, and the way on. */
+.home-proof__under {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
 }
 
-.home-proof__links {
-  margin-top: var(--space-4);
+.home-proof__after {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+}
+
+.home-proof__reason {
+  max-width: 640px;
+}
+
+.home-proof__after > p {
+  margin-top: 0;
 }
 
 .home-check {
@@ -1090,10 +1131,13 @@ body:has(.home) {
    split: the words beside the chart;
    over:  the lead, the words and an aside in one row, over a chart that is drawn for the whole width;
    wide:  one column, for a chart or a row of figures that wants the whole width. */
+/* One column as wide as the cell, never as wide as its content: without it the track of the hash strip (61 cards in a row) made the
+   column 11,500 px wide, and the strip was cut by the edge of the page instead of fading at its own. */
 .home-beat__text,
 .home-beat__aside,
 .home-beat__body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
   align-content: start;
   justify-items: start;

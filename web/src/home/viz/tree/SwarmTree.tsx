@@ -151,13 +151,15 @@ export interface TreeSvgProps {
   description?: string | undefined;
   /** The number beside a candidate's score bar: the hero prints it, the click demo draws the bar alone. */
   scoreText?: boolean | undefined;
+  /** The click demo can fill the whole memorial row, so its "KILLED" sits on the rule, where no grave covers it; the hero's is beside its row. */
+  labelOnRule?: boolean | undefined;
 }
 
 /**
  * The tree's markup, with nothing in it moving: the parts a painter (paint.ts) finds by their data attributes and writes a frame
  * onto. The hero's tree and the click demo are two drivers of the same drawing.
  */
-export function TreeSvg({ svgRef, model, labels, clock, ambient, className, title = "The swarm tree", description, scoreText = true }: TreeSvgProps) {
+export function TreeSvg({ svgRef, model, labels, clock, ambient, className, title = "The swarm tree", description, scoreText = true, labelOnRule = false }: TreeSvgProps) {
   const uid = useId();
   const glow = ambient ? `${uid.replace(/:/g, "")}-glow` : null;
   const b = model.bounds;
@@ -187,7 +189,7 @@ export function TreeSvg({ svgRef, model, labels, clock, ambient, className, titl
       <g className="hv-memorial" opacity="0">
         <line className="hv-memorial-rule" x1={fx((b.x0 + 0.2) * U)} x2={fx((b.x1 - 0.2) * U)} y1={fx((memorialY - 0.95) * U)} y2={fx((memorialY - 0.95) * U)} />
         {labels !== "none" && (
-          <text className="hv-memorial-label" x={fx((b.x0 + 0.2) * U)} y={fx(memorialY * U + 4)}>
+          <text className="hv-memorial-label" x={fx((b.x0 + 0.2) * U)} y={fx(labelOnRule ? (memorialY - 0.95) * U - 8 : memorialY * U + 4)}>
             KILLED
           </text>
         )}

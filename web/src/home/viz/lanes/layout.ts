@@ -12,6 +12,12 @@ export const BOTTOM = 126;
 const BRAIN_WEIGHT = 1.7;
 /** One character of the mono labels (12 px) in pixels. */
 export const CHAR_W = 7.2;
+/**
+ * What each cell of the key needs, in pixels: its swatch, its words and the widest value it gets (counted $0.000, cut off $0.000,
+ * paid again $0.000, no agent working 000.0 s), and the air between two columns.
+ */
+const LEDGER_NEED = [16 + 7 * CHAR_W + 8 + 6 * CHAR_W, 16 + 7 * CHAR_W + 8 + 6 * CHAR_W, 16 + 10 * CHAR_W + 8 + 6 * CHAR_W, 16 + 16 * CHAR_W + 8 + 7 * CHAR_W];
+const LEDGER_GAP = 12;
 /** The width of the box that tells the run's time at the cursor: the widest time (345.3 s) and a little air. */
 export const READOUT_W = 62;
 
@@ -85,15 +91,44 @@ export function keepApart<T extends { x: number; w: number }>(items: T[], gap = 
 
 const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
 
+/**
+ * Where the columns of the key start in a box `width` wide: as many columns as fit (four, two or one). Each starts where an even
+ * share of the box would put it, pulled back as far as it takes for the columns after it to fit, so no cell is clipped or overlaps
+ * its neighbour, whatever the width.
+ */
+export function ledgerColumns(width: number): number[] {
+  for (const count of [4, 2, 1]) {
+    const need = Array.from({ length: count }, (_, k) => Math.max(...LEDGER_NEED.filter((_, i) => i % count === k)));
+    const total = need.reduce((a, b) => a + b, 0) + (count - 1) * LEDGER_GAP;
+    if (count > 1 && total > width - 16) continue;
+    const cell = (width - 16) / count;
+    const xs: number[] = [];
+    let end = 0;
+    for (let k = 0; k < count; k++) {
+      const latest = width - 8 - need.slice(k).reduce((a, b) => a + b, 0) - (count - 1 - k) * LEDGER_GAP;
+      const x = Math.max(8, Math.min(Math.max(k === 0 ? 8 : end + LEDGER_GAP, 8 + k * cell), latest));
+      xs.push(x);
+      end = x + need[k]!;
+    }
+    return xs;
+  }
+  return [8];
+}
+
+/** The width each column of the key needs, and the rows it makes of the four cells. */
+export const ledgerNeed = (columns: number): number[] => Array.from({ length: columns }, (_, k) => Math.max(...LEDGER_NEED.filter((_, i) => i % columns === k)));
+
 export function layoutFor(model: LanesModel, width: number, height: number, top: number, captions: string[] = []): LanesLayout {
   const x0 = LABEL_W + 8;
   const x1 = Math.max(x0 + 80, width - RIGHT_PAD);
   const pxPerMs = (x1 - x0) / Math.max(1, model.durationMs);
   const xAt = (ms: number): number => x0 + ms * pxPerMs;
 
+  const columns = ledgerColumns(width);
+  const ledgerRows = Math.ceil(4 / columns.length);
   const markY = top + 8;
   const yTop = top + 20;
-  const yBottom = Math.max(yTop + model.lanes.length * 12, height - BOTTOM);
+  const yBottom = Math.max(yTop + model.lanes.length * 12, height - BOTTOM - Math.max(0, ledgerRows - 2) * 22);
   const weights = model.lanes.map((l) => (l.brain ? BRAIN_WEIGHT : 1));
   const unit = (yBottom - yTop) / weights.reduce((a, b) => a + b, 0);
   const barH = clamp(unit * 0.5, 6, 20);
@@ -144,12 +179,10 @@ export function layoutFor(model: LanesModel, width: number, height: number, top:
     }
   }
 
-  // The ledger: counted, cut off, paid again, and the stalls' key. One row when the box is wide, two otherwise.
+  // The ledger: counted, cut off, paid again, and the stalls' key. One row when the box is wide, two or four rows as it narrows.
   const ledgerTop = tickY + 22;
-  const columns = width >= 640 ? 4 : 2;
-  const cell = (width - 16) / columns;
-  const ledger: LedgerCell[] = Array.from({ length: 4 }, (_, i) => ({ x: 8 + (i % columns) * cell, y: ledgerTop + Math.floor(i / columns) * 22 }));
-  const captionY = ledgerTop + (columns === 4 ? 1 : 2) * 22 + 10;
+  const ledger: LedgerCell[] = Array.from({ length: 4 }, (_, i) => ({ x: columns[i % columns.length]!, y: ledgerTop + Math.floor(i / columns.length) * 22 }));
+  const captionY = ledgerTop + ledgerRows * 22 + 10;
 
   const room = width - 16;
   const caption = captions.find((c) => textWidth(c) <= room) ?? captions[captions.length - 1] ?? "";

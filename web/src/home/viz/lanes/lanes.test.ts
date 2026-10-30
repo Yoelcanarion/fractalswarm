@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { story } from "../../data/story";
 import { Pen } from "../tree/paint";
-import { READOUT_W, layoutFor, keepApart, textWidth, type LanesLayout } from "./layout";
+import { READOUT_W, layoutFor, keepApart, ledgerColumns, ledgerNeed, textWidth, type LanesLayout } from "./layout";
 import { barState, drawnMs, lanesModel, lifeTracks, linearStallMs, spentMicro, stallElapsedMs, timeMap } from "./model";
 import { paintLanes, usd, type LanesRig } from "./paint";
 import { WorkLanes, captionsFor, summaryFor } from "./WorkLanes";
@@ -174,7 +174,8 @@ describe("the layout", () => {
 
     it(`${label}: sets the ledger and the setting inside the width, the setting in the longest form that fits`, () => {
       expect(layout.ledger).toHaveLength(4);
-      for (const cell of layout.ledger) expect(cell.x + textWidth("no agent working") + 16 + 8 + textWidth("$0.000")).toBeLessThanOrEqual(layout.width + 40);
+      const need = ledgerNeed(new Set(layout.ledger.map((cell) => cell.x)).size);
+      layout.ledger.forEach((cell, i) => expect(cell.x + need[i % need.length]!).toBeLessThanOrEqual(layout.width - 8 + 0.001));
       expect(textWidth(layout.caption)).toBeLessThanOrEqual(width - 16);
       expect(layout.captionY).toBeLessThanOrEqual(layout.height + 40);
     });
@@ -327,5 +328,38 @@ describe("WorkLanes markup", () => {
     expect(text).toContain("6 agents are killed");
     expect(text).toContain("101.8 s");
     expect(text).not.toMatch(/\b(simpler|cheaper|more reliable|first)\b/i);
+  });
+});
+
+describe("the key under the lanes", () => {
+  it("fits every width from a small phone to a wide screen: no cell clipped by the box, none over its neighbour", () => {
+    for (let width = 210; width <= 1700; width += 3) {
+      const xs = ledgerColumns(width);
+      const need = ledgerNeed(xs.length);
+      expect([1, 2, 4], `columns at ${width}`).toContain(xs.length);
+      expect(xs[0]!, `first column at ${width}`).toBeGreaterThanOrEqual(8);
+      xs.forEach((x, k) => {
+        expect(x + need[k]!, `column ${k} at ${width}`).toBeLessThanOrEqual(width - 8 + 0.001);
+        if (k > 0) expect(x - (xs[k - 1]! + need[k - 1]!), `gap before column ${k} at ${width}`).toBeGreaterThanOrEqual(11.99);
+      });
+    }
+  });
+
+  it("uses as many columns as fit: four on a screen, two on a phone's width, one below that", () => {
+    expect(ledgerColumns(1280)).toHaveLength(4);
+    expect(ledgerColumns(640)).toHaveLength(4);
+    expect(ledgerColumns(600)).toHaveLength(2);
+    expect(ledgerColumns(358)).toHaveLength(2);
+    expect(ledgerColumns(340)).toHaveLength(1);
+  });
+
+  it("gives the lanes the room the extra rows take, and the setting stays under the key", () => {
+    const model = lanesModel(story.lanes.central);
+    const narrow = layoutFor(model, 300, 420, 24);
+    const wide = layoutFor(model, 1200, 420, 24);
+    expect(narrow.ledger[3]!.y).toBeGreaterThan(narrow.ledger[0]!.y);
+    expect(narrow.captionY).toBeGreaterThan(narrow.ledger[3]!.y);
+    expect(narrow.captionY).toBeLessThanOrEqual(420);
+    expect(wide.captionY).toBeLessThanOrEqual(420);
   });
 });
