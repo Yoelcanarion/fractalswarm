@@ -360,3 +360,20 @@ def test_the_hero_names_its_set_and_the_ten_seed_reading_takes_over_only_when_it
     if not ten.exists():
         with pytest.raises(SystemExit, match="cannot be the hero yet"):
             generator.build(generator.DEFAULT_BUNDLE, None, committed, "headline-10")
+
+
+def test_the_verdicts_name_their_setting(committed: dict):
+    verdicts = committed["verdicts"]
+    headline = committed["headline"]
+    assert (verdicts["task"], verdicts["model"], verdicts["real"]) == (
+        "t2_conference",
+        "real",
+        True,
+    )
+    assert verdicts["source"] == headline["source"]
+    # the comparisons are the headline's: the rows they were computed from are the cells
+    assert {c["profile"] for c in verdicts["comparisons"]} <= {
+        c["profile"] for c in headline["cells"]
+    }
+    seeds = {s for c in verdicts["comparisons"] for s in c["seeds"]}
+    assert seeds <= set(headline["seeds"])

@@ -406,6 +406,10 @@ export interface FalseDeathRow {
 
 export interface VerdictsSlice {
   source: string;
+  /** The setting of the comparisons: the task they were run on (null when the set mixes tasks) and the model. */
+  task?: string | null;
+  model?: "real" | "fake";
+  real?: boolean;
   prereg: Record<string, string>;
   rules: Record<string, unknown>;
   comparisons: VerdictRow[];
