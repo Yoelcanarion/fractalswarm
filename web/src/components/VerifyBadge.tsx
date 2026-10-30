@@ -1,3 +1,4 @@
+import { notReproduced, notReproducedWords } from "../lib/catalogue";
 import { useRunStore } from "../store";
 import { Hint } from "./ui";
 
@@ -30,6 +31,14 @@ export function VerifyBadge() {
             <span className="badge badge--good badge--big">
               Replay verified ✓ hash match <span className="mono verify__head">{report.replayed_head.slice(0, 12)}</span>
             </span>
+          </Hint>
+        );
+      }
+      // an intact log that this code does not reproduce is not a broken product: amber, in words that say only that; red stays for a broken chain
+      if (notReproduced(report)) {
+        return (
+          <Hint label={report.detail}>
+            <span className="badge badge--warn badge--big">{notReproducedWords(report)}</span>
           </Hint>
         );
       }

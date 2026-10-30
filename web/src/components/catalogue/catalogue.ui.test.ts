@@ -122,7 +122,7 @@ describe("the table of runs", () => {
     const out = table(body, {
       b: { state: "pending" },
       c: { state: "done", report: report() },
-      d: { state: "done", report: report({ ok: false, first_divergence: 812 }) },
+      d: { state: "done", report: report({ ok: false, chain_ok: false, first_divergence: 812 }) },
     });
     expect(out).toContain("Verify the replay of a");
     expect(out).toContain("Replaying…");

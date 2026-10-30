@@ -19,6 +19,7 @@ import { createRunStore, RunStoreProvider, type RunApi, type RunStoreApi } from 
 import { Meter, PStat, Pill } from "./PanelParts";
 import { RunFrame, RunGate } from "./RunFrame";
 import { Guide, GuideButton, useGuide, type GuideState } from "./shell/Guide";
+import { VerifyBadge } from "./VerifyBadge";
 
 const events = (): RunEvent[] =>
   readFileSync(REPO_ROOT + "demo/toy/events.jsonl", "utf-8")
@@ -351,5 +352,29 @@ describe("what the views of a run keep out of their first view", () => {
   it("has the two proofs of the strip as text with their hint, and no tab stop", async () => {
     const out = render(await opened(), createElement(RunPage));
     expect(out).not.toMatch(/<span class="tip"[^>]*tabindex="0"[^>]*><span class="badge/);
+  });
+});
+
+describe("the replay check on the run strip", () => {
+  const verified = async (over: Record<string, unknown>) => {
+    const store = await opened();
+    const report = { ok: false, chain_ok: true, recorded_events: 14047, replayed_events: 42, recorded_head: "aa", replayed_head: "bb", first_divergence: 9, detail: "effect.started differs in payload", bundle_head: null, bundle_head_ok: false, ...over };
+    store.setState({ live: false, verify: { state: "done", report } } as never);
+    return render(store, createElement(VerifyBadge));
+  };
+
+  it("says an intact log that this code does not reproduce in amber, in exact words, with the server's detail as the hint", async () => {
+    const out = await verified({});
+    expect(out).toContain('<span class="badge badge--warn badge--big">Log intact. This code does not reproduce this recording: first difference at seq 9.</span>');
+    expect(out).toContain("effect.started differs in payload");
+    expect(out).not.toContain("badge--bad");
+    expect(out).not.toContain("MISMATCH");
+    expect(out).not.toMatch(/older|version/i);
+  });
+
+  it("keeps red for a broken chain", async () => {
+    const out = await verified({ chain_ok: false });
+    expect(out).toContain('<span class="badge badge--bad badge--big">✕ Replay MISMATCH at seq 9</span>');
+    expect(out).not.toContain("badge--warn");
   });
 });
