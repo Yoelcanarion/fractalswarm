@@ -477,8 +477,14 @@ def verdicts_slice(directory: str) -> dict[str, Any] | None:
             }
         )
     rule = {k: v for k, v in honesty.rules.items() if k in ("difference", "ratio", "tie")}
+    rows = result_rows(directory) or []
+    tasks = sorted({row["task"] for row in rows})
     return {
         "source": f"{directory}/results.json",
+        # the setting of the comparisons, as the headline slice names it: one task, real-model runs
+        "task": tasks[0] if len(tasks) == 1 else None,
+        "model": "real",
+        "real": True,
         "prereg": honesty.prereg,
         "rules": rule,
         "comparisons": comparisons,

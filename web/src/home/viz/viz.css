@@ -910,6 +910,61 @@
   fill: var(--text-muted);
 }
 
+/* ---- the paired bars: the swarm's measure against the rival's, the rival's the whole length ---- */
+
+.hv-pb-bar--swarm {
+  fill: var(--accent);
+}
+.hv-pb-bar--rival {
+  fill: var(--text-muted);
+  fill-opacity: 0.7;
+}
+.hv-pb-half {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+.hv-pb-name {
+  dominant-baseline: central;
+  fill: var(--text-secondary);
+}
+.hv-pb-name--swarm {
+  fill: var(--text-primary);
+}
+.hv-pb-value {
+  dominant-baseline: central;
+  fill: var(--text-secondary);
+}
+.hv-pb-value--swarm {
+  fill: var(--accent-text);
+}
+.hv-pb-key {
+  dominant-baseline: central;
+  fill: var(--text-muted);
+}
+.hv-pb-pill rect {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-pb-pill text {
+  text-anchor: middle;
+  dominant-baseline: central;
+  letter-spacing: 0.04em;
+  fill: var(--text-primary);
+}
+.hv-pb-pill[data-verdict="win"] rect {
+  stroke: var(--accent);
+}
+.hv-pb-pill[data-verdict="win"] text {
+  fill: var(--accent-text);
+}
+.hv-pb-pill[data-verdict="tie"] text {
+  fill: var(--text-secondary);
+}
+
 .hv-hidden {
   position: absolute;
   width: 1px;
