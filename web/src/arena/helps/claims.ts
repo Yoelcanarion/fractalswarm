@@ -29,7 +29,7 @@ export const CLAIMS: Claims = {
     id: "R2",
     text: "Resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism.",
     status: "allowed",
-    note: "allowed (gate, Oct 29; real rows, Oct 30)",
+    note: "allowed (gate, Oct 29; real rows, Oct 30, re-read at ten seeds)",
   },
   R3: {
     id: "R3",

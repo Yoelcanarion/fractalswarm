@@ -24,7 +24,11 @@ and it fails where an external supervisor detects and restarts within 0.5–1 s 
 the two are comparable, and the supervisor recovers sooner (§4.7); the swarm's failure detector
 produces false deaths, the supervisors' none (§4.8). Against the in-process supervisor
 (`central`), whose workers die with it, the swarm stalls 1.2 s against 34.3 s and pays −1.0%
-against +66.6% extra on T2 at C3 (§4.1, §4.2). What a headline may say is fixed in
+against +66.6% extra on T2 at C3 (§4.1, §4.2). On the real model, over ten seeds at T2 and C3, the
+swarm stalls 11.2 s against 42.8 s for `central` and pays +2.4% against +67.0% extra. Against
+`durable-max` it ties on preserved work, extra cost, time to recover and stall time, it loses on
+false deaths (1.90 per run against none), and the locality that three seeds showed does not hold
+at ten (§4.10.7). What a headline may say is fixed in
 `bench/PREREG.md` §7; the claims, each with its evidence, are in `docs/claims.md`.
 
 ## 1. Rivals and fairness rules (read these first)
