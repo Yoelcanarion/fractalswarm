@@ -67,15 +67,17 @@ export function DotPlot({ progress, data, still, stillAt, className, setting = t
                 mean
               </text>
 
-              {panel.ticks.map((t) => (
-                <line key={t.x} className={t.zero ? "hv-ch-zero" : "hv-ch-grid"} x1={fx(t.x)} x2={fx(t.x)} y1={fx(panel.gridTop)} y2={fx(panel.gridBottom)} />
-              ))}
+              {panel.ticks.flatMap((t) =>
+                panel.spans.map((s, si) => (
+                  <line key={`${t.x}:${si}`} className={t.zero ? "hv-ch-zero" : "hv-ch-grid"} x1={fx(t.x)} x2={fx(t.x)} y1={fx(s.top)} y2={fx(s.bottom)} />
+                )),
+              )}
               {panel.groups.map((g) => (
                 <g key={g.group}>
                   <line className="hv-dp-rule" x1={fx(panel.labels ? panel.labelX : panel.left)} x2={fx(panel.meanX)} y1={fx(g.rule)} y2={fx(g.rule)} />
                   {panel.labels && (
                     <text className="hv-dp-group" x={fx(panel.labelX)} y={fx(g.y)}>
-                      {groupTitle(shownGroups[g.group]!, L.short)}
+                      {g.title}
                     </text>
                   )}
                 </g>

@@ -76,7 +76,7 @@ export function buildEpochs(tree: TreeSlice): Epoch[] {
   return epochs;
 }
 
-function layoutForest(present: string[], parent: Record<string, string | null>, root: string): Record<string, Slot> {
+export function layoutForest(present: string[], parent: Record<string, string | null>, root: string): Record<string, Slot> {
   const kids = new Map<string, string[]>();
   for (const id of present) {
     const p = parent[id];

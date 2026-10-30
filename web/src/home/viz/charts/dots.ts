@@ -132,6 +132,9 @@ const GAP_Y = 14;
 const MIN_ROW = 22;
 const MAX_ROW = 52;
 const LABEL_GAP = 18;
+/** The header over each mean column ends at the column's edge, so a panel's own header has to stop short of it. */
+const MEAN_HEAD = "mean";
+const HEAD_GAP = 12;
 
 export interface DotPlace {
   runIndex: number;
@@ -163,8 +166,8 @@ export interface DotPanel {
   meanX: number;
   headY: number;
   axisY: number;
-  gridTop: number;
-  gridBottom: number;
+  /** Where the vertical grid is drawn: the rows of each group, never the band that carries the group's title. */
+  spans: { top: number; bottom: number }[];
   ticks: { x: number; label: string; zero: boolean }[];
   xAt: Scale;
   groups: { group: number; y: number; title: string; rule: number }[];
@@ -283,6 +286,7 @@ export function dotLayout(model: DotModel, width: number, height: number, captio
     const rows: RowPlace[] = [];
     const groups: DotPanel["groups"] = [];
     const notes: DotPanel["notes"] = [];
+    const spans: DotPanel["spans"] = [];
     model.groups.slice(0, shown).forEach((g, gi) => {
       if (gi > 0) y += GROUP_GAP;
       groups.push({ group: gi, y: y + GROUP_H / 2 + 2, title: groupTitle(g, short), rule: y });
@@ -311,15 +315,14 @@ export function dotLayout(model: DotModel, width: number, height: number, captio
         });
         y += rowH;
       });
+      spans.push({ top: first, bottom: y });
       if (metric === "extra" && g.reference) notes.push({ group: gi, x: (left + right) / 2, y: first + (g.rows.length * rowH) / 2, text: "0 by definition: the reference" });
     });
 
-    const gridTop = top + HEAD_H;
-    const gridBottom = y;
     return {
       metric,
       title: info.title,
-      sub: textWidth(info.title, 13) + 8 + textWidth(info.sub) <= right - left + MEAN_W ? info.sub : info.subShort,
+      sub: textWidth(info.title, 13) + 8 + textWidth(info.sub) <= right + MEAN_W - textWidth(MEAN_HEAD) - HEAD_GAP - left ? info.sub : info.subShort,
       labels: stacked || index === 0,
       labelX: PAD,
       left,
@@ -327,8 +330,7 @@ export function dotLayout(model: DotModel, width: number, height: number, captio
       meanX: right + MEAN_W,
       headY: top + 14,
       axisY: y + 2,
-      gridTop,
-      gridBottom,
+      spans,
       ticks: domain.values.map((v) => ({ x: xAt(v), label: tickLabel(v, domain.step), zero: v === 0 })),
       xAt,
       groups,
@@ -416,7 +418,7 @@ export function paintDots(rig: DotRig, p: number): void {
   const f = dotFrame(p);
   for (const pen of rig.axes) pen.set("opacity", f.axes);
   for (const pen of rig.means) pen.set("opacity", f.means);
-  for (const row of rig.rows) row.pen.set("opacity", f.row(row.index, rig.rowCount));
+  for (const row of rig.rows) row.pen.set("opacity", smoothstep(f.row(row.index, rig.rowCount)));
   for (const dot of rig.dots) {
     const t = easeOutCubic(f.row(dot.row, rig.rowCount));
     const scale = 0.4 + 0.6 * t;

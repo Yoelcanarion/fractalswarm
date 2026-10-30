@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { HOME } from "../testing";
+import { HOME, sources } from "../testing";
 import { EASE_OUT } from "../../lib/motion";
 import { easeOutCubic, span } from "./shared";
 
@@ -24,6 +24,21 @@ describe("the drivers of the visuals' progress", () => {
       expect(found).toMatch(/ease: "linear"/);
     });
   }
+});
+
+describe("no driver of the page eases", () => {
+  const code = sources().map((path) => ({ path: path.slice(HOME.length + 1), text: readFileSync(path, "utf-8") }));
+
+  it("moves a progress or a hover with animate() on a linear ease only, but for the count-up of a figure, which has no visual in it", () => {
+    const eased = code.flatMap(({ path, text }) =>
+      [...text.matchAll(/\banimate\(/g)].filter((m) => !/ease: "linear"/.test(text.slice(m.index, m.index + 220))).map(() => path),
+    );
+    expect([...new Set(eased)]).toEqual(["parts/Figure.tsx"]);
+  });
+
+  it("has no spring either, which is an ease that overshoots", () => {
+    expect(code.filter(({ text }) => /\buseSpring\b|type: "spring"/.test(text)).map(({ path }) => path)).toEqual([]);
+  });
 });
 
 describe("a visual under a linear driver", () => {
