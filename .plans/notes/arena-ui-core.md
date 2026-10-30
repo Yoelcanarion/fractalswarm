@@ -727,3 +727,12 @@ Arena `7452747` (W6) merged at `961c413`, arena `86f2951` (the looping hero) at 
 
 #### Still to do in this slot
 1920x1080 light, the empty and error states, keyboard walks, the dimmed text on dead tree cards (`deadtext.mjs`), the theme and run-opening flashes (`flash.mjs`), frame times on a scratch build (`frames.mjs`), a last `merge_ready`.
+
+#### After the first merge point (f384db9, merged at 99dad26): later fixes, and what is left (my usage limit was reached here)
+- 0866822 Rate limits: the panels' Meter wrapper carried the class `meter`, which the Muse lens styles as a flex row, so the quota meters had no bar since Oct 29; it is a plain block now, and `styles/classnames.test.ts` lists where components outside `components/lens/` use a class only the lens styles.
+- dc9f891 A run page with no run to open, or one that failed to load, has no empty strip band and no "..." status badge (`openingRun` decides; `TopBar` gets `opening`).
+- 87a3751 Dead, restarting and finished tree cards: text at AA by colour, not by group opacity (before: meta 2.2:1 dark and 1.9:1 light, id 4:1 and 2.9:1 on a dead card); `styles/contrast.test.ts` reads the three states.
+- e8c1365 A launch opens its page only once its runs are listed (`untilRunsListed`, `listedRuns`): `POST api/arena` answers 202 before the runs exist, and the arena page opened at once stayed on "Could not load the pair" until a reload. Checked in a browser on the fake model: the pair lands on the arena page, no console errors.
+- Checks: web suite green at 14ba712 (125 files, 1913 tests); intake 9 files / 168 tests green at e8c1365; Python, `demo --verify` and the references as at ee045c1 (not re-run since).
+- Frame times, production scratch build, 1920x1080, 20x, the first 6 s while playing, three passes: 32.8, 28.5 (`lite=shadow`), 27.4 fps. The machine was busy and identical passes drifted by 6 fps, so this does not compare with the quiet-window 37.3 of Oct 29. Theme before the bundle: right in the four cases on the build. Tooltips: 14 bubbles at 1366x768, none outside the viewport or over its trigger.
+- Left: the one-run launch in a browser; a 1920x1080 dark pass after these fixes; the run view's tree text (about 5 px at 1080p: 17 leaf cards make a width-limited fit); W5's Arena page with no pair on record; W6's `.home-extract__mark[data-lit]` (4.30:1 light).
