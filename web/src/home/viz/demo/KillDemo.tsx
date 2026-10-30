@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import type { TreeSlice } from "../../data/types";
 import { bundledStory, useStory } from "../../story";
 import { SECONDS } from "../ease";
@@ -262,9 +262,25 @@ export function KillDemo({ data, still, note = false, className }: KillDemoProps
     };
   }, [tree, model, sizes, reduced]);
 
+  const bounds = model.bounds;
+  const aspect = (bounds.x1 - bounds.x0) / (bounds.y1 - bounds.y0);
+
   return (
     <figure ref={host} className={className ? `hv-demo ${className}` : "hv-demo"}>
-      <div className="hv-demo-stage">
+      <div className="hv-demo-head">
+        <p ref={line} className="hv-demo-line" role="status" aria-live="polite">
+          {INTRO}
+        </p>
+        <div className="hv-demo-bar">
+          <button ref={half} type="button" className="hv-demo-btn hv-demo-btn--main">
+            Kill half
+          </button>
+          <button ref={again} type="button" className="hv-demo-btn" disabled>
+            Reset
+          </button>
+        </div>
+      </div>
+      <div className="hv-demo-stage" style={{ "--demo-aspect": aspect.toFixed(3) } as CSSProperties}>
         <TreeSvg
           svgRef={svg}
           model={model}
@@ -282,18 +298,7 @@ export function KillDemo({ data, still, note = false, className }: KillDemoProps
           ))}
         </div>
       </div>
-      <p ref={line} className="hv-demo-line" role="status" aria-live="polite">
-        {INTRO}
-      </p>
-      <div className="hv-demo-bar">
-        <button ref={half} type="button" className="btn hv-demo-btn">
-          Kill half
-        </button>
-        <button ref={again} type="button" className="btn hv-demo-btn" disabled>
-          Reset
-        </button>
-        {note && <p className="hv-demo-note">An illustration in your browser, not a real run.</p>}
-      </div>
+      {note && <p className="hv-demo-note">An illustration in your browser, not a real run.</p>}
     </figure>
   );
 }

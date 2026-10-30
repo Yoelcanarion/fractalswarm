@@ -72,7 +72,7 @@ const LABELS: Record<VizName, string> = {
   LineDraw: "Waiting and extra cost, as coordinators die",
   DotPlot: "Stall time and extra cost, one dot per seed",
   PairedBars: "Locality, against an ideal durable supervisor",
-  RegimeStrip: "Where the swarm wins and where it loses",
+  RegimeStrip: "Where the swarm holds, ties and fails",
   TokenBar: "Tokens by model",
   DoorGlyph: "A door",
 };

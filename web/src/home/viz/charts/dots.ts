@@ -48,8 +48,16 @@ export interface DotModel {
 
 const mean = (values: number[]): number => values.reduce((s, v) => s + v, 0) / values.length;
 
-export function dotModel(data: HeadlineSlice): DotModel {
-  const cells = data.cells;
+/**
+ * The systems the tie is about: the swarm and the two durable supervisors. The in-process supervisor's runs are in the data, and the
+ * hero chart and the proof's bars show them, but a dot for each of its ten seeds stretches the axis the tie is read on (its extra
+ * cost alone is several times the others') and adds forty dots to a chart that has eighty.
+ */
+export const TIE_SYSTEMS: readonly string[] = ["swarm", "durable-max", "durable"];
+
+/** `systems` null draws every system of the data; the default is the ones the tie is about. */
+export function dotModel(data: HeadlineSlice, systems: readonly string[] | null = TIE_SYSTEMS): DotModel {
+  const cells = systems === null ? data.cells : data.cells.filter((c) => systems.includes(c.workflow));
   const byProfile = new Map<string, HeadlineCell[]>();
   for (const c of cells) byProfile.set(c.profile, [...(byProfile.get(c.profile) ?? []), c]);
   const groups: DotGroup[] = [...byProfile.entries()]
@@ -168,6 +176,7 @@ export interface DotPanel {
   axisY: number;
   /** Where the vertical grid is drawn: the rows of each group, never the band that carries the group's title. */
   spans: { top: number; bottom: number }[];
+  /** A tick whose label is empty keeps its line and gives its label to a neighbour: on a narrow plot every other one is named. */
   ticks: { x: number; label: string; zero: boolean }[];
   xAt: Scale;
   groups: { group: number; y: number; title: string; rule: number }[];
@@ -211,6 +220,15 @@ function domainOf(model: DotModel, metric: DotMetric, groups: number): { min: nu
     }
   });
   return niceTicks(lo, hi, 4);
+}
+
+/** The ticks of an axis, each named unless the names would touch: then every second, third… one is, counting from the zero. */
+function thinned(domain: { step: number; values: number[] }, xAt: Scale): DotPanel["ticks"] {
+  const names = domain.values.map((v) => tickLabel(v, domain.step));
+  const room = Math.abs(xAt(domain.values[1] ?? 1) - xAt(domain.values[0] ?? 0));
+  const every = Math.max(1, Math.ceil((Math.max(...names.map((n) => textWidth(n))) + 8) / Math.max(1, room)));
+  const origin = Math.max(0, domain.values.indexOf(0));
+  return domain.values.map((v, i) => ({ x: xAt(v), label: (i - origin) % every === 0 ? names[i]! : "", zero: v === 0 }));
 }
 
 function keyFor(model: DotModel, short: boolean): DotLayout["key"] {
@@ -331,7 +349,7 @@ export function dotLayout(model: DotModel, width: number, height: number, captio
       headY: top + 14,
       axisY: y + 2,
       spans,
-      ticks: domain.values.map((v) => ({ x: xAt(v), label: tickLabel(v, domain.step), zero: v === 0 })),
+      ticks: thinned(domain, xAt),
       xAt,
       groups,
       rows,

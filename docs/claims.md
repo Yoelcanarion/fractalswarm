@@ -42,6 +42,13 @@ three-seed wording is withdrawn.
 | S6 | "Shared log, not shared brain." | Description of the design; the log is a central component (stated limitation, `bench/REPORT.md` §6) | allowed, always with the limitation |
 | S7 | The tagline: "Kill half the brains. It still finishes." Only that sentence (Yoel, Oct 30). | C3 crashes five of the swarm's ten orchestrators and kills half of its agents (`bench/PREREG.md` §5). Every real swarm run at C3 completed with a valid result: 4 of 4 in `bench/results/v1` (T1 and T2, seeds 1–2) and 10 of 10 in `bench/results/headline-10` (T2, seeds 1–10, after the freeze; its first three are the 3 of 3 of `bench/results/headline`). Every real run of every workflow completed (176 of 176), so finishing does not set the swarm apart: what it shows is that losing half its brains does not stop it. One real run is not valid, the swarm at C0 on seed 5 (no crash; one wrong model reading, `bench/REPORT.md` §4.10.7), so validity is claimed for the runs at C3 and for no other setting | **allowed**. The measured numbers go under it as a subtitle, each with its rival named (R2, R3), never as part of the tagline |
 
+## The models
+
+| # | Claim, as worded | Evidence | Status |
+|---|---|---|---|
+| M1 | "In the recorded demo run, 65% of input tokens were served from cache." | `GET /api/runs/demo-final/models` on `demo/final` (run `final-kill-half-1`): `cache_hit_share` 0.651, 139,264 of 215,208 input tokens | **allowed** |
+| M2 | "96 real benchmark runs for about $17." | `bench/results/v1`: `metrics.cost_usd` over its 96 cells sums to $16.74, on Contributor routing, with the estimate for cancelled calls counted (`bench/REPORT.md` §2) | **allowed** |
+
 ## Against the rivals (decision gate, Thu Oct 29: outcome B)
 
 The $0 evidence: `fractalswarm bench verdicts bench/results/rivals-gate bench/results/sweeps`
