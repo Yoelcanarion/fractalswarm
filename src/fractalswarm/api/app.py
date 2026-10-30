@@ -132,7 +132,8 @@ def create_app(
         run = entry(request)
         from_seq = _int_param(request, "from_seq", 1, minimum=1)
         limit = _int_param(request, "limit", 1000, minimum=1, maximum=MAX_PAGE)
-        events, last_seq = catalog.page(run, from_seq, limit)
+        # A full page is about 170 ms of sqlite and pydantic: off the loop, for the live streams.
+        events, last_seq = await anyio.to_thread.run_sync(catalog.page, run, from_seq, limit)
         next_seq = events[-1]["seq"] + 1 if events else from_seq
         done = next_seq > last_seq  # the page reached the end of the log as it saw it
         return JSONResponse(
@@ -353,7 +354,9 @@ def create_app(
         if not TOKEN.fullmatch(eid):
             raise HTTPException(422, "the escalation id is not valid")
         inbox, _ = live_inbox(run_id)
-        goal = body.get("goal_id") or escalation_goal(entry_of(run_id), eid)
+        goal = body.get("goal_id") or await anyio.to_thread.run_sync(
+            escalation_goal, entry_of(run_id), eid
+        )
         if not isinstance(goal, str):
             raise HTTPException(404, f"no escalation {eid!r} in run {run_id!r}")
         found = valid(answer_control, eid, goal, body)
