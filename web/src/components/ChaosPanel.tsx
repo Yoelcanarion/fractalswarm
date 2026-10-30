@@ -4,6 +4,7 @@ import { postControl, type ControlResult } from "../lib/api";
 import { isLeafKind } from "../lib/layout";
 import type { ViewState } from "../lib/reducer";
 import { ControlButton, useControlState } from "./ControlButton";
+import { Hint } from "./ui";
 
 interface Props {
   runId: string;
@@ -68,9 +69,11 @@ export function ChaosPanel({ runId, view }: Props) {
       </div>
       {result && <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>{result.detail}</div>}
       {Object.keys(view.netFaults).length > 0 && (
-        <div className="chaos__net mono" title="the chaos network's faults are counted, not listed; the Events tab has each one">
-          network: {NET_LABELS.filter(([key]) => view.netFaults[key]).map(([key, label]) => `${view.netFaults[key].toLocaleString("en")} ${label}`).join(" · ")}
-        </div>
+        <Hint label="the chaos network's faults are counted, not listed; the Events tab has each one">
+          <div className="chaos__net mono">
+            network: {NET_LABELS.filter(([key]) => view.netFaults[key]).map(([key, label]) => `${view.netFaults[key].toLocaleString("en")} ${label}`).join(" · ")}
+          </div>
+        </Hint>
       )}
       {view.chaos.length > 0 && (
         <ol className="chaos__log">

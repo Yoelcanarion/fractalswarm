@@ -19,6 +19,11 @@ export function parsedSample(): Honesty {
   return parsed.honesty;
 }
 
+/** The text a reader sees in rendered markup, leaving out what is there only for a screen reader or only when a hint is open:
+ * the hints sit in the markup, closed, and read as words in the middle of a sentence if they are not taken out. */
+export const visibleText = (html: string): string =>
+  plainText(html.replace(/<span[^>]*role="tooltip"[^>]*>[\s\S]*?<\/span>/g, "").replace(/<span class="sr-only">[\s\S]*?<\/span>/g, ""));
+
 /** The text a reader sees in rendered markup. */
 export const plainText = (html: string): string =>
   html

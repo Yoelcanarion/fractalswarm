@@ -1,0 +1,299 @@
+/* The Runs page: the toolbar, the live strip, the table and the key under it.
+   Colours are tokens only; nothing a person reads is smaller than --fs-body. Media queries, never container queries. */
+
+.runs {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.runs > * {
+  min-width: 0;
+}
+
+/* The page's gap does the spacing, so the shared header adds none of its own. */
+.runs > .pagehead {
+  margin-bottom: 0;
+}
+
+.runs__sk-gap {
+  height: var(--space-3);
+}
+
+.runs__sk-row {
+  margin-bottom: var(--space-2);
+}
+
+.runs__error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-2);
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+}
+
+/* ---- search, filters and the actions on the whole list ---- */
+.runstool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.runstool__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 260px;
+  max-width: 440px;
+}
+
+.runstool__search svg {
+  position: absolute;
+  left: 10px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.runstool__search input {
+  width: 100%;
+  min-height: 36px;
+  padding-left: 34px;
+}
+
+.runstool__field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+}
+
+.runstool__field select {
+  min-height: 36px;
+}
+
+.runstool__summary {
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.runstool__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* ---- live now ---- */
+.livenow__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.livenow__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.livenow__id {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.livenow__watch {
+  margin-left: auto;
+  text-decoration: none;
+}
+
+/* ---- the table ---- */
+.runstable {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+}
+
+.runstable table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-body);
+}
+
+.runstable th,
+.runstable td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--divider);
+  text-align: left;
+  vertical-align: top;
+}
+
+.runstable tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.runstable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.runstable thead th:first-child {
+  border-top-left-radius: var(--radius-3);
+}
+
+.runstable thead th:last-child {
+  border-top-right-radius: var(--radius-3);
+}
+
+.runstable tbody th {
+  font-weight: 400;
+}
+
+@media (hover: hover) {
+  .runstable tbody tr:hover > * {
+    background: var(--hover-wash);
+  }
+}
+
+.runcell__main {
+  display: block;
+  font-weight: 600;
+}
+
+.runcell__sub {
+  display: block;
+  color: var(--text-secondary);
+}
+
+.runcell__id {
+  display: block;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.runcell__verify {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sorthead {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: -2px -6px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sorthead svg {
+  flex: none;
+  color: var(--text-muted);
+}
+
+th[aria-sort="ascending"] .sorthead svg,
+th[aria-sort="descending"] .sorthead svg {
+  color: var(--accent-text);
+}
+
+@media (hover: hover) {
+  .sorthead:hover {
+    background: var(--hover-wash);
+    color: var(--text-primary);
+  }
+}
+
+/* On a narrow screen the table scrolls sideways inside its frame, and the header stops sticking (a scrolling frame
+   takes the stickiness with it). Above that width the header follows the page. */
+@media (max-width: 1100px) {
+  .runstable {
+    overflow-x: auto;
+  }
+
+  .runstable thead th {
+    position: static;
+  }
+}
+
+/* ---- the key under the table ---- */
+.runskey {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+  padding: var(--space-3) var(--space-4);
+}
+
+.runskey > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.runskey__list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-3) var(--space-5);
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-body);
+}
+
+.runskey__list dt {
+  font-weight: 700;
+}
+
+.runskey__list dd {
+  margin: 0;
+  max-width: 80ch;
+  color: var(--text-secondary);
+  line-height: var(--lh-body);
+}
+
+.runskey__list ul {
+  margin: var(--space-1) 0;
+  padding-left: var(--space-5);
+}
+
+.runskey__list strong {
+  color: var(--text-primary);
+}
+
+@media (max-width: 720px) {
+  .runskey__list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+
+  .runskey__list dd {
+    margin-bottom: var(--space-3);
+  }
+}
+
+/* ---- starting a run ---- */
+.runs__start > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.runs__start[open] > summary {
+  margin-bottom: var(--space-3);
+}

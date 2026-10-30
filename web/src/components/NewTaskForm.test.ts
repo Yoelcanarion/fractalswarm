@@ -1,11 +1,11 @@
-// What a person reads after pressing Submit for planning: drawn on the server (react-dom/server), no browser.
+// The form that starts a run and what a person reads after pressing Start the run: drawn on the server (react-dom/server), no browser.
 
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { LaunchResult } from "../lib/api";
-import { Launched } from "./NewTaskForm";
+import { Launched, NewTaskForm, SpecPreview } from "./NewTaskForm";
 
 const started = (runId: string): LaunchResult => ({ ok: true, status: 202, detail: `Started run ${runId}.`, runId, jobId: "job-1", warnings: [] });
 const refused = (status: number, detail: string): LaunchResult => ({ ok: false, status, detail, runId: null, jobId: null, warnings: [] });
@@ -41,5 +41,57 @@ describe("the answer to a launch", () => {
     expect(out).toContain("chaos__result--bad");
     expect(out).toContain("give the input: inputs.fixture");
     expect(out).not.toContain("Started run");
+  });
+});
+
+describe("the form", () => {
+  const out = renderToStaticMarkup(createElement(NewTaskForm));
+  const plain = out.replace(/<[^>]+>/g, " ").replace(/&#x27;/g, "'").replace(/\s+/g, " ");
+
+  it("says in words what each field is for, as text on the page and not as a hover hint", () => {
+    expect(out).not.toMatch(/ title="/);
+    expect(plain).toContain("Orchestrators per level");
+    expect(plain).toContain("Builds the tree the fanout describes");
+    expect(plain).toContain("Seeds the run's randomness");
+    expect(plain).toContain("The most the run may spend");
+    expect(plain).toContain("Agents per session");
+    expect(plain).toContain("poisoned speaker email");
+  });
+
+  it("ties every help sentence to its control, so a screen reader reads them together", () => {
+    const describedBy = [...out.matchAll(/aria-describedby="([^"]+)"/g)].map((m) => m[1]);
+    expect(describedBy.length).toBeGreaterThanOrEqual(6);
+    for (const id of describedBy) expect(out).toContain(`id="${id}"`);
+    const labelled = [...out.matchAll(/<label for="([^"]+)"/g)].map((m) => m[1]);
+    for (const id of labelled) expect(out).toContain(`id="${id}"`);
+  });
+
+  it("defines the words it uses instead of citing the spec", () => {
+    expect(out).not.toMatch(/spec §/);
+    expect(out).not.toContain("bench mode");
+    expect(plain).toContain("task spec");
+    expect(out).toContain('class="term"');
+    expect(plain).toContain("T3");
+    expect(plain).toContain("web report");
+  });
+
+  it("names the button for what it does", () => {
+    expect(plain).toContain("Start the run");
+    expect(plain).not.toContain("Submit for planning");
+  });
+
+  it("says what the goal is for, and does not shout that it is missing before anyone has typed", () => {
+    expect(plain).toContain("The run cannot start without one");
+    expect(out).not.toContain("newtask__errors");
+    expect(plain).not.toContain("the goal is required");
+  });
+
+  it("shows the spec as YAML in a region a keyboard can scroll, with how to run the same file", () => {
+    const preview = renderToStaticMarkup(createElement(SpecPreview, { yaml: "goal: x\ntask: t2_conference" }));
+    expect(preview).toMatch(/<pre class="newtask__yaml mono" aria-labelledby="([^"]+)" tabindex="0">goal: x\ntask: t2_conference<\/pre>/);
+    const id = /aria-labelledby="([^"]+)"/.exec(preview)![1];
+    expect(preview).toContain(`id="${id}"`);
+    expect(preview).toContain("uv run fractalswarm run task.yaml");
+    expect(preview).toContain("--backend real --confirm-real-spend");
   });
 });

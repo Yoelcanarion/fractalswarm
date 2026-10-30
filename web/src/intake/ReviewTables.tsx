@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 
+import { Tooltip } from "../components/ui";
 import { AvailabilityGrid } from "./AvailabilityGrid";
 import { addSpeaker, addTalk, patchSpeaker, patchTalk, patchTrack, removeSpeaker, removeTalk, restoreRow, talksOf } from "./edit";
 import { describeCells } from "./format";
@@ -310,19 +311,24 @@ function SpeakersTable({ original, working, facts, selection, onSelect, onChange
                     <ProvenanceBadge {...prov} />
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className="btn btn--icon"
-                      aria-label={`Take ${speaker.id} out`}
-                      title={talks.length > 0 ? `${speaker.name || speaker.id} still has ${talks.length === 1 ? "a talk" : `${talks.length} talks`}: give them to someone else first` : "Take this speaker out of the reading"}
-                      disabled={locked || talks.length > 0}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onChange(removeSpeaker(working, speaker.id));
-                      }}
+                    <Tooltip
+                      focusable={locked || talks.length > 0}
+                      placement="left"
+                      label={talks.length > 0 ? `${speaker.name || speaker.id} still has ${talks.length === 1 ? "a talk" : `${talks.length} talks`}: give them to someone else first` : "Take this speaker out of the reading"}
                     >
-                      ✕
-                    </button>
+                      <button
+                        type="button"
+                        className="btn btn--icon"
+                        aria-label={`Take ${speaker.id} out`}
+                        disabled={locked || talks.length > 0}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onChange(removeSpeaker(working, speaker.id));
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </Tooltip>
                   </td>
                 </tr>
                 {picked && (

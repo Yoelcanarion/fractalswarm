@@ -9,34 +9,9 @@
   padding: var(--space-4) var(--space-5) var(--space-5);
 }
 
-.helps__head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-
-.helps__title {
-  margin: 0;
-  font-size: var(--fs-hero);
-  line-height: 1.15;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.helps__lead {
-  margin: var(--space-1) 0 0;
-  max-width: 64ch;
-  font-size: var(--fs-lead);
-  color: var(--text-secondary);
-}
-
-.helps__controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+/* The shared page head (components/ui PageHeader): the page's flex gap already spaces it from what follows. */
+.helps > .helps__head {
+  margin-bottom: 0;
 }
 
 .helps__field {

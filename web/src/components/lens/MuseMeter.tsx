@@ -13,7 +13,7 @@ import { foldMeter, formatPercent, formatTokens, formatUsd, type ModelRow } from
 import { formatNumber } from "../../lib/motion";
 import { useLens, useLensStoreApi } from "../../lensStore";
 import { useRunStore } from "../../store";
-import { ModelBadge, Skeleton, Tooltip } from "../ui";
+import { Hint, ModelBadge, Skeleton, Tooltip } from "../ui";
 
 const COORDINATION = "Input and output tokens of calls whose role is coordinator, supervisor, router or recovery, or whose tag starts with coord:";
 const RECOVERY = "Input and output tokens of calls whose role is recovery or whose tag starts with recovery:";
@@ -45,8 +45,10 @@ export function MuseMeter() {
   }
   if (status === "error") {
     return (
-      <div className="meter meter--quiet" title={error ?? undefined}>
-        Muse meter unavailable
+      <div className="meter meter--quiet">
+        <Hint focusable label={error}>
+          <span>Muse meter unavailable</span>
+        </Hint>
       </div>
     );
   }

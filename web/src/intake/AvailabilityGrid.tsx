@@ -37,7 +37,10 @@ export function AvailabilityGrid({ proposal, speaker, onChange, disabled }: Avai
                   aria-label={`Day ${day} ${slot.start} to ${slot.end}`}
                   disabled={disabled}
                   onClick={() => onChange(toggleCell(proposal, speaker, [day, slot.index]))}
-                />
+                >
+                  {/* a tick as well as a fill: dark green against dark grey is a small step for anyone, and none for some eyes */}
+                  {on && <span aria-hidden>✓</span>}
+                </button>
               );
             })}
           </div>

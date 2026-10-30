@@ -1,6 +1,7 @@
 import { secondsUntilProbe, type BreakerKind, type BreakerState } from "../lib/breakers";
 import type { ViewState } from "../lib/reducer";
 import { Card, GenericRows, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
+import { Term } from "./ui";
 
 const STATE: Record<BreakerState, { label: string; tone: "good" | "warn" | "bad" }> = {
   closed: { label: "closed", tone: "good" },
@@ -37,7 +38,7 @@ export function BreakersPanel({ view }: { view: ViewState }) {
     .slice(0, 6);
 
   return (
-    <Card title="Breakers" hint="spec §8">
+    <Card title={<Term id="breaker">Breakers</Term>} hint="what stopped calls, and when it let them through again">
       <div className="pstats">
         <PStat label="breakers" value={rows.length + quiet.length} />
         <PStat label="not closed" value={open} tone={open > 0 ? "bad" : ""} />

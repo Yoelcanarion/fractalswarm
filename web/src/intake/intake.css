@@ -10,24 +10,9 @@
   margin: 0 auto;
 }
 
-.intake__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-5);
-  flex-wrap: wrap;
-}
-
-.intake__title {
-  margin: 0 0 var(--space-1);
-  font-size: var(--fs-title);
-}
-
-.intake__lead {
-  margin: 0;
-  max-width: 78ch;
-  color: var(--text-secondary);
-  line-height: var(--lh-body);
+/* The shared page head (components/ui PageHeader): the page's flex gap already spaces it from what follows. */
+.intake > .intake__head {
+  margin-bottom: 0;
 }
 
 .intake__notice {
@@ -66,7 +51,7 @@
   height: 24px;
   border-radius: var(--radius-pill);
   background: var(--surface-3);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   font-weight: 700;
 }
 
@@ -86,9 +71,10 @@
   font-weight: 600;
 }
 
+/* No text token reads on --accent in both themes (3.2:1 and 4.3:1 at best); the accent's text tone does, at 6:1 or more. */
 .steps__item--now .steps__n {
-  background: var(--accent);
-  color: var(--text-primary);
+  background: var(--accent-text);
+  color: var(--text-inverse);
 }
 
 /* ---- the form ---- */
@@ -137,7 +123,7 @@
 .field__count {
   align-self: flex-end;
   color: var(--text-muted);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 .field__problem,
@@ -354,8 +340,10 @@
   color: var(--text-secondary);
 }
 
-.stopped .btn {
-  align-self: flex-start;
+.stopped__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .spinner {
@@ -638,7 +626,7 @@
   display: block;
   margin-top: var(--space-1);
   color: var(--warn-text);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 .prov {
@@ -647,7 +635,7 @@
   border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   color: var(--text-secondary);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -672,12 +660,12 @@
 
 .srcchips__none {
   color: var(--text-muted);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 .srcchip {
   font: inherit;
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
   border: 1px solid var(--accent);
@@ -722,7 +710,7 @@
 .quotes__where,
 .quotes__none {
   color: var(--text-muted);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 .rdetail__email {
@@ -786,7 +774,7 @@
 .avail__dayname,
 .avail__time {
   color: var(--text-muted);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 .avail__cell {
@@ -801,6 +789,10 @@
 .avail__cell--on {
   background: var(--ok-bg-strong);
   border-color: var(--ok-border);
+  color: var(--ok-text);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  line-height: 1;
 }
 
 .avail__cell:disabled {

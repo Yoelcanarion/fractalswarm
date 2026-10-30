@@ -103,6 +103,22 @@ describe("what the page makes of each answer", () => {
     expect(read.value.approved).toMatchObject({ edits: ["speakers[S02].preference", "talks[T01].attendance"], truth_mode: "approved", names_pseudonymized: false });
   });
 
+  it("reads the reading that was approved when the server sends it, and has none when it does not", () => {
+    const body = fixture("intake.approved.json");
+    expect(readIntakeState(body)).toMatchObject({ ok: true, value: { approved: { proposal: null } } }); // a server that predates it
+    const kept = { ...museReading(), talks: museReading().talks.slice(0, 2) };
+    const read = readIntakeState({ ...body, approved: { ...body.approved, proposal: kept } });
+    if (!read.ok) throw new Error(read.reason);
+    expect(read.value.approved?.proposal?.talks).toHaveLength(2);
+    expect(read.value.proposal?.talks).toHaveLength(museReading().talks.length); // the state's own proposal stays Muse's
+  });
+
+  it("names the field when the approved reading cannot be read", () => {
+    const body = fixture("intake.approved.json");
+    const read = readIntakeState({ ...body, approved: { ...body.approved, proposal: { talks: "none" } } });
+    expect(read).toEqual({ ok: false, reason: expect.stringContaining("intake.approved.proposal") });
+  });
+
   it("reads a refusal by the firewall: which box, why, and no proposal", () => {
     const read = readIntakeState(fixture("intake.refused.json"));
     if (!read.ok) throw new Error(read.reason);

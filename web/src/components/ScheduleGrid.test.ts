@@ -75,5 +75,8 @@ describe("the schedule grid", () => {
   it("says so when a run has no schedule", () => {
     const empty = new Stream().emit("run.started", "@kernel", { seed: "0", scenario: "t", clock: "sim", params: {} });
     expect(render(empty)).toContain("No schedule in this run yet");
+    // the jargon in that sentence is defined where it is read
+    expect(render(empty)).toContain('<span class="term">T2</span>');
+    expect(render(empty)).toContain('role="tooltip"');
   });
 });
