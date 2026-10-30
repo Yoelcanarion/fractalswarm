@@ -1,175 +1,192 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { benchResults } from "../lib/api";
-import { axis, GRID, LEGEND_STYLE, TOOLTIP_CURSOR, TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from "../lib/chart";
-import { useFirstDraw } from "../lib/chartMotion";
-import { chartRows, normalizeHero, type HeroData, type HeroPoint } from "../lib/hero";
-import { SERIES } from "../lib/layout";
+import "../components/charts/charts.css";
+import { seriesColors } from "../components/charts/colors";
+import { MetricChart } from "../components/charts/MetricChart";
+import { ResultsTable } from "../components/charts/ResultsTable";
+import { SeriesKey } from "../components/charts/SeriesKey";
+import { SetCaption, SetPicker } from "../components/charts/SetHeader";
+import { Card, EmptyState, PageHeader, Skeleton, SkeletonGroup } from "../components/ui";
+import { benchResults, listRuns } from "../lib/api";
+import { heroSets, runCount, type HeroSet } from "../lib/hero";
+import { drawsInProcess, IN_PROCESS_REASON, isFlat } from "../lib/heroText";
+import { useDocumentTitle } from "../lib/title";
 
-const AXIS = axis(14);
+type Load =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ready"; sets: HeroSet[]; runs: ReadonlySet<string> };
 
-function colorFor(hero: HeroData, id: string): string {
-  return SERIES[hero.series.findIndex((s) => s.id === id) % SERIES.length];
-}
-
-interface PanelProps {
-  hero: HeroData;
-  metric: keyof HeroPoint;
-  title: string;
-  unit: string;
-  height?: number;
-  percent?: boolean;
-}
-
-function MetricPanel({ hero, metric, title, unit, height = 340, percent }: PanelProps) {
-  const rows = useMemo(() => chartRows(hero, metric), [hero, metric]);
-  const draw = useFirstDraw();
-  const format = (v: number) => (percent ? `${Math.round(v * 100)}%` : `${v}${unit}`);
-  return (
-    <section className="panel chart">
-      <header className="panel__title">{title}</header>
-      <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={rows} margin={{ top: 12, right: 24, bottom: 8, left: 4 }}>
-          <CartesianGrid stroke={GRID} vertical={false} />
-          <XAxis dataKey="label" {...AXIS} />
-          <YAxis {...AXIS} tickFormatter={format} width={64} domain={percent ? [0, 1] : [0, "auto"]} />
-          <Tooltip
-            contentStyle={TOOLTIP_STYLE}
-            labelStyle={TOOLTIP_LABEL_STYLE}
-            formatter={(value) => (typeof value === "number" ? format(Number(value.toFixed(2))) : String(value))}
-            labelFormatter={(label) => `coordinators killed: ${label}`}
-          />
-          <Legend wrapperStyle={LEGEND_STYLE} />
-          {hero.series.map((s) => (
-            <Line
-              key={s.id}
-              dataKey={s.id}
-              name={s.label}
-              stroke={colorFor(hero, s.id)}
-              strokeWidth={s.id === "swarm" ? 3.5 : 2}
-              dot={{ r: 4, strokeWidth: 2, fill: "var(--surface-1)" }}
-              activeDot={{ r: 6 }}
-              {...draw}
-              connectNulls
-            />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
-    </section>
-  );
-}
-
-function TokensPanel({ hero }: { hero: HeroData }) {
-  const rows = useMemo(() => chartRows(hero, "coordinationTokens"), [hero]);
-  const draw = useFirstDraw();
-  return (
-    <section className="panel chart">
-      <header className="panel__title">Coordination tokens per run</header>
-      <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={rows} margin={{ top: 12, right: 24, bottom: 8, left: 4 }} barGap={2}>
-          <CartesianGrid stroke={GRID} vertical={false} />
-          <XAxis dataKey="label" {...AXIS} />
-          <YAxis {...AXIS} width={64} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} cursor={TOOLTIP_CURSOR} />
-          <Legend wrapperStyle={LEGEND_STYLE} />
-          {hero.series.map((s) => (
-            <Bar key={s.id} dataKey={s.id} name={s.label} fill={colorFor(hero, s.id)} radius={[4, 4, 0, 0]} {...draw} />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
-    </section>
-  );
-}
-
-export function ChartsPage() {
-  const [state, setState] = useState<{ hero?: HeroData; fixture?: boolean; source?: string; error?: string }>({});
+/** The recorded sets, and the ids of the runs this server lists (so a run in the table links only if it can be opened). */
+function useBenchSets(): [Load, () => void] {
+  const [attempt, setAttempt] = useState(0);
+  const [load, setLoad] = useState<Load>({ status: "loading" });
   useEffect(() => {
-    benchResults()
-      .then((r) => setState({ hero: normalizeHero(r.data), fixture: r.fixture, source: r.source }))
-      .catch((error) => setState({ error: String(error) }));
-  }, []);
+    let live = true;
+    setLoad({ status: "loading" });
+    const known = listRuns().then(
+      (runs) => new Set(runs.map((run) => run.id)),
+      () => new Set<string>(),
+    );
+    Promise.all([benchResults(), known]).then(
+      ([body, runs]) => live && setLoad({ status: "ready", sets: heroSets(body), runs }),
+      (error: unknown) => live && setLoad({ status: "error", message: error instanceof Error ? error.message : String(error) }),
+    );
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
+  return [load, reload];
+}
 
-  if (state.error) return <div className="empty empty--bad">Could not load the bench results: {state.error}</div>;
-  if (!state.hero) return <div className="empty">Loading the bench results…</div>;
-  const { hero } = state;
+function ChartsSkeleton() {
   return (
     <div className="charts">
-      <div className="charts__head">
-        <div>
-          <h1>Kill the coordinators: who stalls, who pays twice?</h1>
-          <p className="muted">
-            {hero.task}, same failures for every workflow, 5 s detection = best-case restart for the baselines (spec §15.2).
-          </p>
+      <SkeletonGroup label="Loading the bench results">
+        <Skeleton width={420} height={26} />
+        <div className="charts__sk-gap" />
+        <Skeleton width="70%" height={14} />
+        <div className="charts__sk-gap" />
+        <div className="charts__hero">
+          <Skeleton height={420} />
+          <Skeleton height={420} />
         </div>
-        {state.fixture ? (
-          <span className="badge badge--warn">Fixture data — not measured. Run the bench to replace it.</span>
-        ) : (
-          <span className="badge badge--muted mono">{state.source}</span>
-        )}
+      </SkeletonGroup>
+    </div>
+  );
+}
+
+function FlatCard({ title, children }: { title: string; children: string }) {
+  return (
+    <Card title={title} className="chartcard chartcard--flat">
+      <p className="flatnote">{children}</p>
+    </Card>
+  );
+}
+
+function ChartsBody({ sets, runs }: { sets: HeroSet[]; runs: ReadonlySet<string> }) {
+  const [chosen, setChosen] = useState(sets[0].name);
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
+  const [showBand, setShowBand] = useState(true);
+  const set = sets.find((s) => s.name === chosen) ?? sets[0];
+  const { hero } = set;
+  const colors = useMemo(() => seriesColors(hero), [hero]);
+  const toggle = useCallback(
+    (id: string) =>
+      setHidden((current) => {
+        const next = new Set(current);
+        if (!next.delete(id)) next.add(id);
+        // Hiding every workflow would leave empty charts; the last one stays.
+        return next.size >= hero.series.length ? current : next;
+      }),
+    [hero.series.length],
+  );
+  const finished = isFlat(hero, "completionRate", 1) && isFlat(hero, "validityRate", 1);
+  const total = runCount(hero);
+  const chart = { hero, colors, hidden, showBand };
+  return (
+    <div className="charts">
+      <PageHeader
+        title="Stall time and extra cost when coordinators die"
+        lead="The same failures hit every workflow. Each point is the mean over the seeds that were run, and the band behind a line runs from the lowest to the highest seed."
+      />
+      <SetPicker
+        sets={sets}
+        value={set.name}
+        onChange={(name) => {
+          setChosen(name);
+          setHidden(new Set());
+        }}
+      />
+      <SetCaption set={set} />
+      <div className="charts__controls">
+        <SeriesKey series={hero.series} colors={colors} hidden={hidden} onToggle={toggle} />
+        <label className="checkline">
+          <input type="checkbox" checked={showBand} onChange={(event) => setShowBand(event.target.checked)} />
+          Show the lowest to highest seed
+        </label>
       </div>
       <div className="charts__hero">
-        <MetricPanel hero={hero} metric="stallS" title="Stall time (s)" unit=" s" height={400} />
-        <MetricPanel hero={hero} metric="extraCostPct" title="Extra cost vs C0 (%)" unit="%" height={400} />
+        <MetricChart {...chart} metric="stallS" height={340} />
+        <MetricChart {...chart} metric="extraCostPct" height={340} />
       </div>
+      {drawsInProcess(hero) && <p className="charts__reason">{IN_PROCESS_REASON}</p>}
       <div className="charts__secondary">
-        <MetricPanel hero={hero} metric="completionRate" title="Completion rate" unit="" percent height={220} />
-        <MetricPanel hero={hero} metric="validityRate" title="Validity rate" unit="" percent height={220} />
-        <TokensPanel hero={hero} />
+        <MetricChart {...chart} metric="costUsd" height={220} />
+        {finished ? (
+          <FlatCard title="Completion and validity">
+            {total > 0 ? `All ${total} runs of this set completed, and all were valid.` : "Every run of this set completed, and every one was valid."}
+          </FlatCard>
+        ) : (
+          <>
+            {isFlat(hero, "completionRate", 1) ? (
+              <FlatCard title="Completion">Every run of this set completed.</FlatCard>
+            ) : (
+              <MetricChart {...chart} metric="completionRate" height={220} />
+            )}
+            {isFlat(hero, "validityRate", 1) ? (
+              <FlatCard title="Validity">Every run of this set was valid.</FlatCard>
+            ) : (
+              <MetricChart {...chart} metric="validityRate" height={220} />
+            )}
+          </>
+        )}
+        {isFlat(hero, "coordinationTokens", 0) ? (
+          <FlatCard title="Coordination tokens per run">No workflow spent LLM tokens on coordination in this set.</FlatCard>
+        ) : (
+          <MetricChart {...chart} metric="coordinationTokens" height={220} />
+        )}
       </div>
       <details className="panel charts__table">
-        <summary>Table view</summary>
-        <table>
-          <thead>
-            <tr>
-              <th>workflow</th>
-              <th>killed</th>
-              <th>profile</th>
-              <th>stall s</th>
-              <th>extra cost %</th>
-              <th>completion</th>
-              <th>validity</th>
-              <th>coord. tokens</th>
-              <th>runs</th>
-            </tr>
-          </thead>
-          <tbody>
-            {hero.series.flatMap((s) =>
-              s.points.map((p) => (
-                <tr key={`${s.id}-${p.coordinatorsKilled}`}>
-                  <td>{s.label}</td>
-                  <td>{p.coordinatorsKilled}</td>
-                  <td>{p.profile}</td>
-                  <td>{p.stallS ?? "–"}</td>
-                  <td>{p.extraCostPct ?? "–"}</td>
-                  <td>{p.completionRate ?? "–"}</td>
-                  <td>{p.validityRate ?? "–"}</td>
-                  <td>{p.coordinationTokens ?? "–"}</td>
-                  <td>
-                    {p.runs.map((run) => (
-                      <a key={run} href={`#/run/${encodeURIComponent(run)}`}>
-                        {run}{" "}
-                      </a>
-                    ))}
-                  </td>
-                </tr>
-              )),
-            )}
-          </tbody>
-        </table>
+        <summary>Table view: every number of the charts</summary>
+        <ResultsTable hero={hero} knownRuns={runs} />
+        <p className="muted charts__tablenote">A run is a link when this server has it; open it to replay and verify it.</p>
       </details>
       {hero.note && <p className="muted">{hero.note}</p>}
     </div>
   );
+}
+
+export function ChartsPage() {
+  useDocumentTitle("Charts");
+  const [load, reload] = useBenchSets();
+  if (load.status === "loading") return <ChartsSkeleton />;
+  if (load.status === "error") {
+    return (
+      <EmptyState
+        tone="bad"
+        title="Could not load the bench results"
+        actions={
+          <>
+            <button type="button" className="btn" onClick={reload}>
+              Try again
+            </button>
+            <a className="btn" href="#/runs">
+              Open the runs
+            </a>
+          </>
+        }
+      >
+        {load.message}
+      </EmptyState>
+    );
+  }
+  if (load.sets.length === 0) {
+    return (
+      <EmptyState
+        tone="warn"
+        title="No measured results on this server"
+        actions={
+          <a className="btn" href="#/runs">
+            Open the runs
+          </a>
+        }
+      >
+        The server found no recorded bench results to draw, and it will not draw its development placeholder as if it were measured. The results are
+        committed under bench/results; a server started from a checkout has them.
+      </EmptyState>
+    );
+  }
+  return <ChartsBody sets={load.sets} runs={load.runs} />;
 }

@@ -1,0 +1,228 @@
+/* The Charts page: the set picker, the caption that states the setting, the key and the hover card.
+   The page's grid is in styles.css (.charts, .charts__hero, .charts__secondary). Colours are tokens only. */
+
+.charts__sk-gap {
+  height: var(--space-3);
+}
+
+.charts__hero > *,
+.charts__secondary > * {
+  min-width: 0;
+}
+
+/* ---- which recorded set ---- */
+.setpicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.setpicker__item {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.setpicker__item[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.setpicker__name {
+  font-weight: 700;
+}
+
+.setpicker__meta {
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+}
+
+@media (hover: hover) {
+  .setpicker__item:hover:not([aria-pressed="true"]) {
+    border-color: var(--border-strong);
+  }
+}
+
+/* ---- what the set was run with: always next to the charts ---- */
+.setcaption {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+}
+
+.setcaption__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.setcaption__source {
+  margin-left: auto;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.setcaption__note {
+  margin: 0;
+  max-width: 90ch;
+  line-height: var(--lh-body);
+}
+
+/* ---- the key, shared by every chart ---- */
+.charts__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+
+.serieskey {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.serieskey__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.serieskey__item[aria-pressed="false"] {
+  background: transparent;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.serieskey__item[aria-pressed="false"] .serieskey__swatch {
+  opacity: 0.35;
+}
+
+.serieskey__swatch {
+  display: inline-block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+@media (hover: hover) {
+  .serieskey__item:hover {
+    border-color: var(--border-strong);
+  }
+}
+
+.checkline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+
+/* ---- the cards ---- */
+.flatnote {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+}
+
+.charts__reason {
+  max-width: 100ch;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--warn-border);
+  border-radius: 0 var(--radius-2) var(--radius-2) 0;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+}
+
+/* ---- the hover card ---- */
+.charttip {
+  min-width: 240px;
+  padding: 10px var(--space-3);
+  font-size: var(--fs-body);
+  color: var(--text-primary);
+}
+
+.charttip__head {
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.charttip__rows {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.charttip__rows li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.charttip__value {
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+/* ---- the table of every number ---- */
+.resultstable {
+  margin-top: var(--space-3);
+  overflow-x: auto;
+}
+
+.resultstable thead th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.resultstable tbody th {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.resultstable__run {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.charts__tablenote {
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-body);
+}
