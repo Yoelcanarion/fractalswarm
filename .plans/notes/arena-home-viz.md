@@ -199,20 +199,56 @@ the run spawns a new member; all of one coordinator's fallback goals go to one h
 Against the ideal durable supervisor ProofBars draws seeds, not bars, for the reason above; the brief says "bars against both rivals".
 (4) The step drawings take about 0.9 s from the first part to the last, a little over the 0.6 to 0.9 s of a hover.
 
-## Checks (Oct 30, 21:10 CET, HOLD: no browser, no build)
+## Browser pass (Oct 30, 22:55 to 23:10 CET, after W6's frames; `0e993b5`)
 
-- `npx tsc --noEmit -p .` clean. `npx vitest run --maxWorkers=1 src/home`: 35 files, 530 tests passed (`src/home/viz`: 21 files, 368).
-- `uv run pytest tests/unit/test_home_data.py`: 22 passed; `build_home_data.py --check`: story.json is current; ruff check and format clean.
-- I touch nothing under `src/fractalswarm/`, so the full pytest and the $0 reference comparison are run at the merge point, not by me
-  before it.
+The lab (`#/home-lab`, on a spare Vite port) in Chromium 130 and in Firefox (Playwright, headless), dark and light, at 1920x1080,
+1280x900, 600, 390 and 320 wide, and under reduced motion. It found three things, all fixed:
 
-## Not done yet (waits for a RELEASE)
+1. **The film had an empty counter band** (the lanes keep a probe for their readout) and was clipped at 390 wide. `.hv-film` now has
+   its own height, `clamp(400px, 44vw, 460px)`, and a 24 px probe, so the lanes fill the box. W6 can drop `--fs-figure: 0px` and
+   the `.home-film .hv-film` clamp.
+2. **The lanes' key ran out of its box on a phone**: "no agent working 101.8 s" needs about 176 px and a cell had 155 to 167.
+   `ledgerColumns(width)` in `lanes/layout.ts` takes four, two or one columns by what each cell needs (swatch, words, the widest value),
+   pulls each column back so the ones after it fit, and the lanes make room for the extra rows. A test walks every width from 210 to
+   1700 px: nothing is clipped by the box and no two cells touch.
+3. **The click demo's "KILLED" label was covered** by the dead once the row filled (Kill all). In the demo it now sits above the rule
+   (`labelOnRule` on `TreeSvg`); the hero keeps it beside its row.
 
-- My lanes and panels at W6's new pace (about 1 s per step) in a browser, with shots.
-- Frames at 1920x1080 for the visuals other than the hero (`?frames` before and after, at a moment of low load) and the hero loop's
-  numbers on `demo/final`.
-- The scratch `vite build`, the real `demo --verify --no-serve --no-browser` against `proof.lines`, and the $0 references (43 of 43).
-- DotPlot at 820, 944, 1000 and 1147 px in a browser, dark and light.
+Frames at 1920x1080 (headless; gaps between `requestAnimationFrame` calls in ms; no row has a frame over 33 ms). Chromium runs at 60 Hz
+and every row is p50 16.7, p95 16.7 to 16.8, p99 16.8, max 16.8. Firefox runs at about 164 Hz:
+
+| animation | frames | p50 | p95 | p99 | max |
+| --- | --- | --- | --- | --- | --- |
+| baseline (nothing in view moves) | 549 | 6.1 | 12.1 | 12.1 | 18.2 |
+| demo idle (the ambient layer) | 730 | 6.1 | 12.1 | 12.1 | 12.1 |
+| demo, one takeover | 407 | 6.1 | 12.1 | 12.1 | 24.3 |
+| demo, Kill half (five takeovers) | 1775 | 6.1 | 12.1 | 12.1 | 18.2 |
+| problem film (7 s) | 1187 | 6.1 | 12.1 | 12.1 | 12.1 |
+| step card hover | 232 | 6.1 | 6.1 | 6.1 | 6.1 |
+| proof bars and numbers (1.6 s) | 353 | 6.1 | 6.1 | 12.1 | 12.1 |
+| grow numbers (1.6 s) | 363 | 6.1 | 6.1 | 6.1 | 6.1 |
+| door thumbnails loop | 823 | 6.1 | 6.1 | 6.1 | 12.8 |
+
+The demo, 19 checks in each browser, all passed, with no console error or warning: by mouse (a click says who crashed at once and
+then who takes over; Reset; Kill half; with everyone down the line says nobody is left; it puts itself back), by keyboard (Tab reaches
+a coordinator button named "Crash Conference (o0)"; Enter and Space crash it), by tap at 390 wide (the stage is 292 px, a target is
+40 px, nothing reaches past the screen) and under reduced motion (the takeover is told at once, with the heir). Under reduced motion
+the proof chart, the film, the drawings and the numbers show their end state.
+
+## Checks (Oct 30, 23:11 CET)
+
+- `npx tsc --noEmit -p .` clean. `npx vitest run --maxWorkers=1 src/home`: 40 files, 639 tests passed (`redesign.test.ts` 40,
+  `lanes/lanes.test.ts` 36).
+- A scratch `npx vite build --outDir <scratch> --emptyOutDir` builds (the lab's chunk is 42 kB, 15 kB gzipped).
+- I touch nothing under `src/fractalswarm/`, so the full pytest and the $0 reference comparison are the coordinator's at the merge
+  ("skip pytest and the refs").
+
+## Not done
+
+- DotPlot at 820, 944, 1000 and 1147 px in a browser: the redesign's six do not use it, so it was not looked at again.
+- The real `demo --verify --no-serve --no-browser` against `proof.lines` and the $0 references (43 of 43): the coordinator's, at the merge.
+- ProofBars draws its words (about 58) inside its svg, which W6's counter does not count; if the budget is ever counted by what a
+  reader sees, the page is 58 words over what it prints.
 
 ## Rules kept
 
