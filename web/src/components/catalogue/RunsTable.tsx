@@ -13,6 +13,7 @@ import {
   type SortKey,
   type VerifyView,
 } from "../../lib/catalogue";
+import { openedRunHash } from "../../lib/address";
 import { formatMetric, taskOf } from "../../lib/heroText";
 import { Skeleton, Term, Tooltip } from "../ui";
 
@@ -104,7 +105,7 @@ function RunRow({ row, view, onVerify }: { row: CatalogueRow; view: VerifyView; 
   return (
     <tr>
       <th scope="row" className="runcell">
-        <a className="mono runcell__id" href={`#/run/${encodeURIComponent(listing.id)}`}>
+        <a className="mono runcell__id" href={openedRunHash(listing.id)}>
           {listing.id}
         </a>
         {listing.source !== "runs" && <Sub>{listing.source === "demo" ? "demo bundle" : listing.source}</Sub>}

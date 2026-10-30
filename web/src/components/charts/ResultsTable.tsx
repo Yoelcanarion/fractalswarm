@@ -1,3 +1,4 @@
+import { openedRunHash } from "../../lib/address";
 import { profileTerm } from "../../lib/glossary";
 import type { HeroData, MetricKey } from "../../lib/hero";
 import { formatPoint, METRICS } from "../../lib/heroText";
@@ -55,7 +56,7 @@ export function ResultsTable({ hero, knownRuns }: ResultsTableProps) {
                       : p.runs.map((path) => {
                           const name = runName(path);
                           return knownRuns.has(name) ? (
-                            <a key={path} className="mono resultstable__run" href={`#/run/${encodeURIComponent(name)}`}>
+                            <a key={path} className="mono resultstable__run" href={openedRunHash(name)}>
                               {name}
                             </a>
                           ) : (

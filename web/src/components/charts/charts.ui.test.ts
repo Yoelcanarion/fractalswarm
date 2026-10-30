@@ -112,7 +112,7 @@ describe("the table of every number", () => {
     expect(none).toContain("swarm__t2_conference__C3__s1");
     expect(none).not.toContain("#/run/");
     const some = table(["swarm__t2_conference__C3__s1"]);
-    expect(some).toContain('href="#/run/swarm__t2_conference__C3__s1"');
+    expect(some).toContain('href="#/run/swarm__t2_conference__C3__s1?at=end"');
     expect(some.match(/#\/run\//g)).toHaveLength(1);
   });
 });

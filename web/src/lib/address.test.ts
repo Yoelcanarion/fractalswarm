@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { namedRunId, openingRun } from "./address";
+import { AT_END, namedRunId, openedRunHash, openingRun } from "./address";
 
 describe("the run an address names", () => {
   it.each([
@@ -46,5 +46,17 @@ describe("what a run page is about to show", () => {
   it("leaves a run that is already open alone on a bare address", () => {
     expect(state({ runId: "other", runs, runsLoaded: true })).toBeNull();
     expect(state({ runId: "other" })).toBeNull();
+  });
+});
+
+describe("the address of a run opened from a list", () => {
+  it("names the run and asks for its end", () => {
+    expect(AT_END).toBe("?at=end");
+    expect(openedRunHash("demo-backup")).toBe("#/run/demo-backup?at=end");
+  });
+
+  it("escapes the id, and the run is still the one named", () => {
+    expect(openedRunHash("a b/c")).toBe("#/run/a%20b%2Fc?at=end");
+    expect(namedRunId(openedRunHash("a b/c"))).toBe("a b/c");
   });
 });

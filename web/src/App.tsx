@@ -21,7 +21,7 @@ import { parseIntakeRoute, type IntakeRoute } from "./intake/route";
 import { TopBar } from "./components/shell/TopBar";
 import { namedRunId } from "./lib/address";
 import { SPEEDS } from "./lib/playback";
-import { RUN_VIEWS, runViewHash, type RunView } from "./lib/shell";
+import { pickedRunHash, RUN_VIEWS, type RunView } from "./lib/shell";
 import { ChartsPage } from "./pages/ChartsPage";
 import { EventsPage } from "./pages/EventsPage";
 import { PanelsPage } from "./pages/PanelsPage";
@@ -129,7 +129,7 @@ export function App() {
         scenario={scenario}
         blocked={blocked}
         onPickRun={(id) => {
-          window.location.hash = runViewHash(id, route.page === "run" ? route.view : "overview");
+          window.location.hash = pickedRunHash(id, route.page === "run" ? route.view : "overview");
         }}
       />
       {/* the strip's place is held from the first paint: it is there before the run is open, and the page below does not jump down when it fills */}

@@ -1,6 +1,8 @@
 // The shape of the app's top: four places, and under a place the views it has of its own (a run's six, the evidence's
 // three). Pure, so the bar and the tab titles are tested without a page; App.tsx parses the hash and says where it is.
 
+import { AT_END } from "./address";
+
 export const RUN_VIEWS = ["overview", "plan", "panels", "security", "results", "events"] as const;
 export type RunView = (typeof RUN_VIEWS)[number];
 
@@ -75,6 +77,9 @@ export function placeOf(where: Where): Place {
 
 export const runViewHash = (runId: string | null, view: RunView): string =>
   `#/run/${runId === null ? "" : encodeURIComponent(runId)}${view === "overview" ? "" : `/${view}`}`;
+
+/** The address of another run picked from the run's own page: the view stays, and the run opens at its end like one from the Runs list. */
+export const pickedRunHash = (runId: string, view: RunView): string => `${runViewHash(runId, view)}${AT_END}`;
 
 export const SITE_NAME = "FractalSwarm";
 

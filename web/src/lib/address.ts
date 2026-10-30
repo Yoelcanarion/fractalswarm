@@ -17,6 +17,13 @@ export function namedRunId(hash: string): string | null {
   }
 }
 
+/** The query that opens a recorded run at its end: the whole picture at once, with "Play from the start" one click away. An address
+ * without it opens a recorded run at its start, to be replayed; a live run opens at its head either way. */
+export const AT_END = "?at=end";
+
+/** The address of a run opened from a list of runs. */
+export const openedRunHash = (id: string): string => `#/run/${encodeURIComponent(id)}${AT_END}`;
+
 export type Opening = { kind: "run"; id: string } | { kind: "list" };
 
 export interface OpeningState {

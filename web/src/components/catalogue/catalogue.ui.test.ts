@@ -54,7 +54,8 @@ describe("the table of runs", () => {
   it("says in words what ran, with what task, under which failures, billed or not, and what it spent", () => {
     const out = table(rows);
     const t = text(out);
-    expect(out).toContain('href="#/run/t2-c3-swarm"');
+    // a recorded run opens at its end: the whole picture at once, the start one click away
+    expect(out).toContain('href="#/run/t2-c3-swarm?at=end"');
     expect(t).toContain("FractalSwarm");
     expect(t).toContain("In-process supervisor");
     expect(t).toContain("Toy demo");
@@ -249,7 +250,7 @@ describe("the page", () => {
 
   it("keeps the list it had and says the refresh failed", () => {
     const out = page({ runsLoaded: true, runs: [listing("kept")], runsError: "timeout" });
-    expect(out).toContain('href="#/run/kept"');
+    expect(out).toContain('href="#/run/kept?at=end"');
     expect(text(out)).toContain("Could not refresh the list: timeout");
   });
 
@@ -263,7 +264,7 @@ describe("the page", () => {
     expect(out).toContain("Rebuilds the run from its recorded log and compares every event");
     expect(t).toContain("Live now");
     expect(t).toContain("1 live · 1 recorded · 1 interrupted");
-    expect(out).toContain('href="#/run/old-1"');
+    expect(out).toContain('href="#/run/old-1?at=end"');
     expect(t).toContain("How to read this table");
     expect(t).toContain("Start a run on the fake model, so it costs nothing");
     expect(t).toContain("Describe the job and start it");
