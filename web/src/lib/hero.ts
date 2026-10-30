@@ -66,7 +66,7 @@ export const WORKFLOW_ORDER = ["swarm", "durable-max", "durable", "central", "pi
  * so the in-process supervisor is never called just "central" or a plain supervisor. */
 export function workflowLabel(id: string): string {
   const name = id === "langgraph" ? "LangGraph teams" : systemName(id);
-  return name === id ? id : name.charAt(0).toUpperCase() + name.slice(1);
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 const PROFILE_BY_KILLS: Record<number, string> = { 0: "C0", 1: "C1", 3: "C2", 5: "C3" };

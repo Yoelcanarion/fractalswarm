@@ -42,6 +42,10 @@ export const GLOSSARY = {
     term: "T3",
     says: "The web report: a comparative report in which every finding cites a page fetched in this run, with a quote that is in that page.",
   },
+  taskSpec: {
+    term: "Task spec",
+    says: "The description of one job: its goal, the task, the budget and how large a swarm to build. The YAML shown under the form is the same file that fractalswarm run takes.",
+  },
   // metrics (bench/REPORT.md §2)
   stall: {
     term: "Stall time",
@@ -95,6 +99,11 @@ export const GLOSSARY = {
   breaker: {
     term: "Breaker",
     says: "A circuit breaker. It opens after repeated failures, so calls go to another model or wait. After a pause it lets a probe call through and closes again if the probe succeeds.",
+  },
+  // runs (the clocks, src/fractalswarm/runs.py)
+  virtualTime: {
+    term: "Virtual time",
+    says: "The run's own clock. A live clock follows real time at the speed the run was started with; a simulated clock jumps ahead as fast as the machine can go.",
   },
   // the log (docs/claims.md, the rules)
   replay: {

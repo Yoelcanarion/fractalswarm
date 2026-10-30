@@ -154,6 +154,13 @@ describe("Term", () => {
     expect(out).toContain(">half the brains<");
     expect(out).toContain("Five coordinator crashes");
   });
+
+  it("leaves the tab order for a word that repeats down a table, and still opens on hover", () => {
+    const out = html(createElement(Term, { id: "c3", focusable: false }));
+    expect(out).not.toContain("tabindex");
+    expect(out).toContain('role="tooltip"');
+    expect(out).toContain("Five coordinator crashes");
+  });
 });
 
 describe("PageHeader", () => {

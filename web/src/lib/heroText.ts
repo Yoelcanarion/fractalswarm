@@ -89,7 +89,7 @@ export const IN_PROCESS_REASON =
 const TASKS: Record<string, { term: TermId | null; name: string }> = {
   t1_extraction: { term: "t1", name: "extraction" },
   t2_conference: { term: "t2", name: "conference schedule" },
-  t3_web_report: { term: "t3", name: "web report" },
+  t3_report: { term: "t3", name: "web report" }, // the id in the task yaml and in tasks/*/task.py NAME
 };
 
 /** The task of a set: the short name that has a glossary entry ("T2") and its words. */

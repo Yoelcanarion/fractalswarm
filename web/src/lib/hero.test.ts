@@ -56,7 +56,9 @@ describe("hero chart data", () => {
     expect(workflowLabel("durable")).toBe("Durable supervisor");
     expect(workflowLabel("central")).toBe("In-process supervisor");
     expect(workflowLabel("langgraph")).toBe("LangGraph teams");
-    expect(workflowLabel("something-new")).toBe("something-new");
+    expect(workflowLabel("pipeline")).toBe("Pipeline");
+    expect(workflowLabel("single")).toBe("Single agent");
+    expect(workflowLabel("something-new")).toBe("Something-new"); // an id the page has never heard of is still a label
   });
 });
 

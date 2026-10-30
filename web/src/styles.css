@@ -914,17 +914,14 @@ textarea {
   gap: 14px;
 }
 
-.charts__table table,
-.runs__table {
+.charts__table table {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--fs-body);
 }
 
 .charts__table th,
-.charts__table td,
-.runs__table th,
-.runs__table td {
+.charts__table td {
   text-align: left;
   padding: 6px 8px;
   border-bottom: 1px solid var(--divider);
@@ -935,15 +932,7 @@ textarea {
   color: var(--text-secondary);
 }
 
-/* ---- runs ---- */
-.runs {
-  padding: 16px 20px;
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-
+/* ---- new task (the Runs page's own layout is in components/catalogue/catalogue.css) ---- */
 .newtask {
   display: flex;
   flex-direction: column;
@@ -968,6 +957,26 @@ textarea {
 .newtask__field textarea {
   width: 100%;
   color: var(--text-primary);
+}
+
+.newtask__lead {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.newtask__help {
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.newtask__caption {
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  font-weight: 700;
 }
 
 .newtask__grid {
@@ -1002,7 +1011,7 @@ textarea {
   padding: 10px 12px;
   border-radius: var(--radius-2);
   background: var(--surface-2);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1010,12 +1019,23 @@ textarea {
   overflow: auto;
 }
 
+@media (max-width: 900px) {
+  .newtask__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .newtask__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 1100px) {
   .run__main,
   .run__main--split,
   .charts__hero,
-  .charts__secondary,
-  .runs {
+  .charts__secondary {
     grid-template-columns: 1fr;
   }
   .run__canvas {

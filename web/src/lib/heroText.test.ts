@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
@@ -89,6 +89,16 @@ describe("the setting of a set", () => {
     expect(taskOf("t2_conference")).toEqual({ term: "t2", short: "T2", name: "conference schedule" });
     expect(taskOf("t1_extraction").term).toBe("t1");
     expect(taskOf("mystery")).toEqual({ term: null, short: "mystery", name: "" });
+  });
+
+  it("knows every task the example specs name, by the id they write", () => {
+    const dir = REPO_ROOT + "tasks/examples/";
+    const ids = readdirSync(dir)
+      .filter((name) => name.endsWith(".yaml"))
+      .map((name) => /^task:\s*(\S+)/m.exec(readFileSync(dir + name, "utf-8"))?.[1]);
+    expect(ids).not.toContain(undefined);
+    expect(new Set(ids)).toEqual(new Set(["t1_extraction", "t2_conference", "t3_report"]));
+    for (const id of ids) expect(taskOf(id!).term, id).not.toBeNull();
   });
 });
 

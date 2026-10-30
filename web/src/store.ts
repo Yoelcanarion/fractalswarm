@@ -41,6 +41,9 @@ export type TakeoverState =
 export interface RunStoreState {
   runs: RunListing[];
   runsError: string | null;
+  /** The catalog has been asked at least once, and it answered or failed. An empty `runs` before that means "not yet",
+   * and after it "none", which a page tells apart: a skeleton in one case and an empty state in the other. */
+  runsLoaded: boolean;
   runId: string | null;
   loading: boolean;
   loadError: string | null;
@@ -135,6 +138,7 @@ export function createRunStore(options: RunStoreOptions = {}): RunStoreApi {
   const store: RunStoreApi = createStore<RunStore>()((set, get) => ({
     runs: [],
     runsError: null,
+    runsLoaded: false,
     runId: null,
     loading: false,
     loadError: null,
@@ -157,7 +161,7 @@ export function createRunStore(options: RunStoreOptions = {}): RunStoreApi {
       try {
         const runs = await api.listRuns();
         const status = statusOf(runs, get().runId);
-        set({ runs, runsError: null, ...(status ? { runStatus: status } : {}) });
+        set({ runs, runsError: null, runsLoaded: true, ...(status ? { runStatus: status } : {}) });
         // The catalog says the run stopped recording without a word in the log: stop tailing it.
         if (get().live && status && status !== "running") {
           stopTail?.();
@@ -166,7 +170,7 @@ export function createRunStore(options: RunStoreOptions = {}): RunStoreApi {
           set({ live: false, following: false });
         }
       } catch (error) {
-        set({ runsError: messageOf(error) });
+        set({ runsError: messageOf(error), runsLoaded: true });
       }
     },
 
@@ -213,7 +217,7 @@ export function createRunStore(options: RunStoreOptions = {}): RunStoreApi {
         const cursor = live ? events.length : 0;
         const playhead = live ? (events.at(-1)?.ts_virtual ?? 0) : 0;
         set({
-          ...(runs ? { runs, runsError: null } : {}),
+          ...(runs ? { runs, runsError: null, runsLoaded: true } : {}),
           events,
           loading: false,
           live,
