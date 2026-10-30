@@ -27,7 +27,7 @@ import time
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Literal
 
 from starlette.testclient import TestClient
@@ -406,12 +406,16 @@ def pair_listing(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
 
 
 def public_bench(content: bytes) -> bytes:
-    """``GET api/bench/results`` names the file it read by its path on this machine; the site
-    says where it lives in the repo. The one thing that differs from the live answer."""
+    """``GET api/bench/results`` names a ``hero_chart.json`` it read by its path on this machine;
+    the site says where it lives in the repo. The one thing that differs from the live answer. A
+    source that is already a path in the repo (a recorded set, ``bench/results/v1/...``) stays."""
     body = json.loads(content)
     source = body.get("source") if isinstance(body, dict) else None
-    if isinstance(source, str) and source != "fixture":
-        body["source"] = f"bench/results/{Path(source).name}"
+    if isinstance(source, str) and (
+        PurePosixPath(source).is_absolute() or PureWindowsPath(source).is_absolute()
+    ):
+        name = re.split(r"[\\/]", source)[-1]
+        body["source"] = f"bench/results/{name}"
         return _dump(body)
     return content  # any other shape: the scan of the finished site still looks for a local path
 

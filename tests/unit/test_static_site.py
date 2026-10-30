@@ -78,11 +78,20 @@ class Exported(NamedTuple):
 
 
 def export(
-    base: Path, *, sources: tuple[str, ...], pairs: tuple[tuple[str, str], ...] = ()
+    base: Path,
+    *,
+    sources: tuple[str, ...],
+    pairs: tuple[tuple[str, str], ...] = (),
+    bench_files: dict[str, Any] | None = None,
 ) -> Exported:
     out, bench = base / "site", base / "bench"
     out.mkdir()
     bench.mkdir()
+    for relative, content in (
+        bench_files or {}
+    ).items():  # recorded results, as under bench/results
+        (bench / relative).parent.mkdir(parents=True, exist_ok=True)
+        (bench / relative).write_text(json.dumps(content), encoding="utf-8")
     cfg = settings_in(base)
     names = dict.fromkeys([*sources, *(name for pair in pairs for name in pair)])
     found = {name: build.resolve_source(name, cfg.runs_dir) for name in names}
@@ -600,6 +609,26 @@ class TestBenchResults:
         body = json.loads(build.public_bench(live.encode()))
         assert body == {"source": "bench/results/hero_chart.json", "fixture": False, "data": [1]}
 
+    def test_a_source_that_is_already_a_path_in_the_repo_stays(self) -> None:
+        # W4's recorded sets: the API names them bench/results/<set>/hero-t2_conference.json.
+        live = json.dumps(
+            {
+                "source": "bench/results/v1/hero-t2_conference.json",
+                "fixture": False,
+                "data": [1],
+                "sets": [{"name": "v1", "source": "bench/results/v1/hero-t2_conference.json"}],
+            }
+        ).encode()
+        assert build.public_bench(live) == live
+
+    def test_the_sets_come_through_when_the_hero_chart_is_renamed(self) -> None:
+        sets = [{"name": "v1", "source": "bench/results/v1/hero-t2_conference.json", "data": [2]}]
+        live = json.dumps(
+            {"source": "/home/somebody/repo/bench/results/hero.json", "data": [1], "sets": sets}
+        )
+        body = json.loads(build.public_bench(live.encode()))
+        assert body["source"] == "bench/results/hero.json" and body["sets"] == sets
+
     @pytest.mark.parametrize("body", [[1, 2], {"data": []}, {"source": 3}, "text"])
     def test_any_other_shape_goes_through_unchanged(self, body: Any) -> None:
         content = json.dumps(body).encode()
@@ -608,6 +637,28 @@ class TestBenchResults:
     def test_the_packaged_fixture_keeps_saying_it_is_one(self) -> None:
         live = json.dumps({"source": "fixture", "fixture": True, "data": []})
         assert json.loads(build.public_bench(live.encode()))["source"] == "fixture"
+
+    def test_a_recorded_set_in_the_bench_folder_is_stored_as_the_api_answers(
+        self, tmp_path: Path
+    ) -> None:
+        site = export(
+            tmp_path, sources=(TOY,), bench_files={"v1/hero-t2_conference.json": {"rows": [1]}}
+        )
+        live = site.live.get("/api/bench/results").json()
+        status, stored = answer_of(site, site.manifest["global"]["bench/results"])
+        assert (status, stored) == (200, live)
+        assert stored["fixture"] is False
+        assert stored["source"] == "bench/results/v1/hero-t2_conference.json"
+        assert [one["name"] for one in stored["sets"]] == ["v1"]
+
+    def test_a_hero_chart_file_is_named_by_its_place_in_the_repo(self, tmp_path: Path) -> None:
+        site = export(tmp_path, sources=(TOY,), bench_files={"hero_chart.json": [1]})
+        live = site.live.get("/api/bench/results").json()
+        _status, stored = answer_of(site, site.manifest["global"]["bench/results"])
+        assert live["source"] != stored["source"] == "bench/results/hero_chart.json"
+        assert {k: v for k, v in stored.items() if k != "source"} == {
+            k: v for k, v in live.items() if k != "source"
+        }
 
 
 class TestTheFolderItEmpties:

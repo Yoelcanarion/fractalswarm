@@ -3,6 +3,7 @@
 // last event of the log, which the page reads lazily. Pure, so it is tested without a browser.
 
 import { systemKind } from "../arena/assumptions";
+import { verifiedAtBuild } from "../static/BuildVerified";
 import { asRunStatus, type RunStatus } from "./controls";
 import { profileTerm, type TermId } from "./glossary";
 import { workflowLabel } from "./hero";
@@ -268,6 +269,8 @@ export function verifyWords(view: VerifyView): VerifyWords {
     case "done": {
       const { report } = view;
       if (report.ok && report.bundle_head_ok) {
+        // The static showcase has no server to replay on: its report was made when the site was built (static/BuildVerified.tsx).
+        if (import.meta.env.MODE === "static") return { ...verifiedAtBuild(report), tone: "good" };
         return {
           label: "Replay verified",
           tone: "good",
