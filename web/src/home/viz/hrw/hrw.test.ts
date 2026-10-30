@@ -5,7 +5,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { story } from "../../data/story";
 import { HRW_TIERS, fitHrw } from "./fit";
 import { HrwPanels } from "./HrwPanels";
-import { digitsShown, groupHex, hrwState, rowsOf } from "./state";
+import { digitsShown, groupHex, hiddenAt, hrwState, rowsOf } from "./state";
+
+describe("the reveal of a score", () => {
+  it("clips the whole score to the digits shown: all of it hidden at none, none of it at all, and a prefix's share of the width between", () => {
+    const hex = "e5ec11ec2d057b7e";
+    const hidden = hiddenAt(hex);
+    expect(hidden).toHaveLength(hex.length + 1);
+    expect(hidden[0]).toBe(100);
+    expect(hidden[hex.length]).toBe(0);
+    // four digits are "e5ec" (4 of the 19 characters), five are "e5ec 1" (6 of them: the space comes in with the digit after it)
+    expect(hidden[4]).toBeCloseTo((1 - 4 / 19) * 100, 2);
+    expect(hidden[5]).toBeCloseTo((1 - 6 / 19) * 100, 2);
+    for (let n = 1; n < hidden.length; n++) expect(hidden[n]!, `at ${n} digits`).toBeLessThan(hidden[n - 1]!);
+    // every count of digits the computation can show has an entry
+    for (let i = 0; i <= 100; i++) expect(hidden[digitsShown(i / 100)]).toBeDefined();
+  });
+
+  it("is a style write per row and no text written: the markup has the whole score, clipped to none of it at the start", () => {
+    const round = story.hrw.rounds[0]!;
+    const html = renderToStaticMarkup(createElement(HrwPanels, { progress: motionValue(0), data: story.hrw, round: 0 }));
+    expect(html.match(/class="hv-hrw-digits" style="clip-path:inset\(0 100% 0 0\)"/g)).toHaveLength(round.survivors.length * round.pool.length);
+    for (const s of round.scores) expect(html).toContain(groupHex(s.score));
+  });
+});
 
 describe("the heir computation", () => {
   it("groups a score in fours and reveals it digit by digit, never beyond 16", () => {

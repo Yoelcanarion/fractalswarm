@@ -5,7 +5,7 @@ import { useProgress, type VizProps } from "../shared";
 import "../viz.css";
 import { Pen } from "../tree/paint";
 import { HRW_DEFAULT_BOX, fitHrw } from "./fit";
-import { digitsShown, groupHex, hrwState, rowsOf } from "./state";
+import { digitsShown, groupHex, hiddenAt, hrwState, rowsOf } from "./state";
 
 export interface HrwPanelsProps extends VizProps<HrwSlice> {
   /** Which takeover of the run to show: 0 is the first, the root's. */
@@ -14,10 +14,10 @@ export interface HrwPanelsProps extends VizProps<HrwSlice> {
 
 interface RowRig {
   row: Pen<HTMLElement>;
-  shown: Pen<HTMLElement>;
-  rest: Pen<HTMLElement>;
+  digits: Pen<HTMLElement>;
   bar: Pen<HTMLElement>;
-  hex: string;
+  /** The score is all in the markup and the digits are shown by clipping it: how much is still clipped, by count of digits shown. */
+  hidden: number[];
   fraction: number;
 }
 
@@ -33,11 +33,10 @@ function collect(root: HTMLElement, round: HrwRound): Rig {
   const hexOf = new Map(round.scores.map((s) => [s.member, s]));
   for (const row of root.querySelectorAll<HTMLElement>("[data-row]")) {
     const score = hexOf.get(row.dataset["row"] ?? "");
-    const shown = row.querySelector<HTMLElement>(".hv-hrw-shown");
-    const rest = row.querySelector<HTMLElement>(".hv-hrw-rest");
+    const digits = row.querySelector<HTMLElement>(".hv-hrw-digits");
     const bar = row.querySelector<HTMLElement>(".hv-hrw-bar");
-    if (!score || !shown || !rest || !bar) continue;
-    rows.push({ row: new Pen(row), shown: new Pen(shown), rest: new Pen(rest), bar: new Pen(bar), hex: score.score, fraction: score.fraction });
+    if (!score || !digits || !bar) continue;
+    rows.push({ row: new Pen(row), digits: new Pen(digits), bar: new Pen(bar), hidden: hiddenAt(score.score), fraction: score.fraction });
   }
   const pens = (selector: string): Pen<HTMLElement>[] => [...root.querySelectorAll<HTMLElement>(selector)].map((el) => new Pen(el));
   const verdict = root.querySelector<HTMLElement>(".hv-hrw-verdict");
@@ -64,8 +63,7 @@ export function HrwPanels({ progress, data, still, stillAt, className, round: in
     }
     const digits = digitsShown(s.compute);
     for (const row of r.rows) {
-      row.shown.text(groupHex(row.hex.slice(0, digits)));
-      row.rest.text(groupHex(row.hex).slice(groupHex(row.hex.slice(0, digits)).length));
+      row.digits.set("style", `clip-path:inset(0 ${row.hidden[digits] ?? 0}% 0 0)`);
       row.bar.set("style", `transform:scaleX(${(row.fraction * s.compute).toFixed(4)})`);
       row.row.set("data-pick", s.decide > 0.5 ? "true" : "false");
     }
@@ -103,8 +101,9 @@ export function HrwPanels({ progress, data, still, stillAt, className, round: in
               <div key={r.member} className="hv-hrw-row" data-row={r.member} data-win={r.win ? "true" : "false"} data-pick="false">
                 <span className="hv-hrw-member">{r.member}</span>
                 <span className="hv-hrw-hex">
-                  <span className="hv-hrw-shown" />
-                  <span className="hv-hrw-rest">{groupHex(r.score)}</span>
+                  <span className="hv-hrw-digits" style={{ clipPath: "inset(0 100% 0 0)" }}>
+                    {groupHex(r.score)}
+                  </span>
                 </span>
                 <span className="hv-hrw-track">
                   <i className="hv-hrw-bar" style={{ transform: "scaleX(0)" }} />

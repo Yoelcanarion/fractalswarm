@@ -4,8 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fakePen, seen, type Log } from "../charts/fakes";
 import type { Pen } from "../tree/paint";
-import { DoorGlyph, paintDoor } from "./DoorGlyph";
-import { DOOR_IDS, DOOR_LABELS, GEOM, doorFrame, isDoor, quad } from "./doors";
+import { DoorDrawing, DoorGlyph, paintDoor } from "./DoorGlyph";
+import { CANVAS, DOOR_IDS, DOOR_LABELS, GEOM, WIDE_CANVAS, WIDE_FROM, arenaShape, doorFrame, hasWide, isDoor, liveShape, quad } from "./doors";
 
 const numbers = (text: string): number[] => (text.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
 
@@ -102,15 +102,19 @@ describe("the door glyphs' frames", () => {
     const early = doorFrame("replays", 0.3);
     expect(early["check-0"]!.opacity!).toBeGreaterThan(early["check-1"]!.opacity!);
     expect(early["check-1"]!.opacity!).toBeGreaterThanOrEqual(early["check-3"]!.opacity!);
-    const live = doorFrame("live", 1);
-    expect(live["crosshair"]!.transform).toBe(`translate(${GEOM.live.target[0].toFixed(2)} ${GEOM.live.target[1].toFixed(2)}) scale(1.000)`);
-    expect(live["tree-fill"]!.opacity).toBe(1);
-    expect(live["stream-0"]!.opacity!).toBeLessThan(1e-9);
+    for (const wide of [false, true]) {
+      const live = doorFrame("live", 1, wide);
+      const [tx, ty] = liveShape(wide).target;
+      expect(live["crosshair"]!.transform).toBe(`translate(${tx.toFixed(2)} ${ty.toFixed(2)}) scale(1.000)`);
+      expect(live["tree-fill"]!.opacity).toBe(1);
+      expect(live["stream-0"]!.opacity!).toBeLessThan(1e-9);
+    }
   });
 
   it("closes the clapper and lights every point of the chart by the end, and none at rest", () => {
-    expect(doorFrame("director", 0)["clapper"]!.transform).toBe("rotate(-18.00 36 46)");
-    expect(doorFrame("director", 1)["clapper"]!.transform).toBe("rotate(0.00 36 46)");
+    const [hx, hy] = GEOM.director.hinge;
+    expect(doorFrame("director", 0)["clapper"]!.transform).toBe(`rotate(${GEOM.director.open.toFixed(2)} ${hx} ${hy})`);
+    expect(doorFrame("director", 1)["clapper"]!.transform).toBe(`rotate(0.00 ${hx} ${hy})`);
     const rest = doorFrame("numbers", 0);
     const end = doorFrame("numbers", 1);
     GEOM.numbers.marks.forEach((_, j) => expect([rest[`pt-${j}`]!.opacity, end[`pt-${j}`]!.opacity]).toEqual([0, 1]));
@@ -165,5 +169,167 @@ describe("paintDoor", () => {
     expect(Object.keys(seen(log, pens.get("clapper")))).toEqual(["transform"]);
     expect(Object.keys(seen(log, pens.get("board-lines")))).toEqual(["opacity"]);
     expect(() => paintDoor(new Map(), doorFrame("arena", 0.5))).not.toThrow();
+  });
+});
+
+const drawing = (id: string, wide: boolean, p = 0): string => renderToStaticMarkup(createElement(DoorDrawing, { id, wide, frame: doorFrame(id, p, wide) }));
+
+describe("the wide drawings of the two doors the page gives two columns", () => {
+  it("are the arena's and the live run's, on a canvas of their own that is wider than the shape they are used from", () => {
+    expect(DOOR_IDS.filter(hasWide)).toEqual(["arena", "live"]);
+    expect(CANVAS.width / CANVAS.height).toBeLessThan(WIDE_FROM);
+    expect(WIDE_CANVAS.width / WIDE_CANVAS.height).toBeGreaterThan(WIDE_FROM);
+    expect(WIDE_CANVAS.height).toBe(CANVAS.height);
+    expect(drawing("arena", true)).toContain(`viewBox="0 0 ${WIDE_CANVAS.width} ${WIDE_CANVAS.height}"`);
+    expect(drawing("live", false)).toContain(`viewBox="0 0 ${CANVAS.width} ${CANVAS.height}"`);
+  });
+
+  for (const id of ["arena", "live"]) {
+    it(`${id}: has the parts of the compact drawing, moved by frames that are complete, finite and smooth`, () => {
+      expect([...new Set(partsIn(drawing(id, true)))].sort()).toEqual([...new Set(partsIn(drawing(id, false)))].sort());
+      expect(partsIn(drawing(id, true))).toHaveLength(new Set(partsIn(drawing(id, true))).size);
+      expect(Object.keys(doorFrame(id, 0, true)).sort()).toEqual(Object.keys(doorFrame(id, 1, true)).sort());
+      expect(JSON.stringify(doorFrame(id, 0, true))).not.toBe(JSON.stringify(doorFrame(id, 1, true)));
+      let before = doorFrame(id, 0, true);
+      for (let i = 1; i <= 400; i++) {
+        const now = doorFrame(id, i / 400, true);
+        for (const [name, state] of Object.entries(now)) {
+          expect(JSON.stringify(state), name).not.toMatch(/NaN|undefined|Infinity/);
+          if (state.opacity !== undefined) expect(Math.abs(state.opacity - before[name]!.opacity!), `${name} opacity at ${i}`).toBeLessThan(0.1);
+          if (state.transform !== undefined) {
+            const a = numbers(before[name]!.transform!);
+            numbers(state.transform).forEach((n, k) => expect(Math.abs(n - a[k]!), `${name} transform at ${i}`).toBeLessThan(2.5));
+          }
+        }
+        before = now;
+      }
+    });
+  }
+
+  it("keep the arena's failure where the drawing has its dead coordinator and its dead worker, in both of its sizes", () => {
+    for (const wide of [false, true]) {
+      const { deadLeft, deadRight, swarm, workers } = arenaShape(wide);
+      const end = doorFrame("arena", 1, wide);
+      expect(end["x-left"]!.transform).toBe(`translate(${deadLeft[0].toFixed(2)} ${deadLeft[1].toFixed(2)}) scale(1.000)`);
+      expect(end["x-right"]!.transform).toBe(`translate(${deadRight[0].toFixed(2)} ${deadRight[1].toFixed(2)}) scale(1.000)`);
+      expect(swarm.tracks).toContainEqual(deadLeft);
+      expect(workers).toContainEqual(deadRight);
+      // the swarm has more coordinators than the one that fails, and the supervisor more workers than the one
+      expect(swarm.tracks.length).toBeGreaterThan(1);
+      expect(workers.length).toBeGreaterThan(1);
+    }
+    expect(arenaShape(true).workers.length).toBeGreaterThan(arenaShape(false).workers.length);
+    expect(liveShape(true).tree.leaves.length).toBeGreaterThan(liveShape(false).tree.leaves.length);
+  });
+
+  it("have the stream follow the whole of the arrow and the crosshair land on the last coordinator", () => {
+    for (const wide of [false, true]) {
+      const { arrow, flow, target, tree } = liveShape(wide);
+      expect(arrow[0] + flow).toBeGreaterThanOrEqual(arrow[1]);
+      expect(arrow[0] + flow).toBeLessThan(tree.leaves[0]![0]);
+      expect(target).toEqual(tree.tracks[tree.tracks.length - 1]);
+    }
+  });
+});
+
+/** Every number a path's absolute commands say, as the x and y it reaches (the only commands the glyphs use). */
+function pathPoints(d: string): [number, number][] {
+  const out: [number, number][] = [];
+  let x = 0;
+  let y = 0;
+  for (const [, cmd, args] of d.matchAll(/([A-Za-z])([^A-Za-z]*)/g)) {
+    const n = numbers(args!);
+    if (cmd === "M" || cmd === "L") for (let i = 0; i < n.length; i += 2) out.push([(x = n[i]!), (y = n[i + 1]!)]);
+    else if (cmd === "Q") for (let i = 0; i < n.length; i += 2) out.push([n[i]!, n[i + 1]!]);
+    else if (cmd === "H") for (const v of n) out.push([(x = v), y]);
+    else if (cmd === "V") for (const v of n) out.push([x, (y = v)]);
+    else if (cmd !== "Z") throw new Error(`the path command ${cmd} is not one the glyphs use, so the fit test cannot read it`);
+  }
+  return out;
+}
+
+/** The box the markup's circles, rectangles, lines and paths cover, leaving out the parts that are moved by a transform (their targets are held below). */
+function extent(html: string): { x0: number; y0: number; x1: number; y1: number } {
+  const still = html.replace(/<g data-part="[^"]*"[^>]*\btransform="[^"]*"[^>]*>[\s\S]*?<\/g>/g, "");
+  const attr = (tag: string, name: string): number => Number(new RegExp(`\\b${name}="(-?[\\d.]+)"`).exec(tag)?.[1] ?? 0);
+  const box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  const take = (x: number, y: number): void => {
+    box.x0 = Math.min(box.x0, x);
+    box.y0 = Math.min(box.y0, y);
+    box.x1 = Math.max(box.x1, x);
+    box.y1 = Math.max(box.y1, y);
+  };
+  for (const [tag] of still.matchAll(/<circle [^>]*>/g)) {
+    const [cx, cy, r] = [attr(tag, "cx"), attr(tag, "cy"), attr(tag, "r")];
+    take(cx - r, cy - r);
+    take(cx + r, cy + r);
+  }
+  for (const [tag] of still.matchAll(/<rect [^>]*>/g)) {
+    take(attr(tag, "x"), attr(tag, "y"));
+    take(attr(tag, "x") + attr(tag, "width"), attr(tag, "y") + attr(tag, "height"));
+  }
+  for (const [tag] of still.matchAll(/<line [^>]*>/g)) {
+    take(attr(tag, "x1"), attr(tag, "y1"));
+    take(attr(tag, "x2"), attr(tag, "y2"));
+  }
+  for (const [, d] of still.matchAll(/<path [^>]*\bd="([^"]*)"/g)) for (const [x, y] of pathPoints(d!)) take(x, y);
+  return box;
+}
+
+describe("a drawing fits its canvas", () => {
+  // two units of air inside the edge for the thickness of a stroke
+  const AIR = 2;
+  const cases = DOOR_IDS.flatMap((id) => (hasWide(id) ? [[id, false] as const, [id, true] as const] : [[id, false] as const]));
+
+  for (const [id, wide] of cases) {
+    it(`${id}${wide ? " (wide)" : ""}: everything that is drawn, and where each moving part ends up, is inside the canvas`, () => {
+      const canvas = wide ? WIDE_CANVAS : CANVAS;
+      const box = extent(drawing(id, wide));
+      expect(box.x0, "left").toBeGreaterThanOrEqual(AIR);
+      expect(box.y0, "top").toBeGreaterThanOrEqual(AIR);
+      expect(box.x1, "right").toBeLessThanOrEqual(canvas.width - AIR);
+      expect(box.y1, "bottom").toBeLessThanOrEqual(canvas.height - AIR);
+      // and the parts that move: every translate they reach, a part's reach from its own origin being at most 17 units (the crosshair's arms)
+      for (let i = 0; i <= 100; i++) {
+        for (const [name, state] of Object.entries(doorFrame(id, i / 100, wide))) {
+          if (!state.transform || state.opacity === 0 || name === "clapper") continue;
+          const [tx, ty] = numbers(state.transform);
+          // a stream dot is drawn at the start of the arrow and moved along it; every other part is moved to where it is
+          const stream = name.startsWith("stream-");
+          const x = stream ? liveShape(wide).arrow[0] + tx! : tx!;
+          const y = stream ? 55 : ty!;
+          const reach = name === "crosshair" ? 17 : name.startsWith("check-") ? 7 : name.startsWith("x-") ? 8 : 3;
+          if ((state.opacity ?? 1) < 0.5) continue;
+          expect(x - reach, `${name} left at ${i}`).toBeGreaterThanOrEqual(0);
+          expect(x + reach, `${name} right at ${i}`).toBeLessThanOrEqual(canvas.width);
+          if (name !== "scrub") {
+            expect(y - reach, `${name} top at ${i}`).toBeGreaterThanOrEqual(0);
+            expect(y + reach, `${name} bottom at ${i}`).toBeLessThanOrEqual(canvas.height);
+          }
+        }
+      }
+    });
+  }
+
+  it("director: the clapper, open or shut or on its way, never leaves the canvas, so the glyph's box is all it needs", () => {
+    const [hx, hy] = GEOM.director.hinge;
+    const { width, bar } = GEOM.director;
+    const corners = [[0, 0], [width, 0], [width, -bar], [0, -bar]] as const;
+    let highest = Infinity;
+    for (let i = 0; i <= 200; i++) {
+      const angle = Number(/rotate\((-?[\d.]+)/.exec(doorFrame("director", i / 200)["clapper"]!.transform!)![1]);
+      const t = (angle * Math.PI) / 180;
+      for (const [dx, dy] of corners) {
+        const x = hx + dx * Math.cos(t) - dy * Math.sin(t);
+        const y = hy + dx * Math.sin(t) + dy * Math.cos(t);
+        highest = Math.min(highest, y);
+        expect(x).toBeGreaterThanOrEqual(AIR);
+        expect(x).toBeLessThanOrEqual(CANVAS.width - AIR);
+        expect(y).toBeGreaterThanOrEqual(AIR);
+        expect(y).toBeLessThanOrEqual(CANVAS.height - AIR);
+      }
+    }
+    // and it opens as far as the canvas allows, so that it is not drawn smaller than it has to be
+    expect(highest).toBeLessThan(AIR + 4);
   });
 });

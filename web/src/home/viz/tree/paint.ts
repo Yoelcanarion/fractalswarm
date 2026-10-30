@@ -23,7 +23,11 @@ export class Pen<E extends Element> {
   text(value: string): void {
     if (this.last["#text"] !== value) {
       this.last["#text"] = value;
-      this.el.textContent = value;
+      // The text node is changed where it stands: replacing it (what textContent does) rebuilds the element's text, which costs
+      // several times more in a browser that paints in software.
+      const only = this.el.firstChild;
+      if (only && only.nodeType === 3 && only === this.el.lastChild) only.nodeValue = value;
+      else this.el.textContent = value;
     }
   }
 }
@@ -176,7 +180,10 @@ export function paintTree(rig: TreeRig, frame: TreeFrame): void {
   for (const [id, pen] of Object.entries(rig.edges)) paintEdge(pen, byChild.get(id));
   rig.dashes.forEach((pen, i) => paintDash(pen, frame.dashes[i]));
   rig.clock?.text(`${(frame.tMs / 1000).toFixed(1)} s`);
-  rig.memorial?.set("opacity", frame.killed > 0 ? smoothstep(span(frame.appear, 0.7, 1)) : 0);
+  // The label names the brains in the memorial row, so it comes in as the first dead one sets off for it, not when the first one
+  // dies: the hero shows a killed brain for a while, stamped, in its place in the tree, and a label over an empty row says nothing.
+  const gone = frame.nodes.reduce((far, n) => (n.state === "dead" ? Math.max(far, n.buried) : far), 0);
+  rig.memorial?.set("opacity", smoothstep(span(gone, 0, 0.3)) * smoothstep(span(frame.appear, 0.7, 1)));
 }
 
 /** Copies the ambient layer onto the SVG: a pulse on each edge, a halo on each brain, a ring on each working agent. */

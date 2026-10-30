@@ -1,8 +1,8 @@
-import { useCallback, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import { Pen } from "../tree/paint";
 import { fx, useProgress, type VizProps } from "../shared";
 import "../viz.css";
-import { DOOR_LABELS, GEOM, doorFrame, isDoor, type DoorFrame } from "./doors";
+import { CANVAS, DOOR_LABELS, GEOM, WIDE_CANVAS, WIDE_FROM, arenaShape, doorFrame, hasWide, isDoor, liveShape, type DoorFrame, type Pt } from "./doors";
 
 type Part = (name: string, children: ReactNode) => ReactNode;
 
@@ -10,24 +10,28 @@ const node = (cx: number, cy: number, className: string, r = 5) => <circle key={
 const edge = (x1: number, y1: number, x2: number, y2: number) => <line key={`${x1}-${y1}-${x2}-${y2}`} className="hv-dg-edge" x1={x1} y1={y1} x2={x2} y2={y2} />;
 const cross = (s = 6.5) => <path className="hv-dg-x" d={`M${-s} ${-s}L${s} ${s}M${s} ${-s}L${-s} ${s}`} />;
 
+const link = (a: Pt, b: Pt) => edge(a[0], a[1], b[0], b[1]);
+
 /** Two systems, hit by the same failure at the same moment: a swarm of coordinators, and a supervisor over its workers. */
-function Arena({ part }: { part: Part }) {
-  const left = [[17, 82], [43, 82], [67, 82], [93, 82]] as const;
-  const workers = [130, 153, 177, 200] as const;
+function Arena({ part, wide }: { part: Part; wide: boolean }) {
+  const { divider, swarm, deadTrack, supervisor, workers, deadWorker } = arenaShape(wide);
+  const { root, tracks, leaves } = swarm;
+  const under = (t: number): Pt[] => [leaves[2 * t]!, leaves[2 * t + 1]!];
+  const alive = tracks.map((t, i) => ({ t, i })).filter(({ i }) => i !== deadTrack);
+  const livingWorkers = workers.filter((_, i) => i !== deadWorker);
   return (
     <>
-      <line className="hv-dg-divider" x1="110" y1="8" x2="110" y2="102" />
-      {edge(55, 18, 80, 50)}
-      {edge(80, 50, 67, 82)}
-      {edge(80, 50, 93, 82)}
-      {part("dead-left", [edge(55, 18, 30, 50), edge(30, 50, 17, 82), edge(30, 50, 43, 82), node(30, 50, "hv-dg-node")])}
-      {node(55, 18, "hv-dg-node")}
-      {node(80, 50, "hv-dg-node")}
-      {left.map(([x, y]) => node(x, y, "hv-dg-node"))}
-      {workers.filter((x) => x !== GEOM.arena.deadRight[0]).map((x) => edge(165, 24, x, 82))}
-      {part("dead-right", [edge(165, 24, GEOM.arena.deadRight[0], 82), node(GEOM.arena.deadRight[0], 82, "hv-dg-node hv-dg-node--rival")])}
-      <rect className="hv-dg-node hv-dg-node--rival" x="158" y="12" width="14" height="14" rx="2.5" />
-      {workers.filter((x) => x !== GEOM.arena.deadRight[0]).map((x) => node(x, 82, "hv-dg-node hv-dg-node--rival"))}
+      <line className="hv-dg-divider" x1={divider} y1="8" x2={divider} y2="102" />
+      {alive.map(({ t }) => link(root, t))}
+      {alive.flatMap(({ t, i }) => under(i).map((leaf) => link(t, leaf)))}
+      {part("dead-left", [link(root, tracks[deadTrack]!), ...under(deadTrack).map((leaf) => link(tracks[deadTrack]!, leaf)), node(tracks[deadTrack]![0], tracks[deadTrack]![1], "hv-dg-node")])}
+      {node(root[0], root[1], "hv-dg-node")}
+      {alive.map(({ t }) => node(t[0], t[1], "hv-dg-node"))}
+      {leaves.map(([x, y]) => node(x, y, "hv-dg-node"))}
+      {livingWorkers.map((w) => link(supervisor, w))}
+      {part("dead-right", [link(supervisor, workers[deadWorker]!), node(workers[deadWorker]![0], workers[deadWorker]![1], "hv-dg-node hv-dg-node--rival")])}
+      <rect className="hv-dg-node hv-dg-node--rival" x={supervisor[0] - 7} y="12" width="14" height="14" rx="2.5" />
+      {livingWorkers.map(([x, y]) => node(x, y, "hv-dg-node hv-dg-node--rival"))}
       {part("x-left", cross())}
       {part("x-right", cross())}
     </>
@@ -35,31 +39,22 @@ function Arena({ part }: { part: Part }) {
 }
 
 /** A pasted text, a run, and a crosshair on one of its coordinators. */
-function Live({ part }: { part: Part }) {
-  const leaves = [[127, 82], [153, 82], [177, 82], [203, 82]] as const;
-  const all: (readonly [number, number])[] = [[165, 18], [140, 50], [190, 50], ...leaves];
+function Live({ part, wide }: { part: Part; wide: boolean }) {
+  const { box, lines, arrow, tree } = liveShape(wide);
+  const { root, tracks, leaves } = tree;
+  const all: Pt[] = [root, ...tracks, ...leaves];
   return (
     <>
-      <rect className="hv-dg-box" x="6" y="18" width="78" height="74" rx="7" />
-      {[
-        [33, 65],
-        [45, 71],
-        [57, 47],
-        [69, 68],
-        [80, 55],
-      ].map(([y, x2]) => (
-        <line key={y} className="hv-dg-ink" x1="17" y1={y} x2={x2} y2={y} />
+      <rect className="hv-dg-box" x={box[0]} y={box[1]} width={box[2]} height={box[3]} rx="7" />
+      {lines.map(([y, x2]) => (
+        <line key={y} className="hv-dg-ink" x1={box[0] + 11} y1={y} x2={x2} y2={y} />
       ))}
-      <path className="hv-dg-edge" d="M92 55H112M106 49L113 55L106 61" />
-      {edge(165, 18, 140, 50)}
-      {edge(165, 18, 190, 50)}
-      {edge(140, 50, 127, 82)}
-      {edge(140, 50, 153, 82)}
-      {edge(190, 50, 177, 82)}
-      {edge(190, 50, 203, 82)}
+      <path className="hv-dg-edge" d={`M${arrow[0]} 55H${arrow[1] - 1}M${arrow[1] - 7} 49L${arrow[1]} 55L${arrow[1] - 7} 61`} />
+      {tracks.map((t) => link(root, t))}
+      {tracks.flatMap((t, i) => [leaves[2 * i]!, leaves[2 * i + 1]!].map((leaf) => link(t, leaf)))}
       {all.map(([x, y]) => node(x, y, "hv-dg-node hv-dg-node--ring"))}
       {part("tree-fill", all.map(([x, y]) => node(x, y, "hv-dg-node")))}
-      {[0, 1, 2].map((i) => part(`stream-${i}`, <circle className="hv-dg-dot" cx="92" cy="55" r="2.5" />))}
+      {[0, 1, 2].map((i) => part(`stream-${i}`, <circle className="hv-dg-dot" cx={arrow[0]} cy="55" r="2.5" />))}
       {part(
         "crosshair",
         <>
@@ -96,23 +91,30 @@ function Replays({ part }: { part: Part }) {
 
 /** A clapperboard, its clapper open at rest and shut when the pointer is on it. */
 function Director({ part }: { part: Part }) {
-  const stripes = (top: number, bottom: number, shift: number): string =>
-    [0, 1, 2, 3, 4].map((i) => `M${46 + shift + 28 * i} ${bottom}L${54 + shift + 28 * i} ${top}H${62 + shift + 28 * i}L${54 + shift + 28 * i} ${bottom}Z`).join("");
+  const [x0, hy] = GEOM.director.hinge;
+  const { width, bar, bottom } = GEOM.director;
+  // diagonal stripes on a bar: `count` of them from `from`, a step apart; the clapper's fall between the stick's
+  const stripes = (top: number, base: number, from: number, count: number): string =>
+    Array.from({ length: count }, (_, i) => {
+      const x = from + 24 * i;
+      return `M${x} ${base}L${x + 8} ${top}H${x + 16}L${x + 8} ${base}Z`;
+    }).join("");
+  const lines = [0, 1, 2].map((i) => hy + 19 + 10 * i);
   return (
     <>
-      <rect className="hv-dg-box" x="36" y="52" width="148" height="48" rx="4" />
-      <rect className="hv-dg-box" x="36" y="46" width="148" height="8" rx="2" />
-      <path className="hv-dg-stripe" d={stripes(46, 54, 0)} />
+      <rect className="hv-dg-box" x={x0} y={hy + 6} width={width} height={bottom - hy - 6} rx="4" />
+      <rect className="hv-dg-box" x={x0} y={hy} width={width} height="8" rx="2" />
+      <path className="hv-dg-stripe" d={stripes(hy, hy + 8, x0 + 6, 6)} />
       {part(
         "board-lines",
-        <path className="hv-dg-ink hv-dg-ink--fine" d="M48 68H100M48 80H124M48 92H88" />,
+        <path className="hv-dg-ink hv-dg-ink--fine" d={`M${x0 + 12} ${lines[0]}H${x0 + 64}M${x0 + 12} ${lines[1]}H${x0 + 88}M${x0 + 12} ${lines[2]}H${x0 + 52}`} />,
       )}
       {part(
         "clapper",
         <>
-          <rect className="hv-dg-box" x="36" y="32" width="148" height="14" rx="2" />
-          <path className="hv-dg-stripe" d={stripes(32, 46, 14)} />
-          <circle className="hv-dg-hinge" cx="36" cy="46" r="3" />
+          <rect className="hv-dg-box" x={x0} y={hy - bar} width={width} height={bar} rx="2" />
+          <path className="hv-dg-stripe" d={stripes(hy - bar, hy, x0 + 18, 5)} />
+          <circle className="hv-dg-hinge" cx={x0} cy={hy} r="3" />
         </>,
       )}
     </>
@@ -121,13 +123,14 @@ function Director({ part }: { part: Part }) {
 
 /** A chart with two lines, and a marker that runs along it. */
 function Numbers({ part }: { part: Part }) {
-  const a: [number, number][] = [[24, 78], [64, 70], [104, 52], [144, 48], [204, 30]];
-  const b: [number, number][] = [[24, 60], [64, 62], [104, 66], [144, 54], [204, 70]];
+  const { from, to } = GEOM.numbers;
+  const a: [number, number][] = [[from, 78], [54, 70], [99, 52], [143, 48], [210, 30]];
+  const b: [number, number][] = [[from, 60], [54, 62], [99, 66], [143, 54], [210, 70]];
   const line = (points: [number, number][]): string => `M${points.map(([x, y]) => `${x} ${y}`).join("L")}`;
   return (
     <>
-      <path className="hv-dg-soft" d="M24 36H206M24 64H206" />
-      <path className="hv-dg-edge" d="M24 12V92H206" />
+      <path className="hv-dg-soft" d={`M${from} 36H${to}M${from} 64H${to}`} />
+      <path className="hv-dg-edge" d={`M${from} 12V92H${to}`} />
       <path className="hv-dg-chart hv-dg-chart--a" d={line(a)} />
       <path className="hv-dg-chart hv-dg-chart--b" d={line(b)} />
       {GEOM.numbers.marks.map((x, j) => {
@@ -177,23 +180,11 @@ export function paintDoor(pens: Map<string, Pen<SVGGElement>>, frame: DoorFrame)
   }
 }
 
-/** The door's pictogram, 220 by 110, kept to the left of its frame as the door's words are. `data` is the door's id. */
-export function DoorGlyph({ progress, data: id, still, stillAt, className }: VizProps<string>) {
-  const svg = useRef<SVGSVGElement>(null);
-  const pens = useRef<Map<string, Pen<SVGGElement>>>(new Map());
-  const apply = useCallback(
-    (p: number) => {
-      paintDoor(pens.current, doorFrame(id, p));
-    },
-    [id],
-  );
-  useLayoutEffect(() => {
-    pens.current = collectDoor(svg.current);
-  }, [id]);
-  useProgress(progress, apply, still, stillAt);
-
-  // What the markup says before anything is drawn is the picture the first frame will be.
-  const frame = doorFrame(id, still ? (stillAt ?? 1) : progress.get());
+/**
+ * The door's drawing in one frame: 220 by 110, or 480 by 110 for the wide drawing of the two doors that have one, kept to the
+ * left of its box as the door's words are. A drawing that does not fit its box is made smaller, never cropped.
+ */
+export function DoorDrawing({ id, wide, frame, className, svgRef }: { id: string; wide: boolean; frame: DoorFrame; className?: string; svgRef?: Ref<SVGSVGElement> }) {
   const part: Part = (name, children) => {
     const state = frame[name] ?? {};
     return (
@@ -203,18 +194,64 @@ export function DoorGlyph({ progress, data: id, still, stillAt, className }: Viz
     );
   };
   const Glyph = isDoor(id) ? GLYPHS[id] : null;
-
+  const canvas = wide ? WIDE_CANVAS : CANVAS;
   return (
     <svg
-      ref={svg}
+      ref={svgRef}
       className={className ? `hv hv-dg ${className}` : "hv hv-dg"}
-      viewBox="0 0 220 110"
+      viewBox={`0 0 ${canvas.width} ${canvas.height}`}
       preserveAspectRatio="xMinYMid meet"
       role="img"
       aria-label={isDoor(id) ? DOOR_LABELS[id] : "A door"}
       data-door={id}
+      data-wide={wide ? "" : undefined}
     >
-      {Glyph ? <Glyph part={part} /> : null}
+      {Glyph ? <Glyph part={part} wide={wide} /> : null}
     </svg>
   );
+}
+
+/**
+ * Whether the glyph's box has the shape of the door's wide drawing. The shape of the box decides, not the width of the window: the
+ * page may give the doors another number of columns, and the drawing still fits what it is given. It is settled before the first
+ * paint, so the door is never seen in the wrong drawing.
+ */
+function useWide(id: string, svg: RefObject<SVGSVGElement | null>): boolean {
+  const [wide, setWide] = useState(false);
+  useLayoutEffect(() => {
+    const el = svg.current;
+    if (!el || !hasWide(id) || typeof ResizeObserver === "undefined") {
+      setWide(false);
+      return undefined;
+    }
+    const measure = () => {
+      const box = el.getBoundingClientRect();
+      setWide(box.height > 0 && box.width / box.height >= WIDE_FROM);
+    };
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(el);
+    return () => watch.disconnect();
+  }, [id, svg]);
+  return wide;
+}
+
+/** The door's pictogram, kept to the left of its box as the door's words are. `data` is the door's id. */
+export function DoorGlyph({ progress, data: id, still, stillAt, className }: VizProps<string>) {
+  const svg = useRef<SVGSVGElement>(null);
+  const pens = useRef<Map<string, Pen<SVGGElement>>>(new Map());
+  const wide = useWide(id, svg);
+  const apply = useCallback(
+    (p: number) => {
+      paintDoor(pens.current, doorFrame(id, p, wide));
+    },
+    [id, wide],
+  );
+  useLayoutEffect(() => {
+    pens.current = collectDoor(svg.current);
+  }, [id, wide]);
+  useProgress(progress, apply, still, stillAt);
+
+  // What the markup says before anything is drawn is the picture the first frame will be.
+  return <DoorDrawing id={id} wide={wide} frame={doorFrame(id, still ? (stillAt ?? 1) : progress.get(), wide)} className={className} svgRef={svg} />;
 }
