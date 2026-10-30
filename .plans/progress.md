@@ -1423,3 +1423,9 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 - **W6:** the Director door is a dead end and the Model against parser door opens an empty page, so both come off the home page until they have content; every cost figure names its basis, since R5 has two; two sentences that are not in `docs/claims.md`.
 - **W4:** the tree on the run page; jargon; `Play from the start` keeps its label while playing; every app page scrolls 246 px sideways on a phone.
 - **W7's order:** ten seeds, demo, step card, Proof in two columns, film captions, hero. The demo goes before the rest because it is the home page's main action.
+
+**Green again at d743840, on 8765 from 23:52, pushed.** W7's ten seeds, film captions and demo layout (62d0e52), W6's four doors, cost basis and words (5d6d834). 8765 was restarted, so the Charts page offers `headline-10` first.
+- **Checks:** the whole pytest in chunks at a6960e3, all green: unit 1,097, integration 902 (320, 169, 120, 107, 186), strict 13, PromptGuard 3. Only web code and this log changed after it. At d743840: web suite 2,109 green, tsc clean, `story.json` current, ruff, `demo --verify` and both other replays MATCH, 43 of 43 reference runs identical.
+- **The home page:** 5,357, 4,421 and 5,608 px at 1920, 1366 and 390 wide. Seen at 1366x768: the Proof shows 11.2 s against 42.8 s and ten dots a row, and the demo shows its buttons in one window.
+- **Spend:** unchanged tonight since 22:37: remaining $92.06 of $150, with $11.37 of that held by stale reservations.
+- **Paid queue:** LangGraph ($4 worst case, 8 cells) and scaling ($10, 20 cells) wait for a window with the workers on HOLD. The UI comes first. **Decision:** no automatic start. CPU cannot tell a working session from an idle one here (both use about 1–2 s per 20 s), and nothing forces these runs tonight.
