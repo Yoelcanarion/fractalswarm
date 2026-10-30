@@ -137,9 +137,10 @@ def _working(job: dict[str, Any] | None) -> bool:
 
 
 def _approved_summary(approved: dict[str, Any] | None) -> dict[str, Any] | None:
+    """What a person approved, ``proposal`` included: the state's own ``proposal`` stays Muse's."""
     if approved is None:
         return None
-    keep = ("sha256", "approved_at", "edits", "truth_mode", "names_pseudonymized")
+    keep = ("sha256", "approved_at", "edits", "truth_mode", "names_pseudonymized", "proposal")
     return {key: approved[key] for key in keep}
 
 
