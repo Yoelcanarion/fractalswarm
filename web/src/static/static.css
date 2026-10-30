@@ -21,6 +21,12 @@ html[data-staticbar="on"] #root {
   flex-shrink: 0;
 }
 
+/* The director's list and its "this scene cannot be shown" cards are a window tall (min-height: 100vh, director.css),
+   which would scroll the page by the banner's height: make them as tall as the space the banner leaves. */
+html[data-staticbar="on"] .dir-page {
+  min-height: 100%;
+}
+
 .staticbar {
   position: relative;
   display: flex;

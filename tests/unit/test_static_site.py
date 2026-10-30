@@ -331,6 +331,70 @@ class TestPairsAndTheRunsTheyNeed:
         assert answer_of(site, site.manifest["global"]["pairs"]) == (200, [])
 
 
+class TestTheRunsTheDirectorPlays:
+    # The director's scenes are linked from the home page. A scene never names its runs:
+    # web/src/director/sources.json does, once the final pair is chosen, and the site must hold
+    # them.
+    @staticmethod
+    def sources(tmp_path: Path, **named: Any) -> Path:
+        empty = {"swarm": None, "rival": None, "run": None, "ablation": None, "real": False}
+        file = tmp_path / "sources.json"
+        file.write_text(json.dumps(empty | named), encoding="utf-8")
+        return file
+
+    def test_a_site_that_holds_the_named_runs_has_nothing_to_say(self, tmp_path: Path) -> None:
+        file = self.sources(tmp_path, swarm="t2-swarm", rival="t2-central")
+        assert build.director_notes(file, ["t2-swarm", "t2-central", "demo-toy"]) == []
+
+    def test_a_named_run_the_site_does_not_hold_is_named_in_a_note(self, tmp_path: Path) -> None:
+        file = self.sources(tmp_path, swarm="t2-swarm", rival="t2-central", run="t2-other")
+        notes = build.director_notes(file, ["t2-swarm"])
+        assert len(notes) == 2
+        assert "rival 't2-central'" in notes[0] and "--runs or --pair" in notes[0]
+        assert "run 't2-other'" in notes[1]
+
+    def test_a_file_that_names_no_run_yet_says_so(self, tmp_path: Path) -> None:
+        notes = build.director_notes(self.sources(tmp_path), ["demo-toy"])
+        assert len(notes) == 1 and "names no run yet" in notes[0]
+
+    def test_an_ablation_needs_the_local_server(self, tmp_path: Path) -> None:
+        file = self.sources(tmp_path, swarm="a", rival="b", ablation="ablation-1")
+        notes = build.director_notes(file, ["a", "b"])
+        assert len(notes) == 1 and "needs the local server" in notes[0]
+
+    @pytest.mark.parametrize("text", ["", "{", "[]", '"swarm"'])
+    def test_a_file_that_does_not_read_is_one_note_not_a_crash(
+        self, tmp_path: Path, text: str
+    ) -> None:
+        file = tmp_path / "sources.json"
+        file.write_text(text, encoding="utf-8")
+        notes = build.director_notes(file, [])
+        assert len(notes) == 1 and "sources.json could not be read" in notes[0]
+
+    def test_a_file_that_is_not_there_is_the_same_note(self, tmp_path: Path) -> None:
+        notes = build.director_notes(tmp_path / "missing.json", [])
+        assert len(notes) == 1 and "missing.json could not be read" in notes[0]
+
+    def test_the_directors_own_file_reads(self) -> None:
+        notes = build.director_notes(build.DIRECTOR_SOURCES, [])
+        assert not any("could not be read" in note for note in notes)
+
+    def test_the_notes_are_in_the_build_output(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        assert "note: director: x" in build.describe(build.SiteReport(notes=["director: x"]))
+        for name, value in (
+            ("RUNS_DIR", "runs"),
+            ("PRIVATE_DIR", "private"),
+            ("LEDGER_PATH", "ledger.sqlite"),
+        ):
+            monkeypatch.setenv(f"FRACTALSWARM_{name}", str(tmp_path / value))
+        monkeypatch.setattr(build, "DIRECTOR_SOURCES", self.sources(tmp_path, swarm="t2-swarm"))
+        argv = ["--runs", TOY, "--out", str(tmp_path / "site"), "--no-build"]
+        assert build.main([*argv, "--bench-dir", str(tmp_path)]) == 0
+        assert "note: director: sources.json names swarm 't2-swarm'" in capsys.readouterr().out
+
+
 class TestALogInPages:
     def test_pages_tile_the_log_and_end_where_the_api_says_it_does(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

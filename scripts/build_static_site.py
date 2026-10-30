@@ -24,7 +24,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -40,6 +40,7 @@ from fractalswarm.runs import SCENARIOS
 
 REPO = Path(__file__).resolve().parents[1]
 WEB = REPO / "web"
+DIRECTOR_SOURCES = WEB / "src" / "director" / "sources.json"  # the runs the director's scenes play
 DEFAULT_RUNS = ("demo/backup", "demo/toy")
 DEFAULT_OUT = REPO / "dist" / "static-site"  # under dist/, which .gitignore already covers
 DATA = "data"
@@ -110,6 +111,7 @@ class SiteReport:
     pairs: list[str] = field(default_factory=list)
     data_bytes: int = 0
     web_bytes: int = 0
+    notes: list[str] = field(default_factory=list)
 
     @property
     def total_bytes(self) -> int:
@@ -588,6 +590,39 @@ def tree_bytes(folder: Path) -> int:
     return sum(path.stat().st_size for path in folder.rglob("*") if path.is_file())
 
 
+def director_notes(sources_file: Path, run_ids: Iterable[str]) -> list[str]:
+    """What the director's scenes (``#/director``, linked from the home page) need that this site
+    does not hold. A scene never names its runs: ``sources.json`` does, once the final pair is
+    chosen, and the site must hold those runs or the scene cannot play. Notes, not a failure: the
+    file names nothing until then."""
+    try:
+        named = json.loads(sources_file.read_text(encoding="utf-8"))
+        if not isinstance(named, dict):
+            raise ValueError("not a JSON object")
+    except (OSError, ValueError) as exc:
+        return [f"director: {sources_file.name} could not be read ({exc})"]
+    held = set(run_ids)
+    notes: list[str] = []
+    for role in ("swarm", "rival", "run"):
+        run_id = named.get(role)
+        if isinstance(run_id, str) and run_id not in held:
+            notes.append(
+                f"director: {sources_file.name} names {role} {run_id!r}, which this site does not "
+                "hold, so the scenes that play it cannot (publish it with --runs or --pair)"
+            )
+    if not any(isinstance(named.get(role), str) for role in ("swarm", "rival", "run")):
+        notes.append(
+            f"director: {sources_file.name} names no run yet, so each scene of the director says "
+            "which runs it needs"
+        )
+    if isinstance(named.get("ablation"), str):
+        notes.append(
+            f"director: {sources_file.name} names an ablation; an ablation needs the local server, "
+            "so its scene says so on this site"
+        )
+    return notes
+
+
 # ---- git and the command line -----------------------------------------------------------------
 
 
@@ -660,6 +695,7 @@ def describe(report: SiteReport, budget_mb: int = BUDGET_MB) -> str:
     if report.pairs:
         lines.append("pairs: " + ", ".join(report.pairs))
     lines += [f"note: {note}" for run in report.runs for note in run.notes]
+    lines += [f"note: {note}" for note in report.notes]
     return "\n".join(lines)
 
 
@@ -690,6 +726,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             shutil.rmtree(out, ignore_errors=True)
             out.mkdir(parents=True)
         report = export_site(sources, pair_sources, out, provenance, args.bench_dir, settings)
+        report.notes += director_notes(DIRECTOR_SOURCES, [run.run_id for run in report.runs])
         finish(out)
         report.web_bytes = tree_bytes(out) - report.data_bytes
         findings = scan(out, forbidden(settings, settings.private_dir))

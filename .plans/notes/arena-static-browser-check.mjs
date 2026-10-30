@@ -64,11 +64,13 @@ const overflowOf = (page) =>
 const badgeSelector = ".badge--good";
 
 /** Open one hash route of the site and run the checks every page has to pass. */
-async function visit(name, hash, { banner = true, needles = [], badge = false, wait, viewport, shoot = true, scroll = true } = {}) {
+async function visit(name, hash, { banner = true, needles = [], badge = false, wait, viewport, shoot = true, scroll = true, dataOnly } = {}) {
   console.log(`\n== ${name}  ${hash || "(no hash)"}`);
   const page = await context.newPage();
   if (viewport) await page.setViewportSize(viewport);
   watch(page, name);
+  const asked = new Set();
+  page.on("request", (r) => asked.add(new URL(r.url()).pathname));
   const started = Date.now();
   await page.goto(baseUrl + hash, { waitUntil: "load" });
   if (badge) await page.waitForSelector(badgeSelector, { timeout: 120000 });
@@ -78,6 +80,11 @@ async function visit(name, hash, { banner = true, needles = [], badge = false, w
   timings[name] = Date.now() - started;
   console.log(`  ready after ${timings[name]} ms`);
 
+  if (dataOnly) {
+    // a page that needs no run asks for the manifest and for nothing else under data/
+    const extra = [...asked].filter((path) => path.includes("/data/") && !dataOnly.some((file) => path.endsWith(`/data/${file}`)));
+    if (extra.length) problem(name, `the page asked for data files it should not need: ${extra.join(", ")}`);
+  }
   const shown = await bannerOf(page);
   if (banner && !shown?.startsWith(BANNER)) problem(name, `banner is ${JSON.stringify(shown)}`);
   if (!banner && shown !== null) problem(name, `the banner is on this page: ${JSON.stringify(shown)}`);
@@ -102,9 +109,44 @@ async function visit(name, hash, { banner = true, needles = [], badge = false, w
   return page;
 }
 
-// ---- home: no banner on the hero
-for (const [name, hash] of [["home-empty", ""], ["home-slash", "#/"]]) {
-  const page = await visit(name, hash, { banner: false, scroll: false });
+// ---- home (W6's page): no banner, and no run needed: the manifest is the only file it asks for under data/
+for (const [name, hash] of [["home-empty", ""], ["home-slash", "#/"], ["home-name", "#/home"]]) {
+  const page = await visit(name, hash, { banner: false, scroll: false, dataOnly: ["manifest.json"], needles: ["Kill half the brains"] });
+  await page.close();
+}
+
+// ---- home: the doors. The two that need the server are closed and say so; the others lead to pages that open with the
+// banner back, and coming back to the home page takes it away again
+{
+  const name = "home-doors";
+  const page = await visit(name, "#/", { banner: false, scroll: false, dataOnly: ["manifest.json"], shoot: false });
+  const open = await page.locator("a.home-door").count();
+  const closed = await page.locator(".home-door--closed").count();
+  console.log(`  ${open} open doors, ${closed} closed`);
+  if (open !== 4 || closed !== 2) problem(name, `4 open and 2 closed doors expected, found ${open} and ${closed}`);
+  for (const note of await page.locator(".home-door--closed .home-door__note").allInnerTexts()) {
+    if (!/needs the local server/i.test(note)) problem(name, `a closed door does not say it needs the local server: ${JSON.stringify(note)}`);
+  }
+  for (const href of ["#/arena", "#/runs", "#/director", "#/charts"]) {
+    const door = page.locator(`a.home-door[href="${href}"]`);
+    await door.scrollIntoViewIfNeeded();
+    await door.click();
+    await page.waitForFunction((wanted) => window.location.hash === wanted, href);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(800);
+    const shown = await bannerOf(page);
+    if (!shown?.startsWith(BANNER)) problem(name, `the banner is ${JSON.stringify(shown)} on ${href}, reached from the home page`);
+    const body = await text(page);
+    if (/\bundefined\b|\bNaN\b|\[object Object\]/.test(body)) problem(name, `${href} shows undefined, NaN or [object Object]`);
+    if (body.trim().length < 40) problem(name, `${href} is (nearly) blank, reached from the home page`);
+    const overflow = await overflowOf(page);
+    if (overflow.y > 1) problem(name, `${href} scrolls as a whole after the home page: ${overflow.y}px`);
+    await shot(page, `${name}-${href.slice(2)}`);
+    await page.goBack();
+    await page.waitForFunction(() => window.location.hash === "#/" || window.location.hash === "");
+    await page.waitForTimeout(500);
+    if ((await bannerOf(page)) !== null) problem(name, `the banner is still on the home page after coming back from ${href}`);
+  }
   await page.close();
 }
 
@@ -148,6 +190,8 @@ const pages = [
   ["charts", "#/charts", []],
   ["helps", "#/helps", []],
   ["runs", "#/runs", RUNS],
+  ["director-list", "#/director", ["Director", "s1-arena-open"]],
+  ["director-no-runs", "#/director/s1-arena-open", []], // sources.json names no run until W5 fills it: read what a visitor sees
   ["arena-picker", "#/arena", left === "-" ? [] : [left]],
   ["new-run", "#/new", ["fractalswarm serve", "Use the sample text"]],
   ["ablation", "#/ablation", ["Run the ablation"]],
@@ -163,6 +207,43 @@ if (left !== "-") {
   await page.reload({ waitUntil: "load" });
   await page.waitForLoadState("networkidle");
   await shot(page, "arena-pair-reloaded");
+  await page.close();
+}
+
+// ---- the director's scenes that can play here, on the runs the site holds (a frame is a window tall, with nothing around it).
+// The ablation scene reads GET api/ablation/<id>, which needs the server: read what it says.
+{
+  const scenes = [
+    ["director-s1", `#/director/s1-arena-open?swarm=${left}&rival=${right}`, left !== "-"],
+    ["director-s4", `#/director/s4-lens?run=${RUNS[0]}`, true],
+    ["director-s5", `#/director/s5-recovery?run=${RUNS[0]}`, true],
+    ["director-s7", "#/director/s7-where-it-helps", true],
+    ["director-s9", "#/director/s9-close", true],
+    ["director-s3-ablation", "#/director/s3-ablation?ablation=ablation-x", true],
+  ];
+  for (const [name, hash, wanted] of scenes) {
+    if (!wanted) continue;
+    const page = await visit(name, hash, { wait: (p) => p.waitForTimeout(5000) });
+    await page.close();
+  }
+}
+
+// ---- the Runs page (W4): "Verify all" gives the verdict of the build, and never says a replay ran in the browser
+{
+  const name = "runs-verify";
+  const page = await visit(name, "#/runs", { needles: RUNS, shoot: false });
+  const verifyAll = page.getByRole("button", { name: /verify all/i });
+  if ((await verifyAll.count()) === 0) warn(name, "no 'Verify all' button on the Runs page: is W4's page merged?");
+  else {
+    await verifyAll.first().click();
+    await page.waitForFunction(() => /Replay verified/.test(document.body.innerText), null, { timeout: 120000 });
+    await page.waitForTimeout(800);
+    const body = await text(page);
+    const html = await page.content();
+    if (!/Replay verified at build/.test(body)) problem(name, "the Runs page does not say the replays were verified at build");
+    if (/re-run from run\.started|Replaying/.test(`${body}\n${html}`)) problem(name, "the Runs page says a replay ran in the browser");
+    await shot(page, name);
+  }
   await page.close();
 }
 
