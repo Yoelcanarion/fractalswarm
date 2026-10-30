@@ -29,7 +29,7 @@ export const COPY = {
   description:
     "Kill half the brains. It still finishes. FractalSwarm is a multi-agent runtime on Muse Spark and Muse Wonder. Scroll through the problem, the design and the evidence, then step into the simulation.",
 
-  bar: { brand: "FractalSwarm", enter: "Enter the simulation", skip: "Skip to the story", rail: "Chapters" },
+  bar: { brand: "FractalSwarm", enter: "Enter the simulation", enterShort: "Enter", skip: "Skip to the story", rail: "Chapters" },
 
   labels: { stalled: "stalled", extraCost: "extra cost" },
 

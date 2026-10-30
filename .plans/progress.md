@@ -1312,3 +1312,47 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 - **On origin:** arena (this commit), `arena-home` 2588ed8, `arena-home-viz` a0e8465, `arena-ui-core` e1e67ec, `w8-static-showcase` d953306.
 - **The machine rebooted at 15:31.** Every terminal and session of the run is gone, and the dispatches above have lost their terminals. Worktrees, branches and transcripts are intact. The workers' sessions can be resumed with `claude --resume`: W6 b63d769b-820f-437b-b2d7-b312b1b9be90, W7 8ad0c2fd-cfd1-4236-b74a-b627b4910230, W4 9e97009a-a246-4f4b-9410-64146e824692, W8 0e0ca852-a3e9-4a10-9046-3faf8aab2db5.
 - **Yoel (15:35): continue as we left it.** Step 1 needs no question: §M item 13 says that Yoel says when he needs the machine.
+
+**Resumed at 15:43 CET (second coordinator).** The Run is bound to the new terminal `term_d0a5cf40`.
+
+**Workers:** all four sessions were resumed with their context, in auto mode, by `coord\resume_worker.ps1`, and each got a new Task on its own terminal. A `--retry-of` would have replayed the old spec from step 1, so the old Tasks are marked failed, superseded. All four start on HOLD.
+
+| worker | new dispatch | new Task | terminal |
+|---|---|---|---|
+| W6 home | ctx_b9ccc2e2b34e | task_7c5e1da13425 | term_430cc7df |
+| W7 home-viz | ctx_57b721d9bc6b | task_e4268ddaea56 | term_1c0b240e |
+| W4 ui-core | ctx_11fec30e929d | task_50991b0458e6 | term_2b5280a5 |
+| W8 static | ctx_8129c99f72a1 | task_521cb7f93cd9 | term_a2bdf30f |
+
+**Chain 2 started at 15:47** from the `arena` worktree: the last cell of seed 5, then seeds 6 and 7, with $112.71 remaining before it.
+
+**The invalid cell, explained.** In `swarm__t2_conference__C0__s5`, the track planner (Muse Spark, role `sub_planner`, seq 3647) put T48 in the day-2 session of `track-hci`, though its speaker's email says "I'll only be around on Day 1". No slot of that session could work. The verifier rejected its `place` contract on all six attempts (seqs 6983–16290, `unavailable: S31 is not available on day 2`), the contract failed, and the session's 8 talks stayed unplaced, which the checker counts as 8 hard violations. The other 6 recorded runs of this track on seed 5 put T48 on day 1, the swarm at C3 among them. So this is one wrong model reading, with no chaos and no API error, and it is not a coordination failure. The runtime has no way to give a talk back to the track, so a session's retries cannot repair its track's split. The same task code runs in every workflow, so any of them can lose a session this way. The handlers are frozen: it is reported, not fixed. `bench/PREREG.md` has no rule on invalid runs, and that seed's extra cost is measured against this short C0 run: the 10-seed reading must say both.
+
+**Chain 2 ended at 17:01, bench exit 0.** 56 of 80 cells, committed in 7e674a6 with the fixtures of seeds 6 and 7. Still one invalid cell, the same one, and one LLM error in 56 cells. Spend: spent $35.80, reserved $7.90 ($6.85 of it stale: calls cut off in flight), remaining $106.30 of $150. Seeds 8–10 are left.
+
+**v1 rescored at $0** (W1 found it): the 29 Day 9 cells were scored before `bench/recovery.py` existed, so their recovery columns were blank and the T2 recovery chart had no swarm, central or single line. `bench rescore bench/results/v1` filled them (b9ebec1) and no value that was already recorded moved, checked column by column. The chart is redrawn in b98ff7f.
+
+**`coord/arena_pair.py` works on the fake LLM,** through a scratch server (`coord/pair_server.ps1 -Scratch`, a new tool): one pair on the T2 fixture, one on the sample text (read, approved, launched, private). Both completed. `/takeover` of the rival answers 501, as it should.
+
+**Yoel's verdict on the home page (17:00, relayed by the first coordinator; he looked at 9c04b66).** Verbatim: "de acuerdo, pues continua con todo eso, aun queda bastante por pulir en la portada, las animaciones se ven toscas, al scrollear, hay que scrollear mucho para que carguen las animaciones al completo. Estaria bien que el diagrama de la portada con los orquestadores y agentes, se movieran (una animacion constante). Te dejo trabajar y no quiero que me hagas preguntas, abre los agentes necesarios y haz todo lo que necesites. Recuerda que me debes de dejar 30 dolares de free credits por usar por si acaso". No questions to him; the merge to `master`, the public repo and deleting branches still wait for his OK at the end.
+
+**Decisions (17:10):**
+- **The first merge goes first,** rough or not: it unblocks W4 and W8 and puts the new home on 8765, which he went looking for.
+- **The scroll chooses the beat and the clock plays it** (W6). No visual is a function of the scroll any more. A step that becomes current plays to its keyframe on its own clock, about 1 s, interruptible, and it ends without the wheel. Step blocks of 0.6 to 1 screen; the page under 16,000 px from 29,960. Cards and layers change by state, not by scroll position. The diagnosis behind it: an animation ended only when the hand reached its last keyframe, wheel notches arrive as jumps, the holds stop and start the motion with no ease, and Firefox, which he uses, scrolls on its compositor, so anything JS computes from the scroll lands late.
+- **The hero never stops while it is on screen** (W7, who takes over `Hero.tsx`, `viz/tree` and `viz/playback.ts`): the recorded run on a loop, a graceful restart, a layer of work moving through the tree in every phase, paused off screen, frozen with reduced motion, and a line saying it is a recorded run on a loop.
+- **W6 and W7 stay on their sessions and move to Opus 5.5** through the `hard-task` skill, rather than two cold workers: they hold the context, and two more sessions would cost about 1.3 GB that the machine does not have.
+- **Seeds 8–10 and the pairs move to tonight.** W6 and W7 need browsers all evening and real calls need a quiet machine. HOLD at about 21:00.
+
+**W1's report merged (b415e4b):** REPORT §3 and §4.10, the seed-3 wording, the status line; 31 of 31 tables. Two of its findings change what the story may say:
+- **Over half of `central`'s extra cost at C2 and C3 is the §2 estimate for cancelled calls.** T2 at C3 is +75.6% with the estimate and +32.4% on completed calls alone; the swarm's is +6.6% and +4.5%. The ledger never saw the estimate. R5's numbers are right as the pre-registered figure, but R5 does not say what they count. **Decision:** at the 10-seed rewrite R5 gives both bases in one sentence, the pre-registered one first. W1's new sub-section gives both for every workflow at C3.
+- **Locality does not repeat in the other recording of seed 1.** R4 holds as worded (headline, three seeds, below half on every seed), but v1's seed 1 is below half on none of the three measures. The 10-seed reading decides how far R4 goes.
+
+**First merge, 17:32:** W6 and W7 are in arena (97d9b22), the bundle is rebuilt (ac6f772), and `fractalswarm demo` now opens the home page; a named bundle still opens its run (7452747). W6 found why Yoel saw an empty left half: the `m` components had no `LazyMotion`, so every step card but the first stayed at opacity 0, in dev and in production (cc039bd, with a guard test). Before the redesign the page measures 30,020 px, 27.8 screens at 1920x1080.
+
+**The looping hero, 18:02:** W7's work is in arena (813082b, bundle 4c81b41): grow, run, rest, fold, again; comets along live edges and agents working in every phase; "A recorded run, replayed on a loop." on the figure. Chromium 60 fps with 0% of frames over 17 ms; Firefox 165 fps with the same; heap flat over 5 minutes.
+
+**Checks on arena at 175bc4f:** the whole pytest in chunks at below-normal priority (`coord/pytest_chunks.ps1`, new): unit 1093, integration 899, strict 13, PromptGuard 3, after one stale-data failure the guard caught (`story.json` holds the digest of `bench/REPORT.md`, so a REPORT edit needs `scripts/build_home_data.py`). `merge_checks.ps1`: ruff, `demo --verify`, replays MATCH, 43 of 43 reference runs identical. So the four API commits of this morning are now fully checked. Web suite on the merge: 1619.
+
+**Fake gates pass** (`coord/fake_gates.ps1`, first run): LangGraph 8 of 8, scaling 20 of 20, all valid. Paid worst cases $4 and $10.
+
+**Claude Code's memory reaper** stops background shells of idle sessions, and it seems to fire at about 3 GB free of 15.2, 20%. It took W1's heartbeat and mail wait at 17:20, and at 18:05 the first coordinator's servers on 8765 and 5190 and its watcher, with the note not to restart them unless Yoel asks. So **8765 is down** until Yoel says so, and the bundle waits on disk. I closed W1's idle terminal to give the others room; nothing is lost. To bring W1 back for the 10-seed section: `resume_worker.ps1 -Name arena-rival -Session 85097601-ed16-473c-8d91-f6141327f1a5` with a new spec.

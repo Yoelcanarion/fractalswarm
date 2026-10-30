@@ -168,6 +168,25 @@ body:has(.home) {
   gap: var(--space-3);
 }
 
+.home-bar .home-button {
+  white-space: nowrap;
+}
+
+/* on a phone the way in is one word, so the label never wraps over the brand */
+.home-bar__short {
+  display: none;
+}
+
+@media (max-width: 559px) {
+  .home-bar__long {
+    display: none;
+  }
+
+  .home-bar__short {
+    display: inline;
+  }
+}
+
 .home-rail {
   position: fixed;
   top: 50%;

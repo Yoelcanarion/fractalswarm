@@ -17,7 +17,8 @@ export function TopBar() {
       </a>
       <div className="home-bar__right">
         <a className="home-button home-button--primary home-button--small" href={targetHash("enter")} onClick={(event) => scrollToTarget("enter", event)}>
-          {COPY.bar.enter}
+          <span className="home-bar__long">{COPY.bar.enter}</span>
+          <span className="home-bar__short">{COPY.bar.enterShort}</span>
           <ArrowRight size={16} aria-hidden />
         </a>
         <ThemeSwitch />
