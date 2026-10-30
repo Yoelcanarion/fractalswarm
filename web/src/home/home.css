@@ -542,10 +542,17 @@ body:has(.home) {
 }
 
 /* ---- the problem: the film of the work lanes ---- */
-/* the film sets its own height (W7's .hv-film: 44vw between 320 and 560 px); the figure wraps it */
+/* The film sets its own height (W7's .hv-film: 44vw between 320 and 560 px); the page keeps it under 440 px so the section's title,
+   film and button show together on one screen. Its lanes keep a band at the top for a counter, as tall as --fs-figure: this page
+   draws no counter over the film, so the band is only the marks of the crashes. */
 .home-film {
+  --fs-figure: 0px;
   position: relative;
   width: 100%;
+}
+
+.home-film .hv-film {
+  height: clamp(380px, 44vw, 440px);
 }
 
 /* ---- the solution: three cards that play on hover, then the click demo ---- */
@@ -578,6 +585,11 @@ body:has(.home) {
   height: clamp(120px, 16svh, 176px);
 }
 
+/* the drawing is 2:1 and fits the box, so it never grows over the title under it */
+.home-step__drawing > .hv-step {
+  height: 100%;
+}
+
 .home-step__title {
   font-family: var(--font-display);
   font-weight: 560;
@@ -597,6 +609,8 @@ body:has(.home) {
 
 .home-demo > :last-child {
   width: 100%;
+  max-width: 1080px;
+  justify-self: center;
 }
 
 .home-demo__label {
