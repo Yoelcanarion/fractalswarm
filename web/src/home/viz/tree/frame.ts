@@ -92,6 +92,8 @@ export interface TreeFrame {
   dashes: DashFrame[];
   /** Kills that have happened by now. */
   killed: number;
+  /** How visible the memorial row's rule and label are at the least (0 when absent): the click demo shows its shelf from the start. */
+  shelf?: number;
 }
 
 export interface TreePlayer {

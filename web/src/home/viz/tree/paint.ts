@@ -183,7 +183,7 @@ export function paintTree(rig: TreeRig, frame: TreeFrame): void {
   // The label names the brains in the memorial row, so it comes in as the first dead one sets off for it, not when the first one
   // dies: the hero shows a killed brain for a while, stamped, in its place in the tree, and a label over an empty row says nothing.
   const gone = frame.nodes.reduce((far, n) => (n.state === "dead" ? Math.max(far, n.buried) : far), 0);
-  rig.memorial?.set("opacity", smoothstep(span(gone, 0, 0.3)) * smoothstep(span(frame.appear, 0.7, 1)));
+  rig.memorial?.set("opacity", Math.max(frame.shelf ?? 0, smoothstep(span(gone, 0, 0.3)) * smoothstep(span(frame.appear, 0.7, 1))));
 }
 
 /** Copies the ambient layer onto the SVG: a pulse on each edge, a halo on each brain, a ring on each working agent. */

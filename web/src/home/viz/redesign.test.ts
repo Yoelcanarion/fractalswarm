@@ -27,13 +27,14 @@ import {
 } from "./charts/proofLayout";
 import { ProofBars } from "./charts/ProofBars";
 import { KillDemo } from "./demo/KillDemo";
+import { createStage } from "./demo/stage";
 import { DOOR_IDS } from "./doors/doors";
 import { DoorThumb } from "./doors/DoorThumb";
 import { FILM_MOMENTS, ProblemFilm } from "./film/ProblemFilm";
 import { grown, GrowNumber, MISSING } from "./parts/GrowNumber";
 import { fx } from "./shared";
 import { STEP_IDS, StepDrawing } from "./steps/StepDrawing";
-import { Pen } from "./tree/paint";
+import { Pen, paintTree, type TreeRig } from "./tree/paint";
 import { SwarmTree } from "./tree/SwarmTree";
 
 beforeEach(() => {
@@ -90,6 +91,33 @@ describe("the click demo's markup", () => {
 
   it("is quiet for a still page: no ambient layer", () => {
     expect(render(KillDemo, { still: true })).not.toContain("hv-amb-halo");
+  });
+
+  it("puts the line and the two buttons right over the tree, Kill half as the main action, and sizes the stage to the window", () => {
+    expect(html.indexOf("hv-demo-line")).toBeLessThan(html.indexOf("hv-demo-stage"));
+    expect(html.indexOf("hv-demo-bar")).toBeLessThan(html.indexOf("hv-demo-stage"));
+    expect(html).toMatch(/class="hv-demo-btn hv-demo-btn--main"[^>]*>Kill half</);
+    expect(html).toMatch(/class="hv-demo-btn"[^>]*disabled=""[^>]*>Reset</);
+    expect(html).not.toContain('class="btn');
+    expect(html).toMatch(/--demo-aspect:\d\.\d{3}/);
+  });
+
+  it("draws the shelf of the dead from the start, faintly, and the hero's tree does not", () => {
+    const rig = (log: Record<string, string>): TreeRig =>
+      ({
+        nodes: {},
+        edges: {},
+        dashes: [],
+        clock: null,
+        memorial: new Pen({ setAttribute: (name: string, value: string) => void (log[name] = value) } as unknown as SVGGElement),
+      }) as TreeRig;
+    const stage = createStage(story.tree);
+    const demo: Record<string, string> = {};
+    paintTree(rig(demo), stage.at(0));
+    expect(Number(demo.opacity)).toBeCloseTo(0.5, 2);
+    const hero: Record<string, string> = {};
+    paintTree(rig(hero), { ...stage.at(0), shelf: undefined });
+    expect(Number(hero.opacity)).toBe(0);
   });
 
   it("writes KILLED above the rule, where a full row of the dead cannot cover it; the hero's tree keeps it beside its row", () => {

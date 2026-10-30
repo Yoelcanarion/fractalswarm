@@ -224,7 +224,8 @@ export function createStage(tree: TreeSlice, duration: number = SECONDS.takeover
     appear: 1,
   }));
   const edges: EdgeFrame[] = model.ids.map((id) => ({ child: id, parent: null, row: 1, x1: 0, y1: 0, x2: 0, y2: 0, broken: 0, opacity: 0 }));
-  const frame: TreeFrame = { p: 1, appear: 1, tMs: 0, hold: null, nodes, edges, dashes: [], killed: 0 };
+  // The shelf the dead will go to is drawn from the start, faintly, so that the room under the tree is a place and not a gap.
+  const frame: TreeFrame = { p: 1, appear: 1, tMs: 0, hold: null, nodes, edges, dashes: [], killed: 0, shelf: 0.5 };
 
   const frameAt = (now: number): TreeFrame => {
     holds = holds.filter((h) => now < h.t0 + h.dur * 1000 + 1);

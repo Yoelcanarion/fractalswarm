@@ -1442,6 +1442,10 @@
 }
 .hv-demo-stage {
   position: relative;
+  /* One screen shows all of it: the stage is never taller than the window less the line and the buttons over it and the page's bar. */
+  max-width: calc((100svh - 200px) * var(--demo-aspect, 1.4));
+  margin-inline: auto;
+  width: 100%;
 }
 /* The buttons sit over the nodes the painter moves: they are moved with it (a transform, set by the demo), and are as big as a
    finger needs whatever the width of the picture. */
@@ -1479,32 +1483,85 @@
 .hv-pick:focus-visible {
   border-color: var(--accent-text);
 }
+/* The line that says what happened and the two buttons sit right over the tree: the line on the left, the buttons on the right. */
+.hv-demo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
 .hv-demo-line {
+  flex: 1 1 320px;
   min-height: 2.9em;
   margin: 0;
   color: var(--text-primary);
-  font-size: 15px;
+  font-size: var(--fs-body, 15px);
   line-height: 1.45;
 }
 .hv-demo-bar {
   display: flex;
-  flex-wrap: wrap;
+  flex: none;
   align-items: center;
   gap: 10px 12px;
 }
 .hv-demo-note {
-  margin: 0 0 0 auto;
+  margin: 0;
   color: var(--text-muted);
   font-size: 13px;
 }
-@media (max-width: 640px) {
-  .hv-demo-note {
-    flex-basis: 100%;
-    margin-left: 0;
+/* The page's own pill button (the page's .home-button and .home-button--primary, from the same tokens): Kill half is the main action,
+   the inverted neutral pill; Reset is the quiet one beside it. Written under .hv-demo so that a page's own rules for buttons (and the lab's)
+   do not turn them back into plain buttons. */
+.hv-demo .hv-demo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 var(--space-5, 20px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--fs-body, 15px);
+  font-weight: 560;
+  letter-spacing: var(--track-tight, 0);
+  cursor: pointer;
+  transition:
+    transform var(--dur-base, 0.2s) var(--ease-out),
+    background-color var(--dur-base, 0.2s) var(--ease-out),
+    border-color var(--dur-base, 0.2s) var(--ease-out);
+}
+.hv-demo .hv-demo-btn.hv-demo-btn--main {
+  border-color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--bg);
+}
+.hv-demo .hv-demo-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.hv-demo .hv-demo-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+.hv-demo .hv-demo-btn:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hv-demo .hv-demo-btn:not(:disabled):hover {
+    background: var(--hover-wash);
+    border-color: var(--text-muted);
+  }
+  .hv-demo .hv-demo-btn.hv-demo-btn--main:not(:disabled):hover {
+    background: var(--text-secondary);
+    border-color: var(--text-secondary);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hv-pick {
+  .hv-pick,
+  .hv-demo .hv-demo-btn {
     transition: none;
   }
 }
