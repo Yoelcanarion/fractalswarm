@@ -178,14 +178,18 @@ textarea {
   cursor: default;
 }
 
+/* The main action, and the chosen one of a set of buttons, is the inverted neutral, as on the home page (home/home.css
+   `.home-button--primary`): the accent stays the colour of the swarm at work, and this clears AA in both themes. */
 .btn--on {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg);
 }
 
 .btn--danger {
   background: var(--danger-solid);
   border-color: var(--danger-solid-border);
+  color: var(--danger-solid-ink);
 }
 
 .btn--danger:hover:not(:disabled) {

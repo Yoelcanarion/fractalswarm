@@ -1,7 +1,8 @@
 // tokens.test.ts checks every text colour against every surface in the abstract. This test reads the sheets: wherever one rule
 // gives a text a token colour and a token background (and wherever a :hover, :focus-visible or [aria-…] variant swaps one of the
 // two), the pair it makes keeps AA, 4.5:1, in the dark theme and in the light one. What a rule inherits from its parent is not
-// known here, so a rule that sets only one of the two is not read.
+// known here, so a rule that sets only one of the two is not read: the button modifiers, which would inherit the base button's text,
+// are held to set both.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -61,7 +62,7 @@ function themes(): Record<"dark" | "light", Tokens> {
   return { dark, light: { ...dark, ...light } };
 }
 
-const STATE = /(:hover|:focus-visible|:focus|:active|:disabled|:checked|\[disabled\]|\[aria-[\w-]+(?:="[^"]*")?\]|\[data-[\w-]+(?:="[^"]*")?\])$/;
+const STATE = /(:not\(:disabled\)|:hover|:focus-visible|:focus|:active|:disabled|:checked|\[disabled\]|\[aria-[\w-]+(?:="[^"]*")?\]|\[data-[\w-]+(?:="[^"]*")?\])$/;
 
 /** `.btn:hover` is the rule `.btn` in the state `:hover`; a pseudo-element is not read: it sits on its own background. */
 function split(selector: string): { key: string; state: string } | null {
@@ -146,6 +147,15 @@ function sheets(dir: string): string[] {
 }
 
 const all = sheets(SRC).flatMap((path) => pairsOf(readFileSync(path, "utf-8"), path.slice(SRC.length + 1)));
+
+describe("the button modifiers", () => {
+  it("give their text colour with their background: the base button's would be read on a fill it was not chosen for", () => {
+    const bare = readRules(withoutComments(readFileSync(`${SRC}/styles.css`, "utf-8")))
+      .filter((rule) => /^\.btn--[\w-]+$/.test(rule.selector) && rule.decls.has("background") && !rule.decls.has("color"))
+      .map((rule) => rule.selector);
+    expect(bare).toEqual([]);
+  });
+});
 
 describe("the colours the sheets pair", () => {
   it("finds pairs to check", () => {
