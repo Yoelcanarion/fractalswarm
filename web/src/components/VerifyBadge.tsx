@@ -1,3 +1,4 @@
+import { BuildVerified } from "../static/BuildVerified";
 import { useRunStore } from "../store";
 
 export function VerifyBadge() {
@@ -24,6 +25,8 @@ export function VerifyBadge() {
     case "done": {
       const { report } = verify;
       if (report.ok && report.bundle_head_ok) {
+        // The static showcase has no server to replay on: its report was made when the page was built.
+        if (import.meta.env.MODE === "static") return <BuildVerified report={report} />;
         return (
           <span
             className="badge badge--good badge--big"

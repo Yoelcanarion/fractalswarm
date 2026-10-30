@@ -1,0 +1,73 @@
+/* The banner of the static showcase (Banner.tsx). Only the static build imports this file, so no other build carries it. */
+
+:root {
+  --staticbar-h: 32px;
+}
+
+/* The banner sits above #root, outside the app. While it shows, the body stacks the two and #root takes what is left,
+   so the app keeps filling the window exactly (a banner that wraps on a narrow screen included). */
+html[data-staticbar="on"] body {
+  display: flex;
+  flex-direction: column;
+}
+
+html[data-staticbar="on"] #root {
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto;
+}
+
+#static-banner {
+  flex-shrink: 0;
+}
+
+.staticbar {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+  min-height: var(--staticbar-h);
+  padding: var(--space-1) var(--space-5);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-tight);
+}
+
+.staticbar__text code {
+  color: var(--text-primary);
+}
+
+.staticbar__side {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.staticbar__bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transition: width var(--dur-base) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .staticbar__bar {
+    transition: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .staticbar {
+    padding: var(--space-1) var(--space-3);
+  }
+
+  .staticbar__side {
+    flex-shrink: 1;
+  }
+}
