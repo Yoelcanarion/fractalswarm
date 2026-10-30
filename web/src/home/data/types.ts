@@ -329,6 +329,8 @@ export interface HeroSeries {
 
 export interface HeroSlice {
   source: string;
+  /** The result set the reading is from: "v1" (2 seeds) or "headline-10" (the 10-seed extension). */
+  set: string;
   digest: string;
   task: string;
   /** The file's title: "rivals-real" is the real model against the rivals. */

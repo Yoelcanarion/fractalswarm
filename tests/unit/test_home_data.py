@@ -348,3 +348,15 @@ def test_the_lanes_name_their_setting(committed: dict):
     assert (setting["task"], setting["profile"], setting["seed"]) == ("t2_conference", "C3", "1")
     assert setting["crashes"] == sum(1 for m in central["marks"] if m["kind"] == "crash") == 5
     assert setting["real"] is True and setting["label"] == "In-process supervisor"
+
+
+def test_the_hero_names_its_set_and_the_ten_seed_reading_takes_over_only_when_it_exists(
+    generator: ModuleType, committed: dict
+):
+    assert committed["hero"]["set"] == "v1"
+    assert committed["hero"]["source"].startswith("bench/results/v1/")
+    assert committed["sources"]["hero"]["path"] == committed["hero"]["source"]
+    ten = REPO / generator.HEADLINE_10 / "hero-t2_conference.json"
+    if not ten.exists():
+        with pytest.raises(SystemExit, match="cannot be the hero yet"):
+            generator.build(generator.DEFAULT_BUNDLE, None, committed, "headline-10")
