@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { story } from "../../data/story";
 import { burialTimes } from "./layout";
-import { curvePoint, treePlayer } from "./frame";
+import { curvePoint, rowGate, treePlayer } from "./frame";
 import { treeModel } from "./model";
 
 const model = treeModel(story.tree);
@@ -189,5 +189,102 @@ describe("a frame", () => {
     const down = curvePoint(a, b, 0.5).angle;
     const up = curvePoint(b, a, 0.5).angle;
     expect(Math.abs(Math.abs(down - up) - 180)).toBeLessThan(1e-9);
+  });
+});
+
+describe("a frame at the end of the run", () => {
+  it("holds no message in mid-air: the last ones fade with the run, and none is left on the settled tree", () => {
+    for (const player of [hero, told]) {
+      const last = player.frame(1);
+      for (const d of last.dashes) expect(d.opacity).toBe(0);
+      const before = player.frame(1 - player.timeline.perS(player.timeline.profile.dashS) / 2).dashes;
+      for (const d of before) expect(d.opacity).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("a frame while the tree grows from its root and folds back into it", () => {
+  it("is the frame of the run, whole, when nothing is said about how much of the tree is drawn", () => {
+    for (const p of [0, 0.2, 0.5, 0.9, 1]) {
+      expect(hero.frame(p, 1)).toEqual(hero.frame(p));
+      expect(hero.frame(p).appear).toBe(1);
+      for (const n of hero.frame(p).nodes) expect(n.appear).toBe(1);
+    }
+  });
+
+  it("draws the rows one after the other: the root first, each row more than the one under it, and the memorial row last", () => {
+    expect(rowGate(0, 4, 1)).toBe(1);
+    for (const levels of [2, 3, 4, 5]) {
+      for (let row = 0; row < levels; row++) {
+        expect(rowGate(row, levels, 1)).toBe(1);
+        expect(rowGate(row, levels, 0)).toBe(0);
+        let last = 0;
+        for (let a = 0; a <= 1; a += 0.01) {
+          const g = rowGate(row, levels, a);
+          expect(g).toBeGreaterThanOrEqual(last);
+          last = g;
+        }
+      }
+      for (const a of [0.1, 0.3, 0.5, 0.7]) for (let row = 1; row < levels; row++) expect(rowGate(row - 1, levels, a)).toBeGreaterThanOrEqual(rowGate(row, levels, a));
+    }
+  });
+
+  it("starts with an empty picture, grows the root first and ends with the whole tree", () => {
+    const at = (appear: number) => hero.frame(0, appear);
+    expect(at(0).nodes.every((n) => n.opacity === 0)).toBe(true);
+    expect(at(0).edges.every((e) => e.opacity === 0)).toBe(true);
+    const some = at(0.25);
+    const root = some.nodes.find((n) => n.id === "o0")!;
+    const agent = some.nodes.find((n) => n.id === "o1.1.a1")!;
+    expect(root.row).toBe(0);
+    expect(agent.row).toBe(3);
+    expect(root.opacity).toBeGreaterThan(0.5);
+    expect(agent.opacity).toBe(0);
+    expect(at(1).nodes.every((n) => n.opacity === 1)).toBe(true);
+  });
+
+  it("folds the settled tree back into its root: the killed first, then the agents, the brains, and the root last", () => {
+    const at = (appear: number) => hero.frame(1, appear);
+    const survivors = at(1).nodes.filter((n) => n.state === "alive");
+    const root = at(1).nodes.find((n) => n.crown === 1)!;
+    let lastOpacity = new Map<string, number>(at(1).nodes.map((n) => [n.id, n.opacity]));
+    for (let a = 1; a >= 0; a -= 0.02) {
+      const frame = at(a);
+      for (const n of frame.nodes) {
+        expect(n.opacity, `${n.id} comes back at ${a}`).toBeLessThanOrEqual((lastOpacity.get(n.id) ?? 1) + 1e-9);
+      }
+      lastOpacity = new Map(frame.nodes.map((n) => [n.id, n.opacity]));
+    }
+    expect(at(0).nodes.every((n) => n.opacity === 0)).toBe(true);
+    const half = at(0.45);
+    const dead = half.nodes.filter((n) => n.state === "dead");
+    expect(dead).toHaveLength(5);
+    const rootNow = half.nodes.find((n) => n.id === root.id)!;
+    for (const n of survivors) if (n.id !== root.id) expect(half.nodes.find((m) => m.id === n.id)!.opacity).toBeLessThanOrEqual(rootNow.opacity + 1e-9);
+    for (const n of dead) expect(n.row).toBeGreaterThan(rootNow.row);
+  });
+
+  it("shows no message while the tree is not whole, and the memorial row only with the last of it", () => {
+    for (const appear of [0, 0.3, 0.99]) expect(hero.frame(0.5, appear).dashes).toHaveLength(0);
+    expect(hero.frame(0.5, 1).dashes.length).toBeGreaterThanOrEqual(0);
+    const frame = hero.frame(1, 0.2);
+    expect(frame.appear).toBe(0.2);
+    expect(frame.killed).toBe(5);
+  });
+
+  it("puts a killed brain in the row below the last row of the picture", () => {
+    const last = hero.frame(1);
+    const rows = last.nodes.filter((n) => n.state === "alive").map((n) => n.row);
+    for (const n of last.nodes.filter((m) => m.state === "dead")) expect(n.row).toBe(Math.max(...rows) + 1);
+  });
+
+  it("gives each edge the row of its child and, once it hangs from one, its parent", () => {
+    const frame = hero.frame(1);
+    for (const e of frame.edges) {
+      const child = frame.nodes.find((n) => n.id === e.child)!;
+      expect(e.row).toBe(child.row);
+      if (e.parent !== null) expect(frame.nodes.find((n) => n.id === e.parent)!.row).toBeLessThan(e.row);
+    }
+    expect(frame.edges.find((e) => e.child === "o1.1")?.parent).toBe("o3");
   });
 });
