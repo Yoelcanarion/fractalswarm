@@ -11,7 +11,7 @@ import { Reveal } from "../parts/Reveal";
 import { Terminal } from "../parts/Terminal";
 import type { StoryFigure } from "../storyTypes";
 import { slice, useStory } from "../story";
-import { Viz, type VizName } from "../viz";
+import { Viz, type VizName } from "../visuals";
 
 export function Evidence() {
   return (

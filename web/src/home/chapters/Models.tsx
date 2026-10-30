@@ -10,7 +10,7 @@ import { segmentEmail, spanOf } from "../parts/emailSegments";
 import { Figure } from "../parts/Figure";
 import { Reveal } from "../parts/Reveal";
 import { slice, useStory } from "../story";
-import { Viz } from "../viz";
+import { Viz } from "../visuals";
 
 // Colour is never the only cue: every row names its model in words. The dot is the model's own token.
 const MODEL_DOT: Record<string, string> = { spark: "var(--model-spark)", wonder: "var(--model-wonder)", guard: "var(--model-guard)" };

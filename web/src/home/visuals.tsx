@@ -1,5 +1,6 @@
-// The way in to W7's visuals (web/src/home/viz/index.ts). Each visual is a pure component with the same
-// three props; the page owns the beats and a visual knows only `progress`.
+// The way in to W7's visuals (web/src/home/viz/index.ts). This file is not called viz.tsx so that no import of "./viz"
+// can be read as that folder. Each visual is a pure component with the same three props; the page owns the beats
+// and a visual knows only `progress`.
 //
 // The index is picked up with a glob, so that this page builds and runs before the visuals are merged
 // (every visual then draws as a labelled placeholder that shows its progress) and uses them the moment

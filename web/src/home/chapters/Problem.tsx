@@ -12,7 +12,7 @@ import { Readout } from "../parts/Readout";
 import { Stage, type StageStep } from "../scroll/Stage";
 import { clamp01 } from "../scroll/timeline";
 import { slice, useStory } from "../story";
-import { Viz } from "../viz";
+import { Viz } from "../visuals";
 
 // Where the real run's events sit in the lanes' progress, if the data does not say (lanes.central.keyframes).
 const LANES_DEFAULTS = { filled: 0.3, crash: 0.34, restart: 0.55, redone: 0.82, end: 1 };

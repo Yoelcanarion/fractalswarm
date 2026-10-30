@@ -10,7 +10,7 @@ import { Claim } from "../parts/Claim";
 import { Reveal } from "../parts/Reveal";
 import { scrollToChapter } from "../scrollTo";
 import { slice, useStory } from "../story";
-import { Viz } from "../viz";
+import { Viz } from "../visuals";
 
 // The tree plays its recorded sequence once, on load, in about eight seconds, then breathes (W7's visual).
 const PLAY_SECONDS = 8;

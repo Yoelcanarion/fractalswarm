@@ -31,11 +31,14 @@ export function useActiveChapter(): number {
   useEffect(() => {
     measure();
     update(window.scrollY);
+    // The page's own element, not <body>: the app shell's stylesheet fixes the body to the window's height once it has loaded.
+    const page = document.querySelector("main");
+    if (!page) return;
     const observer = new ResizeObserver(() => {
       measure();
       update(window.scrollY);
     });
-    observer.observe(document.body);
+    observer.observe(page);
     return () => observer.disconnect();
   }, [measure, update]);
 

@@ -10,7 +10,7 @@ import { Figure } from "../parts/Figure";
 import { Stage, type StageStep } from "../scroll/Stage";
 import { clamp01 } from "../scroll/timeline";
 import { slice, useStory, type Story } from "../story";
-import { exportedTreeKeyframes, Viz } from "../viz";
+import { exportedTreeKeyframes, Viz } from "../visuals";
 
 // Where the real kill sequence of the demo bundle sits in the tree's progress, if neither the data
 // (tree.keyframes) nor the visual (TREE_KEYFRAMES) says. The text below follows these names.

@@ -6,7 +6,7 @@ import { DOORS, doorState, isStaticShowcase, type Door } from "../doors";
 import { useStill } from "../hooks";
 import { ChapterHead } from "../parts/Chapter";
 import { Reveal } from "../parts/Reveal";
-import { Viz } from "../viz";
+import { Viz } from "../visuals";
 
 export function Enter() {
   const staticBuild = isStaticShowcase();
