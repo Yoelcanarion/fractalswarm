@@ -255,7 +255,8 @@ export interface HashesSlice {
   chainOk: boolean;
   events: HashEvent[];
   eventFields: string[];
-  marks: Record<string, string>;
+  /** By seq: what happened at that event, and what kind of moment it is. */
+  marks: Record<string, { kind: "start" | "kill" | "remap" | "end"; label: string }>;
   gaps: { after: number; skipped: number }[];
   replay: { command: string; line: string | null; source: string | null; matches: boolean | null };
   takeover: { command: string; line: string };

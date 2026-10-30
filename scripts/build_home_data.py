@@ -939,23 +939,22 @@ def hashes_slice(events: list[Event], bundle: Path, report: TakeoverReport) -> d
     start = next(e.ts_virtual for e in events if e.type == "run.started")
     by_seq = {e.seq: i for i, e in enumerate(events)}
     keep: set[int] = set()
-    marks: dict[int, str] = {}
+    marks: dict[int, dict[str, str]] = {}
 
-    def window(seq: int, before: int, after: int, label: str | None = None) -> None:
+    def window(seq: int, before: int, after: int, kind: str, label: str) -> None:
         i = by_seq[seq]
         for j in range(max(0, i - before), min(len(events), i + after + 1)):
             keep.add(events[j].seq)
-        if label:
-            marks[seq] = label
+        marks[seq] = {"kind": kind, "label": label}
 
     first, last = events[0].seq, events[-1].seq
-    window(first, 0, 5, "run starts")
+    window(first, 0, 5, "start", "run starts")
     for k in report.kills:
         if k.target:
-            window(k.seq, 1, 2, f"{k.target} killed")
+            window(k.seq, 1, 2, "kill", f"{k.target} killed")
     for s in report.successions:
-        window(s.seq, 1, 1, f"{s.goal}: {s.previous} → {s.owner}")
-    window(last, 3, 0, "run completes")
+        window(s.seq, 1, 1, "remap", f"{s.goal}: {s.previous} → {s.owner}")
+    window(last, 3, 0, "end", "run completes")
     ordered = [e for e in events if e.seq in keep]
     gaps = []
     for a, b in zip(ordered, ordered[1:], strict=False):

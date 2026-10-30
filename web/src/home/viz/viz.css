@@ -215,6 +215,312 @@
   vector-effect: non-scaling-stroke;
 }
 
+/* ---- the survivors computing the heir ------------------------------------------------------ */
+
+.hv-hrw {
+  font-size: var(--fs-body);
+}
+.hv-hrw-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-5);
+  margin-bottom: var(--space-4);
+  color: var(--text-secondary);
+}
+.hv-hrw-head b {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.hv-hrw-rule {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  color: var(--text-muted);
+}
+.hv-hrw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-3);
+}
+.hv-hrw-panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+}
+.hv-hrw-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--space-2);
+}
+.hv-hrw-who {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.hv-hrw-reads {
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.hv-hrw-row {
+  display: grid;
+  grid-template-columns: 3.4ch 1fr;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  row-gap: 3px;
+  margin-bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.hv-hrw-member {
+  color: var(--text-primary);
+}
+.hv-hrw-rest {
+  visibility: hidden;
+}
+.hv-hrw-track {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.hv-hrw-bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--text-muted);
+  transform-origin: left center;
+}
+.hv-hrw-row[data-pick="true"][data-win="false"] {
+  opacity: 0.5;
+}
+.hv-hrw-row[data-pick="true"][data-win="true"] .hv-hrw-hex,
+.hv-hrw-row[data-pick="true"][data-win="true"] .hv-hrw-member {
+  color: var(--accent-text);
+}
+.hv-hrw-row[data-pick="true"][data-win="true"] .hv-hrw-bar {
+  background: var(--accent);
+}
+.hv-hrw-panel footer {
+  font-size: var(--fs-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.hv-hrw-panel footer b {
+  font-family: var(--font-mono);
+  color: var(--accent-text);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.hv-hrw-verdict {
+  margin: var(--space-4) 0 0;
+  font-size: var(--fs-lead);
+  color: var(--text-primary);
+}
+.hv-hrw-verdict b {
+  font-family: var(--font-mono);
+  color: var(--accent-text);
+}
+
+/* ---- the log as a strip of hashes ---------------------------------------------------------- */
+
+.hv-hash {
+  position: relative;
+}
+.hv-hash-view {
+  position: relative;
+  overflow: hidden;
+  padding: 30px 0 6px;
+}
+.hv-hash-view::before,
+.hv-hash-view::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 56px;
+  z-index: var(--z-raised);
+  pointer-events: none;
+}
+.hv-hash-view::before {
+  left: 0;
+  background: linear-gradient(to right, var(--hv-fade, var(--bg)), transparent);
+}
+.hv-hash-view::after {
+  right: 0;
+  background: linear-gradient(to left, var(--hv-fade, var(--bg)), transparent);
+}
+.hv-hash-track {
+  display: flex;
+  align-items: stretch;
+  gap: 30px;
+  width: max-content;
+  padding: 0 56px;
+  will-change: transform;
+}
+.hv-hash-card {
+  position: relative;
+  flex: 0 0 188px;
+  padding: 10px 12px 11px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+.hv-hash-card[data-kind="kill"] {
+  border-color: var(--danger-border);
+}
+.hv-hash-card[data-kind="remap"] {
+  border-color: var(--accent);
+}
+.hv-hash-card[data-kind="end"] {
+  border-color: var(--ok-border);
+}
+.hv-hash-card[data-linked="true"]::before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 50%;
+  width: 30px;
+  border-top: 1px solid var(--border-strong);
+}
+.hv-hash-card[data-linked="true"]::after {
+  content: "";
+  position: absolute;
+  left: -31px;
+  top: calc(50% - 3.5px);
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  border-right: 6px solid var(--border-strong);
+}
+.hv-hash-card header {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+}
+.hv-hash-seq {
+  color: var(--text-primary);
+}
+.hv-hash-type {
+  margin-top: 6px;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.hv-hash-actor {
+  color: var(--text-muted);
+}
+.hv-hash-card dl {
+  display: grid;
+  grid-template-columns: 4ch 1fr;
+  gap: 2px 8px;
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--divider);
+}
+.hv-hash-card dt {
+  color: var(--text-muted);
+}
+.hv-hash-card dd {
+  margin: 0;
+  color: var(--text-secondary);
+}
+.hv-hash-mark {
+  position: absolute;
+  left: 0;
+  top: -21px;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+.hv-hash-card[data-kind="kill"] .hv-hash-mark {
+  color: var(--danger);
+}
+.hv-hash-card[data-kind="remap"] .hv-hash-mark {
+  color: var(--accent-text);
+}
+.hv-hash-card[data-kind="end"] .hv-hash-mark {
+  color: var(--ok-text);
+}
+.hv-hash-gap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 150px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.hv-hash-gap::before,
+.hv-hash-gap::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed var(--border-strong);
+}
+.hv-hash-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-6);
+  margin-top: var(--space-4);
+}
+.hv-hash-head {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.hv-hash-label {
+  font-size: var(--fs-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.hv-hash-head code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-lead);
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.hv-hash-stamp {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-4);
+  border: 2px solid var(--ok);
+  border-radius: var(--radius-2);
+  color: var(--ok-text);
+  transform-origin: center;
+}
+.hv-hash-stamp[data-ok="false"] {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.hv-hash-stamp b {
+  font-family: var(--font-mono);
+  font-size: var(--fs-stat);
+  letter-spacing: 0.18em;
+}
+.hv-hash-stamp span {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+}
+
 .hv-hidden {
   position: absolute;
   width: 1px;
