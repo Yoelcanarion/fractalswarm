@@ -2,7 +2,7 @@
 // and how far a large log has loaded. It lives outside the app's React tree (install.tsx mounts it in its own root), so
 // App.tsx does not know it exists; on the home route it renders nothing, so it never sits on the hero.
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 import { COMMAND } from "./answers";
 import type { SiteStamp } from "./manifest";
@@ -47,8 +47,9 @@ export function StaticBanner({ site }: { site: SiteStamp }) {
   const hidden = isHome(useHash());
   const loading = overall(useReports());
 
-  // The banner is not in the app's layout; while it shows, the page gives it the room (static.css).
-  useEffect(() => {
+  // The banner is not in the app's layout; while it shows, the page gives it the room (static.css). Before the first
+  // paint, so the app does not jump down when the banner appears.
+  useLayoutEffect(() => {
     const root = document.documentElement;
     if (hidden) delete root.dataset.staticbar;
     else root.dataset.staticbar = "on";

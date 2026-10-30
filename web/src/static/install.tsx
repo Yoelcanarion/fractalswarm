@@ -33,13 +33,17 @@ export async function startStatic(mount: () => void): Promise<void> {
     const base = document.baseURI;
     const data = new URL("data/", base);
     const original = window.fetch.bind(window);
-    const found = await original(new URL("manifest.json", data));
+    // The manifest is asked again every time (a cheap revalidation); the files it names carry the build in their URL,
+    // so a site published again is never read through the old copies a cache still holds (GitHub Pages keeps a file
+    // for ten minutes, and a new manifest over old pages would not describe them).
+    const found = await original(new URL("manifest.json", data), { cache: "no-cache" });
     if (!found.ok) throw new Error(`data/manifest.json answered ${found.status}`);
     const manifest = readManifest(await found.json());
+    const build = encodeURIComponent(`${manifest.site.commit_short}-${manifest.site.built_at}`);
     window.fetch = createStaticFetch({
       manifest,
       base,
-      load: (file, signal) => original(new URL(file, data), { signal }),
+      load: (file, signal) => original(new URL(`${file}?v=${build}`, data), { signal }),
       passthrough: original,
       onProgress: (detail) => window.dispatchEvent(new CustomEvent(PROGRESS_EVENT, { detail })),
     });

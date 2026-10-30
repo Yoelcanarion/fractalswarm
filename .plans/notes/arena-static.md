@@ -8,7 +8,7 @@ Branch `Yoelcanarion/w8-static-showcase`. Brief: `.plans/arena/w8-static.md`. Ar
 
 | What | Result |
 |---|---|
-| `uv run pytest tests/unit/test_static_site.py` | 63 passed, 3 s |
+| `uv run pytest tests/unit/test_static_site.py` | 70 passed, 3.5 s |
 | `uv run pytest tests/unit` (merge check, unit chunk) | 1137 passed, 3 deselected (promptguard), 79 s |
 | `npx vitest run --maxWorkers=1` (whole web suite) | 79 files, 1293 passed (139 of them in `web/src/static`) |
 | `npm --prefix web run typecheck`, `ruff check`, `ruff format --check` | clean |
@@ -17,7 +17,7 @@ Branch `Yoelcanarion/w8-static-showcase`. Brief: `.plans/arena/w8-static.md`. Ar
 **Not done yet** (each waits for something named):
 - The Vite build, the browser checks with Playwright and the "local build is unchanged" proof: **wait for RELEASE** (builds and browsers). Until then nothing here is shown in a browser.
 - The integration chunks of the merge check: **need a slot**. I touched no code they run (only `scripts/`, `tests/unit/test_static_site.py`, `web/`); say GO and I run them in chunks.
-- The real arena pair: I need the two run ids (the swarm run and its rival, kill-half). The $0 refs pair `~/.fractalswarm/refs/arena-c2b5e08/runs/t2-swarm-killhalf` and `t2-central-killhalf` is what I try first.
+- The final pairs (a real pair against central, one against durable-max, bundled under `demo/` by the coordinator): `--pair` takes them by arguments and may be repeated; a run in two pairs is exported once. Tried so far on the $0 refs pair `~/.fractalswarm/refs/arena-c2b5e08/runs/t2-swarm-killhalf:t2-central-killhalf` with `--no-build`: both replays verified at build, 15.2 MB of data with backup and toy (swarm 4.56 MB, central 2.64 MB), 5001 events = two pages, the second holding one event.
 - Publishing: prepared below, not done. It needs Yoel's OK.
 
 ## What it is
@@ -105,12 +105,19 @@ The script prints this table and `OVER BUDGET` above 40 MB.
 - `tests/unit/test_static_site.py`: the exporter against the live API (see above), the pages tiling a log, every refusal (intake, live input, spec pointing at pasted text, private directory, tampered log, duplicate names, unsafe names), the scan, `--pair` parsing, the bench `source`, the command (`main`) and the committed fixture being current. `UPDATE_STATIC_FIXTURE=1 uv run pytest tests/unit/test_static_site.py` writes the fixture again after the exporter changes.
 - `web/src/static/*.test.ts`: paging against a reference over every window of logs of 0 to 10 events; the manifest reader; every route of the shim, both ways, with sub-path hosting, aborts, missing files, progress; the socket stub; the banner's and badge's words; and `client.test.ts`, which runs the app's own client functions (`listRuns`, `loadAllEvents`, `verifyRun`, `fetchPairs`, `fetchCalls` ...) through the shim over `web/src/static/fixtures/site`, a real export of `demo/toy` and `tests/golden/one-call` with a fixed stamp.
 
+## Findings for the coordinator
+
+- **`GET api/runs/{id}/takeover` answers 500 for a supervisor log (central).** `check_run` raises `SupervisorLog` ("supervisor log: use `fractalswarm recovery`") and `api/app.py` does not catch it, so uvicorn sends 500 and the `TakeoverChip` goes to its error state on a central run. The site stores what the live server says (500) and prints a note at build, so nothing is hidden. A one-line fix in `api/app.py` (not mine) would make the app show nothing instead: answer 501 for `SupervisorLog`; `fetchTakeover` already reads 404, 405, 409 and 501 as "not offered". Say if you want me to do it (the brief lets me touch `api/` only for a helper, so I ask first).
+- **The packaged build `src/fractalswarm/api/static` is committed.** Mine does not change it: `vite build` for every mode but `static` folds the guard in `main.tsx` and the badge away (proof after RELEASE: both builds from `287704a` and from this branch into scratch folders, compared byte for byte). I never write to that folder.
+
 ## Deviations and decisions
 
 1. `VerifyBadge.tsx` edited, with the coordinator's OK (3 lines; `package.json` untouched).
 2. The exporter needs no change under `src/fractalswarm` (not even a helper in `api/`).
 3. `bench/results.source` is rewritten (above). `pairs.json` is built by the exporter from the two `run.started` events, because the live `GET api/pairs` reads a private directory the site must not have; the shape is that of `api/arena.py`'s manifest.
 4. `data/` is read relative to the document (`document.baseURI`), not with `new URL(..., import.meta.url)`, so it does not depend on Vite's asset scanner.
+5. The manifest is fetched with `cache: "no-cache"`, and every data file with `?v=<commit>-<built_at>`: GitHub Pages lets a browser keep a file for ten minutes, and a new manifest over old pages would not describe them.
+6. A read route that raises while the site is built is kept as the 500 the live server gives (see the findings) instead of stopping the build; a route that is missing for a run is a 404 saying it is not part of the showcase.
 
 ## Open questions
 
