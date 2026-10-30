@@ -150,9 +150,11 @@ const WIDTHS: [string, string][] = [
   ["the page's width", "100%"],
   ["1224 px (a laptop)", "1224px"],
   ["820 px (a tablet)", "820px"],
+  ["690 px (the page's pinned stage)", "690px"],
   ["390 px (a phone)", "390px"],
+  ["358 px (a phone's stage)", "358px"],
 ];
-const HEIGHTS = [280, 353, 388, 460, 520];
+const HEIGHTS = [280, 353, 388, 460, 520, 584, 640, 700, 780];
 
 /** A visual in a frame of a size the person picks, as the page frames it, with the progress slider under it. */
 function FrameSection({
@@ -162,7 +164,9 @@ function FrameSection({
   seconds,
   height,
   heights = HEIGHTS,
+  width: initialWidth = "100%",
   controls,
+  overlay,
   children,
 }: {
   id: string;
@@ -171,11 +175,14 @@ function FrameSection({
   seconds: number;
   height: number;
   heights?: number[];
+  width?: string;
   controls?: ReactNode;
+  /** Something the page lays over the visual: the lab stands a placeholder in for it. */
+  overlay?: ReactNode;
   children: (progress: MotionValue<number>) => ReactNode;
 }) {
   const progress = useMotionValue(0);
-  const [width, setWidth] = useState("100%");
+  const [width, setWidth] = useState(initialWidth);
   const [h, setH] = useState(height);
   const options = [...new Set([...heights, height])].sort((a, b) => a - b);
   return (
@@ -205,6 +212,7 @@ function FrameSection({
       </div>
       <div className="lab-stage">
         <div className="lab-frame" style={{ width, maxWidth: "100%", height: h }}>
+          {overlay}
           {children(progress)}
         </div>
       </div>
@@ -223,7 +231,9 @@ function LanesSection({ still }: { still: boolean }) {
       title="WorkLanes"
       note="The lanes of a recorded run: the in-process supervisor's run of the benchmark, or the swarm's recorded demo."
       seconds={18}
-      height={420}
+      height={700}
+      heights={[371, 584, 700, 780]}
+      overlay={<div className="lab-standin">the page puts its own counter here, and the lanes start below it</div>}
       controls={
         <label>
           run
@@ -247,7 +257,9 @@ function HrwSection({ still }: { still: boolean }) {
       title="HrwPanels"
       note="The survivors' panels of one takeover: each scores the candidates with the same hash and picks the same one."
       seconds={10}
-      height={388}
+      width="690px"
+      height={640}
+      heights={[304, 479, 640]}
       controls={
         <label>
           takeover
@@ -268,7 +280,7 @@ function HrwSection({ still }: { still: boolean }) {
 
 function HashSection({ still }: { still: boolean }) {
   return (
-    <FrameSection id="hash" title="HashStrip" note="The hash chain of the recorded run's log." seconds={8} height={160} heights={[120, 160, 200]}>
+    <FrameSection id="hash" title="HashStrip" note="The hash chain of the recorded run's log." seconds={8} width="690px" height={109} heights={[82, 109, 160, 220]}>
       {(progress) => <HashStrip progress={progress} data={story.hashes} still={still} />}
     </FrameSection>
   );

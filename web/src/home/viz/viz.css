@@ -640,6 +640,10 @@
 .hv-ln-tick-label {
   fill: var(--text-muted);
 }
+.hv-ln-readout-bg {
+  fill: var(--hv-fade, var(--bg));
+  stroke: var(--border-strong);
+}
 .hv-ln-clock {
   fill: var(--text-primary);
 }
@@ -742,6 +746,9 @@
 .hv-ch-axis-title {
   text-anchor: end;
   fill: var(--text-muted);
+}
+.hv-pb-axis-title {
+  text-anchor: start;
 }
 .hv-ch-caption {
   fill: var(--text-muted);

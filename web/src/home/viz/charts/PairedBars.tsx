@@ -70,6 +70,9 @@ export function PairedBars({ progress, data, still, stillAt, className, rival = 
               </text>
             </g>
           ))}
+          <text className="hv-ch-axis-title hv-pb-axis-title" x={fx(L.axisTitle.x)} y={fx(L.axisTitle.y)}>
+            {L.axisTitle.text}
+          </text>
           {model.rows.map((row, i) => {
             const g = L.groups[i]!;
             return (

@@ -131,7 +131,7 @@ const GAP_X = 28;
 const GAP_Y = 14;
 const MIN_ROW = 22;
 const MAX_ROW = 52;
-const LABEL_GAP = 8;
+const LABEL_GAP = 18;
 
 export interface DotPlace {
   runIndex: number;

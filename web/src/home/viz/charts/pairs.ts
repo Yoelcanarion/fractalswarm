@@ -114,7 +114,7 @@ export function pairSummary(model: PairModel): string {
 const PAD = 10;
 const TITLE_H = 26;
 const ROW_GAP = 4;
-const AXIS_H = 34;
+const AXIS_H = 52;
 const KEY_H = 20;
 const CAP_H = 20;
 const VALUE_W = 58;
@@ -150,6 +150,8 @@ export interface PairLayout {
   groups: PairGroup[];
   axisY: number;
   ticks: { x: number; label: string }[];
+  /** What 100% is, under the axis. */
+  axisTitle: { x: number; y: number; text: string };
   halfX: number;
   guideTop: number;
   keyY: number;
@@ -176,17 +178,22 @@ export function pairLayout(model: PairModel, width: number, height: number, capt
   const labelW = labelWidth(names);
 
   const n = Math.max(1, model.rows.length);
-  const available = height - 2 * PAD - foot - AXIS_H;
+  const room = height - 2 * PAD - foot;
+  const available = room - AXIS_H;
   const barH = Math.min(MAX_BAR, Math.max(MIN_BAR, (available - n * (TITLE_H + ROW_GAP + 10)) / (2 * n)));
   const block = TITLE_H + 2 * barH + ROW_GAP;
-  const gap = Math.min(44, Math.max(10, (available - n * block) / n));
+  const gap = Math.min(44, Math.max(10, (available - n * block) / Math.max(1, n - 1)));
+  // What the groups do not use is shared above and below them, so the chart sits in the frame instead of hugging its top.
+  const spare = Math.max(0, (room - (n * block + (n - 1) * gap + AXIS_H)) / 2);
 
   const x0 = PAD + labelW;
   const x1 = width - PAD - VALUE_W;
   const longKey = `half of the ${model.rivalLabel.toLowerCase()}'s value`;
+  const axisTitles = [`% of the ${model.rivalLabel.toLowerCase()}'s value`, "% of the rival's value"];
+  const axisTitle = axisTitles.find((t) => textWidth(t) <= x1 - x0 + VALUE_W) ?? axisTitles[1]!;
   const xAt = linear(0, model.domainMax, x0, x1);
 
-  let top = PAD;
+  let top = PAD + spare;
   const groups: PairGroup[] = model.rows.map((row, index) => {
     const swarmY = top + TITLE_H;
     const rivalY = swarmY + barH + ROW_GAP;
@@ -218,6 +225,7 @@ export function pairLayout(model: PairModel, width: number, height: number, capt
     groups,
     axisY: lastBottom + 8,
     ticks,
+    axisTitle: { x: x0, y: lastBottom + 8 + 34, text: axisTitle },
     halfX: xAt(0.5),
     guideTop: PAD + TITLE_H,
     keyY: height - PAD - (caption ? CAP_H : 0) - 2,

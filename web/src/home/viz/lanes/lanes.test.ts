@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { story } from "../../data/story";
 import { Pen } from "../tree/paint";
-import { layoutFor, keepApart, textWidth, type LanesLayout } from "./layout";
+import { READOUT_W, layoutFor, keepApart, textWidth, type LanesLayout } from "./layout";
 import { barState, drawnMs, lanesModel, lifeTracks, linearStallMs, spentMicro, stallElapsedMs, timeMap } from "./model";
 import { paintLanes, usd, type LanesRig } from "./paint";
 import { WorkLanes, captionsFor, summaryFor } from "./WorkLanes";
@@ -218,6 +218,7 @@ describe("paintLanes", () => {
     counted: fake(log),
     notes: fake(log),
     clock: fake(log),
+    readout: fake(log),
     value: { counted: fake(log), cut: fake(log), again: fake(log), idle: fake(log) },
   };
   const at = (pen: Pen<Element> | null | undefined): Record<string, string> => log.get(pen!.el) ?? {};
@@ -237,7 +238,7 @@ describe("paintLanes", () => {
     expect(rig.crashes.every((pen) => Number(at(pen)["opacity"]) === 0)).toBe(true);
     expect(at(rig.value.cut)["#text"]).toBe("$0.000");
     expect(at(rig.value.idle)["#text"]).toBe("");
-    expect(at(rig.clock)["#text"]).toBe("0.0");
+    expect(at(rig.clock)["#text"]).toBe("0.0 s");
   });
 
   it("strikes the first crash and the six kills when the run reaches it, and cuts off the calls in flight", () => {
@@ -263,9 +264,24 @@ describe("paintLanes", () => {
     expect(Number(at(rig.notes)["opacity"])).toBe(1);
     expect(Number(at(rig.counted)["opacity"])).toBeCloseTo(0.28, 6);
     expect(Number(at(rig.cursor)["opacity"])).toBe(0);
-    expect(at(rig.clock)["#text"]).toBe((model.durationMs / 1000).toFixed(1));
+    expect(at(rig.clock)["#text"]).toBe(`${(model.durationMs / 1000).toFixed(1)} s`);
+    expect(Number(at(rig.readout)["opacity"])).toBe(0);
     expect(model.bars.every((_, i) => at(rig.bars[i])["data-state"] === "done")).toBe(true);
     for (const stall of model.stalls) expect(at(rig.stalls[stall.index])["width"]).toBe((((stall.endMs - stall.startMs) * layout.pxPerMs).toFixed(2)));
+  });
+
+  it("keeps the time of the run on the cursor, inside the box at both ends, and gone with it", () => {
+    const moved = (): number => Number(/translate\(([-\d.]+)/.exec(at(rig.readout)["transform"] ?? "")?.[1]);
+    paintLanes(rig, model, layout, map, 0);
+    expect(moved()).toBeGreaterThanOrEqual(READOUT_W / 2);
+    expect(Number(at(rig.readout)["opacity"])).toBe(1);
+    paintLanes(rig, model, layout, map, kf.crash + 0.01);
+    expect(moved()).toBeCloseTo(Number(/translate\(([-\d.]+)/.exec(at(rig.cursor)["transform"] ?? "")?.[1]), 1);
+    for (let i = 0; i <= 200; i++) {
+      paintLanes(rig, model, layout, map, i / 200);
+      expect(moved()).toBeGreaterThanOrEqual(READOUT_W / 2);
+      expect(moved()).toBeLessThanOrEqual(layout.width - READOUT_W / 2);
+    }
   });
 
   it("is the same picture whichever way it got there", () => {
