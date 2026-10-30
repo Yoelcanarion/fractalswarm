@@ -440,6 +440,8 @@ export interface RegimeSlice {
   task: string;
   profile: string;
   model: "real" | "fake";
+  /** The seeds every sweep behind the strip ran, from the sweeps' own result rows. */
+  seeds?: string[];
   threshold: number;
   defaults: Record<string, number | null>;
   rows: RegimeRow[];
