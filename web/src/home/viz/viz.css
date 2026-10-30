@@ -326,8 +326,10 @@
 .hv-hrw-member {
   color: var(--text-primary);
 }
-.hv-hrw-rest {
-  visibility: hidden;
+/* the whole score is drawn and clipped to the digits that have been computed (HrwPanels sets the clip) */
+.hv-hrw-digits {
+  display: inline-block;
+  vertical-align: baseline;
 }
 .hv-hrw-track {
   grid-column: 1 / -1;

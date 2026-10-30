@@ -36,6 +36,16 @@ export function hrwState(p: number): HrwState {
 /** The 16-digit score in groups of four, as the panels show it. */
 export const groupHex = (hex: string): string => hex.replace(/(.{4})(?=.)/g, "$1 ");
 
+/**
+ * How much of a score's grouped width is still hidden on the right, in percent, for each count of digits shown (0 to all). The
+ * panels draw the whole score once and clip it, so a step of the reveal is one style write, not a text node rebuilt in each of
+ * the rows (the score is in a mono face: the width of a prefix is its share of the characters).
+ */
+export function hiddenAt(hex: string): number[] {
+  const whole = groupHex(hex).length;
+  return Array.from({ length: hex.length + 1 }, (_, n) => Number(((1 - groupHex(hex.slice(0, n)).length / whole) * 100).toFixed(2)));
+}
+
 /** How many of the 16 hex digits are on screen when ``compute`` of the work is done. */
 export const digitsShown = (compute: number, digits = 16): number => Math.min(digits, Math.floor(compute * (digits + 0.999)));
 
