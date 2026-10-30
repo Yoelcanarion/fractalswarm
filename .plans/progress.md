@@ -1312,3 +1312,18 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 - **On origin:** arena (this commit), `arena-home` 2588ed8, `arena-home-viz` a0e8465, `arena-ui-core` e1e67ec, `w8-static-showcase` d953306.
 - **The machine rebooted at 15:31.** Every terminal and session of the run is gone, and the dispatches above have lost their terminals. Worktrees, branches and transcripts are intact. The workers' sessions can be resumed with `claude --resume`: W6 b63d769b-820f-437b-b2d7-b312b1b9be90, W7 8ad0c2fd-cfd1-4236-b74a-b627b4910230, W4 9e97009a-a246-4f4b-9410-64146e824692, W8 0e0ca852-a3e9-4a10-9046-3faf8aab2db5.
 - **Yoel (15:35): continue as we left it.** Step 1 needs no question: §M item 13 says that Yoel says when he needs the machine.
+
+**Resumed at 15:43 CET (second coordinator).** The Run is bound to the new terminal `term_d0a5cf40`.
+
+**Workers:** all four sessions were resumed with their context, in auto mode, by `coord\resume_worker.ps1`, and each got a new Task on its own terminal. A `--retry-of` would have replayed the old spec from step 1, so the old Tasks are marked failed, superseded. All four start on HOLD.
+
+| worker | new dispatch | new Task | terminal |
+|---|---|---|---|
+| W6 home | ctx_b9ccc2e2b34e | task_7c5e1da13425 | term_430cc7df |
+| W7 home-viz | ctx_57b721d9bc6b | task_e4268ddaea56 | term_1c0b240e |
+| W4 ui-core | ctx_11fec30e929d | task_50991b0458e6 | term_2b5280a5 |
+| W8 static | ctx_8129c99f72a1 | task_521cb7f93cd9 | term_a2bdf30f |
+
+**Chain 2 started at 15:47** from the `arena` worktree: the last cell of seed 5, then seeds 6 and 7, with $112.71 remaining before it.
+
+**The invalid cell, explained.** In `swarm__t2_conference__C0__s5`, the track planner (Muse Spark, role `sub_planner`, seq 3647) put T48 in the day-2 session of `track-hci`, though its speaker's email says "I'll only be around on Day 1". No slot of that session could work. The verifier rejected its `place` contract on all six attempts (seqs 6983–16290, `unavailable: S31 is not available on day 2`), the contract failed, and the session's 8 talks stayed unplaced, which the checker counts as 8 hard violations. The other 6 recorded runs of this track on seed 5 put T48 on day 1, the swarm at C3 among them. So this is one wrong model reading, with no chaos and no API error, and it is not a coordination failure. The runtime has no way to give a talk back to the track, so a session's retries cannot repair its track's split. The same task code runs in every workflow, so any of them can lose a session this way. The handlers are frozen: it is reported, not fixed. `bench/PREREG.md` has no rule on invalid runs, and that seed's extra cost is measured against this short C0 run: the 10-seed reading must say both.
