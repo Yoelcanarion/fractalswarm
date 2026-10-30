@@ -80,9 +80,18 @@ describe("the evidence page, rendered with a story", () => {
   });
 
   it("draws the claims the evidence is about, once each", () => {
-    expect(new Set(drawnClaims(html).map((claim) => claim.id))).toEqual(new Set(["S2", "S4", "S5", "S6", "R2", "R3", "R4"]));
-    for (const id of ["S2", "S4", "S5", "S6", "R2", "R3", "R4"]) expect(countOf(html, `data-claim="${id}"`), id).toBe(1);
+    expect(new Set(drawnClaims(html).map((claim) => claim.id))).toEqual(new Set(["S2", "S4", "S5", "S6", "R2", "R3", "R4", "R5"]));
+    for (const id of ["S2", "S4", "S5", "S6", "R2", "R3", "R4", "R5"]) expect(countOf(html, `data-claim="${id}"`), id).toBe(1);
     expect(html).not.toContain('data-claim="R1"');
+  });
+
+  it("puts R5 under the chart whose extra cost it names the bases of, with its setting and the in-process reason before it", () => {
+    const hero = /<article id="hero-chart"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
+    const at = hero.indexOf('data-claim="R5"');
+    expect(at).toBeGreaterThan(-1);
+    const before = plain(hero.slice(0, at));
+    expect(before).toContain("real model");
+    expect(before).toContain(COPY.rivalReason);
   });
 
   it("draws the code in a claim as code", () => {
@@ -161,11 +170,12 @@ describe("the evidence page, rendered with the real story", () => {
     for (const [pattern, name] of UNIVERSAL) expect(pattern.test(outsideClaims), `"${name}" outside a claim`).toBe(false);
   });
 
-  it("writes the real false deaths beside R4 at one decimal, the way its row writes them", () => {
+  it("writes the real false deaths beside R4 at two decimals, the way R2's row and R4's evidence write them (1.90 at ten seeds)", () => {
     const cost = realFalseDeaths(bundledStory);
     expect(cost, "the real story has the false deaths of the headline rows").not.toBeNull();
     const helps = /<article[^>]*aria-labelledby="helps-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
-    expect(plain(helps)).toContain(`${figure(cost!.perRun, 1)} ${COPY.evidence.helps.perRun}`);
+    expect(plain(helps)).toContain(`${figure(cost!.perRun, 2)} ${COPY.evidence.helps.perRun}`);
+    expect(figure(cost!.perRun, 2)).toBe("1.90");
   });
 
   it("shows the first four terms granted to the rival and keeps every other one in the page, behind a control", () => {

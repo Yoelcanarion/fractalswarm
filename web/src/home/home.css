@@ -465,8 +465,11 @@ body:has(.home) {
   transform: rotate(180deg);
 }
 
+/* One column as wide as the fold: an implicit `auto` column grows to the longest line of the terminal's output (the head hash),
+   and the whole fold, text and all, ran past the edge of a phone. The terminal scrolls its own lines instead. */
 .home-fold__body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   justify-items: start;
   max-width: 760px;
