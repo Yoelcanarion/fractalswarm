@@ -606,7 +606,12 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         help="an arena pair on record: the swarm run, a colon, its rival's run (both published)",
     )
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="default: %(default)s")
-    parser.add_argument("--bench-dir", type=Path, default=BENCH_RESULTS_DIR)
+    parser.add_argument(
+        "--bench-dir",
+        type=Path,
+        default=BENCH_RESULTS_DIR,
+        help="where the Charts page's hero_chart.json and the helps page's honesty.json are read",
+    )
     parser.add_argument("--no-build", action="store_true", help="write only data/ (no Vite build)")
     parser.add_argument("--web-dist", type=Path, help="copy this build instead of running Vite")
     parser.add_argument(
