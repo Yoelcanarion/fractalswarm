@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { HomeView } from "./HomePage";
 import { bundledStory } from "./story";
-import { HOME, visibleText, visibleWords } from "./testing";
+import { HOME, sectionOf, visibleText, visibleWords } from "./testing";
 
 const MAX_WORDS = 230;
 const render = (still = false): string => renderToStaticMarkup(createElement(HomeView, { story: bundledStory, still }));
@@ -39,13 +39,12 @@ describe("the words of the home page", () => {
 
   it("has a title and one sentence to a section, the click demo's label on the demo, and a See more on the sections that fold", () => {
     for (const id of ["problem", "solution", "proof", "enter"]) {
-      const section = new RegExp(`<section id="${id}"[\\s\\S]*?</section>`).exec(html)?.[0] ?? "";
-      expect(section, id).toContain(`<h2 id="${id}-title"`);
+      expect(sectionOf(html, id), id).toContain(`<h2 id="${id}-title"`);
     }
     const demo = /<div id="demo"[\s\S]*?<\/div>/.exec(html)?.[0] ?? "";
     expect(visibleText(demo)).toContain("An illustration in your browser, not a real run.");
     for (const id of ["problem", "solution", "proof"]) {
-      expect(new RegExp(`<section id="${id}"[\\s\\S]*?<details class="home-fold"`).test(html), `${id} folds its nuance`).toBe(true);
+      expect(sectionOf(html, id), `${id} folds its nuance`).toContain('<details class="home-fold"');
     }
   });
 });

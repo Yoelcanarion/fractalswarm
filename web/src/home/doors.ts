@@ -2,8 +2,10 @@
 // build that has no server. The static showcase (W8) is built with Vite mode "static"; its doors that
 // need the local server say so instead of leading to a dead page.
 
+import type { DoorId } from "./viz/doors/doors";
+
 export interface Door {
-  id: string;
+  id: DoorId;
   title: string;
   /** One line: what is behind the door. */
   purpose: string;

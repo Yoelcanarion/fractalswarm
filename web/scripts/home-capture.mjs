@@ -143,11 +143,14 @@ async function shots(base, out, configs = "1920:dark:motion") {
 // ---- layout ---------------------------------------------------------------------------------------------------
 
 // Run in the page. The words are counted the way words.test.ts counts them: what is in view with every See more closed, leaving
-// out what is hidden from the eye (aria-hidden, the text only a screen reader gets, the skip link, drawings' own labels).
+// out what is hidden from the eye (aria-hidden, the text only a screen reader gets, the skip link). The text inside a drawing
+// (an svg: node names, bar labels) is counted apart, as svgWords: the test leaves it out because it comes and goes with the
+// animation, and this shows what it comes to.
 const measurePage = () => {
   const root = document.querySelector(".home");
-  const hiddenFromTheEye = "[aria-hidden='true'], [hidden], svg, script, style, .home-sr, .home-skip, .home-placeholder";
+  const hiddenFromTheEye = "[aria-hidden='true'], [hidden], script, style, .home-sr, .home-skip, .home-placeholder";
   let words = 0;
+  let svgWords = 0;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const element = node.parentElement;
@@ -156,7 +159,9 @@ const measurePage = () => {
     if (details && !details.open && !element.closest("summary")) continue;
     const style = getComputedStyle(element);
     if (style.display === "none" || style.visibility === "hidden") continue;
-    words += node.textContent.split(/\s+/).filter((piece) => /[\p{L}\p{N}]/u.test(piece)).length;
+    const count = node.textContent.split(/\s+/).filter((piece) => /[\p{L}\p{N}]/u.test(piece)).length;
+    if (element.closest("svg")) svgWords += count;
+    else words += count;
   }
   const sections = [...document.querySelectorAll("main > section")].map((s) => `${s.id} ${Math.round(s.getBoundingClientRect().height)}`);
   const pinned = [...document.querySelectorAll("body *")]
@@ -167,6 +172,7 @@ const measurePage = () => {
     width: document.documentElement.scrollWidth,
     screen: innerWidth,
     words,
+    svgWords,
     sections,
     pinned,
     folds: document.querySelectorAll("details.home-fold").length,
@@ -201,7 +207,7 @@ async function layout(base) {
       if (errors.length) bad.push(`errors: ${[...new Set(errors)].slice(0, 4).join(" | ")}`);
       console.log(
         `${size.padStart(4)} ${hash.padEnd(10)} height ${String(m.height).padStart(6)} px (${(m.height / viewport.height).toFixed(1)} screens)` +
-          `  words ${String(m.words).padStart(4)}  folds ${m.folds}  ${bad.length ? "CHECK: " + bad.join("; ") : "OK"}`,
+          `  words ${String(m.words).padStart(4)} (+${m.svgWords} in drawings)  folds ${m.folds}  ${bad.length ? "CHECK: " + bad.join("; ") : "OK"}`,
       );
       if (hash === "#/") console.log(`      sections: ${m.sections.join(" | ")}   pinned: ${m.pinned.join(", ") || "none"}`);
       if (bad.length) problems.push(`${size} ${hash}: ${bad.join("; ")}`);

@@ -11,10 +11,9 @@ import { DOORS } from "./doors";
 import { HomeView } from "./HomePage";
 import { sentences } from "./parts/Claim";
 import { bundledStory } from "./story";
-import { countOf, drawnClaims, fixtureClaimText, FIXTURE_STORY, plain, UNIVERSAL } from "./testing";
+import { countOf, drawnClaims, fixtureClaimText, FIXTURE_STORY, plain, sectionOf, UNIVERSAL } from "./testing";
 
 const render = (story: Story | null, still = false): string => renderToStaticMarkup(createElement(HomeView, { story, still }));
-const sectionOf = (html: string, id: string): string => new RegExp(`<section id="${id}"[\\s\\S]*?</section>`).exec(html)?.[0] ?? "";
 const foldOf = (html: string): string => /<details[\s\S]*?<\/details>/.exec(html)?.[0] ?? "";
 const outsideFolds = (html: string): string => html.replace(/<details[\s\S]*?<\/details>/g, "");
 

@@ -221,3 +221,12 @@ export const drawnClaims = (html: string): DrawnClaim[] =>
     part: m[3] ?? null,
     body: m[4],
   }));
+
+/** One section of the home page as markup: from its opening tag to the next section's (or the end of `main`). A drawing inside it may hold sections of its own. */
+export function sectionOf(html: string, id: string): string {
+  const start = html.indexOf(`<section id="${id}"`);
+  if (start < 0) return "";
+  const next = html.indexOf('<section id="', start + 1);
+  const end = next < 0 ? html.indexOf("</main>", start) : next;
+  return html.slice(start, end < 0 ? undefined : end);
+}

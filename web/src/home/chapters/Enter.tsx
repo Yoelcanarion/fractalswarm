@@ -3,9 +3,9 @@ import { useRef } from "react";
 
 import { COPY } from "../copy";
 import { DOORS, doorState, isStaticShowcase, type Door } from "../doors";
-import { useOnScreenAttribute } from "../hooks";
+import { useOnScreenAttribute, useStill } from "../hooks";
 import { SectionHead } from "../parts/Chapter";
-import { DoorThumb } from "../slots";
+import { DoorThumb } from "../viz/doors/DoorThumb";
 
 /** The way in: a card per door, each with a small drawing that loops softly in CSS while the section is on screen
  * (`data-onscreen` is false the rest of the time, and the loops pause with it). */
@@ -30,10 +30,11 @@ export function Enter() {
 }
 
 function DoorCard({ door, open, note }: { door: Door; open: boolean; note: string | null }) {
+  const still = useStill();
   const body = (
     <>
       <span className="home-door__thumb" aria-hidden>
-        <DoorThumb door={door.id} />
+        <DoorThumb door={door.id} still={still} />
       </span>
       <span className="home-door__title">{door.title}</span>
       <span className="home-door__purpose">{door.purpose}</span>
