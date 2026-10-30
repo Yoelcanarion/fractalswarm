@@ -71,9 +71,10 @@
   font-weight: 600;
 }
 
+/* No text token reads on --accent in both themes (3.2:1 and 4.3:1 at best); the accent's text tone does, at 6:1 or more. */
 .steps__item--now .steps__n {
-  background: var(--accent);
-  color: var(--text-primary);
+  background: var(--accent-text);
+  color: var(--text-inverse);
 }
 
 /* ---- the form ---- */
@@ -788,6 +789,10 @@
 .avail__cell--on {
   background: var(--ok-bg-strong);
   border-color: var(--ok-border);
+  color: var(--ok-text);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  line-height: 1;
 }
 
 .avail__cell:disabled {

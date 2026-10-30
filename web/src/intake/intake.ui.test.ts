@@ -185,6 +185,11 @@ describe("the review", () => {
     expect(plainText(markup)).toContain("Showing where speaker S02 · availability was read.");
     // the speaker's cells of the grid, as buttons a person can press
     expect(markup.match(/class="avail__cell( avail__cell--on)?"/g)?.length).toBe(muse.days.length * muse.slots.length);
+    // a cell that is given is a tick as well as a colour, and a cell that is not is empty
+    const given = occurrences(markup, "avail__cell--on");
+    expect(given).toBeGreaterThan(0);
+    expect(markup.match(/avail__cell--on"[^>]*><span aria-hidden="true">✓<\/span><\/button>/g)?.length).toBe(given);
+    expect(markup).not.toMatch(/class="avail__cell"[^>]*>[^<]/);
   });
 
   it("says, instead of marking a wrong place, that a sentence is not in the text", () => {

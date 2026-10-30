@@ -1,0 +1,168 @@
+// tokens.test.ts checks every text colour against every surface in the abstract. This test reads the sheets: wherever one rule
+// gives a text a token colour and a token background (and wherever a :hover, :focus-visible or [aria-…] variant swaps one of the
+// two), the pair it makes keeps AA, 4.5:1, in the dark theme and in the light one. What a rule inherits from its parent is not
+// known here, so a rule that sets only one of the two is not read.
+
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+import { contrast } from "../lib/color";
+import { REPO_ROOT } from "../lib/testing";
+
+const SRC = REPO_ROOT + "web/src";
+const TOKENS = `${SRC}/styles/tokens.css`;
+
+type Tokens = Record<string, string>;
+
+const declarations = (body: string): Map<string, string> => {
+  const out = new Map<string, string>();
+  for (const match of body.matchAll(/([\w-]+)\s*:\s*([^;]+);?/g)) out.set(match[1].toLowerCase(), match[2].trim());
+  return out;
+};
+
+interface Rule {
+  selector: string;
+  decls: Map<string, string>;
+}
+
+/** Every rule of a sheet in source order, the ones inside @media included; keyframes and font faces are not rules about colour. */
+function readRules(css: string): Rule[] {
+  const out: Rule[] = [];
+  let at = 0;
+  while (at < css.length) {
+    const open = css.indexOf("{", at);
+    if (open === -1) break;
+    let depth = 1;
+    let close = open + 1;
+    while (depth > 0 && close < css.length) {
+      if (css[close] === "{") depth++;
+      else if (css[close] === "}") depth--;
+      close++;
+    }
+    const head = css.slice(at, open).trim();
+    const body = css.slice(open + 1, close - 1);
+    if (head.startsWith("@media") || head.startsWith("@supports")) out.push(...readRules(body));
+    else if (!head.startsWith("@")) out.push({ selector: head, decls: declarations(body) });
+    at = close;
+  }
+  return out;
+}
+
+const withoutComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, "");
+
+/** The two themes: the dark one is the whole of `:root`, the light one overrides part of it. */
+function themes(): Record<"dark" | "light", Tokens> {
+  const dark: Tokens = {};
+  const light: Tokens = {};
+  for (const rule of readRules(withoutComments(readFileSync(TOKENS, "utf-8")))) {
+    const target = rule.selector === ":root" ? dark : rule.selector === ':root[data-theme="light"]' ? light : null;
+    if (target) rule.decls.forEach((value, name) => (target[name] = value));
+  }
+  return { dark, light: { ...dark, ...light } };
+}
+
+const STATE = /(:hover|:focus-visible|:focus|:active|:disabled|:checked|\[disabled\]|\[aria-[\w-]+(?:="[^"]*")?\]|\[data-[\w-]+(?:="[^"]*")?\])$/;
+
+/** `.btn:hover` is the rule `.btn` in the state `:hover`; a pseudo-element is not read: it sits on its own background. */
+function split(selector: string): { key: string; state: string } | null {
+  if (selector.includes("::") || /:(before|after)\b/.test(selector)) return null;
+  let key = selector.trim();
+  let state = "";
+  for (let match = STATE.exec(key); match; match = STATE.exec(key)) {
+    state = match[1] + state;
+    key = key.slice(0, match.index);
+  }
+  return { key, state };
+}
+
+/** Commas inside :is(), :not() and [attr] do not separate selectors. */
+function selectors(list: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let from = 0;
+  [...list].forEach((char, i) => {
+    if (char === "(" || char === "[") depth++;
+    else if (char === ")" || char === "]") depth--;
+    else if (char === "," && depth === 0) {
+      out.push(list.slice(from, i));
+      from = i + 1;
+    }
+  });
+  out.push(list.slice(from));
+  return out.map((s) => s.trim()).filter(Boolean);
+}
+
+const token = (value: string | undefined): string | undefined => /^var\((--[\w-]+)\)$/.exec(value ?? "")?.[1];
+
+interface Paint {
+  color?: string;
+  background?: string;
+}
+
+interface Pair {
+  where: string;
+  color: string;
+  background: string;
+}
+
+/** The text and background tokens each selector sets, and the pair each of its states ends up with. */
+function pairsOf(css: string, file: string): Pair[] {
+  const base = new Map<string, Paint>();
+  const states = new Map<string, Map<string, Paint>>();
+  for (const rule of readRules(withoutComments(css))) {
+    const color = token(rule.decls.get("color"));
+    const background = token(rule.decls.get("background") ?? rule.decls.get("background-color"));
+    if (!color && !background) continue;
+    for (const raw of selectors(rule.selector)) {
+      const parts = split(raw);
+      if (!parts) continue;
+      const slot = parts.state === "" ? base : (states.get(parts.state) ?? states.set(parts.state, new Map()).get(parts.state)!);
+      const paint = slot.get(parts.key) ?? {};
+      if (color) paint.color = color;
+      if (background) paint.background = background;
+      slot.set(parts.key, paint);
+    }
+  }
+  const pairs: Pair[] = [];
+  const add = (key: string, state: string, paint: Paint) => {
+    if (paint.color && paint.background) pairs.push({ where: `${file}  ${key}${state}`, color: paint.color, background: paint.background });
+  };
+  base.forEach((paint, key) => add(key, "", paint));
+  states.forEach((slot, state) =>
+    slot.forEach((paint, key) => {
+      const own = base.get(key) ?? {};
+      add(key, state, { color: paint.color ?? own.color, background: paint.background ?? own.background });
+    }),
+  );
+  return pairs;
+}
+
+function sheets(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = `${dir}/${name}`;
+    if (statSync(path).isDirectory()) return sheets(path);
+    return path.endsWith(".css") && path !== TOKENS ? [path] : [];
+  });
+}
+
+const all = sheets(SRC).flatMap((path) => pairsOf(readFileSync(path, "utf-8"), path.slice(SRC.length + 1)));
+
+describe("the colours the sheets pair", () => {
+  it("finds pairs to check", () => {
+    expect(all.length).toBeGreaterThan(40);
+  });
+
+  describe.each(Object.entries(themes()))("%s theme", (theme, tokens) => {
+    it("keeps every text on its background at AA, 4.5:1", () => {
+      const failures: string[] = [];
+      for (const pair of all) {
+        const [text, background] = [tokens[pair.color], tokens[pair.background]];
+        // an alpha wash or a scrim has no single colour to measure
+        if (!text?.startsWith("#") || !background?.startsWith("#")) continue;
+        const ratio = contrast(text, background);
+        if (ratio < 4.5) failures.push(`${pair.where}: ${pair.color} on ${pair.background} = ${ratio.toFixed(2)} (${theme})`);
+      }
+      expect(failures).toEqual([]);
+    });
+  });
+});
