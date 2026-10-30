@@ -177,10 +177,12 @@ describe("the Proof's data", () => {
 
   it("read in words with every number, the rivals by name and the verdict, and no word of a win", () => {
     const reading = proofReading(panels, "FractalSwarm");
-    expect(reading).toContain("FractalSwarm 14.6 s, In-process supervisor 92.6 s");
-    expect(reading).toContain("+6.6%");
-    expect(reading).toContain("+75.6%");
-    expect(reading).toContain("the data's verdict is a tie");
+    const t2 = story.numbers.r5.t2;
+    expect(reading).toContain(`FractalSwarm ${proofText(t2.swarmStallS, "s")}, In-process supervisor ${proofText(t2.centralStallS, "s")}`);
+    expect(reading).toContain(`FractalSwarm ${proofText(t2.swarmExtraPct, "pct")}, In-process supervisor ${proofText(t2.centralExtraPct, "pct")}`);
+    for (const row of durable.rows) expect(reading).toContain(`the data's verdict is a ${row.verdict}`);
+    // the extra cost names its basis, because the claims give it on two
+    expect(reading).toContain("extra cost, pre-registered basis: FractalSwarm");
     expect(reading).not.toMatch(/\bwin\b|faster|cheaper|simpler|more reliable|NaN|undefined/i);
   });
 });
