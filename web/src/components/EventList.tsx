@@ -4,7 +4,7 @@ import { NOISE_GROUPS, recent, summarize, tone, type EventFilter } from "../lib/
 import type { RunEvent } from "../lib/types";
 import { useRunStore } from "../store";
 import { LensButton } from "./lens/LensButton";
-import { Tooltip } from "./ui";
+import { Details, Tooltip } from "./ui";
 
 const PAGE = 300;
 
@@ -45,35 +45,37 @@ export function EventList({ events, cursor, groups }: Props) {
           {cursor.toLocaleString("en")} events so far · newest first
         </span>
       </header>
-      <div className="evlist__bar">
-        <input
-          className="evlist__search"
-          placeholder="search type, actor or payload — every word must match"
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setLimit(PAGE);
-          }}
-          aria-label="search events"
-        />
-        <Tooltip label="Heartbeats, network frames, timers and network faults: the events that fill the log without saying what the run did." placement="bottom">
-          <button className="btn" onClick={() => setHidden(noiseHidden ? new Set() : new Set(NOISE_GROUPS))}>
-            {noiseHidden ? "Show the noise" : "Hide the noise"}
-          </button>
-        </Tooltip>
-      </div>
-      <div className="evlist__chips" role="group" aria-label="event groups">
-        {names.map((name) => (
-          <button
-            key={name}
-            className={`chip ${hidden.has(name) ? "" : "chip--on"} ${NOISE_GROUPS.has(name) ? "chip--noise" : ""}`}
-            onClick={() => toggle(name)}
-            aria-pressed={!hidden.has(name)}
-          >
-            {name} <span className="mono">{groups[name].toLocaleString("en")}</span>
-          </button>
-        ))}
-      </div>
+      <Details inline id="filter" summary="Filter the events" hint={noiseHidden ? "search, groups; the noise is hidden" : "search, groups; the noise is shown"}>
+        <div className="evlist__bar">
+          <input
+            className="evlist__search"
+            placeholder="search type, actor or payload — every word must match"
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setLimit(PAGE);
+            }}
+            aria-label="search events"
+          />
+          <Tooltip label="Heartbeats, network frames, timers and network faults: the events that fill the log without saying what the run did." placement="bottom">
+            <button className="btn" onClick={() => setHidden(noiseHidden ? new Set() : new Set(NOISE_GROUPS))}>
+              {noiseHidden ? "Show the noise" : "Hide the noise"}
+            </button>
+          </Tooltip>
+        </div>
+        <div className="evlist__chips" role="group" aria-label="event groups">
+          {names.map((name) => (
+            <button
+              key={name}
+              className={`chip ${hidden.has(name) ? "" : "chip--on"} ${NOISE_GROUPS.has(name) ? "chip--noise" : ""}`}
+              onClick={() => toggle(name)}
+              aria-pressed={!hidden.has(name)}
+            >
+              {name} <span className="mono">{groups[name].toLocaleString("en")}</span>
+            </button>
+          ))}
+        </div>
+      </Details>
       <ol className="evlist__rows">
         {rows.map((event) => (
           <li key={event.seq} className={`evrow ${tone(event.type) ? `evrow--${tone(event.type)}` : ""}`}>

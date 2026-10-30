@@ -10,7 +10,7 @@ export function ResultsPage() {
       title="Results"
       lead={
         <>
-          What the run reported, how each goal was checked and what it spent, as they stood at the <Term id="playhead">playhead</Term>.
+          What the run reported, how each goal was checked and what it spent, as they stood at the <Term id="playhead" focusable={false}>playhead</Term>.
         </>
       }
     >

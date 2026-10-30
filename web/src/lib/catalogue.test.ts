@@ -229,9 +229,18 @@ describe("the replay check in words", () => {
     expect(verifyWords({ state: "done", report: report({ bundle_head_ok: false, detail: "head differs" }) })).toMatchObject({ tone: "bad", detail: "head differs" });
   });
 
+  it("says an intact log that this code does not reproduce is just that, in amber, and keeps red for a broken chain", () => {
+    const words = verifyWords({ state: "done", report: report({ ok: false, chain_ok: true, first_divergence: 9, detail: "effect.started differs in payload" }) });
+    expect(words).toEqual({ label: "Log intact. This code does not reproduce this recording: first difference at seq 9.", tone: "warn", detail: "effect.started differs in payload" });
+    expect(verifyWords({ state: "done", report: report({ ok: false, chain_ok: true, first_divergence: null }) }).label).toBe("Log intact. This code does not reproduce this recording.");
+    expect(verifyWords({ state: "done", report: report({ ok: false, chain_ok: false, first_divergence: 9 }) }).tone).toBe("bad");
+    // never a guess about where the recording came from
+    expect(words.label).not.toMatch(/older|version|outdated|stale/i);
+  });
+
   it("names the event where a replay diverged, and keeps a failed check apart from a failed run", () => {
-    expect(verifyWords({ state: "done", report: report({ ok: false, first_divergence: 812 }) }).label).toBe("Replay mismatch at seq 812");
-    expect(verifyWords({ state: "done", report: report({ ok: false, first_divergence: null }) }).label).toBe("Replay mismatch at seq ?");
+    expect(verifyWords({ state: "done", report: report({ ok: false, chain_ok: false, first_divergence: 812 }) }).label).toBe("Replay mismatch at seq 812");
+    expect(verifyWords({ state: "done", report: report({ ok: false, chain_ok: false, first_divergence: null }) }).label).toBe("Replay mismatch at seq ?");
     expect(verifyWords({ state: "error", error: "502 Bad Gateway" })).toEqual({ label: "Could not check", tone: "warn", detail: "502 Bad Gateway" });
   });
 });

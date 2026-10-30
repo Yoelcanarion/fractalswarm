@@ -264,6 +264,14 @@ export interface VerifyWords {
   detail: string;
 }
 
+/** A replay that does not match while the log's own hash chain holds is not a broken log: this code does not reproduce that recording
+ * (the chain is intact, so what was recorded is what is there). The words say exactly that and no more: whether the recording came from an
+ * older version is not something the check can know. */
+export const notReproduced = (report: VerifyReport): boolean => !report.ok && report.chain_ok;
+
+export const notReproducedWords = (report: VerifyReport): string =>
+  `Log intact. This code does not reproduce this recording${report.first_divergence === null ? "" : `: first difference at seq ${report.first_divergence}`}.`;
+
 /** The same verdict the run page gives (components/VerifyBadge.tsx): verified only when the replay and the bundle's head both match. */
 export function verifyWords(view: VerifyView): VerifyWords {
   switch (view.state) {
@@ -282,6 +290,7 @@ export function verifyWords(view: VerifyView): VerifyWords {
           detail: `${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head.slice(0, 12)}.`,
         };
       }
+      if (notReproduced(report)) return { label: notReproducedWords(report), tone: "warn", detail: report.detail };
       return { label: `Replay mismatch at seq ${report.first_divergence ?? "?"}`, tone: "bad", detail: report.detail };
     }
   }
