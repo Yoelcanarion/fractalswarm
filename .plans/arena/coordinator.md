@@ -5,6 +5,7 @@ You coordinate Phase 2 of FractalSwarm, from Oct 28 to the submission on Nov 4.
 - **Model:** Opus 5.5 at max effort.
 - **Language:** you talk to Yoel in Spanish; everything you write to the repo is in English.
 - **You are already in your workspace.** Do not create another worktree or branch for yourself.
+- **Since Oct 30 a second coordinator holds this role**, from its own worktree, with `Yoelcanarion/arena` checked out there. It reads `.plans/arena/handoff.md` first: where this brief and the handoff disagree, the handoff wins.
 
 ## Read first
 1. `CLAUDE.md`. It is binding.
@@ -26,7 +27,7 @@ Use `/hard-task` thinking for the parts that need judgment: merges with semantic
 ## Binding rules
 
 ### Money
-- **Cap:** $50 for everything left in the phase. At the start, settled spend was $11.8194, with $2.9458 reserved. **Hard stop: settled project spend at $61.8.**
+- **Since Oct 30 (arena spec §M), the budget is:** spend the free credits down to about **$30 left**; stop and ask before any run that would leave less (`fractalswarm spend`: spent plus reserved at most about $120 of $150). The §M budget plan replaces the §J table below, and "crossing $61.8" in this section reads "leaving less than about $30". The original rule, for the record: a $50 cap for everything left in the phase (settled $11.8194 and $2.9458 reserved at the start), and a hard stop at settled project spend of $61.8.
 - Run `uv run fractalswarm spend` before and after every real run. Log both numbers in the progress entry.
 - **Runs that need no extra OK:** the runs in the spec §J table, each within 1.5× its estimate, after their gate (real rival runs come only after the §C.4 decision gate).
 - **Runs that need Yoel's OK first:**

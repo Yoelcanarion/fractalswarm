@@ -14,17 +14,17 @@ A multi-agent LLM runtime for the Meta Global AI Developer Hackathon (Indie trac
 - **API facts:** `docs/api-notes.md`, written by the Day 2 spike. Trust it over memory for Meta Model API details.
 
 ## Phase 2 "Arena" (Oct 29 – Nov 4)
-- **Source of truth:** `.plans/arena-spec.md`. It wins over the original spec and the day prompts where they disagree.
+- **Source of truth:** `.plans/arena-spec.md`. It wins over the original spec and the day prompts where they disagree. Its §M (Yoel, Oct 30) wins over the rest of it.
 - **Briefs** live in `.plans/arena/`:
-  - `coordinator.md`;
+  - `coordinator.md`, plus `handoff.md` for the second coordinator (from Oct 30);
   - `w1-rival.md` … `w5-ui-arena.md`;
   - `backend-design.md`.
 - **How the work runs:**
-  - an Orca coordinator works in the `arena` workspace;
+  - an Orca coordinator owns the branch `Yoelcanarion/arena`: the first one in the `arena` workspace until Oct 30, then a second one in its own worktree (`handoff.md`);
   - workers branch from `Yoelcanarion/arena`, not from `master`;
   - workers write their notes to `.plans/notes/arena-<name>.md`;
   - only the coordinator edits `.plans/progress.md`.
-- **Money:** the phase cap is **$50**, counted from Oct 28. The hard stop is **$61.8** of settled project spend. Only the coordinator makes real calls, in quiet windows (workers hold their heavy commands).
+- **Money** (Yoel, Oct 30, arena spec §M): spend the free credits down to about **$30 left**. Stop and ask before any run that would leave less in `fractalswarm spend` (spent plus reserved: at most about $120 of $150). This replaces the old $50 cap and $61.8 hard stop. Only the coordinator makes real calls, in quiet windows (workers hold their heavy commands).
 - **Replay safety:** never add a field to an existing event payload model, because old runs would stop replaying. Use new event types, and gate new behaviour by new modes or params.
 - **No plan by days** (Yoel, Oct 29): everything as soon as its inputs exist, in the order of the arena spec §I.
 - **Handler freeze:** as soon as the last handler change has merged and the real rival rows have run; Sun Nov 1, 20:00 CET at the latest.

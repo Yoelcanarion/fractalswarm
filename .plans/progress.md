@@ -1118,6 +1118,24 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
   - **W4 done and merged** (ea40fa0, 8cfc99e): the answer buttons, clicked on a real server (15 of 15: the person overrules the arbiter, and a run not launched for controls gets the server's 409); the scored counters; a class clash that laid the collision rows out as lens rows, found by looking and fixed. Checks: demo and replays MATCH, tsc, vitest 1126, `test_api` 37; W4's references 43 of 43.
   - **W5's MP2 slots** (director polish): the arena fits the 1080 frame, the camera stays in the stage, s8's tooltips are drawn with the chips' own words. Its merge_ready follows.
   - **Paid block 3 started at 21:55** at 8cfc99e: the T1 rows of the final matrix (swarm, central, single, pipeline; 32 cells).
+- **After midnight (22:00–01:10):**
+  - **Paid block 3 done** (21:55–00:43, committed as a5e9609): 32 cells, 0 failed, all completed and valid; $1.52, settled $17.9963 → $19.5130. It took 2 h 48 min, not 1 h: a single-agent T1 run takes 6–10 min, and a pipeline one 5–20 min with crashes (one agent at a time).
+  - **The v1 aggregates** (`results.csv`, `results.json`, the T2 hero chart, the recovery charts of both tasks) were written from all 96 cells of `bench/matrix-rivals-real.yaml` by a rerun with 0 cells to run ($0), and committed with the cells. They had never been committed: each block wrote them from its own cells only.
+  - **First look at the real rows** (2 seeds each; descriptive, not a verdict). At C3, stall and extra cost against each system's own C0:
+
+    | | T2 stall | T2 extra cost | T1 stall | T1 extra cost |
+    |---|---|---|---|---|
+    | swarm | 14.6 s | +6.6% | 8.2 s | +2.6% |
+    | durable-max | 9.8 s | −6.8% | 14.1 s | −17.4% |
+    | durable | 8.0 s | −11.7% | 1.1 s | +1.9% |
+    | central | 92.6 s | +75.6% | 62.6 s | +37.7% |
+
+    All 96 runs completed and are valid, and each spent 0 coordination tokens. At C0 the multi-agent systems already stall 0–50 s (live API latency), single 128–225 s and pipeline 49–77 s (one agent at a time), so stall compares the profiles of one system, not the topologies. Against `central` the gap is the one of the $0 gate. Against the durable rivals, two real seeds sit within the noise: the two seeds of one C0 differ by up to 8% in cost.
+  - **Handler freeze tagged** at a5e9609 (`handler-freeze`, 00:55): nothing under `src/fractalswarm` has changed since dedde57 except the static bundle. Announced to W3, the only worker still running.
+  - **W5's MP2 merged** (e307ca1, at c61b989; W5 done): director polish, and `scenes.real.test.ts`, which plays every scene on the demo's real log. Checks: ruff, demo and replays MATCH, tsc, vitest 1154, `test_api` 37.
+  - **W3's slot 2** (00:57–01:04, load on the reader at speed 40): the old code failed again (one `events()` call chased the log for 58 s); the fix held the plan for the person in 2 of 2 runs. With slot 1, the old code fails 6 of 6 under the loads chosen and the fix holds 25 of 25. Its merge waits for the end of the headline runs.
+  - **Memory fell to 1.9 GB free at 00:15** (Firefox and eight Claude sessions). I stopped the sessions of the finished workers (W1, W3's earlier Task, W4, then W5) and closed their terminals: about +1 GB.
+  - **The headline runs started at 01:05** at e307ca1, after the tag: `bench/matrix-headline.yaml`, 18 cells, worst case $9, settled before $19.5130.
 - **Why no real call yet** (Yoel asked): the spec puts the decision gate before any real rival run, and the replay evidence must be recorded after the freeze. Today's spend is $0; settled $11.82, all from Phase 1.
 - **The $0 gate v2 ran** (W1, at 7bac37d, PREREG locked at blob 4df0c2b): 128 cells, 0 failed, about 4 min. I recomputed the deciding per-seed ratios from `results.csv`; they match W1's report. Against `durable-max` on T2, locality **ties** at C2 and C3: blast radius wins on every seed, but coordinator-dependency time and idle agent-seconds, though about 2.5–3 times lower on the seed means, are not below half on every seed (C3 seeds 2 and 3 at 0.51). So outcome A cannot be reached, and the outcome is B whatever the sweeps show; they map the conditions. Cost ties with `durable-max`, so "cheaper" is not claimed against it. The swarm loses H5 (false deaths, 1.25–2.25 per run at C2–C3). The low-memory reaper stopped the gate once at 30 of 128 cells; it resumed in the foreground. Workers now run every heavy command in the foreground, in chunks under 9 minutes.
 
@@ -1138,10 +1156,10 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 
 - **A plain `uv sync` in the coordinator worktree removes the safety extra**, and the PromptGuard tests then skip silently. Use `uv sync --extra safety` there.
 
-**Spend:** no real calls.
-- Settled: $11.8194 before and after.
-- Reserved: $2.9458, all stale.
-- Phase budget left to the hard stop: $49.98.
+**Spend** (`fractalswarm spend`):
+- Settled: $11.8194 → $19.5130 (block 1 $4.54, block 2 $1.64, block 3 $1.52), all Contributor-routed bench runs.
+- Reserved: $3.7443, all stale (calls cut off in flight, kept open on purpose).
+- Left to the $61.8 hard stop: $42.29. Left to my ceiling while Yoel is away ($35): $15.49. The headline runs (worst case $9) fit under both.
 
 **Deviations**
 - The integration merge was a normal merge, not `--ff-only`.
@@ -1154,8 +1172,64 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 - **An orphan pytest,** stuck on the autoscale mutation since 18:50, was stopped: three processes from day-09-economy.
 
 **Next**
-- Supervise W1–W4. The merge order:
-  - W1's durable modes and metrics first;
-  - W3's lens API;
-  - W4's first merge (tokens and the store factory), then start W5.
-- Fri Oct 30: the $0 gate v2 and the sensitivity sweep, then the decision gate with Yoel (spec §C.4).
+- The headline runs (about 75 min): then `bench verdicts bench/results/headline`, `replay --verify` at HEAD on a sample of the real runs, and commit the cells.
+- Merge W3's API fix (`Catalog.page` reads the page and the last seq in one transaction), with the full checks, PromptGuard included.
+- Re-dispatch W1 for REPORT §3 and §4.10 (the real rows of v1 and the headline runs), and the seed-3 wording of §4.4 and §5.
+- `docs/claims.md`: the real rows of R2, S4 (0 coordination tokens in every real run), and the tagline proposal for Yoel from the real data.
+- Ask Yoel:
+  - the rest of §J beyond my $35 ceiling: the LangGraph rows, the scaling sweep, the final demo bundle and attack clip, T3, and the live-input rehearsals;
+  - the final arena pair (then W5 re-dispatched for the recorder);
+  - ffmpeg;
+  - his old W4 terminal in Orca.
+- Nightly push of arena (with the tag) and of the worker branches.
+
+## Phase 2, Fri 30 Oct 2026 (night): the headline runs, Yoel's decisions, the handoff
+
+**Done (01:05–03:00):**
+- **The headline runs** (01:05–02:14 at e307ca1, after the freeze; committed as 098f405): 18 cells, 0 failed, all completed and valid, seed 3 included; $5.15. `bench verdicts bench/results/headline`, T2 at C3:
+  - **Against `durable-max`, locality holds:** H4a, H4b and H4c win on every seed (coordinator-dependency time 6.94 against 22.27 s; blast radius 6.67 against 23.33% of sessions; idle agent-seconds 7.18 against 24.38).
+  - **Ties:** H1, H2, H3, H6 and stall time (extra cost −6.6% against +7.5%; stall 10.3 against 32.0 s).
+  - **H5 loses:** 2.0 false deaths per run.
+  - **Against `durable`:** the same, and stall time wins (10.3 against 23.3 s).
+  - Three replays checked at HEAD: MATCH.
+  - At the $0 gate locality tied at C2 and C3. So this is a real-model result at one point, and the gate's outcome B stands. It is claimed with its setting (`docs/claims.md` R4), and the 10-seed extension reads it again.
+- **Yoel's decisions** (01:50, now arena spec §M). He asked for every question at once, at most 5; I asked 4.
+  - **A full handoff** to a second coordinator, in its own worktree, once the headline is committed. It must not stop at the end of the plan ("No te detengas en el paso 10; haz todo lo posible").
+  - **Focus:** the web UI, and a home page that works as a presentation with charts and scroll-driven animation, ending in a menu into the simulation; then the whole app.
+  - **Budget:** spend the free credits down to about **$30 left**. This replaces the $50 cap, the $61.8 hard stop and my $35 ceiling.
+  - **Tagline:** "Kill half the brains. It still finishes." only.
+  - **The final arena pair against both rivals** (`central` and `durable-max`).
+  - **The headline extended** to seeds 1–10, with `central` added (about $20).
+  - **ffmpeg** may be installed, and his old W4 terminal closed.
+- **W3's events-API fix merged** (6377a51): `Catalog.page` reads a page and the last seq in one snapshot.
+  - Checks: ruff, demo and replays MATCH; unit 1077; integration 897 in three chunks (315, 289 and 293; 19 min); PromptGuard 3; the intake schema tests 13.
+  - The whole collection is 1972 tests, and the chunks ran 1974.
+  - W3 is done.
+- **ffmpeg 9.0.2 installed** with winget; its `bin` folder is on the user PATH for new shells. Yoel's old W4 terminal is closed and its blocked Task marked superseded.
+- **Docs:**
+  - `docs/claims.md`: the status line; S4 allowed as a property, not an advantage; S7, the tagline; R2's real rows; R4, the real locality at the headline point.
+  - Arena spec §M.
+  - The budget rule in `CLAUDE.md` and in the coordinator brief.
+  - `bench/matrix-headline-10.yaml` (80 cells, 62 to run once the 18 headline cells are copied in; its dry run checks that seeds 4–10 are ready).
+  - `.plans/arena/handoff.md`.
+- **Coordinator tools** copied out of my session scratchpad to `C:\Users\yogar\.fractalswarm\coord\`: the paid chain (it now stops at the $30 floor), merge checks, cell status and summary, the mail wait, worker start, the shared worker rules, and W1's spec draft for the REPORT.
+
+**Spend:**
+- Settled: $19.5130 → $24.6654 (the headline runs).
+- Reserved: $4.1279, stale.
+- Remaining: $121.21 of $150. Under §M about $91 can still be spent above the $30 floor.
+
+**Deviations** (all Yoel's, §M):
+- The budget rule above.
+- The handoff.
+- The handler freeze was tagged on Oct 30 at 00:55, ahead of the Nov 1 limit, as its condition allowed.
+
+**Issues:**
+- **Seen by W3, not fixed:** `events_page` runs blocking sqlite and pydantic on the event loop (about 170 ms per 5,000-event page). It matters for the live UI at high speeds.
+- **The suite totals:** the whole collection (1972) and the chunk sum (1974) now differ by 2, the other way from before. Every chunk passed.
+
+**Next** (the second coordinator, `.plans/arena/handoff.md`):
+- the home page as a presentation, and UI polish;
+- the paid queue: the 10-seed headline plus `central`, the arena pairs against both rivals, the final bundle, LangGraph, scaling, T3, the live-input rehearsals;
+- REPORT §3 and §4.10 (W1);
+- the story files.

@@ -1,0 +1,34 @@
+# The headline runs extended to ten seeds, with central added (Yoel, Oct 30, 01:50 CET). It was
+# decided while bench/matrix-headline.yaml was still running: the swarm's 6 cells had been read,
+# the rivals' had not.
+#   4 workflows x T2 x {C0, C3} x seeds 1-10 = 80 cells.
+# The 18 cells of the pre-registered headline (seeds 1-3 of swarm, durable-max and durable, in
+# results/headline) are copied in first, cells/ and runs/ both, so 62 cells run: 42 for seeds 4-10
+# of those three workflows, and 20 for central.
+# The pre-registered reading stays the 3-seed one in results/headline. This one is reported next
+# to it, in full, whatever it shows.
+# Fairness, caps and routing are those of matrix-headline.yaml. The matrix cap is the worst case
+# of the 62 cells (62 x the run cap), so the pre-flight refuses to run if the 18 were not copied.
+#   copy bench/results/headline/cells and bench/results/headline/runs into bench/results/headline-10
+#   uv run fractalswarm bench run bench/matrix-headline-10.yaml --dry-run    # 80 cells, 18 done, 62 to run
+#   uv run fractalswarm bench run bench/matrix-headline-10.yaml --confirm-real-spend
+# Expected: about $20 and 4.5-5 h of machine time (a central C3 run takes about 6 min). The
+# harness skips finished cells, so it can run in blocks between the UI's slots. Read it with
+# `bench verdicts bench/results/headline-10`.
+name: headline-10
+workflows: [swarm, durable-max, durable, central]
+tasks: [t2_conference]
+profiles: [C0, C3]
+seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+# Contributor routing (spec §7.5): synthetic tasks, explicit opt-in for the bench matrix.
+contributor: true
+out_dir: results/headline-10
+chart_task: t2_conference
+budget:
+  run_cap_usd: 0.50
+  matrix_cap_usd: 31.00  # the 62 cells to run x the run cap
+notes: >
+  Fair failure semantics (spec §15.2): same crashes at the same progress points, 5 s
+  best-case restart for the baselines, completed work preserved. durable-max keeps its workers
+  and its own calls through a crash; durable keeps its workers and loses its own calls in flight
+  (arena spec §A). central is the in-process supervisor: its workers stop with it.

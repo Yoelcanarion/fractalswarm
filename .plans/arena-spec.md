@@ -76,7 +76,7 @@ W1's duplicate count for this run is 42 calls paid twice ($0.22), more than the 
 | Arena | Side by side: swarm left, supervisor right, a shared timeline with the crashes, and counters face to face. |
 | Video | Director mode in the app. **Captured automatically**: Playwright records one clip per scene at 1920×1080, and any scene that stutters falls back to OBS. Yoel's voice-over follows a **word-for-word script** in plain English, timed per scene, with a key-points version beside it. Light editing. |
 | Scope | Nothing is cut from the build: LangGraph rows, scaling sweep, T3 real run and economy panels all stay, in priority order. The video and the top of the README carry only what answers the three questions. |
-| Spend | **One total cap of $50** for everything left, with a daily spend report. The hard stop is settled project spend at **$61.8**. |
+| Spend | **One total cap of $50** for everything left, with a daily spend report. The hard stop is settled project spend at **$61.8**. *Replaced on Oct 30 by §M: spend the credits down to about $30 left.* |
 | Agents | Orca coordinator (Opus 5.5, max effort) plus **4–5 parallel workers** (Sonnet 5.5, max effort, escalating with `/hard-task`), each in its own child worktree. |
 | Publish | Nov 3, after recording: final secret and PII scan, make the repo public, check it logged out. |
 | Push | Each night the coordinator pushes the working branches (`Yoelcanarion/arena` and the workers' branches) to the **private** repo as a backup. Merging into `master`, pushing `master` and publishing still need Yoel's explicit OK. |
@@ -379,6 +379,8 @@ The drafts are ready by Nov 2 and final on Nov 4.
 
 ## J. Budget: $50 total cap
 
+*Replaced on Oct 30 by §M (spend the credits down to about $30 left). This table stays as the record of the plan.*
+
 | Item | Estimate |
 |---|---|
 | v1 tail (3 cells) | ~$1 |
@@ -431,6 +433,47 @@ The drafts are ready by Nov 2 and final on Nov 4.
 | Intake hallucination | Human review and approval; the source sentence is shown for every constraint. |
 | The arena's live pair is unstable | Record the pair, and keep a replay of a pair recorded earlier as plan B. |
 | Merge conflicts in `orchestrator.py` | W1 owns the central path; W3 works through a new module and a small hook, merged after W1. |
+
+---
+
+## M. Oct 30 (Yoel, 01:50 CET): handoff, home page, budget
+
+These decisions override the rest of this document where they disagree.
+
+1. **A second coordinator takes over** (full handoff) once the headline runs are committed.
+   - It works from a new Orca worktree and checks out `Yoelcanarion/arena` there; the first coordinator's worktree is left detached.
+   - Its handoff note is `.plans/arena/handoff.md`.
+   - It launches the workers it needs.
+   - It does not stop at the end of §I or of Day 10's list. When the list is done, it keeps improving the web and the app as far as it can until the submission. Yoel: "No te detengas en el paso 10; haz todo lo posible."
+2. **Focus on the most original parts:**
+   - **Polish the web UI.**
+   - **The home page becomes a presentation.** It explains the problem and its solution with charts, as a story told while scrolling, and ends in a menu that leads into the simulation: the arena, a live run, the replays, intake and director mode.
+   - **Quality detail, animation and visual effects tied to the charts as the page scrolls.** The charts draw, count and reveal as they enter the view. The page respects reduced motion, works offline (`demo --verify` serves it), and stays smooth on this machine.
+   - **Work on the whole application too**, not only the interface.
+3. **Budget:** spend the free Meta credits down to about **$30 left** for future use.
+   - This replaces the $50 phase cap and the $61.8 hard stop (§1, §J), and the first coordinator's $35 ceiling.
+   - Stop and ask before any run that would leave less than about $30 remaining in `fractalswarm spend` (spent plus reserved: at most about $120 of $150).
+   - Only the coordinator makes real calls, as before.
+4. **Tagline:** "Kill half the brains. It still finishes." Only that sentence. The measured numbers, with the rival named, go under it as a subtitle (`docs/claims.md`).
+5. **The final arena pair is recorded against both rivals:** `central` for the contrast, and `durable-max` for the honest tie. Yoel picks in the edit.
+6. **More real seeds:** the headline is extended to seeds 1–10, with `central` added (`bench/matrix-headline-10.yaml`, about $20). The 3-seed pre-registered reading stays primary; both readings are published in full.
+7. **ffmpeg may be installed** (`winget install Gyan.FFmpeg`), and Yoel's old W4 terminal in Orca may be closed.
+8. **Questions to Yoel:** all at once, right away, at most 5 per round. Otherwise proceed on sensible defaults.
+9. **The live real-input rehearsal uses the sample text.** Yoel types his own text for the final take.
+
+**The budget plan** (estimates; the coordinator re-plans from the real numbers):
+
+| Item | Estimate |
+|---|---|
+| Headline extended to 10 seeds, plus `central` | ~$20 |
+| LangGraph rows | ~$2.5 |
+| Scaling sweep | ~$6 |
+| T3 real | ~$0.4 |
+| Final demo bundle (kill-half plus poisoned email), attack clip, re-recordings | ~$3 |
+| Arena pairs against both rivals, live-input rehearsals | ~$6 |
+| **Subtotal** | **~$38** |
+| Left to the coordinator's judgement: more seeds or takes where the evidence or the video needs them | up to ~$50 |
+| Kept for Yoel | ~$30 |
 
 ---
 
