@@ -204,7 +204,7 @@ all). Totals are sums of the unrounded figures. The ledger (`fractalswarm spend`
 agrees with the completed calls to the cent: $4.54, $1.64, $1.52 and $5.15 for the last four blocks, and
 $3.06 for the evening of Oct 28, when it went from $8.7600 to $11.8194: the 11 cells of `f13b20a`
 ($2.891) and the cut `pipeline` run ($0.168). The $8.90 that the progress log gives for the first 29
-cells is the sum of their `cost_usd`, estimate included; on the ledger's basis they cost $8.37.*
+cells is the sum of their `cost_usd`, estimate included; on completed calls alone they cost $8.37.*
 
 Each commit is the code that the progress log names for the start of its block. The logs agree with it:
 the recording times fall in the block's window, the 18 cells of `587c88f` have no `security.routed`
@@ -992,8 +992,9 @@ Extra cost against the same workflow's own C0 (%), mean over the two seeds:
 *`bench/results/v1/results.csv`, column `cost_usd`.*
 
 `central`'s extra cost grows with the crashes and is the largest: +30.6, +57.5 and +75.6% on T2 and
-+3.5, +23.4 and +37.7% on T1 (C1, C2, C3), and its cost rises from $0.278 to $0.489 on T2. `single`'s
-grows too, but less (+10.4% on T2 and +19.8% on T1 at C3). The swarm's is +9.3, −2.8 and +6.6% on T2
++3.5, +23.4 and +37.7% on T1 (C1, C2, C3), and its cost rises from $0.278 to $0.489 on T2. On the
+completed calls alone the same runs give +22.5, +25.4 and +32.4% on T2 and +0.7, +11.5 and +18.3% on
+T1 (below). `single`'s grows too, but less (+10.4% on T2 and +19.8% on T1 at C3). The swarm's is +9.3, −2.8 and +6.6% on T2
 and −5.1, +17.2 and +2.6% on T1. Apart from `central`, the extra costs of the other five lie between
 −17.4% and +42.3%, with no trend by profile that they share. On T2 all six values of the two durable
 supervisors are negative (−4.8 to −14.0%), which means that the C3 run cost less than its own C0 run,
@@ -1016,9 +1017,36 @@ cancelled calls is not known.
 *Extra cost (%) of `central`, mean over the two seeds. Cost of the cells: `results.csv`,
 `extra_cost_pct`. Completed calls only: computed from the run logs (not committed), as (the summed
 `cost_usd` of the completed calls of the run − that of its C0 twin) / that of its C0 twin, per seed,
-then the mean.* For the other workflows at C3 the two readings differ by 0.4–4.9 points (the swarm:
-+6.6 and +4.5% on T2, +2.6 and +1.3% on T1). One cell, `central` C3 seed 2 on T2, costs $0.545 on
-paper, above the $0.50 run cap: its completed calls cost $0.405.
+then the mean.* One cell, `central` C3 seed 2 on T2, costs $0.545 on paper, above the $0.50 run cap:
+its completed calls cost $0.405.
+
+At C3, every workflow on both bases. The cells' cost comes first: it is the figure that the rules and
+the hero chart use. The completed-call figure is next to it.
+
+| Task | Workflow | Cells' cost (%) | Completed calls only (%) | Estimate in the run ($) |
+|---|---|---|---|---|
+| T2 | swarm | 6.6 | 4.5 | 0.006 |
+| T2 | durable-max | -6.8 | -8.9 | 0.006 |
+| T2 | durable | -11.7 | -14.8 | 0.010 |
+| T2 | central (in-process supervisor) | 75.6 | 32.4 | 0.121 |
+| T2 | single | 10.4 | 7.6 | 0.007 |
+| T2 | pipeline | 8.6 | 6.1 | 0.007 |
+| T1 | swarm | 2.6 | 1.3 | 0.001 |
+| T1 | durable-max | -17.4 | -17.8 | 0.000 |
+| T1 | durable | 1.9 | -3.0 | 0.002 |
+| T1 | central (in-process supervisor) | 37.7 | 18.3 | 0.008 |
+| T1 | single | 19.8 | 18.5 | 0.001 |
+| T1 | pipeline | 0.2 | -1.1 | 0.001 |
+| T2, headline | swarm | -6.6 | -9.1 | 0.007 |
+| T2, headline | durable-max | 7.5 | 4.2 | 0.010 |
+| T2, headline | durable | 2.2 | -2.2 | 0.013 |
+
+*Mean over the seeds (two in v1, three in the headline). Cells' cost: `bench/results/v1/results.csv`
+and `bench/results/headline/results.csv`, column `extra_cost_pct`. Completed calls only, and the
+estimate (the cell's `cost_usd` minus the cost of its completed calls, all of it at C3 since no call
+is cancelled at C0): computed from the run logs as above.* For the workflows other than `central` the
+two bases differ by 0.4–4.9 points in v1 and by 2.5–4.4 in the headline, and `central` is the one that
+moves by 43 and 19 points (T2 and T1).
 
 #### 4.10.3 Recovery, per crash
 
@@ -1333,6 +1361,16 @@ This reading covers the $0 runs of §4.1–§4.9; the real-model rows are read i
   routing), a property of that seed's fake outputs: the fake run with Contributor routing and the
   real model both validate it (§4.4, §4.10.5); three T1 runs carry the swarm's stall (§4.1). With
   four seeds one outlier moves a mean, which is why every verdict is taken per seed.
+- **On the real model** (§4.10: live API, two seeds in v1, three in the headline). Against `central`,
+  stall and extra cost grow with the crashes: at C3 on T2 the swarm stalls 14.6 s against 92.6 s and
+  pays +6.6% extra against +75.6% on the cells' cost (the figure that the rules and the hero chart
+  use), or +4.5% against +32.4% on completed calls alone, because the estimate for the calls that a
+  crash cancels is more than half of `central`'s extra cost. Against `durable-max`, on the headline
+  point (T2, C3, three seeds), locality holds on every seed; preserved work, extra cost and stall time
+  tie, with the swarm's preserved work below `durable-max`'s on two seeds of three on few calls (it
+  kept 7 of 9 and 5 of 8 of the calls in flight at a crash); and false deaths are a loss on every
+  seed. The other recording of seed 1 of that cell, in v1, is below half on none of the three locality
+  metrics (§4.10.6), so locality there is a result of three seeds on one day.
 
 ## 6. Limitations
 
@@ -1372,14 +1410,32 @@ This reading covers the $0 runs of §4.1–§4.9; the real-model rows are read i
 - **T2 seed 3 is invalid at C0** for every workflow at the fake gate (default routing, §4.4), so every
   T2 validity figure of the gate carries it. It is not a fact about the task: the fake run with
   Contributor routing and the real model validate the same seed (§4.10.5).
+- **The real runs are few, and live.** v1 has two seeds per cell and the headline three, and the same
+  cell recorded twice differs by up to 20% in cost and 32 s in stall (§4.10.6), so a difference between
+  the swarm and `durable-max` that is smaller than that is not read as one. A new real run would not
+  repeat the numbers. All 51 coordinator crashes of the real swarm runs hit a session coordinator; a
+  crash of the root or of a track lead was run at $0 only (§4.7). The 29 cells of Oct 28 ran before the
+  handler freeze, 18 of them before the routing log existed (§3). The cost of a cancelled call is an
+  estimate (above), and on the real model it is more than half of `central`'s extra cost (§4.10.2).
 
 ## 7. Reproduce
 
 ```sh
-uv run fractalswarm bench bench/matrix.yaml --dry-run      # cells + worst-case cost
-uv run fractalswarm bench bench/matrix.yaml --confirm-real-spend
-uv run fractalswarm replay bench/results/v1/runs/<cell> --verify
+# The real-model runs of §3 and §4.10: Meta Model API, live clock, every call billed.
+uv run fractalswarm bench bench/matrix-rivals-real.yaml --dry-run   # v1, 96 cells: cells + worst-case cost
+uv run fractalswarm bench bench/matrix-headline.yaml --dry-run      # headline, 18 cells
+uv run fractalswarm bench bench/matrix-headline.yaml --confirm-real-spend
+uv run fractalswarm replay bench/results/headline/runs/<cell> --verify   # v1's cells likewise (§3)
 ```
+
+The two matrices write to `bench/results/v1` and `bench/results/headline`, and the harness skips a cell
+that has a result file, so on the committed directories these commands pay nothing. On an empty
+directory the pre-flight of `matrix-rivals-real.yaml` prints a worst case of $48.00 (96 cells × the
+$0.50 run cap) against the matrix cap of $33.50 in the file, which was sized for the 67 cells still to
+run when it was used (§3), so a full re-run needs a copy of the file with the cap raised; the
+headline's is $9.00 against its cap of $9.00. A new real run does not repeat the numbers of §4.10, since
+the clock is live; the 114 cells cost $21.21 (§3). `replay` reads the run bundles (`runs/`), which are
+not committed, and a log replays on the code that recorded it (§3).
 
 The $0 runs of §4 (fake LLM, simulated clock) need no key. Point `FRACTALSWARM_RUNS_DIR` and
 `FRACTALSWARM_LEDGER_PATH` at scratch paths first, so that the shared runs and ledger stay untouched:
@@ -1398,12 +1454,16 @@ uv run fractalswarm recovery <run_dir>                              # a run's ta
 uv run fractalswarm bench tables --check bench/REPORT.md            # every table of this file is the results'
 ```
 
-The tables of §3, §4 and the appendices are laid out from `bench/results/honesty.json` and
-`bench/results/rivals-gate/results.json` (§4.6.1: also the jitter sweep's own `results.json`) by
-`fractalswarm bench tables` (`bench/tables.py`); the
-prose around them is written by hand. `--check` names any table that is not in this file word for
-word, and `tests/unit/test_report_tables.py` runs the same check, so a number cannot drift from the
-files without the test failing.
+The tables of §4.1–§4.9, the one in "Two facts about the setup" (§3) and the appendices are laid out
+from `bench/results/honesty.json` and `bench/results/rivals-gate/results.json` (§4.6.1: also the jitter
+sweep's own `results.json`) by `fractalswarm bench tables` (`bench/tables.py`); the prose around them
+is written by hand. `--check` names any table that is not in this file word for word, and
+`tests/unit/test_report_tables.py` runs the same check, so a number cannot drift from the files
+without the test failing. The other tables of §3 and the tables of §4.10 are not generated and that
+check does not cover them: they are laid out by hand from the matrix files, `bench/results/v1`,
+`bench/results/headline` and the progress log, and where the text says so from the run logs (not
+committed; the scratch computations are recorded in `.plans/notes/arena-rival.md`, Part 10), and each
+names its source and columns.
 
 ## 8. Scaling sweep (spec §15.6)
 
