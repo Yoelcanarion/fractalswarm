@@ -149,8 +149,8 @@ const pages = [
   ["helps", "#/helps", []],
   ["runs", "#/runs", RUNS],
   ["arena-picker", "#/arena", left === "-" ? [] : [left]],
-  ["new-run", "#/new", ["local server"]],
-  ["ablation", "#/ablation", []],
+  ["new-run", "#/new", ["fractalswarm serve", "Use the sample text"]],
+  ["ablation", "#/ablation", ["Run the ablation"]],
   ["unknown-run", "#/run/nope", ["nope"]],
 ];
 if (left !== "-") pages.push(["arena-pair", `#/arena/${left}/${right}?at=end`, []]);
@@ -163,6 +163,20 @@ if (left !== "-") {
   await page.reload({ waitUntil: "load" });
   await page.waitForLoadState("networkidle");
   await shot(page, "arena-pair-reloaded");
+  await page.close();
+}
+
+// ---- the doors that need the server say why when used (the shim answers 503 with its reason in the page's own error box)
+for (const [name, hash, button] of [
+  ["new-run-sample", "#/new", "Use the sample text"],
+  ["ablation-start", "#/ablation", "Run at no cost"],
+]) {
+  const page = await visit(name, hash, { shoot: false });
+  await page.getByRole("button", { name: button }).click();
+  await page.waitForTimeout(800);
+  const body = await text(page);
+  if (!body.includes("needs the local server")) problem(name, `using "${button}" does not say that it needs the local server`);
+  await shot(page, name);
   await page.close();
 }
 
