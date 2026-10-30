@@ -203,18 +203,19 @@ def test_the_caps_count_what_the_ledger_holds_now(api: Api) -> None:
     assert "$0.50 left" in price["refusals"][0]
 
 
-def test_the_default_caps_are_the_phase_cap_from_11_82_and_the_hard_stop_at_61_8(
+def test_the_default_caps_leave_about_30_of_the_150_arena_spec_m(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("FRACTALSWARM_LEDGER_PATH", str(tmp_path / "unused.sqlite"))
     gate = SpendGate(tmp_path / "ledger.sqlite", project_cap_usd=150.0, allow_real=True)
     api = Api(tmp_path, gate, None)
-    fill_ledger(gate.ledger_path, settled=61.0)  # $0.80 under the hard stop
+    fill_ledger(gate.ledger_path, settled=119.2)  # $0.80 under the hard stop
     assert api.post("/api/tasks/preflight", {"spec": SPEC}).json()["ok"] is True
     fill_ledger(gate.ledger_path, settled=0.1, tag="b")  # $0.70 left
     refused = api.post("/api/tasks/preflight", {"spec": SPEC}).json()
     assert refused["ok"] is False and "phase cap" in refused["refusals"][0]
-    assert gate.standing()["phase_start_usd"] == 11.82 and gate.standing()["phase_cap_usd"] == 50
+    assert gate.standing()["phase_start_usd"] == 11.82
+    assert gate.standing()["phase_cap_usd"] == 108.18
 
 
 def test_an_app_without_a_gate_cannot_bill_anything(tmp_path: Path) -> None:
