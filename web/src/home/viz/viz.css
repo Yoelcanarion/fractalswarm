@@ -669,6 +669,174 @@
   fill: var(--text-muted);
 }
 
+/* ---- the charts (shared) ------------------------------------------------------------------ */
+
+.hv.hv-chart {
+  position: relative;
+  height: 100%;
+  min-height: 220px;
+}
+.hv.hv-chart text {
+  font-size: var(--fs-label);
+}
+.hv-ch-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+/* the numbers of a chart, for a screen reader */
+.hv-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.hv-ch-head {
+  dominant-baseline: central;
+}
+.hv.hv-chart .hv-ch-name {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  fill: var(--text-primary);
+}
+.hv-ch-sub {
+  fill: var(--text-muted);
+}
+.hv-ch-grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ch-zero {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ch-axis {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ch-tick {
+  fill: var(--text-muted);
+}
+.hv-ch-tick--y {
+  text-anchor: end;
+  dominant-baseline: central;
+}
+.hv-ch-tick--x {
+  text-anchor: middle;
+  fill: var(--text-secondary);
+}
+.hv-ch-tick--x.hv-ch-tick--dim {
+  fill: var(--text-muted);
+}
+.hv-ch-axis-title {
+  text-anchor: end;
+  fill: var(--text-muted);
+}
+.hv-ch-caption {
+  fill: var(--text-muted);
+}
+
+/* ---- the hero chart: stall time and extra cost against the coordinators killed ------------- */
+
+.hv-ld-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ld-series[data-emph="swarm"] .hv-ld-line {
+  stroke: var(--accent);
+  stroke-width: 2.75;
+}
+.hv-ld-series[data-emph="rival"] .hv-ld-line {
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+}
+.hv-ld-series[data-id="durable-max"] .hv-ld-line {
+  stroke-dasharray: 7 5;
+  stroke-linecap: butt;
+}
+.hv-ld-series[data-emph="quiet"] .hv-ld-line {
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  stroke-opacity: 0.6;
+}
+.hv-ld-series:hover .hv-ld-line {
+  stroke-width: 3.5;
+  stroke-opacity: 1;
+}
+.hv-ld-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  pointer-events: stroke;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ld-band {
+  fill: var(--accent);
+  fill-opacity: 0.16;
+  stroke: none;
+}
+
+.hv-ld-dot {
+  vector-effect: non-scaling-stroke;
+}
+.hv-ld-series[data-emph="swarm"] .hv-ld-dot {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+.hv-ld-series[data-id="central"] .hv-ld-dot {
+  fill: var(--text-secondary);
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+.hv-ld-series[data-id="durable-max"] .hv-ld-dot {
+  fill: var(--bg);
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+}
+.hv-ld-series[data-emph="quiet"] .hv-ld-dot {
+  fill: var(--text-muted);
+  fill-opacity: 0.75;
+  stroke: none;
+}
+
+.hv-ld-name {
+  fill: var(--text-muted);
+  dominant-baseline: central;
+}
+.hv-ld-label[data-emph="rival"] .hv-ld-name {
+  fill: var(--text-secondary);
+}
+.hv-ld-label[data-emph="swarm"] .hv-ld-name {
+  fill: var(--text-primary);
+}
+.hv-ld-value {
+  fill: var(--text-primary);
+  dominant-baseline: central;
+}
+.hv-ld-label[data-emph="swarm"] .hv-ld-value {
+  fill: var(--accent-text);
+}
+.hv-ld-lead {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
 .hv-hidden {
   position: absolute;
   width: 1px;

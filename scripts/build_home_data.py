@@ -73,6 +73,8 @@ DEFAULT_CENTRAL_ID = "central__t2_conference__C3__s1"
 V1 = "bench/results/v1"
 HEADLINE = "bench/results/headline"
 HEADLINE_10 = "bench/results/headline-10"
+# The reading the hero chart and the figures beside R5 come from: v1 until the page says otherwise.
+HERO_SETS = {"v1": V1, "headline-10": HEADLINE_10}
 HONESTY = "bench/results/honesty.json"
 REGIME = "bench/results/regime.json"
 SCHEMA = 1
@@ -293,6 +295,7 @@ def hero_slice(directory: str) -> dict[str, Any] | None:
     )
     return {
         "source": rel(path),
+        "set": folder.name,
         "digest": file_digest(path),
         "task": data["task"],
         "title": data["title"],
@@ -1415,8 +1418,18 @@ def failures_slice(found: dict[str, Any], verdicts: dict[str, Any]) -> dict[str,
 
 
 def build(
-    bundle_arg: str, central_dir: Path | None, previous: dict[str, Any] | None
+    bundle_arg: str,
+    central_dir: Path | None,
+    previous: dict[str, Any] | None,
+    hero_set: str = "v1",
 ) -> dict[str, Any]:
+    hero_dir = HERO_SETS[hero_set]
+    hero = hero_slice(hero_dir)
+    if hero is None:
+        raise SystemExit(
+            f"{hero_dir}/hero-t2_conference.json does not exist: "
+            f"the {hero_set} reading cannot be the hero yet"
+        )
     bundle = (REPO / bundle_arg).resolve()
     events = load_bundle(bundle)
     report = check_run(bundle)
@@ -1468,7 +1481,7 @@ def build(
         },
         "lanesCentral": central_source,
         "claims": source_record("docs/claims.md"),
-        "hero": source_record(f"{V1}/hero-t2_conference.json"),
+        "hero": source_record(f"{hero_dir}/hero-t2_conference.json"),
         "v1": source_record(f"{V1}/results.json"),
         "headline": source_record(f"{HEADLINE}/results.json"),
         "headline10": {
@@ -1497,7 +1510,7 @@ def build(
         "lanes": {"central": with_page_fields(central), "swarm": swarm_lanes},
         "hashes": hashes,
         "proof": proof_slice(hashes, bundle),
-        "hero": hero_slice(V1),
+        "hero": hero,
         "hero10": hero_slice(HEADLINE_10),
         "headline": headline_slice(HEADLINE),
         "headline10": head10,
@@ -1531,6 +1544,12 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="a recorded run of central at C3, when not in this checkout",
     )
+    parser.add_argument(
+        "--hero-set",
+        choices=sorted(HERO_SETS),
+        default="v1",
+        help="the result set the hero chart and the figures beside R5 are read from",
+    )
     parser.add_argument("--out", type=Path, default=OUT)
     parser.add_argument(
         "--check", action="store_true", help="exit 1 when --out differs from a fresh build"
@@ -1542,7 +1561,7 @@ def main(argv: list[str] | None = None) -> int:
     if central is None:
         default = REPO / V1 / "runs" / DEFAULT_CENTRAL_ID
         central = default if default.is_dir() else None
-    story = build(args.bundle, central, previous)
+    story = build(args.bundle, central, previous, args.hero_set)
     text = dump(story)
     if args.check:
         current = (
