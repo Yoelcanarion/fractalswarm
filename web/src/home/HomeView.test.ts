@@ -10,7 +10,7 @@ import { COPY, TAGLINE } from "./copy";
 import { DOORS } from "./doors";
 import { figure } from "./format";
 import { HomeView } from "./HomePage";
-import { realFalseDeaths } from "./numbers";
+import { assumptions, realFalseDeaths } from "./numbers";
 import type { Story } from "./data/types";
 import { bundledStory } from "./story";
 import { fixtureClaimText, FIXTURE_STORY, UNIVERSAL } from "./testing";
@@ -208,6 +208,20 @@ describe("the home page, rendered with the real story", () => {
     expect(cost, "the real story has the false deaths of the headline rows").not.toBeNull();
     const helps = /<article[^>]*aria-labelledby="helps-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
     expect(plain(helps)).toContain(`${figure(cost!.perRun, 1)} ${COPY.evidence.helps.perRun}`);
+  });
+
+  it("shows the first four terms granted to the rival and keeps every other one in the page, behind a control", () => {
+    const terms = assumptions(bundledStory);
+    expect(terms.length, "the real story has terms to fold").toBeGreaterThan(4);
+    const fair = /<article id="fair"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
+    const rows = [...fair.matchAll(/<tr( hidden="")?><th scope="row">/g)];
+    expect(rows.map((row) => row[1] !== undefined)).toEqual(terms.map((_, index) => index >= 4));
+    // the control names the table it opens and says how many terms there are
+    expect(fair).toContain('<table id="fair-terms"');
+    expect(fair).toMatch(/<button type="button" class="home-more" aria-expanded="false" aria-controls="fair-terms">/);
+    expect(plain(fair)).toContain(COPY.evidence.fair.showAll(terms.length));
+    // every term is in the page to be read, in view or not
+    for (const term of terms) expect(plain(fair), term.id).toContain(term.label.replace(/`/g, ""));
   });
 
   it("lets only R6 say it, in the row's words, with the setting and the link to R2 and R3 beside it", () => {

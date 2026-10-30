@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 import { COPY, word } from "../copy";
 import { figure, MISSING } from "../format";
@@ -29,16 +29,40 @@ export function Evidence() {
   );
 }
 
+/** How a beat sits on a wide screen. `split`: the words (`text`, under the lead) stand beside what they speak of
+ * (`children`). `over`: the lead, the text and an `aside` make one row over the children, which keep the whole width (a chart
+ * that is drawn for that width). `wide`: one column, for a chart or a row of figures that wants the whole width.
+ * On a narrow screen all of them are one column, in the order lead, text, aside, children. */
+type Layout = "split" | "over" | "wide";
+
 /** One thing the evidence shows. Its id is an address: R6 in the hero links to the one named `tie`. */
-function Beat({ id, lead, children }: { id: string; lead: ReactNode; children: ReactNode }) {
+function Beat({
+  id,
+  lead,
+  text,
+  aside,
+  layout = "split",
+  children,
+}: {
+  id: string;
+  lead: ReactNode;
+  text?: ReactNode;
+  aside?: ReactNode;
+  layout?: Layout;
+  children: ReactNode;
+}) {
   return (
-    <article id={id} className="home-beat" aria-labelledby={`${id}-lead`}>
-      <Reveal>
-        <h3 id={`${id}-lead`} className="home-beat__lead">
-          {lead}
-        </h3>
-      </Reveal>
-      {children}
+    <article id={id} className={`home-beat home-beat--${layout}`} aria-labelledby={`${id}-lead`}>
+      <div className="home-beat__text">
+        <Reveal>
+          <h3 id={`${id}-lead`} className="home-beat__lead">
+            {lead}
+          </h3>
+        </Reveal>
+        {text}
+      </div>
+      {aside && <div className="home-beat__aside">{aside}</div>}
+      <div className="home-beat__body">{children}</div>
     </article>
   );
 }
@@ -69,15 +93,25 @@ function Chart({
   );
 }
 
+/** The terms of the rival that are shown with the argument; the rest are in the page too, behind the control under them. */
+const TERMS_SHOWN = 4;
+const TERMS_ID = "fair-terms";
+
 function FairFight() {
   const rows = assumptions(useStory());
+  const [open, setOpen] = useState(false);
   return (
-    <Beat id="fair" lead={COPY.evidence.fair.lead}>
-      <Reveal delay={60} className="home-beat__why">
-        <p>{COPY.evidence.fair.why}</p>
-      </Reveal>
+    <Beat
+      id="fair"
+      lead={COPY.evidence.fair.lead}
+      text={
+        <Reveal delay={60} className="home-beat__why">
+          <p>{COPY.evidence.fair.why}</p>
+        </Reveal>
+      }
+    >
       <Reveal delay={120}>
-        <table className="home-table">
+        <table id={TERMS_ID} className="home-table">
           <thead>
             <tr>
               <th scope="col">{COPY.evidence.fair.columns.what}</th>
@@ -95,8 +129,8 @@ function FairFight() {
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
-                <tr key={row.id}>
+              rows.map((row, index) => (
+                <tr key={row.id} hidden={!open && index >= TERMS_SHOWN}>
                   <th scope="row">
                     <Inline text={row.label} />
                   </th>
@@ -111,6 +145,14 @@ function FairFight() {
             )}
           </tbody>
         </table>
+        {rows.length > TERMS_SHOWN && (
+          <button type="button" className="home-more" aria-expanded={open} aria-controls={TERMS_ID} onClick={() => setOpen((was) => !was)}>
+            <span>{open ? COPY.evidence.fair.showFewer : COPY.evidence.fair.showAll(rows.length)}</span>
+            <svg className="home-more__chevron" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+              <path d="M3 5.5 7 9.5 11 5.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
       </Reveal>
     </Beat>
   );
@@ -119,7 +161,7 @@ function FairFight() {
 function HeroChart() {
   const story = useStory();
   return (
-    <Beat id="hero-chart" lead={COPY.evidence.hero.lead}>
+    <Beat id="hero-chart" lead={COPY.evidence.hero.lead} layout="wide">
       {/* the chart prints its own setting by default; the page prints it once, in the same words as everywhere else */}
       <Chart name="LineDraw" path="hero" duration={2.2} className="home-chart--hero" extra={{ setting: false }} />
       <Setting>{captionFor(story, "hero")}</Setting>
@@ -130,11 +172,21 @@ function HeroChart() {
 function Tie() {
   const story = useStory();
   return (
-    <Beat id="tie" lead={<span className="home-beat__tie">{COPY.evidence.tie.word}</span>}>
-      <Reveal delay={60}>
-        <Claim id="R2" className="home-claim--lead" />
-        <Claim id="R3" className="home-claim--small" />
-      </Reveal>
+    <Beat
+      id="tie"
+      lead={<span className="home-beat__tie">{COPY.evidence.tie.word}</span>}
+      layout="over"
+      text={
+        <Reveal delay={60}>
+          <Claim id="R2" className="home-claim--lead" />
+        </Reveal>
+      }
+      aside={
+        <Reveal delay={100}>
+          <Claim id="R3" className="home-claim--small" />
+        </Reveal>
+      }
+    >
       <Chart name="DotPlot" path="headline" duration={1.8} extra={{ setting: false }} />
       <Setting>
         {COPY.evidence.tie.note} {captionFor(story, "headline")}
@@ -147,15 +199,22 @@ function Helps() {
   const story = useStory();
   const cost = realFalseDeaths(story);
   return (
-    <Beat id="helps" lead={COPY.evidence.helps.lead}>
-      <Reveal delay={60}>
-        <Claim id="R4" className="home-claim--lead" />
-      </Reveal>
+    <Beat
+      id="helps"
+      lead={COPY.evidence.helps.lead}
+      text={
+        <>
+          <Reveal delay={60}>
+            <Claim id="R4" className="home-claim--lead" />
+          </Reveal>
+          <Reveal delay={80} className="home-beat__why">
+            <p>{COPY.evidence.helps.gate(gateCrashes(story).map(word).join(" and ") || MISSING)}</p>
+          </Reveal>
+        </>
+      }
+    >
       <Chart name="PairedBars" path="verdicts" duration={1.6} extra={{ setting: false }} />
       <Setting>{captionFor(story, "headline")}</Setting>
-      <Reveal delay={80} className="home-beat__why">
-        <p>{COPY.evidence.helps.gate(gateCrashes(story).map(word).join(" and ") || MISSING)}</p>
-      </Reveal>
       {cost && (
         <Reveal delay={100}>
           <p className="home-beat__verdict">{COPY.evidence.helps.cost}</p>
@@ -186,10 +245,16 @@ function FailGroup({ title, figures, suffix = "" }: { title: string; figures: Fa
 function Fails() {
   const found = failures(useStory());
   return (
-    <Beat id="fails" lead={COPY.evidence.fails.lead}>
-      <Reveal delay={60}>
-        <p className="home-beat__verdict">{COPY.evidence.fails.wins}</p>
-      </Reveal>
+    <Beat
+      id="fails"
+      lead={COPY.evidence.fails.lead}
+      layout="wide"
+      text={
+        <Reveal delay={60}>
+          <p className="home-beat__verdict">{COPY.evidence.fails.wins}</p>
+        </Reveal>
+      }
+    >
       <Reveal delay={100} className="home-fails">
         <FailGroup title={COPY.evidence.fails.fast} figures={found.fastRestart} suffix={COPY.evidence.fails.times} />
         <FailGroup title={COPY.evidence.fails.falseDeaths} figures={found.falseDeaths} />
@@ -200,7 +265,7 @@ function Fails() {
           <p className="home-limit">{COPY.solution.steps.log.limit}</p>
         </div>
       </Reveal>
-      <Chart name="RegimeStrip" path="regime" duration={1.6} />
+      <Chart name="RegimeStrip" path="regime" duration={1.6} className="home-chart--regime" />
     </Beat>
   );
 }
@@ -208,16 +273,23 @@ function Fails() {
 function Proof() {
   const steps = proofSteps(useStory());
   return (
-    <Beat id="proof" lead={COPY.evidence.proof.lead}>
-      <Reveal delay={60}>
-        <Claim id="S5" className="home-claim--lead" />
-      </Reveal>
+    <Beat
+      id="proof"
+      lead={COPY.evidence.proof.lead}
+      text={
+        <>
+          <Reveal delay={60}>
+            <Claim id="S5" className="home-claim--lead" />
+          </Reveal>
+          <Reveal delay={100}>
+            <p className="home-limit home-limit--wide">{COPY.evidence.proof.proves}</p>
+          </Reveal>
+        </>
+      }
+    >
       <Chart name="HashStrip" path="hashes" duration={2.4} className="home-chart--strip" />
       <Reveal delay={60}>
         <Terminal steps={steps} label={COPY.evidence.proof.terminal} />
-      </Reveal>
-      <Reveal delay={100}>
-        <p className="home-limit home-limit--wide">{COPY.evidence.proof.proves}</p>
       </Reveal>
     </Beat>
   );

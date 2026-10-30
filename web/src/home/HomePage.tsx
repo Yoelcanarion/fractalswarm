@@ -1,6 +1,5 @@
 import "./home.css";
 
-import { domMin, LazyMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { ChapterRail, useActiveChapter } from "./bar/ChapterRail";
@@ -22,36 +21,33 @@ const readAddress = () => parseHomeAddress(currentHash(), currentSearch());
 /** The page as a picture of its three inputs: the story, whether everything stands still, and the chapter being read.
  * It looks at nothing in the browser, so the tests render it to a string.
  *
- * The page's `m` components (the cards of a stage, its layers, the hero) take motion values in `style`. The minimal `m`
- * has no renderer of its own: without a LazyMotion above it, it draws the value it has at the first render and never
- * subscribes to the value again, so nothing it holds would ever fade or move. `domMin` is the smallest bundle that
- * carries the renderer; `motion.test.ts` keeps this provider here for as long as a file uses `m`. */
+ * Nothing on it draws with an `m` component any more: the stages and the hero write their motion values themselves. The
+ * minimal `m` has no renderer without a LazyMotion above it (it draws the value it had at the first render and never
+ * subscribes again), so if one comes back the provider has to come back with it: `motion.test.ts` holds that either way. */
 export function HomeView({ story, still, active }: { story: Story | null; still: boolean; active: number }) {
   return (
-    <LazyMotion features={domMin}>
-      <StoryContext.Provider value={story}>
-        <StillContext.Provider value={still}>
-          <div className="home" data-still={still ? "" : undefined}>
-            <a className="home-skip" href={targetHash("problem")}>
-              {COPY.bar.skip}
-            </a>
-            <TopBar />
-            <ChapterRail active={active} />
-            <main>
-              <Hero />
-              <Problem />
-              <Solution />
-              <Models />
-              <Evidence />
-              <Enter />
-            </main>
-            <footer className="home-footer">
-              <p>{COPY.footer}</p>
-            </footer>
-          </div>
-        </StillContext.Provider>
-      </StoryContext.Provider>
-    </LazyMotion>
+    <StoryContext.Provider value={story}>
+      <StillContext.Provider value={still}>
+        <div className="home" data-still={still ? "" : undefined}>
+          <a className="home-skip" href={targetHash("problem")}>
+            {COPY.bar.skip}
+          </a>
+          <TopBar />
+          <ChapterRail active={active} />
+          <main>
+            <Hero />
+            <Problem />
+            <Solution />
+            <Models />
+            <Evidence />
+            <Enter />
+          </main>
+          <footer className="home-footer">
+            <p>{COPY.footer}</p>
+          </footer>
+        </div>
+      </StillContext.Provider>
+    </StoryContext.Provider>
   );
 }
 

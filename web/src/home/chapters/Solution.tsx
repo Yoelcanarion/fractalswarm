@@ -34,7 +34,7 @@ export function Solution() {
       {
         id: "intro",
         at: 0,
-        weight: 0.8,
+        weight: 0.7,
         layers: { strip: 0, tree: 1, hrw: 0 },
         content: (
           <ChapterHead id="solution" number="02" eyebrow={COPY.solution.eyebrow} title={COPY.solution.title}>

@@ -234,7 +234,7 @@ describe("a stage clock", () => {
     clock.go(0, "snap");
     clock.go(1);
     frames.run(1 / 60);
-    // from rest: the first frame of a smoothstep barely moves
+    // from rest: the first frame of a ramp barely moves (a left-over speed would carry it three times as far)
     expect(progress.get()).toBeLessThan(0.002);
     expect(there).toBeGreaterThan(0);
   });
