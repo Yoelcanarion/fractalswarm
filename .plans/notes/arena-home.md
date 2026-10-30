@@ -8,7 +8,7 @@ on `web/src/home/viz/**` and `web/src/home/data/story.json`.
 | Piece | Where |
 |---|---|
 | Route and bundle split | `web/src/main.tsx` loads fonts, `tokens.css` and `home/Root.tsx`. `Root` shows `HomePage` for `isHomeHash` (`""`, `#`, `#/`, `#/?...`, `#/home`) and lazy-loads `App.tsx` (which now carries the shell CSS) for every other hash. The home page never touches the zustand store, recharts or React Flow. |
-| Deep links | `#/?at=<problem|solution|models|evidence|enter>` opens at a chapter; `#/?still` (or `?still`) shows every beat in its final state, as reduced motion does. |
+| Deep links | `#/?at=<problem|solution|models|evidence|enter|tie>` opens at a chapter or at the beat `tie`; `#/?still` (or `?still`) shows every beat in its final state, as reduced motion does. |
 | Pinned stages | `scroll/Stage.tsx` + `scroll/timeline.ts` (pure maths, tested). A tall section, a `position: sticky` visual and a column of steps; the wheel is never intercepted. Reading line at `anchor + p·(height−1)` vh. |
 | Chapters | `chapters/{Hero,Problem,Solution,Models,Evidence,Enter}.tsx`. Words in `copy.ts`, numbers from the story (`numbers.ts`), never typed. |
 | Bar and rail | `bar/TopBar.tsx` (brand, "Enter the simulation", theme switch), `bar/ChapterRail.tsx` (right edge, hidden on the hero). |
@@ -18,11 +18,9 @@ on `web/src/home/viz/**` and `web/src/home/data/story.json`.
 
 ## The contract with W7
 
-The page reads `web/src/home/data/story.json` through `import.meta.glob`, and W7's visuals through `viz/index.ts` the same way, so
-the build works before and after either file exists. Without the data every number is "—" and every claim says NO DATA YET;
-without a visual a labelled placeholder shows its progress.
-
-What the page reads itself is typed in `storyTypes.ts` (every field optional). The ones W7 must write:
+`web/src/home/data/types.ts` (W7) is the one place the story is typed (coordinator, Oct 30) and `data/story.ts` exports the typed `story`.
+Without the data every number is "—" and every claim says NO DATA YET; a visual W7 has not written yet draws as a labelled placeholder
+that shows its progress (`visuals.tsx`). W7's commit 9bca49d makes the data follow the list below. What the page reads itself:
 
 - `claims.<id> = {text, status}` for S1–S7, R1–R5: the rows of `docs/claims.md`, verbatim, markdown stripped from `text`'s quotes only.
   The page quotes `text` as is and tags the row PENDING when `status` contains "pending"; "not claimed" rows are never drawn.
@@ -45,13 +43,29 @@ Visual conventions: components fill their parent (`position: relative`, the pare
 
 ## Decisions and deviations
 
-1. **R2 in the hero.** The brief asks for R2 under the tagline and also says R2 and R3 always appear together. R3 is a paragraph, so the hero shows R2 verbatim with a visible
-   link, "Where this holds, and where it does not", to the evidence chapter, where R2 and R3 sit one under the other. Coordinator: say if you want R2 out of the hero instead.
+1. **The hero subtitle is R6, not R2** (coordinator, Oct 30): R6 verbatim, one sentence to a line, then the visible link "Where this holds, and where it does not"
+   to the beat `tie` (`#/?at=tie`) of the evidence chapter, where R2 and R3 stand one under the other.
 2. **R5 everywhere it appears** carries the rival named, the setting and the reason ("In-process: its workers die with it, so most of the gap comes from that design.").
 3. **The primary button is the inverted neutral pill**, not the accent: the accent is the colour of the swarm at work, and accent-on-inverse is 4.3:1 in the light theme.
 4. "A live run" and "New task" both lead to `#/new` (the intake page has a sample button). Two doors, one page, until there is a better target.
 5. `Inter Opsz` is a second family only for display type, so the app's type does not change.
 
-## Verification state
+## State at the Oct 30 12:00 stop (Yoel's STOP)
 
-See the last section of this file, kept current at each merge point.
+**Done.** Everything in the table above: route and bundle split, the five chapters and the hero (R6 + link to `tie`), claims drawn verbatim (PENDING tag,
+code spans as code), the terminal with both proof commands, the doors, the tests. At `e32c5fd` (before the last merge): `tsc` clean, `vitest run src/home
+src/lib/tokens.test.ts --maxWorkers=1` 138 of 139 passed (the one failure: R6 missing from the old `story.json`, which 9bca49d fixes). Merged into this branch:
+`Yoelcanarion/arena` (R6) and W7's `Yoelcanarion/arena-home-viz` up to 9bca49d (merge `bfc0046`).
+
+**Half done.** After that merge the page does not typecheck (not re-run): `story.ts`, `numbers.ts`, `visuals.tsx`, `testing.ts` and the tests read the typed schema W7 had
+at 79fbfe6, and 9bca49d replaced it with the page's contract. No build, browser check, screenshots, bundle size or fps yet (they waited for the RELEASE).
+
+**Next step.** (1) Re-adapt to the new `data/types.ts`: claims `{text,status,state}`; `facts` with `days`; `hero.series.<wf>.points[]` (`stall_s`, `extra_cost_pct`) and
+`hero.{task,model,seedCount}`; `headline.{real,seedCount}`; `finish.{task,real,seeds,talksPlaced}`; `takeover.{killed,rootChain}`; `failures` (ratios at 1 decimal, as R3 writes them);
+`tokens`; `proof` + `proof.takeover` (two commands in the terminal); `assumptions[{id,label,value,why,checkedBy}]`. Each visual takes only its slice
+(`<Viz data={slice(story,"tree"|"hrw"|"hashes"|"lanes.central"|...)}>`, SwarmTree `pacing`, HrwPanels `round`); `TREE_KEYFRAMES` is a name-to-progress record; `lanes.central.keyframes` and
+`stallS` are in the data, so the waiting counter is `stallS` times a ramp from crash to restart (drop `lanesBeats`/`waitedSeconds`). `e32c5fd` keeps what survives: `parts/Inline.tsx`,
+`Terminal` with steps, the fixture built as a tweaked clone of the real story, the test structure. (2) The one route line W7 asked for: `#/home-lab` renders `HomeLab` (`isHomeLabHash`).
+(3) `tsc` + `vitest` (one worker); after a RELEASE: build and report the first-load bundle size, dev server on 5174, Playwright screenshots (1920x1080, 1366x768, 390x844; both themes; reduced motion),
+`?frames` fps, polish in the order 2, 0, 1, 4, 5, 3. (4) `extraction` comes from W7 later, `ablation` stays PENDING; the counter shows this run's 101.8 s beside R5's 2-seed mean 92.6 s, so label it "this run".
+(5) Update this file, `merge_ready`, then `worker_done`.
