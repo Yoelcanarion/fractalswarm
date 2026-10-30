@@ -461,6 +461,12 @@ These decisions override the rest of this document where they disagree.
 8. **Questions to Yoel:** all at once, right away, at most 5 per round. Otherwise proceed on sensible defaults.
 9. **The live real-input rehearsal uses the sample text.** Yoel types his own text for the final take.
 
+**Later on Oct 30 (10:40 CET), to the second coordinator:**
+10. **Home page style:** a mix: a product-landing hero (large type, the animated tree) over a data story (sticky charts that change as you scroll). Brief: `.plans/arena/w6-home.md`.
+11. **A static showcase:** a build of the web with the home page and 2 or 3 recorded replays, needing no server or API key, for GitHub Pages, so the form can link it. Publishing it still needs Yoel's OK, on Nov 3 with the public repo. Brief: `.plans/arena/w8-static.md`.
+12. **`master`:** fast-forwarded to `Yoelcanarion/arena` and pushed to the private origin (done, ede531f). The final merge still needs his OK.
+13. **The paid blocks start now**, in blocks, with the workers holding heavy commands during each one. Yoel says when he needs the machine.
+
 **The budget plan** (estimates; the coordinator re-plans from the real numbers):
 
 | Item | Estimate |
