@@ -8,8 +8,12 @@ import { COMMAND } from "./answers";
 import type { SiteStamp } from "./manifest";
 import { megabytes, overall, PROGRESS_EVENT, type LoadProgress } from "./progress";
 
-/** The home page has its own chrome: `#/`, or no hash at all. */
-export const isHome = (hash: string): boolean => /^#?\/?(\?.*)?$/.test(hash);
+/** The home page has its own chrome: no hash, `#/`, `#/?at=solution`, `#/home`. The rule of `isHomeHash` in home/route.ts
+ * (W6), which this file does not import so that the banner stands on its own. */
+export const isHome = (hash: string): boolean => {
+  const path = hash.replace(/^#\/?/, "").split("?")[0].replace(/\/+$/, "");
+  return path === "" || path === "home";
+};
 
 const useHash = (): string => {
   const [hash, setHash] = useState(() => window.location.hash);

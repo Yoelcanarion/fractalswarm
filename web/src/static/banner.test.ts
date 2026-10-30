@@ -7,11 +7,14 @@ import { megabytes, overall, SHOW_FROM_BYTES, type LoadProgress } from "./progre
 import { VERIFY, makeSite } from "./testing";
 
 describe("where the banner shows", () => {
-  it.each(["", "#", "#/", "#/?x=1", "#?x=1"])("is not on the home page, %j", (hash) => {
-    expect(isHome(hash)).toBe(true);
-  });
+  it.each(["", "#", "#/", "#//", "#/?x=1", "#?x=1", "#/?at=solution", "#/home", "#/home/", "#/home?at=tie"])(
+    "is not on the home page, %j",
+    (hash) => {
+      expect(isHome(hash)).toBe(true);
+    },
+  );
 
-  it.each(["#/run/demo-backup", "#/arena", "#/runs", "#/helps", "#/charts", "#/new", "#/ablation", "#/director/demo-backup"])(
+  it.each(["#/run/demo-backup", "#/run/home", "#/home/x", "#/homework", "#/arena", "#/runs", "#/helps", "#/charts", "#/new", "#/ablation", "#/director/demo-backup"])(
     "is on %s",
     (hash) => {
       expect(isHome(hash)).toBe(false);
