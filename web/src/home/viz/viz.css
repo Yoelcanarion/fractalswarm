@@ -789,25 +789,25 @@
   stroke: none;
 }
 
-.hv-ld-dot {
+.hv-mk {
   vector-effect: non-scaling-stroke;
 }
-.hv-ld-series[data-emph="swarm"] .hv-ld-dot {
+.hv [data-emph="swarm"] .hv-mk {
   fill: var(--accent);
   stroke: var(--bg);
   stroke-width: 2;
 }
-.hv-ld-series[data-id="central"] .hv-ld-dot {
+.hv [data-id="central"] .hv-mk {
   fill: var(--text-secondary);
   stroke: var(--bg);
   stroke-width: 2;
 }
-.hv-ld-series[data-id="durable-max"] .hv-ld-dot {
+.hv [data-id="durable-max"] .hv-mk {
   fill: var(--bg);
   stroke: var(--text-secondary);
   stroke-width: 2;
 }
-.hv-ld-series[data-emph="quiet"] .hv-ld-dot {
+.hv [data-emph="quiet"] .hv-mk {
   fill: var(--text-muted);
   fill-opacity: 0.75;
   stroke: none;
@@ -835,6 +835,79 @@
   stroke: var(--border-strong);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
+}
+
+/* ---- the dot plot: one dot for each run ----------------------------------------------------- */
+
+.hv-dp-meanh {
+  text-anchor: end;
+  dominant-baseline: central;
+  fill: var(--text-muted);
+}
+.hv-dp-group {
+  dominant-baseline: central;
+  fill: var(--text-secondary);
+}
+.hv-dp-rule {
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-dp-guide {
+  stroke: var(--grid);
+  stroke-width: 1;
+  stroke-dasharray: 1 4;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.hv-dp-label {
+  dominant-baseline: central;
+  fill: var(--text-muted);
+}
+[data-emph="rival"] > .hv-dp-label {
+  fill: var(--text-secondary);
+}
+[data-emph="swarm"] > .hv-dp-label {
+  fill: var(--text-primary);
+}
+.hv-dp-note {
+  text-anchor: middle;
+  dominant-baseline: central;
+  fill: var(--text-muted);
+}
+.hv-dp-range {
+  stroke: var(--border-strong);
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.hv-dp-mean {
+  stroke: var(--text-primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.hv-dp-ring {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+.hv-dp-meanv {
+  text-anchor: end;
+  dominant-baseline: central;
+  fill: var(--text-secondary);
+}
+.hv-dp-meanv[data-emph="swarm"] {
+  fill: var(--accent-text);
+}
+.hv-dp-key-dot {
+  fill: var(--text-secondary);
+}
+.hv-dp-key-text {
+  dominant-baseline: central;
+  fill: var(--text-muted);
 }
 
 .hv-hidden {

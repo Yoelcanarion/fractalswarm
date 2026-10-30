@@ -1,0 +1,320 @@
+import { motionValue } from "motion/react";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { story } from "../../data/story";
+import type { HeadlineSlice } from "../../data/types";
+import { textWidth } from "./chart";
+import {
+  DOT_KEYFRAMES,
+  dotCaptions,
+  dotFrame,
+  dotLayout,
+  dotModel,
+  dotSummary,
+  dotValue,
+  groupTitle,
+  paintDots,
+  type DotLayout,
+  type DotRig,
+} from "./dots";
+import { DotPlot } from "./DotPlot";
+import { fakePen, lcg, seen, type Log } from "./fakes";
+import { LABELS, systemName } from "./names";
+
+const data = story.headline!;
+const model = dotModel(data);
+const captions = dotCaptions(model);
+
+describe("the dot plot's model", () => {
+  it("puts the runs with failures first and the run with none after it as the reference, the swarm's row first in each", () => {
+    expect(model.groups.map((g) => [g.profile, g.killed, g.reference])).toEqual([
+      ["C3", 5, false],
+      ["C0", 0, true],
+    ]);
+    for (const g of model.groups) expect(g.rows.map((r) => r.id)).toEqual(["swarm", "durable-max", "durable"]);
+    expect(model.groups[0]!.rows.map((r) => r.emphasis)).toEqual(["swarm", "rival", "quiet"]);
+  });
+
+  it("keeps one dot for each seed, in seed order, with the numbers of the cells", () => {
+    const swarm = model.groups[0]!.rows[0]!;
+    expect(swarm.runs.map((r) => r.seed)).toEqual(["1", "2", "3"]);
+    expect(swarm.runs.map((r) => r.stall)).toEqual([7.108, 22.64, 1.188]);
+    expect(swarm.runs.map((r) => r.extra)).toEqual([2.94, -8.87, -13.87]);
+    expect(model.seedCount).toBe(3);
+    expect(model.real).toBe(true);
+  });
+
+  it("means to the figures the claims quote, which the generator recomputes from the same rows", () => {
+    const [c3] = model.groups;
+    const swarm = c3!.rows.find((r) => r.id === "swarm")!;
+    const ideal = c3!.rows.find((r) => r.id === "durable-max")!;
+    const r2 = story.numbers.r2;
+    expect(Number(swarm.meanStall.toFixed(1))).toBe(r2.swarmStallS);
+    expect(Number(ideal.meanStall.toFixed(1))).toBe(r2.durableMaxStallS);
+    expect(Number(swarm.meanExtra!.toFixed(1))).toBe(r2.swarmExtraPct);
+    expect(Number(ideal.meanExtra!.toFixed(1))).toBe(r2.durableMaxExtraPct);
+    expect([dotValue("stall", swarm.meanStall), dotValue("stall", ideal.meanStall)]).toEqual(["10.3 s", "32.0 s"]);
+    expect([dotValue("extra", swarm.meanExtra!), dotValue("extra", ideal.meanExtra!)]).toEqual(["−6.6%", "+7.5%"]);
+  });
+
+  it("counts a run whose result is not valid, and none is not valid in these 18", () => {
+    expect(model.invalid).toEqual([]);
+    expect(data.cells.every((c) => c.valid === true)).toBe(true);
+  });
+
+  it("names its groups, and its setting in the long form when it fits", () => {
+    expect(model.groups.map((g) => groupTitle(g, false))).toEqual(["5 coordinators killed (C3)", "No failures (C0)"]);
+    expect(model.groups.map((g) => groupTitle(g, true))).toEqual(["C3 · 5 killed", "C0 · no failures"]);
+    expect(captions[0]).toBe("T2 conference · real model · 3 seeds · failure profiles C3 and C0");
+    expect(captions[2]).toBe("T2 · real model · 3 seeds");
+  });
+
+  it("reads the names of the systems the generator gives, so the two cannot drift apart", () => {
+    expect(LABELS).toEqual(story.workflows);
+    expect(systemName("durable-max", LABELS["durable-max"]!, "full")).toBe("Ideal durable supervisor");
+    expect(systemName("durable-max", LABELS["durable-max"]!, "short")).toBe("Ideal durable");
+    expect(systemName("durable", LABELS["durable"]!, "full")).toBe("Realistic durable");
+  });
+});
+
+const SIZES: [number, number][] = [
+  [1480, 460],
+  [1224, 353],
+  [1000, 400],
+  [820, 420],
+  [700, 420],
+  [600, 388],
+  [390, 388],
+  [350, 388],
+];
+
+function checkLayout(layout: DotLayout, label: string, m = model): void {
+  const radius = layout.radius;
+  expect(layout.panels, label).toHaveLength(2);
+  layout.panels.forEach((panel, pi) => {
+    expect(panel.left, label).toBeGreaterThan(40);
+    expect(panel.right - panel.left, label).toBeGreaterThanOrEqual(150);
+    expect(panel.meanX, label).toBeLessThanOrEqual(layout.width + 0.001);
+    // the rows keep apart, in order
+    panel.rows.slice(1).forEach((row, i) => expect(row.y - panel.rows[i]!.y, `${label} rows`).toBeGreaterThanOrEqual(15.999));
+    // every dot is on the plot, and on the row it belongs to
+    for (const row of panel.rows) {
+      for (const d of row.dots) {
+        expect(d.x, `${label} dot`).toBeGreaterThanOrEqual(panel.left - 0.001);
+        expect(d.x, `${label} dot`).toBeLessThanOrEqual(panel.right + 0.001);
+        expect(d.y, label).toBe(row.y);
+      }
+      if (row.mean !== null) {
+        expect(row.mean, label).toBeGreaterThanOrEqual(panel.left - 0.001);
+        expect(row.mean, label).toBeLessThanOrEqual(panel.right + 0.001);
+      }
+    }
+    // the labels fit their column, the mean values theirs
+    if (panel.labels) {
+      m.groups.slice(0, layout.shown).forEach((g) => {
+        for (const r of g.rows) expect(panel.labelX + textWidth(systemName(r.id, r.label, layout.names)), `${label} label`).toBeLessThanOrEqual(panel.left - 4);
+      });
+    }
+    expect(textWidth("−13.9%"), label).toBeLessThanOrEqual(panel.meanX - panel.right);
+    // the axis is under the last row, the key under the axis
+    const lastRow = panel.rows[panel.rows.length - 1]!;
+    expect(panel.axisY, label).toBeGreaterThan(lastRow.y);
+    expect(panel.axisY + 24, `${label} axis vs key`).toBeLessThanOrEqual(layout.keyY - 4 + (layout.stacked && pi === 0 ? 1000 : 0));
+    expect(radius, label).toBeGreaterThan(2);
+  });
+  if (layout.stacked) {
+    const [a, b] = layout.panels;
+    expect(a!.axisY + 24, label).toBeLessThanOrEqual(b!.headY - 4);
+  }
+  const lastKey = layout.key[layout.key.length - 1]!;
+  expect(lastKey.x + 16 + textWidth(lastKey.label), label).toBeLessThanOrEqual(layout.width - 10 + 0.001);
+  if (layout.caption) expect(textWidth(layout.caption), label).toBeLessThanOrEqual(layout.width - 20);
+}
+
+describe("the dot plot's layout", () => {
+  for (const [width, height] of SIZES) {
+    it(`${width}x${height}: everything is inside its box and nothing sits on anything else`, () => {
+      checkLayout(dotLayout(model, width, height, captions), `${width}x${height}`);
+    });
+  }
+
+  it("sets the two panels side by side with the claims' names where there is room, and stacks them, with the failures only, where there is not", () => {
+    const wide = dotLayout(model, 1480, 460, captions);
+    expect([wide.stacked, wide.names, wide.shown]).toEqual([false, "full", 2]);
+    expect(wide.panels[0]!.right).toBeLessThan(wide.panels[1]!.left);
+    expect(wide.panels[0]!.rows).toHaveLength(6);
+    const narrow = dotLayout(model, 350, 388, captions);
+    expect([narrow.stacked, narrow.names, narrow.shown]).toEqual([true, "short", 1]);
+    expect(narrow.panels[0]!.rows).toHaveLength(3);
+  });
+
+  it("scales stall from zero and extra cost across zero, and draws the extra cost of the run with no failures as the reference it is", () => {
+    const [stall, extra] = dotLayout(model, 1480, 460, captions).panels;
+    expect(stall!.ticks[0]!.label).toBe("0");
+    expect(extra!.ticks.some((t) => t.zero)).toBe(true);
+    expect(extra!.ticks.some((t) => t.label.startsWith("−"))).toBe(true);
+    const reference = extra!.rows.filter((r) => r.group === 1);
+    expect(reference).toHaveLength(3);
+    for (const r of reference) expect([r.dots.length, r.mean]).toEqual([0, null]);
+    expect(extra!.notes).toHaveLength(1);
+    expect(extra!.notes[0]!.text).toContain("0 by definition");
+    // while its stall time is drawn
+    expect(stall!.rows.filter((r) => r.group === 1).every((r) => r.dots.length === 3)).toBe(true);
+  });
+
+  it("puts the swarm's dots where its numbers are", () => {
+    const [stall] = dotLayout(model, 1480, 460, captions).panels;
+    const swarm = stall!.rows[0]!;
+    expect(swarm.dots.map((d) => d.x)).toEqual([stall!.xAt(7.108), stall!.xAt(22.64), stall!.xAt(1.188)]);
+    expect(swarm.min).toBe(stall!.xAt(1.188));
+    expect(swarm.max).toBe(stall!.xAt(22.64));
+    expect(swarm.mean).toBeCloseTo(stall!.xAt(10.312), 9);
+  });
+
+  it("holds for any numbers and any count of seeds", () => {
+    const next = lcg(5);
+    for (let round = 0; round < 40; round++) {
+      const seeds = Array.from({ length: 1 + Math.floor(next() * 10) }, (_, i) => String(i + 1));
+      const cells: HeadlineSlice["cells"] = [];
+      for (const profile of ["C0", "C3"]) {
+        for (const workflow of ["swarm", "durable-max", "durable"]) {
+          for (const seed of seeds) {
+            cells.push({
+              cell: `${workflow}__t2_conference__${profile}__s${seed}`,
+              workflow,
+              task: "t2_conference",
+              profile,
+              seed,
+              crashes: profile === "C0" ? 0 : 5,
+              coordinatorsKilled: profile === "C0" ? 0 : 5,
+              completed: true,
+              valid: next() < 0.9,
+              stallS: next() * 150,
+              extraCostPct: profile === "C0" ? 0 : (next() - 0.4) * 80,
+              costUsd: 0.3,
+              makespanS: 300,
+              coordinationTokens: 0,
+              cdtS: null,
+              blastSessionsPct: null,
+              blastAgentsPct: null,
+              idleAgentS: null,
+              falseDeathRemaps: null,
+              dupCalls: null,
+              preservedPct: null,
+            });
+          }
+        }
+      }
+      const odd = dotModel({ ...data, seeds, seedCount: seeds.length, cells });
+      const [width, height] = SIZES[round % SIZES.length]!;
+      checkLayout(dotLayout(odd, width, height, dotCaptions(odd)), `random ${round} ${width}x${height} ${seeds.length} seeds`, odd);
+    }
+  });
+});
+
+describe("the draw", () => {
+  it("shows the axes first, then each row in turn, then the means, and is complete at the end", () => {
+    const k = DOT_KEYFRAMES;
+    const start = dotFrame(0);
+    const end = dotFrame(1);
+    expect([start.axes, start.means, start.row(0, 6), start.row(5, 6)]).toEqual([0, 0, 0, 0]);
+    expect([end.axes, end.means, end.row(0, 6), end.row(5, 6)]).toEqual([1, 1, 1, 1]);
+    expect(dotFrame(k.axes[1]).axes).toBe(1);
+    // the rows come in one after another: the first is done before the last has begun
+    expect(dotFrame(0.4).row(0, 6)).toBeGreaterThan(dotFrame(0.4).row(5, 6));
+    expect(dotFrame(k.rows[0] + 0.05).row(5, 6)).toBe(0);
+    expect(dotFrame(k.rows[1]).row(5, 6)).toBe(1);
+    expect(k.means[0]).toBeLessThan(k.rows[1]);
+    let before = dotFrame(0);
+    for (let i = 1; i <= 800; i++) {
+      const f = dotFrame(i / 800);
+      expect(f.axes).toBeGreaterThanOrEqual(before.axes - 1e-12);
+      expect(f.means).toBeGreaterThanOrEqual(before.means - 1e-12);
+      for (let r = 0; r < 6; r++) expect(f.row(r, 6)).toBeGreaterThanOrEqual(before.row(r, 6) - 1e-12);
+      before = f;
+    }
+  });
+
+  const layout = dotLayout(model, 1480, 460, captions);
+  const log: Log = new Map();
+  const rig: DotRig = {
+    axes: [fakePen<SVGGElement>(log), fakePen<SVGGElement>(log), fakePen<SVGGElement>(log)],
+    means: [fakePen<SVGGElement>(log), fakePen<SVGGElement>(log)],
+    rows: Array.from({ length: 6 }, (_, index) => ({ index, pen: fakePen<SVGGElement>(log) })),
+    dots: Array.from({ length: 6 }, (_, row) => ({ row, pen: fakePen<SVGGElement>(log), x: 100 + row, y: 50 + row })),
+    rowCount: 6,
+  };
+
+  it("grows each dot from a little smaller to its size where it is, and the whole at the end", () => {
+    paintDots(rig, 0);
+    for (const row of rig.rows) expect(Number(seen(log, row.pen)["opacity"])).toBe(0);
+    for (const d of rig.dots) expect(seen(log, d.pen)["transform"]).toBe(`translate(${(100 + d.row).toFixed(2)} ${(50 + d.row).toFixed(2)}) scale(0.400)`);
+    paintDots(rig, 1);
+    for (const row of rig.rows) expect(Number(seen(log, row.pen)["opacity"])).toBe(1);
+    for (const d of rig.dots) expect(seen(log, d.pen)["transform"]).toBe(`translate(${(100 + d.row).toFixed(2)} ${(50 + d.row).toFixed(2)}) scale(1.000)`);
+    expect(layout.panels).toHaveLength(2);
+  });
+
+  it("writes finite numbers all the way through", () => {
+    for (let i = 0; i <= 400; i++) {
+      paintDots(rig, i / 400);
+      for (const store of log.values()) for (const [name, value] of Object.entries(store)) expect(value, name).not.toMatch(/NaN|undefined|Infinity/);
+    }
+  });
+});
+
+describe("DotPlot markup", () => {
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  const html = renderToStaticMarkup(createElement(DotPlot, { progress: motionValue(0), data, still: true }));
+
+  it("draws a dot for each run, with the run's numbers in its tooltip, and the mean beside each row", () => {
+    // stall: 2 groups x 3 systems x 3 seeds; extra cost: the failures only
+    expect(html.match(/data-dot="/g)).toHaveLength(27);
+    expect(html).toContain("FractalSwarm, 5 coordinators killed (C3), seed 2: stall 22.6 s (3 seeds in all)");
+    expect(html).toContain("Ideal durable supervisor, 5 coordinators killed (C3), seed 3: extra cost +25.9% (3 seeds in all)");
+    expect(html).toContain(">10.3 s<");
+    expect(html).toContain(">32.0 s<");
+    expect(html).toContain(">−6.6%<");
+    expect(html).toContain(">+7.5%<");
+    expect(html).toContain("0 by definition: the reference");
+  });
+
+  it("is an image with a text alternative, and the same numbers as two tables", () => {
+    expect(html).toContain('role="img"');
+    expect(html).toContain("one dot for each run, for stall time in seconds and for extra cost in percent");
+    expect(html).toContain("5 coordinators killed (C3): the mean over the seeds is FractalSwarm 10.3 s and −6.6% extra cost; Ideal durable supervisor 32.0 s and +7.5% extra cost");
+    expect(html.match(/<table/g)).toHaveLength(2);
+    expect(html).toContain("<th scope=\"col\">Seed 3</th>");
+  });
+
+  it("names its setting, and a page that prints it itself can turn it off", () => {
+    expect(html).toContain("T2 conference");
+    expect(html).toContain("3 seeds");
+    expect(html).toContain("real model");
+    expect(renderToStaticMarkup(createElement(DotPlot, { progress: motionValue(0), data, still: true, setting: false }))).not.toContain("hv-ch-caption");
+  });
+
+  it("rings a run that is not valid, says so in its key and its text, and does not hide it", () => {
+    const bad: HeadlineSlice = {
+      ...data,
+      cells: data.cells.map((c) => (c.cell === "swarm__t2_conference__C3__s2" ? { ...c, valid: false } : c)),
+    };
+    const out = renderToStaticMarkup(createElement(DotPlot, { progress: motionValue(0), data: bad, still: true }));
+    expect(out.match(/class="hv-dp-ring"/g)).toHaveLength(2 + 1);
+    expect(out).toContain("result not valid");
+    expect(out).toContain("the result is not valid");
+    expect(out).toContain("1 of the runs has a result that is not valid and is ringed");
+    expect(html).not.toContain("not valid");
+  });
+
+  it("has no number that is not a number and no word the claims do not allow", () => {
+    expect(html).not.toMatch(/NaN|undefined|Infinity/);
+    expect(html).not.toMatch(/\b(simpler|cheaper|more reliable)\b/i);
+    expect(dotSummary(model)).not.toMatch(/\b(better|worse|wins?|loses?)\b/i);
+  });
+});

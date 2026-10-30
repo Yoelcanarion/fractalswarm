@@ -47,6 +47,15 @@ describe("the hero chart's model", () => {
     expect(model.task).toBe("t2_conference");
   });
 
+  it("draws the figures R5 quotes: the generator recomputes them from the same file, and the two agree", () => {
+    const t2 = story.numbers.r5.t2;
+    const swarm = model.series.find((s) => s.id === "swarm")!;
+    const central = model.series.find((s) => s.id === "central")!;
+    expect([swarm.stall[3]!.mean.toFixed(1), central.stall[3]!.mean.toFixed(1)]).toEqual([String(t2.swarmStallS), String(t2.centralStallS)]);
+    expect([swarm.extra[3]!.mean.toFixed(1), central.extra[3]!.mean.toFixed(1)]).toEqual([String(t2.swarmExtraPct), String(t2.centralExtraPct)]);
+    expect(data.seedCount).toBe(t2.seeds);
+  });
+
   it("names its setting, in the long form when it fits and shorter when it does not", () => {
     expect(captions[0]).toBe("T2 conference · real model · 2 seeds · lines: the mean of the seeds · band: their range, FractalSwarm only");
     expect(captions[2]).toBe("T2 · real model · 2 seeds");
