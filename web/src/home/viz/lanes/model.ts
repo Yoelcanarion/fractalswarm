@@ -303,6 +303,24 @@ export function timeMap(model: LanesModel): TimeMap {
   return { knots, tAt, emphasisAt };
 }
 
+/** How much of the progress the fade-in of a caption takes (about a third of a second of the film's seven). */
+export const MOMENT_FADE = 0.04;
+
+/**
+ * The progress at which each of the film's three captions begins to appear, read from the keyframes of the run: the first as the team
+ * has filled its lanes and the crash is about to strike, the second while the work waits, the third as the damage is shown. Each stays
+ * once it is there, so the last picture of the film (and the still one) tells all three.
+ */
+export function momentStarts(kf: Keyframes): number[] {
+  return [kf.crash - 0.05, kf.crash + 0.45 * (kf.restart - kf.crash), kf.restart];
+}
+
+/** How visible caption ``index`` is at progress ``p``: 0 before its start, 1 once it has faded in. */
+export function momentOpacity(kf: Keyframes, index: number, p: number): number {
+  const start = momentStarts(kf)[index];
+  return start === undefined ? 0 : smoothstep((p - start) / MOMENT_FADE);
+}
+
 /** The seconds nobody worked counted from the crash to the restart as the page counts them: a straight line of the progress. */
 export function linearStallMs(model: LanesModel, p: number): number {
   const kf = model.keyframes;

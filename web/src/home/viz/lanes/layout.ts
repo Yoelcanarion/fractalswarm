@@ -8,6 +8,8 @@ export const LABEL_W = 44;
 export const RIGHT_PAD = 14;
 /** What the bottom of the box holds: the stall labels, the axis, the ledger and the setting. */
 export const BOTTOM = 126;
+/** The same in the film's plain form, which has a key of two and no setting. */
+export const BOTTOM_PLAIN = 80;
 /** The brain's lane is taller than an agent's: it makes several calls at once. */
 const BRAIN_WEIGHT = 1.7;
 /** One character of the mono labels (12 px) in pixels. */
@@ -17,7 +19,15 @@ export const CHAR_W = 7.2;
  * paid again $0.000, no agent working 000.0 s), and the air between two columns.
  */
 const LEDGER_NEED = [16 + 7 * CHAR_W + 8 + 6 * CHAR_W, 16 + 7 * CHAR_W + 8 + 6 * CHAR_W, 16 + 10 * CHAR_W + 8 + 6 * CHAR_W, 16 + 16 * CHAR_W + 8 + 7 * CHAR_W];
+/** The film's key: cut off and paid again. */
+const LEDGER_PLAIN_NEED = [LEDGER_NEED[1]!, LEDGER_NEED[2]!];
 const LEDGER_GAP = 12;
+/** The air between the two cells of the film's key, which stand together at the left instead of sharing the width. */
+const LEDGER_PACK = 40;
+/** One character of the film's captions (the page's display face, 600) in em: a little over the widest caption's (0.47), so none runs out of its box. */
+export const MOMENT_EM = 0.5;
+/** The air between two captions that stand in a row. */
+export const MOMENT_GAP = 48;
 /** The width of the box that tells the run's time at the cursor: the widest time (345.3 s) and a little air. */
 export const READOUT_W = 62;
 
@@ -53,6 +63,18 @@ export interface LedgerCell {
   y: number;
 }
 
+/** The film's captions: where each is written, in a row when the box is wide and one under the other when it is not. */
+export interface MomentsLayout {
+  /** The font size and, in a column, the step between two lines. */
+  size: number;
+  lead: number;
+  row: boolean;
+  /** The left and the baseline of each caption. */
+  at: { x: number; y: number }[];
+  /** The height of the band the captions take above the lanes. */
+  height: number;
+}
+
 export interface LanesLayout {
   width: number;
   height: number;
@@ -73,6 +95,7 @@ export interface LanesLayout {
   ledger: LedgerCell[];
   captionY: number;
   caption: string;
+  moments: MomentsLayout | null;
   xAt(ms: number): number;
   /** Where a bar sits: its left, its top and its height. */
   barBox(bar: Bar): { x: number; y: number; h: number };
@@ -91,16 +114,28 @@ export function keepApart<T extends { x: number; w: number }>(items: T[], gap = 
 
 const clamp = (x: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, x));
 
+/** The width each column of a key needs when its cells are laid out `columns` to a row. */
+export const ledgerNeed = (columns: number, cells: readonly number[] = LEDGER_NEED): number[] =>
+  Array.from({ length: columns }, (_, k) => Math.max(...cells.filter((_, i) => i % columns === k)));
+
 /**
  * Where the columns of the key start in a box `width` wide: as many columns as fit (four, two or one). Each starts where an even
  * share of the box would put it, pulled back as far as it takes for the columns after it to fit, so no cell is clipped or overlaps
  * its neighbour, whatever the width.
  */
-export function ledgerColumns(width: number): number[] {
-  for (const count of [4, 2, 1]) {
-    const need = Array.from({ length: count }, (_, k) => Math.max(...LEDGER_NEED.filter((_, i) => i % count === k)));
-    const total = need.reduce((a, b) => a + b, 0) + (count - 1) * LEDGER_GAP;
+export function ledgerColumns(width: number, cells: readonly number[] = LEDGER_NEED, packed = false): number[] {
+  for (const count of [4, 2, 1].filter((c) => c <= cells.length)) {
+    const need = ledgerNeed(count, cells);
+    const total = need.reduce((a, b) => a + b, 0) + (count - 1) * (packed ? LEDGER_PACK : LEDGER_GAP);
     if (count > 1 && total > width - 16) continue;
+    if (packed) {
+      let x = 8;
+      return need.map((n) => {
+        const here = x;
+        x += n + LEDGER_PACK;
+        return here;
+      });
+    }
     const cell = (width - 16) / count;
     const xs: number[] = [];
     let end = 0;
@@ -115,20 +150,51 @@ export function ledgerColumns(width: number): number[] {
   return [8];
 }
 
-/** The width each column of the key needs, and the rows it makes of the four cells. */
-export const ledgerNeed = (columns: number): number[] => Array.from({ length: columns }, (_, k) => Math.max(...LEDGER_NEED.filter((_, i) => i % columns === k)));
+/**
+ * Where the film's captions are written. In a row, left to right, at the largest of 32, 28 and 24 px at which the three fit the box;
+ * when none does (a phone, a narrow column), one under the other at the size at which the longest fits, up to 22 px.
+ */
+export function momentsLayout(texts: readonly string[], width: number, x0: number): MomentsLayout {
+  const room = width - x0 - 8;
+  const chars = texts.reduce((n, t) => n + t.length, 0);
+  for (const size of [32, 28, 24]) {
+    if (chars * MOMENT_EM * size + (texts.length - 1) * MOMENT_GAP > room) continue;
+    let x = x0;
+    const at = texts.map((t) => {
+      const here = { x, y: size + 6 };
+      x += t.length * MOMENT_EM * size + MOMENT_GAP;
+      return here;
+    });
+    return { size, lead: 0, row: true, at, height: size + 24 };
+  }
+  const longest = Math.max(1, ...texts.map((t) => t.length));
+  const size = clamp(Math.floor(room / (longest * MOMENT_EM)), 12, 22);
+  const lead = Math.round(size * 1.25);
+  return { size, lead, row: false, at: texts.map((_, i) => ({ x: x0, y: size + 4 + i * lead })), height: texts.length * lead + 14 };
+}
 
-export function layoutFor(model: LanesModel, width: number, height: number, top: number, captions: string[] = []): LanesLayout {
-  const x0 = LABEL_W + 8;
+export interface LayoutOptions {
+  /** The film's plain form: these captions above the lanes, no lane names, a key of two and no setting. */
+  moments?: readonly string[] | undefined;
+}
+
+export function layoutFor(model: LanesModel, width: number, height: number, top: number, captions: string[] = [], options: LayoutOptions = {}): LanesLayout {
+  const plain = (options.moments?.length ?? 0) > 0;
+  const x0 = (plain ? 0 : LABEL_W) + 8;
   const x1 = Math.max(x0 + 80, width - RIGHT_PAD);
   const pxPerMs = (x1 - x0) / Math.max(1, model.durationMs);
   const xAt = (ms: number): number => x0 + ms * pxPerMs;
 
-  const columns = ledgerColumns(width);
-  const ledgerRows = Math.ceil(4 / columns.length);
-  const markY = top + 8;
-  const yTop = top + 20;
-  const yBottom = Math.max(yTop + model.lanes.length * 12, height - BOTTOM - Math.max(0, ledgerRows - 2) * 22);
+  const cells = plain ? LEDGER_PLAIN_NEED : LEDGER_NEED;
+  const columns = ledgerColumns(width, cells, plain);
+  const ledgerRows = Math.ceil(cells.length / columns.length);
+  // The film has no counter over its top left: the captions take that band, and the lanes start under it.
+  const moments = plain ? momentsLayout(options.moments!, width, x0) : null;
+  const base = moments ? moments.height : top;
+  const markY = base + 8;
+  const yTop = base + 20;
+  const reserve = plain ? BOTTOM_PLAIN + (ledgerRows - 1) * 22 : BOTTOM + Math.max(0, ledgerRows - 2) * 22;
+  const yBottom = Math.max(yTop + model.lanes.length * 12, height - reserve);
   const weights = model.lanes.map((l) => (l.brain ? BRAIN_WEIGHT : 1));
   const unit = (yBottom - yTop) / weights.reduce((a, b) => a + b, 0);
   const barH = clamp(unit * 0.5, 6, 20);
@@ -181,11 +247,11 @@ export function layoutFor(model: LanesModel, width: number, height: number, top:
 
   // The ledger: counted, cut off, paid again, and the stalls' key. One row when the box is wide, two or four rows as it narrows.
   const ledgerTop = tickY + 22;
-  const ledger: LedgerCell[] = Array.from({ length: 4 }, (_, i) => ({ x: columns[i % columns.length]!, y: ledgerTop + Math.floor(i / columns.length) * 22 }));
+  const ledger: LedgerCell[] = Array.from({ length: cells.length }, (_, i) => ({ x: columns[i % columns.length]!, y: ledgerTop + Math.floor(i / columns.length) * 22 }));
   const captionY = ledgerTop + ledgerRows * 22 + 10;
 
   const room = width - 16;
-  const caption = captions.find((c) => textWidth(c) <= room) ?? captions[captions.length - 1] ?? "";
+  const caption = plain ? "" : (captions.find((c) => textWidth(c) <= room) ?? captions[captions.length - 1] ?? "");
 
   return {
     width,
@@ -206,6 +272,7 @@ export function layoutFor(model: LanesModel, width: number, height: number, top:
     ledger,
     captionY,
     caption,
+    moments,
     xAt,
     barBox,
   };

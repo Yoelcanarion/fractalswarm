@@ -5,7 +5,7 @@
 import { fx, smoothstep } from "../shared";
 import { Pen } from "../tree/paint";
 import { READOUT_W, type LanesLayout } from "./layout";
-import { barState, drawnMs, lifeTracks, spentMicro, stallElapsedMs, type LanesModel, type TimeMap } from "./model";
+import { barState, drawnMs, lifeTracks, momentOpacity, spentMicro, stallElapsedMs, type LanesModel, type TimeMap } from "./model";
 
 /** No call is drawn thinner than this, so that a call of a few milliseconds is still there. */
 export const MIN_BAR = 1.5;
@@ -28,6 +28,8 @@ export interface LanesRig {
   notes: Pen<SVGGElement> | null;
   clock: Pen<SVGTextElement> | null;
   readout: Pen<SVGGElement> | null;
+  /** The film's captions, in order; none in the lanes' other form. */
+  moments: (Pen<SVGTextElement> | null)[];
   value: Record<"counted" | "cut" | "again" | "idle", Pen<SVGTextElement> | null>;
 }
 
@@ -64,6 +66,7 @@ export function collectLanes(svg: SVGSVGElement, model: LanesModel): LanesRig {
     notes: one(svg, '[data-group="notes"]'),
     clock: one(svg, ".hv-ln-clock"),
     readout: one(svg, ".hv-ln-readout"),
+    moments: pens<SVGTextElement>(svg, "[data-moment]", svg.querySelectorAll("[data-moment]").length, "data-moment"),
     value: {
       counted: one(svg, '[data-value="counted"]'),
       cut: one(svg, '[data-value="cut"]'),
@@ -110,6 +113,7 @@ export function paintLanes(rig: LanesRig, model: LanesModel, layout: LanesLayout
   rig.counted?.set("opacity", 1 - DIM * e);
   rig.notes?.set("opacity", e);
   rig.clock?.text(seconds(t));
+  rig.moments.forEach((pen, i) => pen?.set("opacity", momentOpacity(model.keyframes, i, p)));
 
   const spent = spentMicro(model, t);
   rig.value.counted?.text(usd(spent.counted + spent.other));
