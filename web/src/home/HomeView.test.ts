@@ -105,14 +105,34 @@ describe("the home page, rendered with a story", () => {
     expect(html).not.toContain('data-claim="R3"');
   });
 
-  it("keeps the in-process supervisor's reason beside the numbers it explains, in the fold and beside the bars", () => {
+  it("keeps the in-process supervisor's reason beside the numbers it explains, in both folds and beside the bars", () => {
     expect(plain(outsideFolds(sectionOf(html, "proof")))).toContain(COPY.rivalReason);
-    expect(countOf(html, 'data-claim="R5"')).toBe(1);
-    const card = html.slice(Math.max(0, html.indexOf('data-claim="R5"') - 2500), html.indexOf('data-claim="R5"'));
-    const text = plain(card);
-    expect(text).toContain(COPY.problem.more.rival);
-    expect(text).toContain("real model");
-    expect(text).toContain(COPY.rivalReason);
+    // R5 is in the fold of the problem and in the fold of the proof, each with its setting and the reason before it
+    expect(countOf(html, 'data-claim="R5"')).toBe(2);
+    for (const id of ["problem", "proof"]) {
+      const fold = foldOf(sectionOf(html, id));
+      const at = fold.indexOf('data-claim="R5"');
+      expect(at, `R5 is not in the fold of the ${id}`).toBeGreaterThan(-1);
+      const text = plain(fold.slice(Math.max(0, at - 2500), at));
+      expect(text, id).toContain("real model");
+      expect(text, id).toContain(COPY.rivalReason);
+    }
+    expect(plain(foldOf(sectionOf(html, "problem")))).toContain(COPY.problem.more.rival);
+  });
+
+  it("names the basis of each extra-cost figure of the problem's fold: R5 has two, and these are the pre-registered one", () => {
+    const labels = [...foldOf(sectionOf(html, "problem")).matchAll(/class="home-figure__label">([^<]*)</g)].map((m) => m[1]);
+    const cost = labels.filter((label) => /extra cost/.test(label));
+    expect(cost).toEqual([COPY.labels.extraCostBasis, COPY.labels.extraCostBasis]);
+    expect(COPY.labels.extraCostBasis).toMatch(/pre-registered basis/);
+  });
+
+  it("says of the better supervisor what the rival is, and of the swarm only what S3 says", () => {
+    const fold = foldOf(sectionOf(html, "problem"));
+    expect(plain(fold)).toContain(COPY.problem.more.better);
+    // S3 stands under the diagram of the better supervisor's parts, in the words of its row
+    expect(fold.indexOf('data-claim="S3"')).toBeGreaterThan(fold.indexOf("home-fold__figure"));
+    expect(plain(fold)).not.toMatch(/something to watch|has to stop to recover|ideal one/);
   });
 
   it("folds the numbers of the problem and the better supervisor, and keeps the film and the repeat button open", () => {
@@ -152,7 +172,7 @@ describe("the home page, rendered with a story", () => {
 
   it("opens every door that is not behind the server, with a link, and sends the numbers to the evidence page", () => {
     expect(countOf(html, 'class="home-door"')).toBe(DOORS.length);
-    expect(countOf(html, 'class="home-door"')).toBe(6);
+    expect(countOf(html, 'class="home-door"')).toBe(4);
     expect(html).toContain('href="#/arena"');
     expect(html).toContain('href="#/evidence"');
   });

@@ -20,13 +20,23 @@ describe("the menu at the end of the page", () => {
     const routes: Record<string, (hash: string) => unknown> = {
       arena: parseArenaRoute,
       live: parseIntakeRoute,
-      director: parseDirectorRoute,
-      ablation: parseAblationRoute,
     };
     for (const door of DOORS) {
       const parse = routes[door.id];
       if (parse) expect(parse(door.href), `${door.id} (${door.href}) is not a route of the app`).not.toBeNull();
     }
+  });
+
+  it("is four doors, so that a row of four, two rows of two and a column all fill their grid", () => {
+    expect(DOORS.map((door) => door.id)).toEqual(["arena", "live", "replays", "numbers"]);
+  });
+
+  it("keeps the Director and the ablation off the menu, and their routes in the app", () => {
+    // the Director is a page of scenes for the video; the ablation says none has been recorded, and its door comes back when one is
+    expect(DOORS.some((door) => door.id === "director" || door.href === "#/director")).toBe(false);
+    expect(DOORS.some((door) => door.id === "ablation" || door.href === "#/ablation")).toBe(false);
+    expect(parseDirectorRoute("#/director")).not.toBeNull();
+    expect(parseAblationRoute("#/ablation")).not.toBeNull();
   });
 
   it("has no two doors that lead to the same place under two names", () => {

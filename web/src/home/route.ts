@@ -13,7 +13,7 @@ export function isHomeHash(hash: string): boolean {
 /** `#/home-lab` is W7's lab of the visuals: a page of its own, loaded on demand like the app shell, never part of the home page's bundle. */
 export const isLabHash = (hash: string): boolean => pathOf(hash) === "home-lab";
 
-/** `#/evidence` is the plain page behind the home page: the models, the fair fight, the charts, where it helps and where it does not. */
+/** `#/evidence` is the plain page behind the home page: the models, the fair fight, the charts, where it ties and where it does worse. */
 export const isEvidenceHash = (hash: string): boolean => pathOf(hash) === "evidence";
 
 export type PageName = "home" | "evidence" | "lab" | "app";

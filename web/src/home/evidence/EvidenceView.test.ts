@@ -1,5 +1,5 @@
 // The evidence page (#/evidence), rendered to a string: the plain document behind the home page. It holds what the home page
-// leaves out (the models, the fair fight, the charts, where it helps and where it does not, the proof, the tokens), with the
+// leaves out (the models, the fair fight, the charts, where it ties and where it does worse, the proof, the tokens), with the
 // rules about claims that hold wherever they are drawn.
 
 import { createElement } from "react";

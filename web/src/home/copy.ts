@@ -37,7 +37,8 @@ export const COPY = {
   seeMore: "See more",
   repeat: "Repeat",
 
-  labels: { stalled: "stalled", extraCost: "extra cost" },
+  // R5 has two bases for the extra cost, so a figure says which one it is: the pre-registered one estimates the cost of cancelled calls.
+  labels: { stalled: "stalled", extraCost: "extra cost", extraCostBasis: "extra cost, pre-registered basis" },
 
   // Said next to every number that is set against the in-process supervisor (R5): the gap is mostly a property of that design.
   rivalReason: "In-process: its workers die with it, so most of the gap comes from that design.",
@@ -59,8 +60,8 @@ export const COPY = {
       numbers: "That is what it cost, in real runs.",
       rival: "In-process supervisor",
       swarm: "FractalSwarm",
+      // the swarm's side of it is claim S3, drawn under the diagram: it is not retyped here
       better: "A better supervisor fixes the paying twice: its workers survive, and a standby takes over.",
-      betterMore: "But then you run a supervisor, a standby and something to watch them. Even an ideal one has to stop to recover.",
     },
     parts: { supervisor: "Supervisor", standby: "Standby", watcher: "Watcher", workers: "Workers" },
   },
@@ -70,7 +71,8 @@ export const COPY = {
     line: "The survivors read the same log and each works out the same heir, so nobody votes.",
     cards: {
       log: { title: "One shared log", drawing: "Each new event is added to the log and carries the hash of the one before it." },
-      heir: { title: "Everyone finds the same heir", drawing: "Each survivor computes the heir alone, from the log. No message passes between them." },
+      // S1's words: the drawing says no more than the claim does
+      heir: { title: "Everyone finds the same heir", drawing: "Every survivor computes the same heir from the log with one rule (HRW), so there is no election." },
       adopt: { title: "The heir takes over", drawing: "The heir adopts the dead coordinator's work, and its subtree is wired to the heir." },
     },
     demo: { title: "Kill one yourself", label: "An illustration in your browser, not a real run." },
@@ -86,7 +88,7 @@ export const COPY = {
     conditions: "Conditions and limits",
     check: "Check it:",
     more: {
-      lead: "The rest of the evidence is on its own page: the models, the fair fight, the charts, where it helps and where it does not.",
+      lead: "The rest of the evidence is on its own page: the models, the fair fight, the charts, where it ties and where it does worse.",
       link: "Open the evidence",
       proves: "Replay proves that this code produces the recorded run from the recorded model outputs. It does not prove where those outputs came from.",
       terminal: "The output of the commands, from the recorded demo run.",

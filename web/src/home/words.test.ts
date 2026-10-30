@@ -73,10 +73,10 @@ describe("the counter of visible words", () => {
 });
 
 describe("the structure that bounds the height", () => {
-  it("is five sections, three cards, six doors, and a fold in the sections that have nuance", () => {
+  it("is five sections, three cards, four doors, and a fold in the sections that have nuance", () => {
     expect([...html.matchAll(/<section id="(\w+)"/g)].map((m) => m[1])).toEqual(["hero", "problem", "solution", "proof", "enter"]);
     expect([...html.matchAll(/<li class="home-step"/g)]).toHaveLength(3);
-    expect([...html.matchAll(/class="home-door"/g)]).toHaveLength(6);
+    expect([...html.matchAll(/class="home-door"/g)]).toHaveLength(4);
     expect([...html.matchAll(/<details/g)].length).toBeLessThanOrEqual(4);
   });
 

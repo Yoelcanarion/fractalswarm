@@ -49,24 +49,23 @@ export function Problem() {
             <div className="home-pair__side">
               <p className="home-pair__who">{s.rival}</p>
               <Figure value={rival.stallS} format={(n) => seconds(n)} label={COPY.labels.stalled} tone="rival" />
-              <Figure value={rival.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCost} tone="paid-twice" />
+              <Figure value={rival.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCostBasis} tone="paid-twice" />
             </div>
             <div className="home-pair__side">
               <p className="home-pair__who">{s.swarm}</p>
               <Figure value={swarm.stallS} format={(n) => seconds(n)} label={COPY.labels.stalled} tone="swarm" />
-              <Figure value={swarm.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCost} tone="swarm" />
+              <Figure value={swarm.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCostBasis} tone="swarm" />
             </div>
           </div>
           <Setting>
             {captionFor(story, "hero")} {"·"} {COPY.rivalReason}
           </Setting>
           <Claim id="R5" className="home-claim--small" />
-          <p className="home-fold__text">
-            {s.better} {s.betterMore}
-          </p>
+          <p className="home-fold__text">{s.better}</p>
           <figure className="home-fold__figure">
             <PartsDiagram workers={f.agents} />
           </figure>
+          <Claim id="S3" />
         </SeeMore>
       </div>
     </section>
