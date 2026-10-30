@@ -1,0 +1,88 @@
+﻿Verdicts under bench/PREREG.md (sha 25d4a75919b3); sources: headline-10
+Code: 3b22208c711c
+Every verdict is the swarm's: win = better by the minimum effect on every seed.
+
+Outcome PENDING (read against durable-max, t2_conference)
+  gate C3: locality ties; ratios of the seed means, descriptive (no verdict): cdt 0.57, blast 0.43, idle 0.70
+  condition: no data for gate C2, recovery_ms=1000, recovery_ms=2000, recovery_ms=2500, recovery_ms=5000, recovery_ms=10000, rival_restart_ms=0, rival_restart_ms=1000, rival_restart_ms=3000, rival_recovery_ms=500, rival_recovery_ms=1000
+  condition: locality ties at gate (t2_conference, C3); ratios of the seed means, descriptive (no verdict): cdt 0.57, blast 0.43, idle 0.70
+
+Hypotheses: swarm wins / ties / losses (n/a) against each rival
+  H1   Preserved work  [preserved_pct; expected: durable-max >= swarm ~ durable >> central]
+       vs durable-max    0 /   1 /   0   (0 n/a)
+       vs durable        0 /   1 /   0   (0 n/a)
+       vs central        1 /   0 /   0   (0 n/a)
+  H2   Extra cost  [extra_cost_pct; expected: swarm and durable-max tie]
+       vs durable-max    0 /   1 /   0   (0 n/a)
+       vs durable        0 /   1 /   0   (0 n/a)
+       vs central        1 /   0 /   0   (0 n/a)
+  H3   Time to recover  [ttr_own_mean_s; expected: the supervisor wins or ties]
+       vs durable-max    0 /   1 /   0   (0 n/a)
+       vs durable        0 /   1 /   0   (0 n/a)
+       vs central        0 /   1 /   0   (0 n/a)
+  H4a  Locality: coordinator-dependency time  [cdt_s; expected: swarm <= 0.5 x rival]
+       vs durable-max    0 /   1 /   0   (0 n/a)
+       vs durable        1 /   0 /   0   (0 n/a)
+       vs central        1 /   0 /   0   (0 n/a)
+  H4b  Locality: blast radius  [blast_sessions_mean_pct; expected: swarm <= 0.5 x rival]
+       vs durable-max    0 /   1 /   0   (0 n/a)
+       vs durable        1 /   0 /   0   (0 n/a)
+       vs central        1 /   0 /   0   (0 n/a)
+  H4c  Locality: idle agent-seconds  [idle_agent_s; expected: swarm <= 0.5 x rival]
+       vs durable-max    0 /   1 /   0   (0 n/a)
+       vs durable        0 /   1 /   0   (0 n/a)
+       vs central        0 /   1 /   0   (0 n/a)
+  H5   Unnecessary reassignments  [unnecessary_reassignments; expected: durable ~ 0; swarm = false deaths]
+       vs durable-max    0 /   0 /   1   (0 n/a)
+       vs durable        0 /   0 /   1   (0 n/a)
+       vs central        0 /   1 /   0   (0 n/a)
+  H6   Duplicated spend  [dup_chaos_pct; expected: durable-max = 0 <= swarm]
+       vs durable-max    0 /   1 /   0   (0 n/a)
+       vs durable        0 /   1 /   0   (0 n/a)
+       vs central        1 /   0 /   0   (0 n/a)
+  S    Stall time (reported, not a hypothesis)  [stall_s; expected: reported]
+       vs durable-max    0 /   1 /   0   (0 n/a)
+       vs durable        0 /   1 /   0   (0 n/a)
+       vs central        1 /   0 /   0   (0 n/a)
+
+The gate, default assumptions, by task and rival
+  headline-10, t2_conference: swarm against durable-max, verdict (swarm / durable-max)
+    H1   preserved_pct              C3 tie*  (82.04 / 90.53)
+    H2   extra_cost_pct             C3 tie*  (2.35 / 8.14)
+    H3   ttr_own_mean_s             C3 tie*  (6.11 / 5.01)
+    H4a  cdt_s                      C3 tie*  (11.42 / 20.20)
+    H4b  blast_sessions_mean_pct    C3 tie*  (9.00 / 21.00)
+    H4c  idle_agent_s               C3 tie*  (13.92 / 19.96)
+    H5   unnecessary_reassignments  C3 loss  (1.90 / 0.00)
+    H6   dup_chaos_pct              C3 tie   (0.06 / 0.00)
+    S    stall_s                    C3 tie*  (11.17 / 21.91)
+  headline-10, t2_conference: swarm against durable, verdict (swarm / durable)
+    H1   preserved_pct              C3 tie*  (82.04 / 60.04)
+    H2   extra_cost_pct             C3 tie*  (2.35 / 4.29)
+    H3   ttr_own_mean_s             C3 tie*  (6.11 / 5.01)
+    H4a  cdt_s                      C3 win   (11.42 / 50.31)
+    H4b  blast_sessions_mean_pct    C3 win   (9.00 / 37.33)
+    H4c  idle_agent_s               C3 tie*  (13.92 / 53.90)
+    H5   unnecessary_reassignments  C3 loss  (1.90 / 0.00)
+    H6   dup_chaos_pct              C3 tie*  (0.06 / 2.45)
+    S    stall_s                    C3 tie*  (11.17 / 21.89)
+  headline-10, t2_conference: swarm against central, verdict (swarm / central)
+    H1   preserved_pct              C3 win   (82.04 / 0.00)
+    H2   extra_cost_pct             C3 win   (2.35 / 67.00)
+    H3   ttr_own_mean_s             C3 tie*  (6.11 / 5.02)
+    H4a  cdt_s                      C3 win   (11.42 / 139.53)
+    H4b  blast_sessions_mean_pct    C3 win   (9.00 / 91.67)
+    H4c  idle_agent_s               C3 tie*  (13.92 / 0.17)
+    H5   unnecessary_reassignments  C3 tie*  (1.90 / 0.30)
+    H6   dup_chaos_pct              C3 win   (0.06 / 69.36)
+    S    stall_s                    C3 win   (11.17 / 42.81)
+
+Regime map: locality of the swarm against each rival (the verdict is PREREG 4's; the ratios are swarm / rival
+  of the seed means, descriptive, and no verdict)
+  headline-10            gate                     t2 C3  vs central     holds  cdt 0.08  blast 0.10  idle 83.77
+  headline-10            gate                     t2 C3  vs durable     holds  cdt 0.23  blast 0.24  idle 0.26
+  headline-10            gate                     t2 C3  vs durable-max ties   cdt 0.57  blast 0.43  idle 0.70
+  (* in the plausible region)
+
+False deaths: live coordinators a detector gave away (the supervisors have none)
+  headline-10            gate                     t2 C3  swarm 1.90 per run (most 5, 10 runs), $0.0002 paid twice; supervisors most 0
