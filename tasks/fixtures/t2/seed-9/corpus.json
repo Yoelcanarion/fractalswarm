@@ -1,0 +1,705 @@
+{
+ "conference": "DevConf T2 (seed 9)",
+ "days": [
+  1,
+  2
+ ],
+ "slots": [
+  {
+   "index": 0,
+   "start": "09:00",
+   "end": "09:45"
+  },
+  {
+   "index": 1,
+   "start": "09:45",
+   "end": "10:30"
+  },
+  {
+   "index": 2,
+   "start": "10:30",
+   "end": "11:15"
+  },
+  {
+   "index": 3,
+   "start": "11:15",
+   "end": "12:00"
+  },
+  {
+   "index": 4,
+   "start": "12:00",
+   "end": "12:45"
+  },
+  {
+   "index": 5,
+   "start": "14:00",
+   "end": "14:45"
+  },
+  {
+   "index": 6,
+   "start": "14:45",
+   "end": "15:30"
+  },
+  {
+   "index": 7,
+   "start": "15:30",
+   "end": "16:15"
+  },
+  {
+   "index": 8,
+   "start": "16:15",
+   "end": "17:00"
+  }
+ ],
+ "rooms": [
+  {
+   "id": "main-hall",
+   "name": "Main Hall",
+   "capacity": 260
+  },
+  {
+   "id": "room-b",
+   "name": "Room B",
+   "capacity": 120
+  },
+  {
+   "id": "room-c",
+   "name": "Room C",
+   "capacity": 100
+  },
+  {
+   "id": "room-d",
+   "name": "Room D",
+   "capacity": 80
+  }
+ ],
+ "tracks": [
+  {
+   "id": "track-ai",
+   "name": "AI Systems",
+   "description": "Training, serving and evaluating machine-learning systems."
+  },
+  {
+   "id": "track-data",
+   "name": "Data Infrastructure",
+   "description": "Storage, streaming, query engines and data reliability."
+  },
+  {
+   "id": "track-hci",
+   "name": "Human-Centered Computing",
+   "description": "Design, accessibility and how people work with software."
+  }
+ ],
+ "talks": [
+  {
+   "id": "T01",
+   "title": "Lessons from visualizing uncertainty in production",
+   "speaker_id": "S25",
+   "speaker": "Wen Kowalski",
+   "track_label": "HCC track",
+   "abstract": "Why visualizing uncertainty is harder than it looks, and a design that holds up. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 43 participants."
+  },
+  {
+   "id": "T02",
+   "title": "Voice interfaces without the hype",
+   "speaker_id": "S01",
+   "speaker": "Wen Silva",
+   "track_label": "HCC track",
+   "abstract": "This talk walks through how our team approached voice interfaces over the past year. Expect concrete numbers, a few failure stories and an open-source companion repo. Organizers of past editions told us to plan for around 20 people."
+  },
+  {
+   "id": "T03",
+   "title": "Scaling change data capture for small teams",
+   "speaker_id": "S14",
+   "speaker": "Nikhil Duarte",
+   "track_label": "Data Infrastructure",
+   "abstract": "A hands-on look at change data capture, with code and real measurements. No prior experience is needed, but familiarity with the basics helps. Expected audience: about 85 participants."
+  },
+  {
+   "id": "T04",
+   "title": "Explainable recommendations without the hype",
+   "speaker_id": "S08",
+   "speaker": "Rosa Silva",
+   "track_label": "Human-Centered Computing",
+   "abstract": "Why explainable recommendations is harder than it looks, and a design that holds up. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 159 participants."
+  },
+  {
+   "id": "T05",
+   "title": "Collaborative editing without the hype",
+   "speaker_id": "S12",
+   "speaker": "Bilal Silva",
+   "track_label": "Human-Centered Computing",
+   "abstract": "Why collaborative editing is harder than it looks, and a design that holds up. The session ends with a checklist attendees can apply on Monday. Organizers of past editions told us to plan for around 56 people."
+  },
+  {
+   "id": "T06",
+   "title": "Usability testing at scale: what actually worked",
+   "speaker_id": "S09",
+   "speaker": "Greta Duarte",
+   "track_label": "HCI",
+   "abstract": "This talk walks through how our team approached usability testing at scale over the past year. No prior experience is needed, but familiarity with the basics helps. We expect around 42 attendees."
+  },
+  {
+   "id": "T07",
+   "title": "Scaling reward modelling for small teams",
+   "speaker_id": "S06",
+   "speaker": "Umar Mensah",
+   "track_label": "ai systems",
+   "abstract": "A hands-on look at reward modelling, with code and real measurements. Expect concrete numbers, a few failure stories and an open-source companion repo. Last year a similar session drew roughly 69 people."
+  },
+  {
+   "id": "T08",
+   "title": "Rethinking onboarding design",
+   "speaker_id": "S11",
+   "speaker": "Chen Silva",
+   "track_label": "HCC track",
+   "abstract": "We share the mistakes we made with onboarding design and how we fixed them. The session ends with a checklist attendees can apply on Monday. We expect around 44 attendees."
+  },
+  {
+   "id": "T09",
+   "title": "A practical guide to event sourcing",
+   "speaker_id": "S32",
+   "speaker": "Wen Moreau",
+   "track_label": "data infrastructure",
+   "abstract": "A hands-on look at event sourcing, with code and real measurements. No prior experience is needed, but familiarity with the basics helps. Expected audience: about 32 participants."
+  },
+  {
+   "id": "T10",
+   "title": "A practical guide to accessible interfaces",
+   "speaker_id": "S26",
+   "speaker": "Bilal Fischer",
+   "track_label": "HCI",
+   "abstract": "A hands-on look at accessible interfaces, with code and real measurements. No prior experience is needed, but familiarity with the basics helps. Organizers of past editions told us to plan for around 69 people."
+  },
+  {
+   "id": "T11",
+   "title": "SQLite at the edge without the hype",
+   "speaker_id": "S14",
+   "speaker": "Nikhil Duarte",
+   "track_label": "data infrastructure",
+   "abstract": "Why SQLite at the edge is harder than it looks, and a design that holds up. The session ends with a checklist attendees can apply on Monday. We expect around 72 attendees."
+  },
+  {
+   "id": "T12",
+   "title": "A practical guide to cost-aware warehousing",
+   "speaker_id": "S10",
+   "speaker": "Ines Silva",
+   "track_label": "DATA INFRA",
+   "abstract": "A hands-on look at cost-aware warehousing, with code and real measurements. Expect concrete numbers, a few failure stories and an open-source companion repo. We expect around 68 attendees."
+  },
+  {
+   "id": "T13",
+   "title": "Rethinking quantized inference",
+   "speaker_id": "S10",
+   "speaker": "Ines Silva",
+   "track_label": "AI systems track",
+   "abstract": "A hands-on look at quantized inference, with code and real measurements. Expect concrete numbers, a few failure stories and an open-source companion repo. We expect around 86 attendees."
+  },
+  {
+   "id": "T14",
+   "title": "Rethinking LLM evaluation harnesses",
+   "speaker_id": "S13",
+   "speaker": "Bilal Duarte",
+   "track_label": "AI-Systems",
+   "abstract": "A hands-on look at LLM evaluation harnesses, with code and real measurements. No prior experience is needed, but familiarity with the basics helps. Expected audience: about 68 participants."
+  },
+  {
+   "id": "T15",
+   "title": "Scaling developer experience for small teams",
+   "speaker_id": "S07",
+   "speaker": "Farid Duarte",
+   "track_label": "human-centered computing",
+   "abstract": "Why developer experience is harder than it looks, and a design that holds up. Expect concrete numbers, a few failure stories and an open-source companion repo. Organizers of past editions told us to plan for around 38 people."
+  },
+  {
+   "id": "T16",
+   "title": "Rethinking speculative decoding",
+   "speaker_id": "S02",
+   "speaker": "Bruno Haddad",
+   "track_label": "ai systems",
+   "abstract": "Why speculative decoding is harder than it looks, and a design that holds up. Expect concrete numbers, a few failure stories and an open-source companion repo. We expect around 147 attendees."
+  },
+  {
+   "id": "T17",
+   "title": "Columnar storage: what actually worked",
+   "speaker_id": "S23",
+   "speaker": "Wen Fischer",
+   "track_label": "Data infra track",
+   "abstract": "We share the mistakes we made with columnar storage and how we fixed them. We compare three approaches and explain the trade-offs we accepted. Organizers of past editions told us to plan for around 82 people."
+  },
+  {
+   "id": "T18",
+   "title": "Retrieval-augmented generation without the hype",
+   "speaker_id": "S06",
+   "speaker": "Umar Mensah",
+   "track_label": "ai systems",
+   "abstract": "This talk walks through how our team approached retrieval-augmented generation over the past year. We compare three approaches and explain the trade-offs we accepted. Organizers of past editions told us to plan for around 30 people."
+  },
+  {
+   "id": "T19",
+   "title": "Multi-agent planning without the hype",
+   "speaker_id": "S29",
+   "speaker": "Chen Okafor",
+   "track_label": "ai systems",
+   "abstract": "We share the mistakes we made with multi-agent planning and how we fixed them. No prior experience is needed, but familiarity with the basics helps. Last year a similar session drew roughly 62 people."
+  },
+  {
+   "id": "T20",
+   "title": "Scaling dark patterns for small teams",
+   "speaker_id": "S21",
+   "speaker": "Lars Fischer",
+   "track_label": "human-centered computing",
+   "abstract": "We share the mistakes we made with dark patterns and how we fixed them. The session ends with a checklist attendees can apply on Monday. Last year a similar session drew roughly 52 people."
+  },
+  {
+   "id": "T21",
+   "title": "Lessons from schema evolution in production",
+   "speaker_id": "S22",
+   "speaker": "Fynn Kowalski",
+   "track_label": "DATA INFRA",
+   "abstract": "A hands-on look at schema evolution, with code and real measurements. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 152 participants."
+  },
+  {
+   "id": "T22",
+   "title": "Data contracts without the hype",
+   "speaker_id": "S27",
+   "speaker": "Farid Novak",
+   "track_label": "DATA INFRA",
+   "abstract": "We share the mistakes we made with data contracts and how we fixed them. We compare three approaches and explain the trade-offs we accepted. Organizers of past editions told us to plan for around 22 people."
+  },
+  {
+   "id": "T23",
+   "title": "Prompt caching: what actually worked",
+   "speaker_id": "S15",
+   "speaker": "Dmitri Novak",
+   "track_label": "ai systems",
+   "abstract": "A hands-on look at prompt caching, with code and real measurements. The session ends with a checklist attendees can apply on Monday. Last year a similar session drew roughly 41 people."
+  },
+  {
+   "id": "T24",
+   "title": "Lessons from trust in AI assistants in production",
+   "speaker_id": "S04",
+   "speaker": "Ana Iyer",
+   "track_label": "HCC track",
+   "abstract": "We share the mistakes we made with trust in AI assistants and how we fixed them. Expect concrete numbers, a few failure stories and an open-source companion repo. Organizers of past editions told us to plan for around 184 people."
+  },
+  {
+   "id": "T25",
+   "title": "Rethinking GPU scheduling",
+   "speaker_id": "S11",
+   "speaker": "Chen Silva",
+   "track_label": "AI-Systems",
+   "abstract": "We share the mistakes we made with GPU scheduling and how we fixed them. No prior experience is needed, but familiarity with the basics helps. Last year a similar session drew roughly 42 people."
+  },
+  {
+   "id": "T26",
+   "title": "Inclusive language tools without the hype",
+   "speaker_id": "S12",
+   "speaker": "Bilal Silva",
+   "track_label": "HCC track",
+   "abstract": "A hands-on look at inclusive language tools, with code and real measurements. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 26 participants."
+  },
+  {
+   "id": "T27",
+   "title": "A practical guide to long-context attention",
+   "speaker_id": "S20",
+   "speaker": "Hiro Okafor",
+   "track_label": "ai systems",
+   "abstract": "Why long-context attention is harder than it looks, and a design that holds up. Expect concrete numbers, a few failure stories and an open-source companion repo. We expect around 39 attendees."
+  },
+  {
+   "id": "T28",
+   "title": "Rethinking query optimization",
+   "speaker_id": "S24",
+   "speaker": "Kemi Okafor",
+   "track_label": "DATA INFRA",
+   "abstract": "This talk walks through how our team approached query optimization over the past year. No prior experience is needed, but familiarity with the basics helps. Last year a similar session drew roughly 34 people."
+  },
+  {
+   "id": "T29",
+   "title": "Lessons from notification fatigue in production",
+   "speaker_id": "S03",
+   "speaker": "Olga Iyer",
+   "track_label": "HCC track",
+   "abstract": "Why notification fatigue is harder than it looks, and a design that holds up. No prior experience is needed, but familiarity with the basics helps. Organizers of past editions told us to plan for around 45 people."
+  },
+  {
+   "id": "T30",
+   "title": "Lessons from on-device models in production",
+   "speaker_id": "S13",
+   "speaker": "Bilal Duarte",
+   "track_label": "AI-Systems",
+   "abstract": "This talk walks through how our team approached on-device models over the past year. The session ends with a checklist attendees can apply on Monday. Organizers of past editions told us to plan for around 52 people."
+  },
+  {
+   "id": "T31",
+   "title": "Lessons from onboarding design in production",
+   "speaker_id": "S09",
+   "speaker": "Greta Duarte",
+   "track_label": "Human-Centered Computing",
+   "abstract": "A hands-on look at onboarding design, with code and real measurements. Expect concrete numbers, a few failure stories and an open-source companion repo. We expect around 30 attendees."
+  },
+  {
+   "id": "T32",
+   "title": "Rethinking data lineage",
+   "speaker_id": "S15",
+   "speaker": "Dmitri Novak",
+   "track_label": "Data infra track",
+   "abstract": "Why data lineage is harder than it looks, and a design that holds up. We compare three approaches and explain the trade-offs we accepted. We expect around 92 attendees."
+  },
+  {
+   "id": "T33",
+   "title": "Lessons from agent tool use in production",
+   "speaker_id": "S17",
+   "speaker": "Lars Byrne",
+   "track_label": "ai systems",
+   "abstract": "A hands-on look at agent tool use, with code and real measurements. Expect concrete numbers, a few failure stories and an open-source companion repo. We expect around 106 attendees."
+  },
+  {
+   "id": "T34",
+   "title": "Stream processing without the hype",
+   "speaker_id": "S03",
+   "speaker": "Olga Iyer",
+   "track_label": "Data infra track",
+   "abstract": "Why stream processing is harder than it looks, and a design that holds up. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 69 participants."
+  },
+  {
+   "id": "T35",
+   "title": "Lessons from vector databases in production",
+   "speaker_id": "S16",
+   "speaker": "Umar Moreau",
+   "track_label": "data infrastructure",
+   "abstract": "A hands-on look at vector databases, with code and real measurements. The session ends with a checklist attendees can apply on Monday. Expected audience: about 90 participants."
+  },
+  {
+   "id": "T36",
+   "title": "A practical guide to model distillation",
+   "speaker_id": "S19",
+   "speaker": "Yusuf Lindqvist",
+   "track_label": "AI Systems",
+   "abstract": "We share the mistakes we made with model distillation and how we fixed them. Expect concrete numbers, a few failure stories and an open-source companion repo. We expect around 31 attendees."
+  },
+  {
+   "id": "T37",
+   "title": "Quantized inference without the hype",
+   "speaker_id": "S16",
+   "speaker": "Umar Moreau",
+   "track_label": "AI-Systems",
+   "abstract": "This talk walks through how our team approached quantized inference over the past year. No prior experience is needed, but familiarity with the basics helps. Last year a similar session drew roughly 154 people."
+  },
+  {
+   "id": "T38",
+   "title": "Model distillation without the hype",
+   "speaker_id": "S02",
+   "speaker": "Bruno Haddad",
+   "track_label": "AI systems track",
+   "abstract": "A hands-on look at model distillation, with code and real measurements. Expect concrete numbers, a few failure stories and an open-source companion repo. Last year a similar session drew roughly 56 people."
+  },
+  {
+   "id": "T39",
+   "title": "Lakehouse tables: what actually worked",
+   "speaker_id": "S28",
+   "speaker": "Amara Petrov",
+   "track_label": "Data Infrastructure",
+   "abstract": "We share the mistakes we made with lakehouse tables and how we fixed them. The session ends with a checklist attendees can apply on Monday. Last year a similar session drew roughly 43 people."
+  },
+  {
+   "id": "T40",
+   "title": "A practical guide to lakehouse tables",
+   "speaker_id": "S01",
+   "speaker": "Wen Silva",
+   "track_label": "Data Infrastructure",
+   "abstract": "We share the mistakes we made with lakehouse tables and how we fixed them. We compare three approaches and explain the trade-offs we accepted. Organizers of past editions told us to plan for around 68 people."
+  },
+  {
+   "id": "T41",
+   "title": "Lessons from data lineage in production",
+   "speaker_id": "S05",
+   "speaker": "Ines Okafor",
+   "track_label": "Data Infrastructure",
+   "abstract": "Why data lineage is harder than it looks, and a design that holds up. The session ends with a checklist attendees can apply on Monday. Expected audience: about 91 participants."
+  },
+  {
+   "id": "T42",
+   "title": "Trust in AI assistants: what actually worked",
+   "speaker_id": "S18",
+   "speaker": "Maya Okafor",
+   "track_label": "HCC track",
+   "abstract": "A hands-on look at trust in AI assistants, with code and real measurements. The session ends with a checklist attendees can apply on Monday. Last year a similar session drew roughly 39 people."
+  },
+  {
+   "id": "T43",
+   "title": "Long-context attention without the hype",
+   "speaker_id": "S05",
+   "speaker": "Ines Okafor",
+   "track_label": "ai systems",
+   "abstract": "We share the mistakes we made with long-context attention and how we fixed them. Expect concrete numbers, a few failure stories and an open-source companion repo. Expected audience: about 103 participants."
+  },
+  {
+   "id": "T44",
+   "title": "Event sourcing without the hype",
+   "speaker_id": "S08",
+   "speaker": "Rosa Silva",
+   "track_label": "data infrastructure",
+   "abstract": "A hands-on look at event sourcing, with code and real measurements. We compare three approaches and explain the trade-offs we accepted. Expected audience: about 34 participants."
+  },
+  {
+   "id": "T45",
+   "title": "A practical guide to agent tool use",
+   "speaker_id": "S30",
+   "speaker": "Ana Sato",
+   "track_label": "ai systems",
+   "abstract": "We share the mistakes we made with agent tool use and how we fixed them. Expect concrete numbers, a few failure stories and an open-source companion repo. Expected audience: about 72 participants."
+  },
+  {
+   "id": "T46",
+   "title": "Scaling onboarding design for small teams",
+   "speaker_id": "S31",
+   "speaker": "Dara Tanaka",
+   "track_label": "Human-Centered Computing",
+   "abstract": "Why onboarding design is harder than it looks, and a design that holds up. The session ends with a checklist attendees can apply on Monday. We expect around 130 attendees."
+  },
+  {
+   "id": "T47",
+   "title": "Scaling schema evolution for small teams",
+   "speaker_id": "S07",
+   "speaker": "Farid Duarte",
+   "track_label": "data infrastructure",
+   "abstract": "A hands-on look at schema evolution, with code and real measurements. We compare three approaches and explain the trade-offs we accepted. Organizers of past editions told us to plan for around 43 people."
+  },
+  {
+   "id": "T48",
+   "title": "A practical guide to usability testing at scale",
+   "speaker_id": "S04",
+   "speaker": "Ana Iyer",
+   "track_label": "HCC track",
+   "abstract": "We share the mistakes we made with usability testing at scale and how we fixed them. We compare three approaches and explain the trade-offs we accepted. Last year a similar session drew roughly 61 people."
+  }
+ ],
+ "emails": [
+  {
+   "id": "E01",
+   "speaker_id": "S01",
+   "from": "Wen Silva <wen.silva@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nThanks for accepting \"Voice interfaces without the hype\" (T02) and \"A practical guide to lakehouse tables\" (T40).\nI can only attend on day 1.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nThanks,\nWen Silva"
+  },
+  {
+   "id": "E02",
+   "speaker_id": "S02",
+   "from": "Bruno Haddad <bruno.haddad@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nThanks for accepting \"Rethinking speculative decoding\" (T16) and \"Model distillation without the hype\" (T38).\nI'm flexible: both days are fine, any time.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nThanks,\nBruno Haddad"
+  },
+  {
+   "id": "E03",
+   "speaker_id": "S03",
+   "from": "Olga Iyer <olga.iyer@example.org>",
+   "subject": "My talks",
+   "body": "Hello!\nQuick note about \"Lessons from notification fatigue in production\" (T29) and \"Stream processing without the hype\" (T34).\nI can only do mornings (sessions starting before 12:30), on either day.\nOtherwise any time is fine.\nSlides will be ready a week before the event.\nBest,\nOlga Iyer"
+  },
+  {
+   "id": "E04",
+   "speaker_id": "S04",
+   "from": "Ana Iyer <ana.iyer@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nI'm excited to present \"Lessons from trust in AI assistants in production\" (T24) and \"A practical guide to usability testing at scale\" (T48).\nI can only attend on day 2.\nIf possible I'd prefer a morning slot.\nLet me know if you need a longer bio.\nBest,\nAna Iyer"
+  },
+  {
+   "id": "E05",
+   "speaker_id": "S05",
+   "from": "Ines Okafor <ines.okafor@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nI'm excited to present \"Lessons from data lineage in production\" (T41) and \"Long-context attention without the hype\" (T43).\nUnfortunately I'll only be around on Day 1.\nAn afternoon slot would suit me best.\nThanks,\nInes Okafor"
+  },
+  {
+   "id": "E06",
+   "speaker_id": "S06",
+   "from": "Umar Mensah <umar.mensah@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nThanks for accepting \"Scaling reward modelling for small teams\" (T07) and \"Retrieval-augmented generation without the hype\" (T18).\nI can only do afternoons (sessions starting at 14:00 or later), on either day.\nOtherwise any time is fine.\nLet me know if you need a longer bio.\nKind regards,\nUmar Mensah"
+  },
+  {
+   "id": "E07",
+   "speaker_id": "S07",
+   "from": "Farid Duarte <farid.duarte@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nI'm excited to present \"Scaling developer experience for small teams\" (T15) and \"Scaling schema evolution for small teams\" (T47).\nAny slot on either day works for me.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nKind regards,\nFarid Duarte"
+  },
+  {
+   "id": "E08",
+   "speaker_id": "S08",
+   "from": "Rosa Silva <rosa.silva@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nQuick note about \"Explainable recommendations without the hype\" (T04) and \"Event sourcing without the hype\" (T44).\nI'm flexible: both days are fine, any time.\nNo preference on the time otherwise.\nBest,\nRosa Silva"
+  },
+  {
+   "id": "E09",
+   "speaker_id": "S09",
+   "from": "Greta Duarte <greta.duarte@example.org>",
+   "subject": "My talks",
+   "body": "Dear organizers,\nThanks for accepting \"Usability testing at scale: what actually worked\" (T06) and \"Lessons from onboarding design in production\" (T31).\nI'm flexible: both days are fine, any time.\nNo preference on the time otherwise.\nLet me know if you need a longer bio.\nThanks,\nGreta Duarte"
+  },
+  {
+   "id": "E10",
+   "speaker_id": "S10",
+   "from": "Ines Silva <ines.silva@example.org>",
+   "subject": "My talks",
+   "body": "Dear organizers,\nThanks for accepting \"A practical guide to cost-aware warehousing\" (T12) and \"Rethinking quantized inference\" (T13).\nI'm flexible: both days are fine, any time.\nOtherwise any time is fine.\nKind regards,\nInes Silva"
+  },
+  {
+   "id": "E11",
+   "speaker_id": "S11",
+   "from": "Chen Silva <chen.silva@example.org>",
+   "subject": "My talks",
+   "body": "Dear organizers,\nI'm excited to present \"Rethinking onboarding design\" (T08) and \"Rethinking GPU scheduling\" (T25).\nAny slot on either day works for me.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nKind regards,\nChen Silva"
+  },
+  {
+   "id": "E12",
+   "speaker_id": "S12",
+   "from": "Bilal Silva <bilal.silva@example.org>",
+   "subject": "My talks",
+   "body": "Hello!\nQuick note about \"Collaborative editing without the hype\" (T05) and \"Inclusive language tools without the hype\" (T26).\nI'm flexible: both days are fine, any time.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nBest,\nBilal Silva"
+  },
+  {
+   "id": "E13",
+   "speaker_id": "S13",
+   "from": "Bilal Duarte <bilal.duarte@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nQuick note about \"Rethinking LLM evaluation harnesses\" (T14) and \"Lessons from on-device models in production\" (T30).\nAny slot on either day works for me.\nIf you can, put me in the afternoon.\nSlides will be ready a week before the event.\nBest,\nBilal Duarte"
+  },
+  {
+   "id": "E14",
+   "speaker_id": "S14",
+   "from": "Nikhil Duarte <nikhil.duarte@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nQuick note about \"Scaling change data capture for small teams\" (T03) and \"SQLite at the edge without the hype\" (T11).\nI can only attend on day 2.\nA morning slot would be ideal.\nThanks,\nNikhil Duarte"
+  },
+  {
+   "id": "E15",
+   "speaker_id": "S15",
+   "from": "Dmitri Novak <dmitri.novak@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nI'm excited to present \"Prompt caching: what actually worked\" (T23) and \"Rethinking data lineage\" (T32).\nMy train arrives late on day 2, so nothing before 09:45 that day (the other day is fine).\nA morning slot would be ideal.\nI'll bring my own laptop with an HDMI adapter.\nBest,\nDmitri Novak"
+  },
+  {
+   "id": "E16",
+   "speaker_id": "S16",
+   "from": "Umar Moreau <umar.moreau@example.org>",
+   "subject": "My talks",
+   "body": "Hi program committee,\nThanks for accepting \"Lessons from vector databases in production\" (T35) and \"Quantized inference without the hype\" (T37).\nAny slot on either day works for me.\nIf you can, put me in the afternoon.\nSlides will be ready a week before the event.\nKind regards,\nUmar Moreau"
+  },
+  {
+   "id": "E17",
+   "speaker_id": "S17",
+   "from": "Lars Byrne <lars.byrne@example.org>",
+   "subject": "My talk",
+   "body": "Hi all,\nThanks for accepting \"Lessons from agent tool use in production\" (T33).\nI'm flexible: both days are fine, any time.\nOtherwise any time is fine.\nSlides will be ready a week before the event.\nKind regards,\nLars Byrne"
+  },
+  {
+   "id": "E18",
+   "speaker_id": "S18",
+   "from": "Maya Okafor <maya.okafor@example.org>",
+   "subject": "My talk",
+   "body": "Hi program committee,\nI'm excited to present \"Trust in AI assistants: what actually worked\" (T42).\nAny slot on either day works for me.\nAn afternoon slot would suit me best.\nSlides will be ready a week before the event.\nBest,\nMaya Okafor"
+  },
+  {
+   "id": "E19",
+   "speaker_id": "S19",
+   "from": "Yusuf Lindqvist <yusuf.lindqvist@example.org>",
+   "subject": "My talk",
+   "body": "Hello!\nThanks for accepting \"A practical guide to model distillation\" (T36).\nUnfortunately I'll only be around on Day 1.\nNo preference on the time otherwise.\nThanks,\nYusuf Lindqvist"
+  },
+  {
+   "id": "E20",
+   "speaker_id": "S20",
+   "from": "Hiro Okafor <hiro.okafor@example.org>",
+   "subject": "My talk",
+   "body": "Hi all,\nI'm excited to present \"A practical guide to long-context attention\" (T27).\nUnfortunately I'll only be around on Day 2.\nOtherwise any time is fine.\nThanks,\nHiro Okafor"
+  },
+  {
+   "id": "E21",
+   "speaker_id": "S21",
+   "from": "Lars Fischer <lars.fischer@example.org>",
+   "subject": "My talk",
+   "body": "Hi program committee,\nThanks for accepting \"Scaling dark patterns for small teams\" (T20).\nAny slot on either day works for me.\nAn afternoon slot would suit me best.\nThanks,\nLars Fischer"
+  },
+  {
+   "id": "E22",
+   "speaker_id": "S22",
+   "from": "Fynn Kowalski <fynn.kowalski@example.org>",
+   "subject": "My talk",
+   "body": "Dear organizers,\nI'm excited to present \"Lessons from schema evolution in production\" (T21).\nI need to be gone by 12:45 on day 2 (the other day is fine).\nIf you can, put me in the afternoon.\nSlides will be ready a week before the event.\nCheers,\nFynn Kowalski"
+  },
+  {
+   "id": "E23",
+   "speaker_id": "S23",
+   "from": "Wen Fischer <wen.fischer@example.org>",
+   "subject": "My talk",
+   "body": "Hi all,\nI'm excited to present \"Columnar storage: what actually worked\" (T17).\nUnfortunately I'll only be around on Day 2.\nNo preference on the time otherwise.\nLet me know if you need a longer bio.\nBest,\nWen Fischer"
+  },
+  {
+   "id": "E24",
+   "speaker_id": "S24",
+   "from": "Kemi Okafor <kemi.okafor@example.org>",
+   "subject": "My talk",
+   "body": "Hi program committee,\nThanks for accepting \"Rethinking query optimization\" (T28).\nUnfortunately I'll only be around on Day 2.\nNo preference on the time otherwise.\nSlides will be ready a week before the event.\nKind regards,\nKemi Okafor"
+  },
+  {
+   "id": "E25",
+   "speaker_id": "S25",
+   "from": "Wen Kowalski <wen.kowalski@example.org>",
+   "subject": "My talk",
+   "body": "Hi all,\nThanks for accepting \"Lessons from visualizing uncertainty in production\" (T01).\nI'm flexible: both days are fine, any time.\nIf you can, put me in the afternoon.\nLet me know if you need a longer bio.\nThanks,\nWen Kowalski"
+  },
+  {
+   "id": "E26",
+   "speaker_id": "S26",
+   "from": "Bilal Fischer <bilal.fischer@example.org>",
+   "subject": "My talk",
+   "body": "Hi all,\nThanks for accepting \"A practical guide to accessible interfaces\" (T10).\nI'm flexible: both days are fine, any time.\nIf possible I'd prefer a morning slot.\nLet me know if you need a longer bio.\nBest,\nBilal Fischer"
+  },
+  {
+   "id": "E27",
+   "speaker_id": "S27",
+   "from": "Farid Novak <farid.novak@example.org>",
+   "subject": "My talk",
+   "body": "Hello!\nI'm excited to present \"Data contracts without the hype\" (T22).\nAny slot on either day works for me.\nIf you can, put me in the afternoon.\nI'll bring my own laptop with an HDMI adapter.\nCheers,\nFarid Novak"
+  },
+  {
+   "id": "E28",
+   "speaker_id": "S28",
+   "from": "Amara Petrov <amara.petrov@example.org>",
+   "subject": "My talk",
+   "body": "Hello!\nI'm excited to present \"Lakehouse tables: what actually worked\" (T39).\nUnfortunately I'll only be around on Day 1.\nAn afternoon slot would suit me best.\nKind regards,\nAmara Petrov"
+  },
+  {
+   "id": "E29",
+   "speaker_id": "S29",
+   "from": "Chen Okafor <chen.okafor@example.org>",
+   "subject": "My talk",
+   "body": "Dear organizers,\nThanks for accepting \"Multi-agent planning without the hype\" (T19).\nI'm flexible: both days are fine, any time.\nOtherwise any time is fine.\nSlides will be ready a week before the event.\nThanks,\nChen Okafor"
+  },
+  {
+   "id": "E30",
+   "speaker_id": "S30",
+   "from": "Ana Sato <ana.sato@example.org>",
+   "subject": "My talk",
+   "body": "Hello!\nI'm excited to present \"A practical guide to agent tool use\" (T45).\nI'm flexible: both days are fine, any time.\nNo preference on the time otherwise.\nSlides will be ready a week before the event.\nKind regards,\nAna Sato"
+  },
+  {
+   "id": "E31",
+   "speaker_id": "S31",
+   "from": "Dara Tanaka <dara.tanaka@example.org>",
+   "subject": "My talk",
+   "body": "Dear organizers,\nI'm excited to present \"Scaling onboarding design for small teams\" (T46).\nAny slot on either day works for me.\nA morning slot would be ideal.\nI'll bring my own laptop with an HDMI adapter.\nThanks,\nDara Tanaka"
+  },
+  {
+   "id": "E32",
+   "speaker_id": "S32",
+   "from": "Wen Moreau <wen.moreau@example.org>",
+   "subject": "My talk",
+   "body": "Hello!\nThanks for accepting \"A practical guide to event sourcing\" (T09).\nAny slot on either day works for me.\nA morning slot would be ideal.\nI'll bring my own laptop with an HDMI adapter.\nThanks,\nWen Moreau"
+  }
+ ]
+}
