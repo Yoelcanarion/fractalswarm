@@ -16,6 +16,7 @@ import { LineDraw } from "./viz/charts/LineDraw";
 import { PairedBars } from "./viz/charts/PairedBars";
 import { RegimeStrip } from "./viz/charts/RegimeStrip";
 import { TokenBar } from "./viz/charts/TokenBar";
+import { DoorGlyph } from "./viz/doors/DoorGlyph";
 import { HashStrip } from "./viz/hash/HashStrip";
 import { HrwPanels } from "./viz/hrw/HrwPanels";
 import { WorkLanes } from "./viz/lanes/WorkLanes";
@@ -54,6 +55,7 @@ const REGISTRY: Partial<Record<VizName, VizComponent>> = {
   PairedBars: PairedBars as unknown as VizComponent,
   RegimeStrip: RegimeStrip as unknown as VizComponent,
   TokenBar: TokenBar as unknown as VizComponent,
+  DoorGlyph: DoorGlyph as unknown as VizComponent,
   HrwPanels: HrwPanels as unknown as VizComponent,
   HashStrip: HashStrip as unknown as VizComponent,
 };
