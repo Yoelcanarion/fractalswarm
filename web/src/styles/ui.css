@@ -104,7 +104,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 2px;
   margin-left: 6px;
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -135,7 +135,7 @@ textarea:focus-visible {
   border-radius: var(--radius-pill);
   background: var(--surface-2);
   color: var(--text-secondary);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   font-weight: 600;
   white-space: nowrap;
 }

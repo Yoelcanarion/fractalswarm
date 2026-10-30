@@ -56,6 +56,8 @@ export interface ApprovedSummary {
   edits: string[];
   truth_mode: string;
   names_pseudonymized: boolean;
+  /** The reading as the person approved it. A server that predates it sends none, and the page then has only Muse's reading. */
+  proposal?: Proposal | null;
 }
 
 export interface IntakeState {
@@ -137,6 +139,12 @@ export function readIntakeState(raw: unknown): Read<IntakeState> {
     const refused = r.refused === null || r.refused === undefined ? null : record(r.refused, "intake.refused");
     const failed = r.failed === null || r.failed === undefined ? null : record(r.failed, "intake.failed");
     const approved = r.approved === null || r.approved === undefined ? null : record(r.approved, "intake.approved");
+    let approvedProposal: Proposal | null = null;
+    if (approved !== null && approved.proposal !== null && approved.proposal !== undefined) {
+      const read = readProposal(approved.proposal, "intake.approved.proposal");
+      if (!read.ok) return bad("intake", read.reason);
+      approvedProposal = read.value;
+    }
     return {
       intake_id: text(r.intake_id, "intake.intake_id"),
       state,
@@ -158,6 +166,7 @@ export function readIntakeState(raw: unknown): Read<IntakeState> {
               edits: strings(approved.edits, "intake.approved.edits"),
               truth_mode: text(approved.truth_mode, "intake.approved.truth_mode"),
               names_pseudonymized: flag(approved.names_pseudonymized ?? false, "intake.approved.names_pseudonymized"),
+              proposal: approvedProposal,
             },
     };
   });

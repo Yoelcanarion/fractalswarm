@@ -28,7 +28,8 @@ a {
 code,
 .mono {
   font-family: var(--font-mono);
-  font-size: 0.92em;
+  /* a little under its neighbours, which a monospace face needs, but never under the floor */
+  font-size: max(0.92em, var(--fs-body));
 }
 
 .muted {
@@ -742,7 +743,7 @@ textarea {
 
 .feed__filter {
   width: 150px;
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   padding: 4px 8px;
 }
 
@@ -1128,7 +1129,7 @@ textarea {
 }
 
 .chaos__net {
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   color: var(--text-muted);
 }
 
@@ -1244,7 +1245,7 @@ textarea {
 
 .ptable .badge {
   padding: 1px 9px;
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 .nothing {
@@ -1385,7 +1386,7 @@ textarea {
 }
 
 .spendchip {
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   padding: 3px 9px;
   border-radius: var(--radius-pill);
   background: var(--surface-2);
@@ -1448,7 +1449,7 @@ textarea {
 
 .generic__text {
   color: var(--text-muted);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1492,7 +1493,7 @@ textarea {
 }
 
 .answer__label {
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   color: var(--text-muted);
 }
 
@@ -1536,7 +1537,7 @@ textarea {
 
 .crow__keys {
   color: var(--text-secondary);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   word-break: break-all;
 }
 
@@ -1607,7 +1608,7 @@ textarea {
   padding: 5px 8px;
   display: flex;
   flex-direction: column;
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 .fault b {
@@ -1625,7 +1626,7 @@ textarea {
   border-radius: var(--radius-pill);
   background: var(--surface-2);
   border: 1px solid var(--border);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 /* run controls: budget shock and kill switch, one slim strip */
@@ -1892,7 +1893,7 @@ textarea {
 .results__raw pre {
   max-height: 300px;
   overflow: auto;
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   margin: 6px 0 0;
 }
 

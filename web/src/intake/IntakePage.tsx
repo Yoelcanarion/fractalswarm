@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRunStore } from "../store";
 import "./intake.css";
 import { createIntakeApi, type Approval, type IntakeApi, type IntakeState } from "./api";
-import { isWorking, phaseFor, phaseOf, POLL_MS, stepOf } from "./flow";
+import { isWorking, phaseFor, phaseOf, POLL_MS, startingReading, stepOf } from "./flow";
 import { boxOf, placeFacts, type Box, type Selection, type Texts } from "./highlight";
 import { IntakeForm } from "./IntakeForm";
 import { formProblems, readingBody, requestFor, type Backend, type ReadingForm } from "./launch";
@@ -101,9 +101,11 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
 
   // Muse's reading, the first time it is there: it is both what the rows are compared against and where the person starts.
   useEffect(() => {
-    if (original !== null || state === null || state.intake_id !== intakeId || state.proposal === null) return;
-    setOriginal(state.proposal);
-    setWorking(state.proposal);
+    if (original !== null || state === null || state.intake_id !== intakeId) return;
+    const start = startingReading(state);
+    if (start === null) return;
+    setOriginal(start.original);
+    setWorking(start.working);
   }, [state, intakeId, original]);
 
   const phase = phaseFor(intakeId, state);

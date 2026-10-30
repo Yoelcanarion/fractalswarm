@@ -2,6 +2,7 @@
 // could say. A reading is being read, waits for review, is approved, or stopped (and why).
 
 import type { IntakeState } from "./api";
+import type { Proposal } from "./proposal";
 
 export type Phase =
   | { name: "form" }
@@ -13,6 +14,13 @@ export type Phase =
 
 export const STEPS = ["Paste", "Read", "Review", "Run"] as const;
 export type Step = (typeof STEPS)[number];
+
+/** The rows the review starts from. Muse's reading is what they are compared against; an approved intake starts from the
+ * version that was approved (servers that keep it send it), so what the person changed shows as edits and not as a note. */
+export function startingReading(state: IntakeState): { original: Proposal; working: Proposal } | null {
+  if (state.proposal === null) return null;
+  return { original: state.proposal, working: state.approved?.proposal ?? state.proposal };
+}
 
 /** How often the page asks a reading that is still being read. */
 export const POLL_MS = 1000;
