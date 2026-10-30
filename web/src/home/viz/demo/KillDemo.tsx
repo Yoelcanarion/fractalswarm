@@ -272,6 +272,7 @@ export function KillDemo({ data, still, note = false, className }: KillDemoProps
           clock={false}
           ambient={!reduced}
           scoreText={false}
+          labelOnRule
           title="The swarm tree, as an illustration"
           description={DESCRIPTION}
         />
