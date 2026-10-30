@@ -1255,6 +1255,60 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 | W6 home | `Yoelcanarion/arena-home` | ctx_e45cccb89655 | the page, story, copy, menu, route, bundle split (`.plans/arena/w6-home.md`) |
 | W7 home-viz | `Yoelcanarion/arena-home-viz` | ctx_ccefb546b59f | the data generator and the visuals (same brief) |
 | W4 ui-core | `Yoelcanarion/arena-ui-core` | ctx_4cb9c1ba1b6d | polish of the whole app (`.plans/arena/w4-polish.md`) |
-| W8 static | `Yoelcanarion/arena-static` | ctx_febe4961c466 | the static showcase (`.plans/arena/w8-static.md`) |
+| W8 static | `Yoelcanarion/w8-static-showcase` | ctx_febe4961c466 | the static showcase (`.plans/arena/w8-static.md`) |
 
 **Found:** the Charts page has been serving placeholder data: `/api/bench/results` knew no file name of the real hero set, and `lib/hero.ts` could not read its shape. W4 fixes both (seen by W4 reading the code).
+
+**Stopped at 12:05 CET by Yoel's STOP** (12:00, relayed by the first coordinator): all work stops and resumes later. After the STOP I dispatched nothing and merged nothing, and all four workers committed and reported. The first coordinator stops the paid chain and the load sampler, copies the headline-10 cells into this worktree, commits them and pushes the working branches.
+
+**State at the stop:**
+- `Yoelcanarion/arena` is at this entry's commit, on top of e688aad. `master` is at ede531f.
+- **No worker branch is in arena.** The home page, W4's polish and the static showcase exist only on their branches, and the bundle the server serves has none of them.
+- Committed on arena since the table above, each with its test:
+  - dcaef55: reads of the log leave the event loop (W3's open item). The new test fails on the old code.
+  - 105e16d: `GET /api/intake/{id}` returns the approved reading in `approved.proposal` (W2's and W5's open item).
+  - d8e8d28: the UI's billed launches stop at $120 committed, not at $61.8 (§M).
+  - e688aad: `/takeover` of a supervisor's run answers 501, not 500 (W8 found it on a real central run).
+- Those four passed their own test files and ruff only. `merge_checks.ps1` and the full pytest suite have not run on them.
+- **Paid:** chain 1 ran from the `arena` worktree (detached at 10c2ff7; keep it there for every headline-10 cell). `h10-central123` and `h10-seed4` ended with bench exit 0. `h10-seed5` was still running: 39 of 80 cells at 12:06, 7 of seed 5's 8. The last ledger reading is **$115.20 remaining at 11:36**, before seed 5; a block costs about $3. Read `spend` again before anything else.
+- This commit also holds `.plans/arena/w5-polish.md`, the brief for W5's next round. W5 has not been started.
+
+**What each worker had in hand.** Worktrees are `C:\Users\yogar\orca\workspaces\work-orquestrator\<name>` (`arena-home`, `arena-home-viz`, `arena-ui-core`, `arena-static`), all clean. Nothing was pushed, and no worker sent `worker_done`. Details are in `.plans/notes/arena-home.md`, `arena-home-viz.md`, `arena-ui-core.md` and `arena-static.md`.
+
+| worker | branch, tip | dispatch | done | left |
+|---|---|---|---|---|
+| W6 home | `Yoelcanarion/arena-home`, 2588ed8 (WIP) | ctx_e45cccb89655 | Route and bundle split, hero, five chapters, claims, terminal, doors. **The tip does not typecheck:** merging W7's 9bca49d (bfc0046) replaced the typed schema, and `story.ts`, `numbers.ts`, `visuals.tsx`, `testing.ts` and the tests still read the old one. Last measured at e32c5fd: tsc clean, 138 of 139 home tests | Adapt the page to `data/types.ts`; add the `#/home-lab` route line; tsc and vitest on one worker. Then, in a RELEASE: build, bundle size, screenshots, fps, polish, `merge_ready` |
+| W7 home-viz | `Yoelcanarion/arena-home-viz`, a0e8465 (code at 9bca49d; push a0e8465, not af4779b) | ctx_ccefb546b59f | `story.json` and its generator on W6's contract; SwarmTree, HrwPanels, HashStrip. At 9bca49d: tsc clean, vitest 1195, `test_home_data` 14. Never seen in a browser | WorkLanes, LineDraw, DotPlot, PairedBars, RegimeStrip, TokenBar, CountUp, DoorGlyph; export HrwPanels and HashStrip from `viz/index.ts`, with lab sections; the extraction slice from `demo/backup` (decided at 11:52, in its notes); browser, build, fps, `demo --verify`. Ablation stays absent, with its PENDING tag |
+| W4 ui-core | `Yoelcanarion/arena-ui-core`, e1e67ec (code at e95864c) | ctx_4cb9c1ba1b6d | Charts on real data, Runs catalogue, shared tooltip, glossary, headers and states on Results, Plan, Panels, Security and Events, type scale, the approved reading in the intake. At e95864c: tsc clean, vitest 1296. Never seen in a browser | Browser audit with screenshots and frame times; the App shell (not started); heads and states of intake, ablation and helps; keyboard, reduced motion, light theme; the pytest merge check and `demo --verify` |
+| W8 static | `Yoelcanarion/w8-static-showcase`, d953306 (code at 19bf4d2) | ctx_febe4961c466 | Shim, manifest reader, banner, exporter with its guards, the `VerifyBadge` branch. `test_static_site.py` 74, tsc clean. The exporter ran on backup + toy and on the refs pair (15.2 MB), replays verified at build, scan clean | Merge arena (for the 501); vitest again (not re-run after its last `Banner.tsx` and `install.tsx` edits); the proof that the local build is unchanged; the site build; the Playwright pass (`.plans/notes/arena-static-browser-check.mjs`, never run); the integration chunks; second `merge_ready` |
+
+**My error, still to correct.** At 11:43 I told W8 that the final pairs are on the T2 fixture, bundled under `demo/`. The handoff (item 2) says the sample text first, and Yoel's own text for the final take. I found this after the STOP, so W8 has not been told. The W5 brief is corrected; `coord/arena_pair.py` still knows only the T2 fixture.
+
+**Decision for the resume:** W8's exporter refuses intake runs, and Yoel's text never goes into git, so the site and the director's committed sources need pairs on an input that is not private. Record the same two pairs on the T2 fixture as well (worst case $1.50 a pair), next to the ones the handoff asks for.
+
+**To resume, in order:**
+1. Read this entry. Ask Yoel whether the machine is free for a paid block, and whether he is gaming. Run `uv run fractalswarm spend`, and `coord\cells_status.ps1 -Repo C:\Users\yogar\orca\workspaces\work-orquestrator\arena -Dir bench\results\headline-10`.
+2. Wake the workers with `orca orchestration send --to dispatch:<id>`, on their existing worktrees; a worker whose terminal is gone gets a new Task on the same worktree (memory, Orca mailbox and resume). Their heartbeat loops have ended. Start on HOLD: W6 repairs its typecheck first, W7 goes on with the visuals, W4 and W8 keep to code, tsc and vitest on one worker. No fifth worker: free memory was 1.3–2.7 GB with four.
+3. Tell W8 the correction above and the 501 on arena. Answer W4's open question: `App.tsx` waits for W6's first merge.
+4. Between chains, RELEASE W6 and W7 first (ports 5174, 5175), then W4 (5176) and W8, keeping about 2 GB free. HOLD again before each chain.
+5. Merge into arena through `merge_checks.ps1`, rebuilding the static bundle each time: W6 (it holds W7's code so far), then W7's later work, then tell W4 that `App.tsx` is free, then W4, then W8. W8's `main.tsx` will conflict with W6's lazy shell: keep W8's static guard around the mount.
+6. Finish headline-10 from the `arena` worktree. Finished cells are skipped, so seed 5 only runs what is missing:
+   ```powershell
+   Start-Process powershell -ArgumentList '-NoProfile','-File','C:\Users\yogar\.fractalswarm\coord\paid_chain.ps1','-Repo','C:\Users\yogar\orca\workspaces\work-orquestrator\arena','-BlockList','h10-seed5|C:\Users\yogar\.fractalswarm\coord\blocks\h10-seed5.yaml|bench/results/headline-10;h10-seed6|C:\Users\yogar\.fractalswarm\coord\blocks\h10-seed6.yaml|bench/results/headline-10;h10-seed7|C:\Users\yogar\.fractalswarm\coord\blocks\h10-seed7.yaml|bench/results/headline-10' -WindowStyle Hidden -PassThru
+   Start-Process powershell -ArgumentList '-NoProfile','-File','C:\Users\yogar\.fractalswarm\coord\load_sampler.ps1','-Label','h10-2','-Hours','2' -WindowStyle Hidden
+   ```
+   Then seeds 8–10 the same way. Then `bench run bench/matrix-headline-10.yaml` with 0 cells to run (the aggregates, $0; check with `--dry-run` first), and `bench verdicts bench/results/headline-10`. Copy cells and aggregates into arena, commit, and report them next to the 3-seed reading, never instead of it.
+7. Go on with handoff items 2–8: the pairs, the demo bundle, LangGraph (`coord/fake_gates.ps1` is written and has never run), scaling, T3 real, the live-input rehearsals, and more seeds with what is left above the $30 floor. `coord/arena_pair.py` is written and has never run: try it on the fake LLM first.
+8. After the pairs, start W5 from `.plans/arena/w5-polish.md` (port 5177) and W1 for REPORT §3, §4.10 and the seed-3 wording (`coord/spec-w1-report-draft.txt`; add R4 and the 10-seed rows).
+9. Then the story files: REPORT top and §5, the 10-seed rows in `docs/claims.md`, a new reading of R4, R5 and R6, the video script, the submission, the README numbers. Then the secret and PII scan, `demo --verify` on a fresh clone, the spend report, and the final merge, public repo and attack clip with Yoel. GitHub Pages cannot serve a private repo on the free plan, so the site goes up with the public repo on Nov 3, with his OK.
+
+**New coordinator tools** in `~/.fractalswarm/coord`: `start_worker_new.ps1`, `load_sampler.ps1`, `fake_gates.ps1`, `arena_pair.py`, `blocks\h10-*.yaml`, `specs\w{4-polish,6-home,7-home-viz,8-static}.txt`.
+
+**After the stop (first coordinator, 15:50 CET).** Everything above stands, with these changes:
+- **The paid chain stopped at 11:57:41, at a cell boundary,** with `coord\stop_at_boundary.ps1`: the tree was killed as `central__t2_conference__C3__s5` started, and the load sampler with it. One call was in flight: $0.35 reserved, nothing settled. The harness deletes that partial run on the rerun.
+- **Spend after the cut:** spent $30.87, reserved $6.42, remaining $112.71 of $150. This replaces the $115.20 above.
+- **Cells:** 39 of 80, committed in 6fbb6ab with the fixture of seed 5; 41 are left (`central` C3 on seed 5, and seeds 6–10). The run directories stay in the `arena` worktree. The aggregates on disk there are not committed, because the last step writes them from all 80 cells.
+- **One cell is not valid: `swarm__t2_conference__C0__s5`.** No chaos and no API errors, but `placed 40/48, hard violations 8, gaps 2`, score 0.96. It is the first invalid real bench run: 96 of 96 valid in `v1`, 18 of 18 in `headline`, 38 of 39 here. It stays in the data and is not rerun. The 10-seed reading reports it, with its cause, which nobody has looked at yet. S7 speaks of C3 and of finishing, so it still holds; nothing may say that every run was valid.
+- **On origin:** arena (this commit), `arena-home` 2588ed8, `arena-home-viz` a0e8465, `arena-ui-core` e1e67ec, `w8-static-showcase` d953306.
+- **The machine rebooted at 15:31.** Every terminal and session of the run is gone, and the dispatches above have lost their terminals. Worktrees, branches and transcripts are intact. The workers' sessions can be resumed with `claude --resume`: W6 b63d769b-820f-437b-b2d7-b312b1b9be90, W7 8ad0c2fd-cfd1-4236-b74a-b627b4910230, W4 9e97009a-a246-4f4b-9410-64146e824692, W8 0e0ca852-a3e9-4a10-9046-3faf8aab2db5.
+- **Yoel (15:35): continue as we left it.** Step 1 needs no question: §M item 13 says that Yoel says when he needs the machine.
