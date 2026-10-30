@@ -1,9 +1,9 @@
 import { useRef, type ReactNode } from "react";
 
-import { COPY } from "../copy";
-import { figure } from "../format";
+import { COPY, word } from "../copy";
+import { figure, MISSING } from "../format";
 import { useEnterProgress, useStill } from "../hooks";
-import { assumptions, captionFor, failures, proofSteps, realFalseDeaths, type FailureFigure } from "../numbers";
+import { assumptions, captionFor, failures, gateCrashes, proofSteps, realFalseDeaths, type FailureFigure } from "../numbers";
 import { ChapterHead, Setting } from "../parts/Chapter";
 import { Claim, PendingTag } from "../parts/Claim";
 import { Figure } from "../parts/Figure";
@@ -138,9 +138,10 @@ function Helps() {
         <Claim id="R4" className="home-claim--lead" />
       </Reveal>
       <Chart name="PairedBars" path="verdicts" duration={1.6} />
-      <Setting>
-        {captionFor(story, "headline")} {"·"} {COPY.evidence.helps.gate}
-      </Setting>
+      <Setting>{captionFor(story, "headline")}</Setting>
+      <Reveal delay={80} className="home-beat__why">
+        <p>{COPY.evidence.helps.gate(gateCrashes(story).map(word).join(" and ") || MISSING)}</p>
+      </Reveal>
       {cost && (
         <Reveal delay={100}>
           <p className="home-beat__verdict">{COPY.evidence.helps.cost}</p>

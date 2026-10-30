@@ -49,24 +49,33 @@ const REGISTRY: Partial<Record<VizName, VizComponent>> = {
 /** Whether W7 has written this visual yet. */
 export const isDrawn = (name: VizName): boolean => name in REGISTRY;
 
-function Placeholder({ name, note, progress }: { name: string; note: string; progress: MotionValue<number> }) {
-  const readout = useRef<HTMLSpanElement>(null);
+// What each visual shows, in the page's own words: a placeholder says what is going to be here, not the name of a component.
+const LABELS: Record<VizName, string> = {
+  SwarmTree: "The swarm tree",
+  WorkLanes: "Work lanes of a recorded run",
+  HrwPanels: "The survivors' panels",
+  HashStrip: "The hash chain of the log",
+  LineDraw: "Waiting and extra cost, as coordinators die",
+  DotPlot: "Stall time and extra cost, one dot per seed",
+  PairedBars: "Locality, against an ideal durable supervisor",
+  RegimeStrip: "Where the swarm wins and where it loses",
+  TokenBar: "Tokens by model",
+  DoorGlyph: "A door",
+};
+
+function Placeholder({ name, note, progress }: { name: VizName; note: string; progress: MotionValue<number> }) {
   const bar = useRef<HTMLSpanElement>(null);
   const paint = (value: number) => {
-    if (readout.current) readout.current.textContent = value.toFixed(2);
     if (bar.current) bar.current.style.transform = `scaleX(${Math.min(1, Math.max(0, value))})`;
   };
   useEffect(() => paint(progress.get()), [progress]);
   useMotionValueEvent(progress, "change", paint);
   return (
-    <div className="home-placeholder" role="img" aria-label={`${name}, not drawn yet`}>
-      <span className="home-placeholder__name">{name}</span>
+    <div className={`home-placeholder home-placeholder--${name}`} role="img" aria-label={`${LABELS[name]}, not drawn yet`}>
+      <span className="home-placeholder__name">{LABELS[name]}</span>
       <span className="home-placeholder__note">{note}</span>
       <span className="home-placeholder__track">
         <span ref={bar} className="home-placeholder__bar" />
-      </span>
-      <span ref={readout} className="home-placeholder__value">
-        0.00
       </span>
     </div>
   );
@@ -78,6 +87,6 @@ export type VizUse = { name: VizName; data: unknown; progress: MotionValue<numbe
 export function Viz({ name, data, progress, still = false, ...extra }: VizUse) {
   const Drawn = REGISTRY[name];
   if (data === undefined || data === null) return <Placeholder name={name} note="no data yet" progress={progress} />;
-  if (!Drawn) return <Placeholder name={name} note="waiting for the visual" progress={progress} />;
+  if (!Drawn) return <Placeholder name={name} note="drawn in the next build" progress={progress} />;
   return <Drawn {...extra} progress={progress} data={data} still={still} />;
 }

@@ -20,7 +20,6 @@ describe("the menu at the end of the page", () => {
     const routes: Record<string, (hash: string) => unknown> = {
       arena: parseArenaRoute,
       live: parseIntakeRoute,
-      "new-task": parseIntakeRoute,
       director: parseDirectorRoute,
       ablation: parseAblationRoute,
     };
@@ -28,6 +27,10 @@ describe("the menu at the end of the page", () => {
       const parse = routes[door.id];
       if (parse) expect(parse(door.href), `${door.id} (${door.href}) is not a route of the app`).not.toBeNull();
     }
+  });
+
+  it("has no two doors that lead to the same place under two names", () => {
+    expect(new Set(DOORS.map((door) => door.href)).size).toBe(DOORS.length);
   });
 
   it("opens every door in the local build", () => {

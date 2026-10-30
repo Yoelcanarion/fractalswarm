@@ -11,6 +11,9 @@ const BANNED: [RegExp, string][] = [
   [/more reliable/i, "more reliable"],
   [/\bfirst\b/i, "first"],
   [/without stalling or paying twice/i, "without stalling or paying twice"],
+  // Claims about the world or absolutes that nothing on the page backs (the coordinator's copy notes, Oct 30).
+  [/\busual(ly)?\b/i, "usual"],
+  [/\bevery advantage\b/i, "every advantage"],
 ];
 
 describe("the page's own words", () => {

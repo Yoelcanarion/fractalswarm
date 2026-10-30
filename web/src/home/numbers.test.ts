@@ -6,6 +6,7 @@ import {
   captionFor,
   facts,
   failures,
+  gateCrashes,
   heroReading,
   heroSetting,
   lanesBeats,
@@ -34,6 +35,12 @@ describe("what the page reads from the story", () => {
 
   it("knows the task, the model, the seeds and the failures of the hero chart", () => {
     expect(heroSetting(FIXTURE_STORY)).toEqual({ task: "t2_conference", real: true, seeds: 7, crashes: 5, profile: "C3" });
+  });
+
+  it("reads the crash counts of the gate's two profiles from the hero chart, and none where it has no points", () => {
+    expect(gateCrashes(FIXTURE_STORY)).toEqual([3, 5]);
+    expect(gateCrashes(null)).toEqual([]);
+    expect(gateCrashes({ ...FIXTURE_STORY, hero: { ...FIXTURE_STORY.hero, series: {} } })).toEqual([]);
   });
 
   it("counts the facts of the example", () => {

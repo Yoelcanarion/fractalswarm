@@ -51,13 +51,13 @@ export const COPY = {
       `Take a real job: plan a conference from messy emails. ${f.talks ?? "—"} talks, ${word(f.tracks)} tracks, ${word(f.days)} ${plural(f.days, "day")}. A team of AI agents reads the emails and places the talks.`,
     visual: "Work lanes of a real run of an in-process supervisor: one lane per agent, one bar per model call, on a shared clock.",
     steps: {
-      team: { lead: "A team of AI agents usually has one coordinator.", more: "It plans, assigns and checks the work." },
+      team: { lead: "The team has one coordinator.", more: "It plans, assigns and checks the work." },
       crash: { lead: "Then it crashes.", more: "The work waits." },
       twice: {
-        lead: "In the usual setup, the workers run inside the coordinator, so they die with it.",
+        lead: "In the simplest setup, the workers run inside the coordinator, so they die with it.",
         more: "Their calls were already paid for. Now they are paid for again.",
       },
-      numbers: { lead: "That is what it cost, in a real run.", rival: "In-process supervisor", swarm: "FractalSwarm" },
+      numbers: { lead: "That is what it cost, in real runs.", rival: "In-process supervisor", swarm: "FractalSwarm" },
       better: {
         lead: "A better supervisor fixes the paying twice: its workers survive, and a standby takes over.",
         more: "But then you run a supervisor, a standby and something to watch them. Even an ideal one has to stop to recover.",
@@ -117,7 +117,7 @@ export const COPY = {
     eyebrow: "The evidence",
     title: "What the runs show, and what they do not.",
     fair: {
-      lead: "We built the strongest rival we could, and gave it every advantage.",
+      lead: "We built the strongest rival we could implement fairly.",
       why: "The rival is an ideal durable supervisor. These are the terms we granted it.",
       columns: { what: "What we grant it", value: "Value", why: "Why" },
     },
@@ -125,7 +125,8 @@ export const COPY = {
     tie: { word: "Tie.", note: "Stall time and extra cost, one dot per seed, against an ideal durable supervisor." },
     helps: {
       lead: "Where it helps.",
-      gate: "At the $0 gate, locality ties against durable-max (T2, C2 and C3).",
+      // `crashes` is read from the data ("three and five"), so the sentence follows the pre-registered profiles.
+      gate: (crashes: string) => `With a fake model, at our pre-registered gate, this measure tied at ${crashes} crashes.`,
       cost: "What it costs: its failure detector declared live coordinators dead on these runs.",
       perRun: "false deaths per run",
     },

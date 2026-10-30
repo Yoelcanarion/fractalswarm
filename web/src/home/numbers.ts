@@ -75,6 +75,17 @@ export function headlineSetting(story: Story | null): Setting {
   return { ...base, task: rows?.task ?? base.task, real: rows ? rows.real : base.real, seeds: num(rows?.seedCount) ?? (rows ? rows.seeds.length : null) };
 }
 
+const GATE_PROFILES = ["C2", "C3"] as const;
+
+/** The crash counts of the two profiles the $0 gate tied at (C2 and C3), read from the hero chart's own points: three and five. */
+export function gateCrashes(story: Story | null): number[] {
+  const points = story?.hero?.series?.swarm?.points ?? [];
+  return GATE_PROFILES.flatMap((profile) => {
+    const crashes = num(points.find((point) => point.profile === profile)?.x);
+    return crashes === null ? [] : [crashes];
+  });
+}
+
 /** `t2_conference` -> `T2 conference planning` (the short name and the name the generator gives the task). */
 export function taskName(story: Story | null, id: string | null): string {
   if (!id) return MISSING;

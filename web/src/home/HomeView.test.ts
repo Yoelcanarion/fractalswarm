@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { CHAPTERS } from "./chapters";
 import { COPY, TAGLINE } from "./copy";
+import { DOORS } from "./doors";
 import { HomeView } from "./HomePage";
 import type { Story } from "./data/types";
 import { bundledStory } from "./story";
@@ -71,6 +72,11 @@ describe("the home page, rendered with a story", () => {
     expect(text).not.toMatch(/undefined|NaN|\bnull\b/);
   });
 
+  it("opens the pre-registered gate's sentence with the crash counts of its profiles, from the data", () => {
+    expect(plain(render(FIXTURE_STORY))).toContain("this measure tied at three and five crashes");
+    expect(plain(render(null))).toContain("this measure tied at — crashes");
+  });
+
   it("draws every claim in the words of its row, with a tag only on the pending ones", () => {
     const drawn = claims(html);
     expect(drawn.length).toBeGreaterThan(0);
@@ -127,7 +133,7 @@ describe("the home page, rendered with a story", () => {
     const helps = /<article[^>]*aria-labelledby="helps-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
     expect(helps).toContain('data-claim="R4"');
     const text = plain(helps);
-    expect(text).toContain(COPY.evidence.helps.gate);
+    expect(text).toContain(COPY.evidence.helps.gate("three and five"));
     expect(text).toContain("T2 conference");
     expect(text).toContain("real model");
     expect(text).toContain("5 seeds");
@@ -168,7 +174,8 @@ describe("the home page, rendered with a story", () => {
   });
 
   it("opens every door that is not behind the server, with a link", () => {
-    expect(countOf(html, 'class="home-door"')).toBe(7);
+    expect(countOf(html, 'class="home-door"')).toBe(DOORS.length);
+    expect(countOf(html, 'class="home-door"')).toBe(6);
     expect(html).toContain('href="#/arena"');
     expect(html).toContain('href="#/charts"');
   });

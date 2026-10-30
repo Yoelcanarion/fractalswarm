@@ -23,12 +23,13 @@ export const DOORS: readonly Door[] = [
     needsServer: false,
   },
   {
+    // One door: the page behind "#/new" is where you paste your own text and launch the run on it.
     id: "live",
     title: "A live run",
-    purpose: "Launch one and kill its coordinators yourself.",
+    purpose: "Paste your own messy text, launch a run, and kill its coordinators yourself.",
     href: "#/new",
     needsServer: true,
-    closedNote: "Needs the local server: it launches a run.",
+    closedNote: "Needs the local server: it launches a run and calls the model.",
   },
   {
     id: "replays",
@@ -36,14 +37,6 @@ export const DOORS: readonly Door[] = [
     purpose: "Every recorded run, with its verification.",
     href: "#/runs",
     needsServer: false,
-  },
-  {
-    id: "new-task",
-    title: "New task",
-    purpose: "Paste your own messy text and let Muse read it.",
-    href: "#/new",
-    needsServer: true,
-    closedNote: "Needs the local server: it calls the model.",
   },
   {
     id: "director",
@@ -61,7 +54,7 @@ export const DOORS: readonly Door[] = [
   },
   {
     id: "ablation",
-    title: "Ablation",
+    title: "Model against parser",
     purpose: "A hand-written parser against Muse, on the same notes.",
     href: "#/ablation",
     needsServer: true,
