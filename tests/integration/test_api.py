@@ -107,10 +107,10 @@ def test_bench_results_serve_the_recorded_sets_not_the_placeholder(dirs) -> None
     app = create_app(dirs["runs"], dirs["demo"], REPO / "bench" / "results", dirs["static"])
     body = TestClient(app).get("/api/bench/results").json()
     assert not body["fixture"]
-    assert [s["name"] for s in body["sets"]] == ["v1", "headline"]
+    assert [s["name"] for s in body["sets"]] == ["v1", "headline", "rivals-gate"]
     assert body["sets"][0]["source"] == "bench/results/v1/hero-t2_conference.json"
     assert body["data"] == body["sets"][0]["data"]  # the first set is the default
-    v1, headline = (s["data"] for s in body["sets"])
+    v1, headline, _gate = (s["data"] for s in body["sets"])
     # The recorded shape: series keyed by workflow, each point with its seeds and their min and max.
     assert {"swarm", "central", "durable-max"} <= set(v1["series"])
     point = v1["series"]["swarm"]["points"][-1]
