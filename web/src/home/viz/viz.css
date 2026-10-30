@@ -1508,3 +1508,230 @@
     transition: none;
   }
 }
+
+/* ---- the Problem film, the Proof's bars, the Solution's three drawings, the doors' thumbnails -------------------------- */
+
+.hv-film {
+  position: relative;
+  width: 100%;
+  height: clamp(320px, 44vw, 560px);
+}
+
+.hv-proof {
+  display: grid;
+  gap: 28px;
+}
+.hv-proof-panel {
+  display: grid;
+  gap: 14px;
+}
+.hv-proof-head h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+.hv-proof-head p {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.hv-proof-row {
+  display: grid;
+  gap: 6px;
+}
+.hv-proof-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.hv-proof-verdict {
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.hv-proof-line {
+  display: grid;
+  grid-template-columns: minmax(96px, 168px) 1fr max-content;
+  align-items: center;
+  gap: 12px;
+}
+.hv-proof-name {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.hv-proof-track {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--surface-2);
+}
+.hv-proof-bar {
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background: var(--border-strong);
+  transform-origin: left center;
+  transform: scaleX(var(--w));
+}
+.hv-proof-line[data-who="swarm"] .hv-proof-bar {
+  background: var(--accent);
+}
+.hv.hv-proof-number {
+  min-width: 5.5ch;
+  justify-items: end;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+/* The bars grow once, in the page's one ease, starting a little apart and ending together (--i is the bar's place in the panel). */
+.hv-proof-panel[data-play="off"] .hv-proof-bar {
+  transform: scaleX(0);
+}
+.hv-proof-panel[data-play="on"] .hv-proof-bar {
+  animation: hv-proof-grow calc(1.6s - var(--i) * 0.06s) var(--ease-play) calc(var(--i) * 0.06s) both;
+}
+@keyframes hv-proof-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(var(--w));
+  }
+}
+@media (max-width: 640px) {
+  .hv-proof-line {
+    grid-template-columns: 1fr max-content;
+  }
+  .hv-proof-name {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The Solution's drawings are CSS only: a part has its end state under [data-on="true"], and a transition in the page's one ease to it. */
+.hv-step .hv-st-node {
+  fill: var(--surface-2);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.hv-step .hv-st-node--dead {
+  stroke: var(--danger);
+}
+.hv-step .hv-st-node--heir {
+  fill: var(--accent-bg);
+  stroke: var(--accent-text);
+}
+.hv-step .hv-st-cross {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.hv-step .hv-st-leaf {
+  fill: var(--surface-1);
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.hv-step .hv-st-slot {
+  fill: var(--surface-2);
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-step .hv-st-ink {
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.hv-step .hv-st-draw,
+.hv-step .hv-st-new {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-step .hv-st-old {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 1.25;
+  stroke-dasharray: 3 4;
+  vector-effect: non-scaling-stroke;
+}
+.hv-step .hv-st-chain {
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  transform: scaleY(0.15);
+}
+.hv-step .hv-st-track {
+  fill: var(--surface-3);
+}
+.hv-step .hv-st-bar {
+  fill: var(--accent);
+  transform-box: fill-box;
+  transform-origin: 0 50%;
+  transform: scaleX(0.04);
+}
+.hv-step .hv-st-heir {
+  fill: none;
+  stroke: var(--accent-text);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+}
+.hv-step .hv-st-row {
+  opacity: 0.3;
+  transform: translateX(-8px);
+}
+.hv-step [data-part] {
+  transition:
+    opacity 0.6s var(--ease-play) calc(var(--i, 0) * 0.06s),
+    transform 0.6s var(--ease-play) calc(var(--i, 0) * 0.06s),
+    stroke-dashoffset 0.6s var(--ease-play) calc(var(--i, 0) * 0.06s);
+}
+.hv-step[data-on="true"] .hv-st-row,
+.hv-step[data-on="true"] .hv-st-chain {
+  opacity: 1;
+  transform: none;
+}
+.hv-step[data-on="true"] .hv-st-draw,
+.hv-step[data-on="true"] .hv-st-new {
+  stroke-dashoffset: 0;
+}
+.hv-step[data-on="true"] .hv-st-old {
+  opacity: 0;
+}
+.hv-step[data-on="true"] .hv-st-bar {
+  transform: scaleX(var(--w));
+}
+.hv-step[data-on="true"] .hv-st-heir {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hv-step [data-part] {
+    transition: none;
+  }
+  .hv-proof-panel[data-play] .hv-proof-bar {
+    transform: scaleX(var(--w));
+    animation: none;
+  }
+}
+
+.hv-thumb {
+  display: block;
+  width: 100%;
+}
