@@ -2,13 +2,25 @@
 
 Branch `Yoelcanarion/w8-static-showcase`. Brief: `.plans/arena/w8-static.md`. Arena spec §M.11.
 
+## STOPPED by Yoel (Oct 30, 12:00 CET): where this stands, and the next step
+
+- **Done and committed** (the branch tip, `git log -1`): the fetch shim, manifest reader, banner, installer, the `VerifyBadge` static branch, `scripts/build_static_site.py` (output-folder guard, a raising read route kept as the live 500 with a build note, pairs that share a run, data URLs versioned by build), `tests/unit/test_static_site.py` (74 passed), `web/src/static/*.test.ts` (139 passed), the fixture `web/src/static/fixtures/site`, these notes. Whole web suite (1293), `tests/unit` (1137), tsc and ruff were green at 2caa928. After it: the Python side was re-run (`tests/unit/test_static_site.py` 74 passed, ruff clean at the tip), but vitest was **not** re-run after the two small edits to `Banner.tsx` (`useLayoutEffect`) and `install.tsx` (no-cache manifest, `?v=` on data files); only `tsc` was (clean). `merge_ready` 1 was sent for 2caa928; the coordinator reviewed the diff ("good") and planned to merge the tip after my browser pass.
+- **Half done: everything that needs a build or a browser, never run.** A paid block was on and RELEASE never came, so no `vite build`, no `http.server`, no Playwright. `install.tsx`, `Banner.tsx`, `static.css` (the banner above `#root`, the load bar) are type-checked only; nothing was seen in a browser. The integration chunks of the merge check were not run (I changed nothing they run).
+- **Next steps, in order, each after RELEASE:**
+  1. *Local-build proof.* `git worktree add --detach <scratch>\base 287704a`, junction its `web\node_modules` to this tree's, then in both trees `node web\node_modules\vite\bin\vite.js build --outDir <scratch>\base-out` (and `mine-out`) `--emptyOutDir`; compare the two folders byte for byte. They must be identical (no static code in a local build). Never build into `src/fractalswarm/api/static`.
+  2. `uv run python scripts/build_static_site.py --out <scratch>\site --runs demo/backup demo/toy --pair <refs>\t2-swarm-killhalf:<refs>\t2-central-killhalf`, with `<refs>` = `C:\Users\yogar\.fractalswarm\refs\arena-c2b5e08\runs` (later the final pairs bundled under `demo/`, one `--pair` each). The app adds its own size to the 15.2 MB of data.
+  3. `python -m http.server 8770 --directory <scratch>\site` (no FractalSwarm server), then run `.plans/notes/arena-static-browser-check.mjs` (its header says how: `playwright-core@1.48.2` in a scratch folder outside the repo). It checks home (no banner), a run at its end (banner, badge, reload), charts, helps, runs, the arena picker and pair, the doors that need the local server, an unknown run and a phone width, and fails on a failed request, a status of 400 or more, another origin or any console message. Fix what it shows (likeliest: the banner's layout above `#root`, the director route), repeat it from a sub-path (site copied into `<tmp>\fractalswarm\`, serve `<tmp>`), time the load of the 8177-event run, then send the second `merge_ready`.
+  4. Once `arena` is merged into this branch's base (its `/takeover` now answers 501 for a supervisor log), the build note about the central 500 disappears by itself.
+- **To expect when resuming** (coordinator's mail, 10:44 and 10:47): the repo goes public on Nov 3 and the site goes up then, but publishing waits for Yoel's OK. The final runs come as a real pair against central and one against durable-max, bundled under `demo/`: pass each as a `--pair`. W4 is making `/api/bench/results` serve the real hero files and removing the fixture badge, so the `charts` scenario in the check script, which expects the word `Fixture`, must drop that needle, and `public_bench` may see a new `source`. W6 changes `main.tsx` too (lazy shell): a small conflict is expected; keep the `import.meta.env.MODE === "static"` guard around the mount.
+- Scratch outside the repo (may be gone): exports `site-default/` and `site-pair/`, and `pw/` with `playwright-core@1.48.2`, in the session's scratchpad. Nothing from it is committed; screenshots from the check go to the folder you name, keep it outside the repo.
+
 ## State
 
 **Merge point 1 (shim and export work on `demo/toy`): reached.** Checked without a build or a browser (a paid block was running):
 
 | What | Result |
 |---|---|
-| `uv run pytest tests/unit/test_static_site.py` | 70 passed, 3.5 s |
+| `uv run pytest tests/unit/test_static_site.py` | 63 passed at 2caa928; 74 passed, 5 s at the tip |
 | `uv run pytest tests/unit` (merge check, unit chunk) | 1137 passed, 3 deselected (promptguard), 79 s |
 | `npx vitest run --maxWorkers=1` (whole web suite) | 79 files, 1293 passed (139 of them in `web/src/static`) |
 | `npm --prefix web run typecheck`, `ruff check`, `ruff format --check` | clean |
