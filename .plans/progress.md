@@ -1233,3 +1233,28 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 - the paid queue: the 10-seed headline plus `central`, the arena pairs against both rivals, the final bundle, LangGraph, scaling, T3, the live-input rehearsals;
 - REPORT §3 and §4.10 (W1);
 - the story files.
+
+## Phase 2, Fri 30 Oct 2026 (day): the second coordinator
+
+**Taken over at 10:40 CET** from `.plans/arena/handoff.md`, in the worktree `arena-coord2` on `Yoelcanarion/arena`; Run `run_1f56a8967f41`.
+
+**Yoel's answers (10:40):** the home page is a mix of product landing and data story; a static showcase for GitHub Pages is prepared (publishing waits for his OK on Nov 3); `master` fast-forwarded and pushed; the paid blocks start now. All four are in arena spec §M, items 10–13.
+
+**Done so far:**
+- Light checks at 10c2ff7: ruff, `demo --verify` and the replays MATCH, tsc clean. Vitest found one stale pin: the helps panel quoted R2's old status (the handoff commit changed `docs/claims.md`). Fixed (ede531f), 1154 passed.
+- `master` fast-forwarded to ede531f (319 commits) and pushed, with arena.
+- `docs/claims.md`: R5 (the in-process supervisor, with its setting and its reason) and R6 (the short form for a subtitle). `README.md` v1, with the three questions on top. The old tagline removed from `README.md` and `CLAUDE.md`.
+- **Paid runs now run from the first coordinator's worktree** (`arena`, detached at 10c2ff7, clean, with the safety extra), so merges into arena no longer wait for a block. The cells are copied into arena when a chain ends.
+- **The 10-seed headline runs in block matrices** (`~/.fractalswarm/coord/blocks/`, one seed or `central` 1–3 each, `--out bench/results/headline-10`), because `bench run` has no cell limit. The aggregates come from a final run of `bench/matrix-headline-10.yaml` with 0 cells to run.
+- A load sampler (`coord/load_sampler.ps1`) logs CPU and free memory next to each chain, so a block can show it had headroom.
+
+**Workers started:**
+
+| worker | branch | dispatch | what |
+|---|---|---|---|
+| W6 home | `Yoelcanarion/arena-home` | ctx_e45cccb89655 | the page, story, copy, menu, route, bundle split (`.plans/arena/w6-home.md`) |
+| W7 home-viz | `Yoelcanarion/arena-home-viz` | ctx_ccefb546b59f | the data generator and the visuals (same brief) |
+| W4 ui-core | `Yoelcanarion/arena-ui-core` | ctx_4cb9c1ba1b6d | polish of the whole app (`.plans/arena/w4-polish.md`) |
+| W8 static | `Yoelcanarion/arena-static` | ctx_febe4961c466 | the static showcase (`.plans/arena/w8-static.md`) |
+
+**Found:** the Charts page has been serving placeholder data: `/api/bench/results` knew no file name of the real hero set, and `lib/hero.ts` could not read its shape. W4 fixes both (seen by W4 reading the code).
