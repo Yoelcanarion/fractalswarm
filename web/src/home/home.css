@@ -542,17 +542,11 @@ body:has(.home) {
 }
 
 /* ---- the problem: the film of the work lanes ---- */
-/* The film sets its own height (W7's .hv-film: 44vw between 320 and 560 px); the page keeps it under 440 px so the section's title,
-   film and button show together on one screen. Its lanes keep a band at the top for a counter, as tall as --fs-figure: this page
-   draws no counter over the film, so the band is only the marks of the crashes. */
+/* The film sets its own height (W7's .hv-film: 44vw between 400 and 460 px), so the section's title, film and button show together
+   on one screen; the figure only wraps it. */
 .home-film {
-  --fs-figure: 0px;
   position: relative;
   width: 100%;
-}
-
-.home-film .hv-film {
-  height: clamp(380px, 44vw, 440px);
 }
 
 /* ---- the solution: three cards that play on hover, then the click demo ---- */
@@ -661,13 +655,15 @@ body:has(.home) {
 }
 
 /* ---- the proof: bars and numbers that grow once, the way to R2 and R3, the command that checks it ---- */
+/* The chart is one svg that is drawn for at most 840 px and scales with its box, so the box stops there until the chart lays its two
+   blocks side by side (then this goes, and the lines under it take the chart's two columns). */
 .home-proof__chart {
   position: relative;
   width: 100%;
+  max-width: 840px;
 }
 
-/* Under the chart: why the in-process supervisor's numbers are so far apart, and the way on. On a wide screen they sit in the
-   chart's two columns (its gap is 48 px), the reason under the in-process block and the links under the other. */
+/* Under the chart: why the in-process supervisor's numbers are so far apart, and the way on. */
 .home-proof__under {
   display: grid;
   gap: var(--space-4);
@@ -678,13 +674,6 @@ body:has(.home) {
   display: grid;
   gap: var(--space-4);
   justify-items: start;
-}
-
-@media (min-width: 1000px) {
-  .home-proof__under {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 48px;
-  }
 }
 
 .home-proof__reason {
