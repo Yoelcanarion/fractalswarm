@@ -135,7 +135,7 @@ function Tie() {
         <Claim id="R2" className="home-claim--lead" />
         <Claim id="R3" className="home-claim--small" />
       </Reveal>
-      <Chart name="DotPlot" path="headline" duration={1.8} />
+      <Chart name="DotPlot" path="headline" duration={1.8} extra={{ setting: false }} />
       <Setting>
         {COPY.evidence.tie.note} {captionFor(story, "headline")}
       </Setting>

@@ -59,9 +59,10 @@ export const bare = (text: string): string => text.replace(/[*_`"]/g, "").replac
 
 /** Wording that says every run was valid. A first invalid real run is on record (swarm__t2_conference__C0__s5, no chaos,
  * 40 of 48 talks placed), so the page may say it only through a claim of docs/claims.md: in the row's own words, with
- * its setting beside it (S7 and R6 speak of C3). Nothing in the page's own copy may. */
+ * its setting beside it (S7 and R6 speak of C3). Nothing in the page's own copy may. "Not valid" is the other side of it
+ * (W7's dot plot rings a run whose result is not valid and says so in its key), so a negated "valid" is not flagged. */
 export const UNIVERSAL: [RegExp, string][] = [
-  [/\bvalid\b/i, "valid"],
+  [/(?<!\b(?:not|never) )\bvalid\b/i, "valid"],
   [/\b(every|each|all)\b[^.]{0,40}\bruns?\b[^.]{0,40}\b(finish|complet|succe|surviv)/i, "every run finished"],
   [/\balways (finish|complete|succeed)/i, "always finishes"],
 ];

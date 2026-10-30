@@ -11,6 +11,7 @@ import { useEffect, useRef, type ComponentType } from "react";
 
 // From the files, not from viz/index.ts: the index also exports the lab (a page of its own, with its own styles), which
 // the bundle of the home page should not carry.
+import { DotPlot } from "./viz/charts/DotPlot";
 import { LineDraw } from "./viz/charts/LineDraw";
 import { HashStrip } from "./viz/hash/HashStrip";
 import { HrwPanels } from "./viz/hrw/HrwPanels";
@@ -46,6 +47,7 @@ const REGISTRY: Partial<Record<VizName, VizComponent>> = {
   SwarmTree: SwarmTree as unknown as VizComponent,
   WorkLanes: WorkLanes as unknown as VizComponent,
   LineDraw: LineDraw as unknown as VizComponent,
+  DotPlot: DotPlot as unknown as VizComponent,
   HrwPanels: HrwPanels as unknown as VizComponent,
   HashStrip: HashStrip as unknown as VizComponent,
 };

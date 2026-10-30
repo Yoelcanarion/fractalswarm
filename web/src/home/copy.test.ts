@@ -34,6 +34,23 @@ describe("the page's own words", () => {
     }
   });
 
+  it("are guarded by patterns that catch a universal claim and let the honest side of it through", () => {
+    const flagged = (text: string) => UNIVERSAL.some(([pattern]) => pattern.test(text));
+    for (const text of [
+      "Every run finished with a valid result.",
+      "all the results are valid",
+      "Valid.",
+      "each of the runs completed",
+      "it always finishes",
+    ]) {
+      expect(flagged(text), text).toBe(true);
+    }
+    // W7's dot plot rings a run whose result is not valid, and says so: that is the opposite claim.
+    for (const text of ["result not valid", "1 of the runs has a result that is not valid and is ringed.", "the result is not valid", "an invalid result"]) {
+      expect(flagged(text), text).toBe(false);
+    }
+  });
+
   it("hold no number of their own: a sentence that needs one is written from the data", () => {
     // Only the labels of the chapters, the model names and the command may carry a digit; a measured number may not.
     const measured = /\d+(\.\d+)?\s?(s\b|%|×|x\b|tokens|runs|seeds|talks)/;
