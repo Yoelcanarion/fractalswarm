@@ -132,16 +132,11 @@ def create_app(
         run = entry(request)
         from_seq = _int_param(request, "from_seq", 1, minimum=1)
         limit = _int_param(request, "limit", 1000, minimum=1, maximum=MAX_PAGE)
-        events = catalog.read(run, from_seq, limit)
-        last = catalog.last(run)
+        events, last_seq = catalog.page(run, from_seq, limit)
         next_seq = events[-1]["seq"] + 1 if events else from_seq
+        done = next_seq > last_seq  # the page reached the end of the log as it saw it
         return JSONResponse(
-            {
-                "events": events,
-                "next_seq": next_seq,
-                "last_seq": last["seq"] if last else 0,
-                "done": next_seq > (last["seq"] if last else 0),
-            }
+            {"events": events, "next_seq": next_seq, "last_seq": last_seq, "done": done}
         )
 
     async def verify_run(request: Request) -> JSONResponse:
@@ -336,7 +331,8 @@ def create_app(
         """The goal an escalation was opened for, from the log: the ``escalation.*`` event that
         carries ``eid`` (as ``eid``, ``escalation_id`` or ``id``) names it in ``goal_id``."""
         seq = 1
-        while page := catalog.read(run, seq, MAX_PAGE):
+        while True:
+            page, last_seq = catalog.page(run, seq, MAX_PAGE)
             for event in page:
                 payload = event["payload"]
                 named = (payload.get("eid"), payload.get("escalation_id"), payload.get("id"))
@@ -344,8 +340,9 @@ def create_app(
                     goal = payload.get("goal_id") or payload.get("goal")
                     if isinstance(goal, str):
                         return goal
+            if not page or page[-1]["seq"] >= last_seq:
+                return None
             seq = page[-1]["seq"] + 1
-        return None
 
     async def answer_escalation(request: Request) -> JSONResponse:
         """What a person decided for an escalation that waits for one: ``{"choice"}``. The goal

@@ -120,6 +120,24 @@ class Catalog:
         start = max(from_seq - 1, 0)
         return events[start : None if limit is None else start + limit]
 
+    def page(self, entry: RunEntry, from_seq: int, limit: int) -> tuple[list[dict], int]:
+        """``read`` with at most ``limit`` events, and the last seq of the log as the page saw it.
+
+        The page and the last seq come from one snapshot, so a page that reaches that seq has
+        reached the end of the log as it was when the page was read. With two reads (the page,
+        then ``last``) a run that commits every few hundred microseconds is almost always ahead
+        of the second one, and a reader that pages until it is at the end keeps chasing it."""
+        if entry.sqlite.exists():
+            query = f"SELECT {COLUMNS} FROM events WHERE seq >= ? ORDER BY seq LIMIT ?"
+            with _readonly(entry.sqlite) as db:
+                db.execute("BEGIN")  # the snapshot starts at the first read and holds to the close
+                rows = db.execute(query, (from_seq, limit)).fetchall()
+                (last_seq,) = db.execute("SELECT coalesce(max(seq), 0) FROM events").fetchone()
+            return [_from_row(row).model_dump() for row in rows], last_seq
+        events = self._jsonl(entry)
+        start = max(from_seq - 1, 0)
+        return events[start : start + limit], events[-1]["seq"] if events else 0
+
     def last(self, entry: RunEntry) -> dict | None:
         if entry.sqlite.exists():
             with _readonly(entry.sqlite) as db:

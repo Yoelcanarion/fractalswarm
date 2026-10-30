@@ -47,19 +47,41 @@ class Api:
             time.sleep(0.2)
         raise AssertionError(f"timed out waiting for {what}")
 
-    def events(self, run_id: str) -> list[dict[str, Any]]:
-        """Every event the log has so far, page by page."""
+    def events(self, run_id: str, after: int = 0) -> list[dict[str, Any]]:
+        """The events after seq ``after``, page by page, up to the end of the log as the first
+        page saw it. A run that holds its plan logs thousands of events a second, so the end is
+        fixed when the read starts: a read that followed the log until it stopped growing would
+        last as long as the hold does."""
         found: list[dict[str, Any]] = []
-        seq = 1
-        while True:
+        seq, end = after + 1, None
+        while end is None or seq <= end:
             page = self.get(f"/api/runs/{run_id}/events?from_seq={seq}&limit=5000")
             if page.status_code != 200:
                 return found
             body = page.json()
+            if end is None:
+                end = body["last_seq"]
+            if not body["events"]:
+                break
             found += body["events"]
-            if body["done"]:
-                return found
             seq = body["next_seq"]
+        return found
+
+
+class Tail:
+    """What the test has read of a run's log. Each look reads on from the last seq seen."""
+
+    def __init__(self, api: Api, run_id: str) -> None:
+        self.api, self.run_id = api, run_id
+        self.last_seq = 0
+        self.kinds: set[str] = set()
+
+    def has(self, kind: str) -> bool:
+        found = self.api.events(self.run_id, after=self.last_seq)
+        if found:
+            self.last_seq = found[-1]["seq"]
+            self.kinds.update(event["type"] for event in found)
+        return kind in self.kinds
 
 
 @pytest.fixture
@@ -81,12 +103,10 @@ def test_a_run_launched_from_the_api_is_killed_and_approved_from_the_api(api: Ap
     assert launched.status_code == 202, launched.text
     job_id = launched.json()["job_id"]
 
-    def type_seen(kind: str) -> Callable[[], bool]:
-        return lambda: any(event["type"] == kind for event in api.events("ui-live"))
-
-    api.wait(type_seen("plan.proposed"), "the root's plan")
+    log = Tail(api, "ui-live")
+    api.wait(lambda: log.has("plan.proposed"), "the root's plan")
     time.sleep(1.0)  # the person reads it; the run waits meanwhile
-    assert not type_seen("plan.approved")(), "the run went on without the person"
+    assert not log.has("plan.approved"), "the run went on without the person"
 
     kill = api.post(
         "/api/runs/ui-live/chaos", {"kind": "kill_coordinator", "at": 0.3, "target": "o1"}
