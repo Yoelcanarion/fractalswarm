@@ -418,7 +418,7 @@ export function paintDots(rig: DotRig, p: number): void {
   const f = dotFrame(p);
   for (const pen of rig.axes) pen.set("opacity", f.axes);
   for (const pen of rig.means) pen.set("opacity", f.means);
-  for (const row of rig.rows) row.pen.set("opacity", f.row(row.index, rig.rowCount));
+  for (const row of rig.rows) row.pen.set("opacity", smoothstep(f.row(row.index, rig.rowCount)));
   for (const dot of rig.dots) {
     const t = easeOutCubic(f.row(dot.row, rig.rowCount));
     const scale = 0.4 + 0.6 * t;
