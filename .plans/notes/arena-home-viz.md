@@ -153,6 +153,52 @@ and the charts write (`d`, `r`, `stroke-dashoffset`) which are repaint-only, and
    the mean column for widths from 350 to 1700 in steps of 10 at five heights; the old header rule fails it at 820x420. The labels are
    still the claims' own names from 967 px up and the short ones below; I left those tiers alone.
 
+## The redesign (Oct 30, evening; `.plans/arena/redesign.md`)
+
+The six pieces W6 asked for, each in its own file under `web/src/home/viz/` (W6 imports the files, not `index.ts`), and each reading
+`useStill()` (`../hooks`) and `useStory()` (`../story`) itself through `viz/page.ts`; the props of the brief are all it takes, and
+`still`, `data` and `className` are optional extras for the lab and the tests.
+
+| Piece | File | Props | What it is |
+| --- | --- | --- | --- |
+| `ProblemFilm` | `film/ProblemFilm.tsx` | `{ play }` | `WorkLanes` over the in-process supervisor's recorded lanes, one 7 s playhead under the shared ease, per increment of `play` |
+| `StepDrawing` | `steps/StepDrawing.tsx` | `{ step: log\|heir\|adopt, active }` | three svg drawings moved by CSS transitions on `data-on`, delays spread over about 0.9 s; the heir's bars are the first recorded round's fractions |
+| `KillDemo` | `demo/KillDemo.tsx` | `{}` | the hero's tree with the real heir rule in TypeScript; `note` prints the "illustration" sentence |
+| `ProofBars` | `charts/ProofBars.tsx` | `{ play }` | one svg, measured to its width (see below) |
+| `GrowNumber` | `parts/GrowNumber.tsx` | `{ value, format, play }` | HTML number; a missing value is a dash; the end width is kept from the first frame |
+| `DoorThumb` | `doors/DoorThumb.tsx` | `{ door: string }` | the door's glyph going there and back (a triangle wave of 2.4 s a leg run through the ease), only while on screen |
+
+- **The shared ease** (`viz/ease.ts`, `--ease-play` in `viz.css`): `cubic-bezier(0.3, 0.05, 0.7, 0.95)`. Its peak speed is 1.357 times
+  the mean and it has covered 12.8% of the way at 20% of the time (the limits are 1.6 and 10%). `SECONDS` holds the durations: numbers
+  and bars 1.6, film 7, hover 0.8, a takeover 2.6. `ease.test.ts` holds the limits, that the CSS token is the same curve, and the
+  durations.
+- **The heir rule in TypeScript** (`viz/hrw/`): BLAKE2b with an 8-byte digest over the canonical JSON `["hrw", key, member]`, rank by
+  score then id, `capacity = max(1, ceil(1.25 K / N))`, `remap` keeps the survivors and moves orphans in `(-priority, key)` order. The
+  test holds the Python vectors (block boundaries, UTF-8, seven remap cases) and every score and ranking of the recorded run.
+- **The click demo** (`viz/demo/`): `sim.ts` is the rules, `stage.ts` the picture over time, `KillDemo.tsx` the DOM. Replaying
+  `o0, o2.1, o1, o3.2, o2` gives the recorded run's 7 rounds, every score, the survivors and the adoptions; 300 random click orders
+  keep one tree. A kill: a flash, the neighbours notice at about 0.4 s, suspect, the verdict, the candidates' scores, the heir's crown,
+  the orphans re-wire, the dead go to the KILLED row. Takeovers overlap and nothing jumps. Tab and Enter, tap, "Kill half" (five kills
+  in turn), "Reset", one `aria-live` line, a reset after 16 s idle or 4.5 s with everyone down ("There is nobody left to take over."),
+  instant changes under reduced motion and `?still`. It carries no time, hash, cost or count from a run.
+- **ProofBars** is one svg, because the page counts the words of its HTML and not those drawn inside an svg, and the chart needs the
+  rivals' names, the setting and the numbers. Against the in-process supervisor it is a bar and a number each (stall 14.6 s against
+  92.6 s, extra cost +6.6% against +75.6%, the setting "Real model · T2 conference · C3 · 2 seeds"). Against the ideal durable
+  supervisor the data's verdict is a tie (the rule is "every seed agrees and the difference reaches the minimum effect"), and two bars
+  of the means, 10.3 s and 32.0 s, would read as a win. So each seed is a dot on one shared axis (swarm 7.1, 22.6, 1.2; durable-max
+  9.8, 0, 86.2 s; the extra-cost axis is signed, with a zero line), the swarm's filled and the rival's a ring, and the chip beside it
+  prints the data's verdict as it is. Every bar, number and line of dots has its own eased share (`shareAt`): lines start 0.05 s apart
+  and end together at 1.6 s. One frame loop writes them through `Pen`, only while the chart is on screen.
+- **Words**: `KillDemo` adds nine ("Click a coordinator to crash it." + "Kill half" + "Reset"); its sentence "An illustration in your
+  browser, not a real run." is off by default because the page prints it above the demo. The film, the drawings, the thumbnails and
+  ProofBars draw their words inside an svg: none are counted.
+
+Deviations from the brief: (1) when a whole group of coordinators dies the demo gives its goals to the owner of the parent goal, where
+the run spawns a new member; all of one coordinator's fallback goals go to one heir, so the tree stays one tree. (2) A takeover takes
+2.6 s, not 2: about 1 s of notice plus the takeover itself (the brief's range of 1.2 to 2 s is for the takeover, which is 1.6 s). (3)
+Against the ideal durable supervisor ProofBars draws seeds, not bars, for the reason above; the brief says "bars against both rivals".
+(4) The step drawings take about 0.9 s from the first part to the last, a little over the 0.6 to 0.9 s of a hover.
+
 ## Checks (Oct 30, 21:10 CET, HOLD: no browser, no build)
 
 - `npx tsc --noEmit -p .` clean. `npx vitest run --maxWorkers=1 src/home`: 35 files, 530 tests passed (`src/home/viz`: 21 files, 368).
