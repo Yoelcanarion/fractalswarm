@@ -1,5 +1,5 @@
 import type { MotionValue } from "motion/react";
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, type Ref } from "react";
 import { prefersReducedMotion } from "../../../lib/motion";
 import type { TreeSlice } from "../../data/types";
 import { fx, useProgress, type VizProps } from "../shared";
@@ -41,7 +41,19 @@ const crack = (R: number): string => {
   return `M${p(0.42, -0.93)}L${p(0.57, -0.68)}L${p(0.34, -0.5)}L${p(0.5, -0.22)}`;
 };
 
-function BrainNode({ info, kill, labels, glow }: { info: NodeInfo; kill: KillInfo | undefined; labels: SwarmTreeProps["labels"]; glow: string | null }) {
+function BrainNode({
+  info,
+  kill,
+  labels,
+  glow,
+  scoreText,
+}: {
+  info: NodeInfo;
+  kill: KillInfo | undefined;
+  labels: SwarmTreeProps["labels"];
+  glow: string | null;
+  scoreText: boolean;
+}) {
   const R = info.size * U;
   const names = labels === "names";
   return (
@@ -80,7 +92,7 @@ function BrainNode({ info, kill, labels, glow }: { info: NodeInfo; kill: KillInf
       <g className="hv-score" transform={`translate(${fx(R + 10)} -9)`} opacity="0">
         <rect className="hv-score-track" y="9" width={SCORE_WIDTH} height="3" rx="1.5" />
         <rect className="hv-score-bar" y="9" width="1" height="3" rx="1.5" />
-        <text className="hv-score-text" y="0" />
+        {scoreText && <text className="hv-score-text" y="0" />}
       </g>
       {labels !== "none" && (
         <text className="hv-id" y={fx(R + 16)} textAnchor="middle">
@@ -127,53 +139,27 @@ function describe(model: TreeModel): string {
   );
 }
 
-export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", labels = "ids", clock = true, ambient = false, appear }: SwarmTreeProps) {
-  const player = useMemo(() => treePlayer(data, pacing), [data, pacing]);
-  const { model } = player;
-  const svg = useRef<SVGSVGElement>(null);
-  const rig = useRef<TreeRig | null>(null);
-  /** The frame the recorded layer shows now, for the ambient layer to read. */
-  const shown = useRef<TreeFrame | null>(null);
+export interface TreeSvgProps {
+  svgRef: Ref<SVGSVGElement>;
+  model: TreeModel;
+  labels: NonNullable<SwarmTreeProps["labels"]>;
+  clock: boolean;
+  ambient: boolean;
+  className?: string | undefined;
+  /** What a screen reader is told about the picture; the recorded run's own title and description when absent. */
+  title?: string | undefined;
+  description?: string | undefined;
+  /** The number beside a candidate's score bar: the hero prints it, the click demo draws the bar alone. */
+  scoreText?: boolean | undefined;
+}
+
+/**
+ * The tree's markup, with nothing in it moving: the parts a painter (paint.ts) finds by their data attributes and writes a frame
+ * onto. The hero's tree and the click demo are two drivers of the same drawing.
+ */
+export function TreeSvg({ svgRef, model, labels, clock, ambient, className, title = "The swarm tree", description, scoreText = true }: TreeSvgProps) {
   const uid = useId();
   const glow = ambient ? `${uid.replace(/:/g, "")}-glow` : null;
-
-  const sizes = useMemo(
-    () => Object.fromEntries(model.ids.map((id) => [id, { size: model.node[id]?.size ?? 0.2, brain: model.node[id]?.kind === "brain" }])),
-    [model],
-  );
-  useLayoutEffect(() => {
-    rig.current = svg.current ? collectTree(svg.current, sizes) : null;
-  }, [sizes, labels, clock, ambient]);
-  const apply = useCallback(
-    (p: number) => {
-      if (!rig.current) return;
-      // A still frame (or less motion) shows the whole tree: how much of it is drawn belongs to the loop, which is not running.
-      const drawn = still || prefersReducedMotion() ? 1 : (appear?.get() ?? 1);
-      const frame = player.frame(p, drawn);
-      shown.current = frame;
-      paintTree(rig.current, frame);
-    },
-    [player, appear, still],
-  );
-  useProgress(progress, apply, still, stillAt);
-  useLayoutEffect(() => {
-    if (!appear || still || prefersReducedMotion()) return undefined;
-    return appear.on("change", () => apply(progress.get()));
-  }, [appear, apply, progress, still]);
-
-  useEffect(() => {
-    const element = svg.current;
-    if (!ambient || still || prefersReducedMotion() || !element) return undefined;
-    const layer = new Ambient(model);
-    return whileVisible(element, () =>
-      onFrame((dt) => {
-        if (!shown.current || !rig.current) return;
-        layer.step(dt, shown.current);
-        paintAmbient(rig.current, layer);
-      }, AMBIENT_ORDER),
-    );
-  }, [ambient, still, model]);
-
   const b = model.bounds;
   const memorialY = Math.max(...Object.values(model.memorial).map((s) => s.y));
   const brains = model.ids.filter((id) => model.node[id]?.kind === "brain");
@@ -181,14 +167,14 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
 
   return (
     <svg
-      ref={svg}
+      ref={svgRef}
       className={className ? `hv hv-tree ${className}` : "hv hv-tree"}
       viewBox={`${fx(b.x0 * U)} ${fx(b.y0 * U)} ${fx((b.x1 - b.x0) * U)} ${fx((b.y1 - b.y0) * U)}`}
       role="img"
       aria-labelledby={`${uid}-t ${uid}-d`}
     >
-      <title id={`${uid}-t`}>The swarm tree</title>
-      <desc id={`${uid}-d`}>{describe(model)}</desc>
+      <title id={`${uid}-t`}>{title}</title>
+      <desc id={`${uid}-d`}>{description ?? describe(model)}</desc>
       {glow && (
         <defs>
           <radialGradient id={glow}>
@@ -230,7 +216,7 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
       )}
       <g>
         {brains.map((id) => (
-          <BrainNode key={id} info={model.node[id] as NodeInfo} kill={model.killOf[id]} labels={labels} glow={glow} />
+          <BrainNode key={id} info={model.node[id] as NodeInfo} kill={model.killOf[id]} labels={labels} glow={glow} scoreText={scoreText} />
         ))}
         {agents.map((id) => (
           <AgentNode key={id} info={model.node[id] as NodeInfo} labels={labels} ping={ambient} />
@@ -248,4 +234,52 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
       )}
     </svg>
   );
+}
+
+export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", labels = "ids", clock = true, ambient = false, appear }: SwarmTreeProps) {
+  const player = useMemo(() => treePlayer(data, pacing), [data, pacing]);
+  const { model } = player;
+  const svg = useRef<SVGSVGElement>(null);
+  const rig = useRef<TreeRig | null>(null);
+  /** The frame the recorded layer shows now, for the ambient layer to read. */
+  const shown = useRef<TreeFrame | null>(null);
+
+  const sizes = useMemo(
+    () => Object.fromEntries(model.ids.map((id) => [id, { size: model.node[id]?.size ?? 0.2, brain: model.node[id]?.kind === "brain" }])),
+    [model],
+  );
+  useLayoutEffect(() => {
+    rig.current = svg.current ? collectTree(svg.current, sizes) : null;
+  }, [sizes, labels, clock, ambient]);
+  const apply = useCallback(
+    (p: number) => {
+      if (!rig.current) return;
+      // A still frame (or less motion) shows the whole tree: how much of it is drawn belongs to the loop, which is not running.
+      const drawn = still || prefersReducedMotion() ? 1 : (appear?.get() ?? 1);
+      const frame = player.frame(p, drawn);
+      shown.current = frame;
+      paintTree(rig.current, frame);
+    },
+    [player, appear, still],
+  );
+  useProgress(progress, apply, still, stillAt);
+  useLayoutEffect(() => {
+    if (!appear || still || prefersReducedMotion()) return undefined;
+    return appear.on("change", () => apply(progress.get()));
+  }, [appear, apply, progress, still]);
+
+  useEffect(() => {
+    const element = svg.current;
+    if (!ambient || still || prefersReducedMotion() || !element) return undefined;
+    const layer = new Ambient(model);
+    return whileVisible(element, () =>
+      onFrame((dt) => {
+        if (!shown.current || !rig.current) return;
+        layer.step(dt, shown.current);
+        paintAmbient(rig.current, layer);
+      }, AMBIENT_ORDER),
+    );
+  }, [ambient, still, model]);
+
+  return <TreeSvg svgRef={svg} model={model} labels={labels} clock={clock} ambient={ambient} className={className} />;
 }

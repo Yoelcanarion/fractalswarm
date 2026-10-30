@@ -28,3 +28,7 @@ export { DoorGlyph } from "./doors/DoorGlyph";
 export { DOOR_IDS, type DoorId } from "./doors/doors";
 
 export { HomeLab, isHomeLabHash } from "./lab/HomeLab";
+
+// The redesigned page (redesign.md): the click demo, with the page's one ease.
+export { KillDemo, type KillDemoProps } from "./demo/KillDemo";
+export { cssEase, ease, playhead, SECONDS } from "./ease";

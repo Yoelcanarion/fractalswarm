@@ -7,6 +7,7 @@ import { LineDraw } from "../charts/LineDraw";
 import { PairedBars } from "../charts/PairedBars";
 import { RegimeStrip } from "../charts/RegimeStrip";
 import { TokenBar } from "../charts/TokenBar";
+import { KillDemo } from "../demo/KillDemo";
 import { DOOR_IDS } from "../doors/doors";
 import { DoorGlyph } from "../doors/DoorGlyph";
 import { HashStrip } from "../hash/HashStrip";
@@ -367,6 +368,20 @@ function DoorsSection({ still }: { still: boolean }) {
   );
 }
 
+function DemoSection({ still }: { still: boolean }) {
+  return (
+    <Section
+      id="demo"
+      title="KillDemo"
+      note="The click demo: crash a coordinator and the survivors pick an heir by the run's own rule, computed in the browser. An illustration, not a run."
+    >
+      <div className="lab-stage">
+        <KillDemo key={String(still)} still={still} />
+      </div>
+    </Section>
+  );
+}
+
 function CountSection({ still }: { still: boolean }) {
   const progress = useMotionValue(0);
   const { r2 } = story.numbers;
@@ -424,6 +439,7 @@ export function HomeLab() {
           </button>
         </div>
       </header>
+      <DemoSection still={still} />
       <TreeSection still={still} />
       <LanesSection still={still} />
       <HrwSection still={still} />
