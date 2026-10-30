@@ -79,6 +79,13 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 # The first file found wins; bench/charts.py writes one of these.
 HERO_FILES = ("hero_chart.json", "hero.json", "charts.json")
+# The recorded results as committed, one hero chart per matrix (bench/results/<set>/). Every one
+# that exists is offered as a set, so the Charts page can show the 2-seed rivals matrix and the
+# 3-seed headline side by side.
+HERO_SETS = {
+    "v1": "v1/hero-t2_conference.json",
+    "headline": "headline/hero-t2_conference.json",
+}
 BUDGET_LEVELS = ("contract", "squad", "run", "project")
 MAX_PAGE = 5000
 
@@ -216,14 +223,34 @@ def create_app(
         raise HTTPException(404, "this run has no feasibility report (feasibility_report: true)")
 
     async def bench_results(request: Request) -> JSONResponse:
+        """The hero chart data. ``sets`` are the recorded matrices that exist (``HERO_SETS``);
+        ``data`` is the first of ``HERO_FILES`` or else the first set. With neither, ``fixture`` is
+        true and ``data`` is the UI-development placeholder, which a page must not draw as if it
+        were measured."""
+        sets = [
+            {
+                "name": name,
+                "source": f"bench/results/{relative}",
+                "data": json.loads((bench_dir / relative).read_text(encoding="utf-8")),
+            }
+            for name, relative in HERO_SETS.items()
+            if (bench_dir / relative).is_file()
+        ]
         for name in HERO_FILES:
             path = bench_dir / name
             if path.is_file():
                 data = json.loads(path.read_text(encoding="utf-8"))
-                return JSONResponse({"source": str(path), "fixture": False, "data": data})
+                return JSONResponse(
+                    {"source": str(path), "fixture": False, "data": data, "sets": sets}
+                )
+        if sets:
+            first = sets[0]
+            return JSONResponse(
+                {"source": first["source"], "fixture": False, "data": first["data"], "sets": sets}
+            )
         fixture = FIXTURES_DIR / "hero_chart.json"
         data = json.loads(fixture.read_text(encoding="utf-8"))
-        return JSONResponse({"source": "fixture", "fixture": True, "data": data})
+        return JSONResponse({"source": "fixture", "fixture": True, "data": data, "sets": []})
 
     async def bench_honesty(request: Request) -> JSONResponse:
         """``honesty.json`` as committed (``bench verdicts --prereg``): the swarm's wins, ties and
