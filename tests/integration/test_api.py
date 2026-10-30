@@ -22,6 +22,7 @@ from fractalswarm.kernel.events import Event
 from fractalswarm.kernel.store import COLUMNS, EventStore, _to_row
 from fractalswarm.llm.fake import FakeBackend
 from fractalswarm.runs import RunPaths, record_run
+from fractalswarm.verify.takeover import SupervisorLog
 
 REPO = Path(__file__).resolve().parents[2]
 GOLDEN = REPO / "tests" / "golden"
@@ -242,6 +243,19 @@ def test_takeover_lists_the_violations_that_make_it_false(client: TestClient) ->
     kinds = {(v["check"], v["kind"]) for v in report["violations"]}
     assert ("lost-work", "task-result") in kinds
     assert all({"check", "kind", "seq", "detail"} <= set(v) for v in report["violations"])
+
+
+def test_takeover_of_a_supervisors_run_is_not_offered(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The check is for the swarm's kills; a supervisor's run is read by ``/recovery``."""
+
+    def supervisor_log(path: Path) -> None:
+        raise SupervisorLog("supervisor log: use `fractalswarm recovery`")
+
+    monkeypatch.setattr("fractalswarm.verify.takeover.check_run", supervisor_log)
+    answer = client.get("/api/runs/demo-toy/takeover")
+    assert answer.status_code == 501 and "recovery" in answer.text
 
 
 def test_takeover_waits_for_the_run_to_end_and_knows_the_runs(

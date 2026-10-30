@@ -171,7 +171,7 @@ def create_app(
         the ``violations`` that made it false, and the kills, successions, adoptions, duplicate
         calls and costs behind them. Recomputed from the finished log, never from what an actor
         said about itself."""
-        from fractalswarm.verify.takeover import check_run
+        from fractalswarm.verify.takeover import SupervisorLog, check_run
 
         run = entry(request)
         last = catalog.last(run)
@@ -179,7 +179,10 @@ def create_app(
             raise HTTPException(409, "the run has not completed yet; check it when it ends")
         key = (str(run.path), last["hash"])
         if key not in takeovers:
-            report = await anyio.to_thread.run_sync(check_run, run.path)
+            try:
+                report = await anyio.to_thread.run_sync(check_run, run.path)
+            except SupervisorLog as exc:  # a supervisor's run has no takeovers: see /recovery
+                raise HTTPException(501, str(exc)) from None
             takeovers[key] = report.model_dump(mode="json")
         return JSONResponse(takeovers[key])
 
