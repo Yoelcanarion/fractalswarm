@@ -247,8 +247,8 @@ the proof chart, the film, the drawings and the numbers show their end state.
 
 - DotPlot at 820, 944, 1000 and 1147 px in a browser: the redesign's six do not use it, so it was not looked at again.
 - The real `demo --verify --no-serve --no-browser` against `proof.lines` and the $0 references (43 of 43): the coordinator's, at the merge.
-- ProofBars draws its words (about 58) inside its svg, which W6's counter does not count; if the budget is ever counted by what a
-  reader sees, the page is 58 words over what it prints.
+- ProofBars draws its words (about 58) inside its svg, which W6's counter does not count; a reader still sees them, so if the
+  230-word budget is ever counted by what is on screen, the chart adds about 58 to what the counter says.
 
 ## Rules kept
 
