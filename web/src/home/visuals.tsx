@@ -13,6 +13,7 @@ import { useEffect, useRef, type ComponentType } from "react";
 // the bundle of the home page should not carry.
 import { HashStrip } from "./viz/hash/HashStrip";
 import { HrwPanels } from "./viz/hrw/HrwPanels";
+import { WorkLanes } from "./viz/lanes/WorkLanes";
 import { SwarmTree } from "./viz/tree/SwarmTree";
 
 export const VIZ_NAMES = [
@@ -42,6 +43,7 @@ type VizComponent = ComponentType<DrawnProps>;
 
 const REGISTRY: Partial<Record<VizName, VizComponent>> = {
   SwarmTree: SwarmTree as unknown as VizComponent,
+  WorkLanes: WorkLanes as unknown as VizComponent,
   HrwPanels: HrwPanels as unknown as VizComponent,
   HashStrip: HashStrip as unknown as VizComponent,
 };
