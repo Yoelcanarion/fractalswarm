@@ -1,0 +1,250 @@
+{
+  "axis": "coordinators_killed",
+  "panels": [
+    {
+      "label": "Time to recover (s)",
+      "metric": "ttr_own_mean_s",
+      "note": "crash to the heir or the restart"
+    },
+    {
+      "label": "Coordinator-dependency time (contract-s)",
+      "metric": "cdt_s",
+      "note": "work that waited for a dead coordinator"
+    },
+    {
+      "label": "Blast radius (% of sessions)",
+      "metric": "blast_sessions_mean_pct",
+      "note": "held up by one crash"
+    },
+    {
+      "label": "Idle agent-seconds",
+      "metric": "idle_agent_s",
+      "note": "free agents whose session was waiting"
+    },
+    {
+      "label": "Preserved work (%)",
+      "metric": "preserved_pct",
+      "note": "calls in flight at a crash that were used"
+    },
+    {
+      "label": "Duplicated spend ($)",
+      "metric": "dup_usd",
+      "note": "work paid twice, by every cause"
+    }
+  ],
+  "profile": null,
+  "series": {
+    "durable": {
+      "color": "#6250d6",
+      "points": [
+        {
+          "blast_sessions_mean_pct": null,
+          "blast_sessions_mean_pct_max": null,
+          "blast_sessions_mean_pct_min": null,
+          "cdt_s": 0.0,
+          "cdt_s_max": 0.0,
+          "cdt_s_min": 0.0,
+          "dup_usd": 0.032917886666666674,
+          "dup_usd_max": 0.07254230200000002,
+          "dup_usd_min": 0.0017409699999999999,
+          "idle_agent_s": 0.0,
+          "idle_agent_s_max": 0.0,
+          "idle_agent_s_min": 0.0,
+          "preserved_pct": null,
+          "preserved_pct_max": null,
+          "preserved_pct_min": null,
+          "runs": [
+            "runs/durable__t2_conference__C0__s1",
+            "runs/durable__t2_conference__C0__s2",
+            "runs/durable__t2_conference__C0__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": null,
+          "ttr_own_mean_s_max": null,
+          "ttr_own_mean_s_min": null,
+          "x": 0
+        },
+        {
+          "blast_sessions_mean_pct": 38.88888888888889,
+          "blast_sessions_mean_pct_max": 50.0,
+          "blast_sessions_mean_pct_min": 23.333333333333336,
+          "cdt_s": 48.581,
+          "cdt_s_max": 66.016,
+          "cdt_s_min": 30.89,
+          "dup_usd": 0.02576767,
+          "dup_usd_max": 0.039618514,
+          "dup_usd_min": 0.013024359999999999,
+          "idle_agent_s": 55.336,
+          "idle_agent_s_max": 85.032,
+          "idle_agent_s_min": 30.89,
+          "preserved_pct": 65.47958214624882,
+          "preserved_pct_max": 83.33333333333333,
+          "preserved_pct_min": 53.84615384615385,
+          "runs": [
+            "runs/durable__t2_conference__C3__s1",
+            "runs/durable__t2_conference__C3__s2",
+            "runs/durable__t2_conference__C3__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 5.008666666666667,
+          "ttr_own_mean_s_max": 5.0128,
+          "ttr_own_mean_s_min": 5.0032,
+          "x": 5
+        }
+      ]
+    },
+    "durable-max": {
+      "color": "#008300",
+      "points": [
+        {
+          "blast_sessions_mean_pct": null,
+          "blast_sessions_mean_pct_max": null,
+          "blast_sessions_mean_pct_min": null,
+          "cdt_s": 0.0,
+          "cdt_s_max": 0.0,
+          "cdt_s_min": 0.0,
+          "dup_usd": 0.011565183333333331,
+          "dup_usd_max": 0.03121729599999999,
+          "dup_usd_min": 0.001208614,
+          "idle_agent_s": 0.0,
+          "idle_agent_s_max": 0.0,
+          "idle_agent_s_min": 0.0,
+          "preserved_pct": null,
+          "preserved_pct_max": null,
+          "preserved_pct_min": null,
+          "runs": [
+            "runs/durable-max__t2_conference__C0__s1",
+            "runs/durable-max__t2_conference__C0__s2",
+            "runs/durable-max__t2_conference__C0__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": null,
+          "ttr_own_mean_s_max": null,
+          "ttr_own_mean_s_min": null,
+          "x": 0
+        },
+        {
+          "blast_sessions_mean_pct": 23.333333333333336,
+          "blast_sessions_mean_pct_max": 33.333333333333336,
+          "blast_sessions_mean_pct_min": 10.0,
+          "cdt_s": 22.272666666666666,
+          "cdt_s_max": 33.752,
+          "cdt_s_min": 9.423,
+          "dup_usd": 0.03058025933333333,
+          "dup_usd_max": 0.03948786,
+          "dup_usd_min": 0.018089691999999997,
+          "idle_agent_s": 24.380666666666666,
+          "idle_agent_s_max": 34.378,
+          "idle_agent_s_min": 15.421,
+          "preserved_pct": 86.22222222222223,
+          "preserved_pct_max": 92.0,
+          "preserved_pct_min": 79.16666666666667,
+          "runs": [
+            "runs/durable-max__t2_conference__C3__s1",
+            "runs/durable-max__t2_conference__C3__s2",
+            "runs/durable-max__t2_conference__C3__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 5.0136,
+          "ttr_own_mean_s_max": 5.0156,
+          "ttr_own_mean_s_min": 5.009600000000001,
+          "x": 5
+        }
+      ]
+    },
+    "swarm": {
+      "color": "#2a78d6",
+      "points": [
+        {
+          "blast_sessions_mean_pct": null,
+          "blast_sessions_mean_pct_max": null,
+          "blast_sessions_mean_pct_min": null,
+          "cdt_s": 0.0,
+          "cdt_s_max": 0.0,
+          "cdt_s_min": 0.0,
+          "dup_usd": 0.0027872333333333337,
+          "dup_usd_max": 0.0029480300000000004,
+          "dup_usd_min": 0.0024683480000000004,
+          "idle_agent_s": 0.0,
+          "idle_agent_s_max": 0.0,
+          "idle_agent_s_min": 0.0,
+          "preserved_pct": null,
+          "preserved_pct_max": null,
+          "preserved_pct_min": null,
+          "runs": [
+            "runs/swarm__t2_conference__C0__s1",
+            "runs/swarm__t2_conference__C0__s2",
+            "runs/swarm__t2_conference__C0__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": null,
+          "ttr_own_mean_s_max": null,
+          "ttr_own_mean_s_min": null,
+          "x": 0
+        },
+        {
+          "blast_sessions_mean_pct": 6.666666666666667,
+          "blast_sessions_mean_pct_max": 10.0,
+          "blast_sessions_mean_pct_min": 3.3333333333333335,
+          "cdt_s": 6.942333333333333,
+          "cdt_s_max": 12.873,
+          "cdt_s_min": 0.704,
+          "dup_usd": 0.016248737333333332,
+          "dup_usd_max": 0.028919498000000002,
+          "dup_usd_min": 0.008180366000000001,
+          "idle_agent_s": 7.177,
+          "idle_agent_s_max": 12.873,
+          "idle_agent_s_min": 1.408,
+          "preserved_pct": 80.0925925925926,
+          "preserved_pct_max": 100.0,
+          "preserved_pct_min": 62.5,
+          "runs": [
+            "runs/swarm__t2_conference__C3__s1",
+            "runs/swarm__t2_conference__C3__s2",
+            "runs/swarm__t2_conference__C3__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "ttr_own_mean_s": 5.523733333333333,
+          "ttr_own_mean_s_max": 5.728,
+          "ttr_own_mean_s_min": 5.3718,
+          "x": 5
+        }
+      ]
+    }
+  },
+  "task": "t2_conference",
+  "title": "headline",
+  "x": [
+    0,
+    5
+  ],
+  "x_label": "Coordinators killed",
+  "x_labels": [
+    "0",
+    "5"
+  ]
+}

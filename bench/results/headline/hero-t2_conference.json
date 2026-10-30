@@ -1,0 +1,223 @@
+{
+  "panels": [
+    {
+      "label": "Stall time (s)",
+      "metric": "stall_s",
+      "note": "no agent work in flight anywhere"
+    },
+    {
+      "label": "Extra cost vs C0 (%)",
+      "metric": "extra_cost_pct",
+      "note": "same workflow, task and seed"
+    },
+    {
+      "label": "Completion (%)",
+      "metric": "completion_rate",
+      "note": ""
+    },
+    {
+      "label": "Validity (%)",
+      "metric": "validity_rate",
+      "note": ""
+    },
+    {
+      "label": "Coordination tokens / run",
+      "metric": "coordination_tokens",
+      "note": "LLM tokens spent on coordination"
+    }
+  ],
+  "series": {
+    "durable": {
+      "color": "#6250d6",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.29293471466666665,
+          "cost_usd_max": 0.33752906,
+          "cost_usd_min": 0.260401364,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/durable__t2_conference__C0__s1",
+            "runs/durable__t2_conference__C0__s2",
+            "runs/durable__t2_conference__C0__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 22.36,
+          "stall_s_max": 26.22,
+          "stall_s_min": 18.157,
+          "validity_rate": 100.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.295072474,
+          "cost_usd_max": 0.311660186,
+          "cost_usd_min": 0.281752038,
+          "extra_cost_pct": 2.150203007487151,
+          "extra_cost_pct_max": 19.684544355919726,
+          "extra_cost_pct_min": -13.546644546694736,
+          "profile": "C3",
+          "runs": [
+            "runs/durable__t2_conference__C3__s1",
+            "runs/durable__t2_conference__C3__s2",
+            "runs/durable__t2_conference__C3__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 23.313333333333333,
+          "stall_s_max": 32.25,
+          "stall_s_min": 10.328,
+          "validity_rate": 100.0,
+          "x": 5
+        }
+      ]
+    },
+    "durable-max": {
+      "color": "#008300",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.288040046,
+          "cost_usd_max": 0.307240244,
+          "cost_usd_min": 0.27742093,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/durable-max__t2_conference__C0__s1",
+            "runs/durable-max__t2_conference__C0__s2",
+            "runs/durable-max__t2_conference__C0__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 19.781333333333333,
+          "stall_s_max": 35.797,
+          "stall_s_min": 11.079,
+          "validity_rate": 100.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.3089887533333333,
+          "cost_usd_max": 0.351888612,
+          "cost_usd_min": 0.269895392,
+          "extra_cost_pct": 7.511767642806691,
+          "extra_cost_pct_max": 25.917811675563225,
+          "extra_cost_pct_min": -2.712678527896218,
+          "profile": "C3",
+          "runs": [
+            "runs/durable-max__t2_conference__C3__s1",
+            "runs/durable-max__t2_conference__C3__s2",
+            "runs/durable-max__t2_conference__C3__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 32.025333333333336,
+          "stall_s_max": 86.232,
+          "stall_s_min": 0.0,
+          "validity_rate": 100.0,
+          "x": 5
+        }
+      ]
+    },
+    "swarm": {
+      "color": "#2a78d6",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.2907750393333333,
+          "cost_usd_max": 0.292562072,
+          "cost_usd_min": 0.289414342,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/swarm__t2_conference__C0__s1",
+            "runs/swarm__t2_conference__C0__s2",
+            "runs/swarm__t2_conference__C0__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 20.921666666666667,
+          "stall_s_max": 23.983,
+          "stall_s_min": 17.813,
+          "validity_rate": 100.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.2715394486666667,
+          "cost_usd_max": 0.298897554,
+          "cost_usd_min": 0.251980622,
+          "extra_cost_pct": -6.599265144096474,
+          "extra_cost_pct_max": 2.9443389559610353,
+          "extra_cost_pct_min": -13.871056395854353,
+          "profile": "C3",
+          "runs": [
+            "runs/swarm__t2_conference__C3__s1",
+            "runs/swarm__t2_conference__C3__s2",
+            "runs/swarm__t2_conference__C3__s3"
+          ],
+          "seeds": [
+            "1",
+            "2",
+            "3"
+          ],
+          "stall_s": 10.312,
+          "stall_s_max": 22.64,
+          "stall_s_min": 1.188,
+          "validity_rate": 100.0,
+          "x": 5
+        }
+      ]
+    }
+  },
+  "task": "t2_conference",
+  "title": "headline",
+  "x": [
+    0,
+    1,
+    3,
+    5
+  ],
+  "x_label": "Coordinators killed"
+}
