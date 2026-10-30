@@ -12,6 +12,7 @@ import { Repeat } from "../parts/Repeat";
 import { SeeMore } from "../parts/SeeMore";
 import { useStory } from "../story";
 import { ProblemFilm } from "../viz/film/ProblemFilm";
+import { captionsFor } from "../viz/lanes/WorkLanes";
 
 /**
  * The problem, as a short film of the real work lanes of an in-process supervisor. It starts by itself when the film is
@@ -29,6 +30,8 @@ export function Problem() {
   const [again, setAgain] = useState(0);
   const play = arrived ? 1 + again : 0;
   const s = COPY.problem.more;
+  // the film draws no setting of its own (its captions need the room): the run it plays is named here, longest form first
+  const filmSetting = story?.lanes?.central ? captionsFor(story.lanes.central)[0] : undefined;
 
   return (
     <section id="problem" className="home-section home-problem" aria-labelledby="problem-title">
@@ -43,6 +46,11 @@ export function Problem() {
           <Repeat onClick={() => setAgain((n) => n + 1)} />
         </div>
         <SeeMore>
+          {filmSetting && (
+            <Setting>
+              {s.film} {filmSetting}
+            </Setting>
+          )}
           <p className="home-fold__text">{s.example(f)}</p>
           <p className="home-fold__text">{s.numbers}</p>
           <div className="home-pair">

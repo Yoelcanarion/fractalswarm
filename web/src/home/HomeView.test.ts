@@ -12,6 +12,7 @@ import { HomeView } from "./HomePage";
 import { sentences } from "./parts/Claim";
 import { bundledStory } from "./story";
 import { countOf, drawnClaims, fixtureClaimText, FIXTURE_STORY, plain, sectionOf, UNIVERSAL } from "./testing";
+import { captionsFor } from "./viz/lanes/WorkLanes";
 
 const render = (story: Story | null, still = false): string => renderToStaticMarkup(createElement(HomeView, { story, still }));
 const foldOf = (html: string): string => /<details[\s\S]*?<\/details>/.exec(html)?.[0] ?? "";
@@ -193,6 +194,13 @@ describe("the home page, rendered with the real story", () => {
 
   it("says nothing of its own that reads as every run being valid", () => {
     for (const [pattern, name] of UNIVERSAL) expect(pattern.test(outsideClaims), `"${name}" outside a claim`).toBe(false);
+  });
+
+  it("names, in the problem's fold, the one run the film plays: the film prints no setting of its own", () => {
+    const run = captionsFor(bundledStory.lanes.central)[0];
+    expect(run, "the real story has the film's setting").toMatch(/seed \d+/);
+    expect(plain(foldOf(sectionOf(html, "problem")))).toContain(`${COPY.problem.more.film} ${run}`);
+    expect(plain(outsideFolds(sectionOf(html, "problem")))).not.toContain(run);
   });
 
   it("lets only R6 say it, in the row's words, and the setting stands in the claim", () => {

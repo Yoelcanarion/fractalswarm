@@ -55,6 +55,7 @@ export const COPY = {
     line: "In the simplest setup its workers die with it, and their calls are paid for twice.",
     film: "Work lanes of a real run of an in-process supervisor: one lane per agent, one bar per model call, on a shared clock. The coordinator crashes, the work waits, and the calls it had already made are made again.",
     more: {
+      film: "The film:",
       example: (f: Facts) =>
         `The job: plan a conference from messy emails. ${f.talks ?? "—"} talks, ${word(f.tracks)} tracks, ${word(f.days)} ${plural(f.days, "day")}. A team of AI agents reads the emails and places the talks.`,
       numbers: "That is what it cost, in real runs.",
