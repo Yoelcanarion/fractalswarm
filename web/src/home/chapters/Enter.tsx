@@ -28,10 +28,11 @@ export function Enter() {
 
 function DoorCard({ door, open, note, index }: { door: Door; open: boolean; note: string | null; index: number }) {
   const still = useStill();
-  // The glyph plays while the pointer or the focus is on the door, and rests at the end otherwise.
+  // The glyph plays while the pointer or the focus is on the door, and rests at the end otherwise. The progress is linear in
+  // time: each part of the glyph eases itself once, over its own stretch of it (doors.ts).
   const hover = useMotionValue(still ? 1 : 0);
   const play = (to: number) => {
-    if (!still) animate(hover, to, { duration: to === 1 ? 0.9 : 0.4, ease: [0.23, 1, 0.32, 1] });
+    if (!still) animate(hover, to, { duration: to === 1 ? 0.9 : 0.4, ease: "linear" });
   };
   const body = (
     <>

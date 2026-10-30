@@ -22,6 +22,23 @@ export interface SourceRecord {
   cell?: string;
   inGit?: boolean;
   present?: boolean;
+  /** An extraction's source: the call that published it, its event, the speaker and the email it read, and how many times
+   * the run published the same reading. */
+  effect?: string;
+  seq?: number;
+  speaker?: string;
+  email?: string;
+  readings?: number;
+  agreeing?: number;
+}
+
+/** One real extraction: a speaker's email as a recorded call read it, and what that call published for them, in words. */
+export interface ExtractionSlice {
+  email: string;
+  /** In the order of the email; each points at the characters of the email it is read from, as [from, to). */
+  constraints: { text: string; source: [from: number, to: number] }[];
+  /** The model, the run and what the email is. */
+  model: string;
 }
 
 // -- the tree and the kill sequence of the demo bundle ----------------------------------------
@@ -590,6 +607,7 @@ export interface Story {
   proof: ProofSlice;
   lanes: { central: LanesSlice; swarm: LanesSlice };
   hashes: HashesSlice;
+  extraction?: ExtractionSlice | null;
   hero: HeroSlice;
   /** The same chart for the ten-seed extension, when it exists. */
   hero10: HeroSlice | null;

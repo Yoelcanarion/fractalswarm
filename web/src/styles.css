@@ -28,7 +28,8 @@ a {
 code,
 .mono {
   font-family: var(--font-mono);
-  font-size: 0.92em;
+  /* a little under its neighbours, which a monospace face needs, but never under the floor */
+  font-size: max(0.92em, var(--fs-body));
 }
 
 .muted {
@@ -53,11 +54,12 @@ code,
   flex-shrink: 0;
 }
 
+/* The same lockup as the home page's bar (home/home.css `.home-bar__brand`), so the brand does not change size on the way in. */
 .brand {
-  font-weight: 700;
-  font-size: var(--fs-title);
+  font-weight: 650;
+  font-size: var(--fs-lead);
   color: var(--text-primary);
-  letter-spacing: 0.2px;
+  letter-spacing: var(--track-tight, -0.012em);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -176,14 +178,18 @@ textarea {
   cursor: default;
 }
 
+/* The main action, and the chosen one of a set of buttons, is the inverted neutral, as on the home page (home/home.css
+   `.home-button--primary`): the accent stays the colour of the swarm at work, and this clears AA in both themes. */
 .btn--on {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg);
 }
 
 .btn--danger {
   background: var(--danger-solid);
   border-color: var(--danger-solid-border);
+  color: var(--danger-solid-ink);
 }
 
 .btn--danger:hover:not(:disabled) {
@@ -225,9 +231,10 @@ textarea {
 
 .panel__title {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 2px 10px;
   font-size: var(--fs-body);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -259,6 +266,75 @@ textarea {
   gap: 12px;
   padding: 12px 16px;
   height: 100%;
+}
+
+/* A way past a long run of tab stops: out of sight until the keyboard reaches it. */
+.skip {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip:focus-visible {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip-path: none;
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: var(--fs-body);
+}
+
+/* The counters take the row; the button that opens the guide sits at its end and costs no height. */
+.run__top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.run__top > .counters {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The body of a run view while it loads, so the page keeps its size. */
+.run__sk-body {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+.runguide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-3);
+  background: var(--accent-bg);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.runguide p {
+  flex: 1 1 320px;
+  max-width: 70ch;
+  margin: 0;
+}
+
+.runguide__done {
+  flex: none;
 }
 
 .run__main {
@@ -294,6 +370,10 @@ textarea {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+}
+
+.run__side > .chaos {
+  flex: none;
 }
 
 /* ---- counters ---- */
@@ -456,7 +536,8 @@ textarea {
 .actor__adopted {
   margin-top: 4px;
   font-size: var(--fs-label);
-  color: var(--owner);
+  /* the owner's track colour, pulled toward the text colour: the colour itself is 4.4:1 on the card for some tracks */
+  color: color-mix(in srgb, var(--owner) 60%, var(--text-primary));
   font-weight: 600;
 }
 
@@ -700,7 +781,7 @@ textarea {
 
 .feed__filter {
   width: 150px;
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   padding: 4px 8px;
 }
 
@@ -902,45 +983,26 @@ textarea {
   gap: 14px;
 }
 
-.charts__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.charts__head h1 {
-  margin: 0 0 4px;
-  font-size: var(--fs-stat);
-}
-
-.charts__head p {
-  margin: 0;
-}
-
 .charts__hero {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px;
 }
 
 .charts__secondary {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 14px;
 }
 
-.charts__table table,
-.runs__table {
+.charts__table table {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--fs-body);
 }
 
 .charts__table th,
-.charts__table td,
-.runs__table th,
-.runs__table td {
+.charts__table td {
   text-align: left;
   padding: 6px 8px;
   border-bottom: 1px solid var(--divider);
@@ -951,15 +1013,7 @@ textarea {
   color: var(--text-secondary);
 }
 
-/* ---- runs ---- */
-.runs {
-  padding: 16px 20px;
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-
+/* ---- new task (the Runs page's own layout is in components/catalogue/catalogue.css) ---- */
 .newtask {
   display: flex;
   flex-direction: column;
@@ -984,6 +1038,26 @@ textarea {
 .newtask__field textarea {
   width: 100%;
   color: var(--text-primary);
+}
+
+.newtask__lead {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.newtask__help {
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.newtask__caption {
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  font-weight: 700;
 }
 
 .newtask__grid {
@@ -1018,7 +1092,7 @@ textarea {
   padding: 10px 12px;
   border-radius: var(--radius-2);
   background: var(--surface-2);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1026,16 +1100,54 @@ textarea {
   overflow: auto;
 }
 
+@media (max-width: 900px) {
+  .newtask__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .newtask__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 1100px) {
   .run__main,
   .run__main--split,
   .charts__hero,
-  .charts__secondary,
-  .runs {
+  .charts__secondary {
     grid-template-columns: 1fr;
   }
   .run__canvas {
     min-height: 420px;
+  }
+}
+
+/* A short screen (a laptop's 768 px): the run page fills it when it fits and scrolls when it does not. At a screen's height it is exactly
+   as tall as the screen, so here the panels were squeezed and what did not fit (the tree, the chaos list) ran under the replay bar. The
+   panels keep one height of their own (a definite one, so that the tree's camera is not fitted to a canvas that then changes size as the
+   schedule fills in), and the replay bar stays in view while the page scrolls, with a shadow in the page's colour over the gap under it. */
+@media (max-height: 900px) {
+  .run {
+    height: auto;
+    min-height: 100%;
+  }
+  .run__main {
+    flex: 1 0 560px;
+  }
+  .run > .timeline {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    box-shadow: 0 12px 0 0 var(--bg);
+  }
+}
+
+/* The bars above the page are 8 px and 4 px lower here: the page is what the screen is for. */
+@media (max-height: 820px) {
+  .topbar {
+    height: 52px;
   }
 }
 
@@ -1082,7 +1194,7 @@ textarea {
 }
 
 .chaos__net {
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   color: var(--text-muted);
 }
 
@@ -1198,7 +1310,7 @@ textarea {
 
 .ptable .badge {
   padding: 1px 9px;
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 .nothing {
@@ -1339,7 +1451,7 @@ textarea {
 }
 
 .spendchip {
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   padding: 3px 9px;
   border-radius: var(--radius-pill);
   background: var(--surface-2);
@@ -1402,7 +1514,7 @@ textarea {
 
 .generic__text {
   color: var(--text-muted);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1446,7 +1558,7 @@ textarea {
 }
 
 .answer__label {
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   color: var(--text-muted);
 }
 
@@ -1490,7 +1602,7 @@ textarea {
 
 .crow__keys {
   color: var(--text-secondary);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   word-break: break-all;
 }
 
@@ -1561,7 +1673,7 @@ textarea {
   padding: 5px 8px;
   display: flex;
   flex-direction: column;
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 .fault b {
@@ -1579,7 +1691,7 @@ textarea {
   border-radius: var(--radius-pill);
   background: var(--surface-2);
   border: 1px solid var(--border);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
 }
 
 /* run controls: budget shock and kill switch, one slim strip */
@@ -1726,6 +1838,17 @@ textarea {
   font-weight: 600;
 }
 
+/* The event type is the keyboard's way to open the payload; the row still opens on a click anywhere. */
+.evrow__toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .evrow--bad .evrow__type {
   color: var(--danger);
 }
@@ -1750,7 +1873,7 @@ textarea {
   padding: 8px 10px;
   background: var(--surface-2);
   border-radius: var(--radius-2);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   overflow: auto;
   max-height: 360px;
 }
@@ -1778,9 +1901,9 @@ textarea {
   gap: 14px;
 }
 
-.results__title h1 {
+.results__task {
   margin: 0;
-  font-size: var(--fs-title);
+  font-size: var(--fs-lead);
 }
 
 .results__outcome {
@@ -1835,7 +1958,7 @@ textarea {
 .results__raw pre {
   max-height: 300px;
   overflow: auto;
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   margin: 6px 0 0;
 }
 

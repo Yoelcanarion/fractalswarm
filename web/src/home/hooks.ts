@@ -70,7 +70,9 @@ export function useEnterProgress(ref: RefObject<Element | null>, still: boolean,
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
         observer.disconnect();
-        playing = animate(progress, 1, { duration, delay, ease: [0.23, 1, 0.32, 1] });
+        // linear: the visuals ease each of their own elements once, over their own stretch of this progress; a driver that
+        // eased as well would squeeze every stretch into the first fifth of the time
+        playing = animate(progress, 1, { duration, delay, ease: "linear" });
       },
       { rootMargin },
     );

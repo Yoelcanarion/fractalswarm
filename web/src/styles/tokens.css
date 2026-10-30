@@ -80,6 +80,7 @@
   --dur-base: 150ms;
   --dur-slow: 300ms;
   --dur-reveal: 700ms; /* a block of the home page coming into view */
+  --dur-step: 450ms; /* a card or a layer of a pinned stage taking its place when the step changes */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); /* mirrors EASE_OUT in lib/motion.ts */
 }

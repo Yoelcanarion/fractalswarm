@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { EmptyState, PageHeader, Skeleton, SkeletonGroup, SkeletonText, Term } from "../components/ui";
 import { listRuns } from "../lib/api";
 import type { RunListing } from "../lib/types";
 import "./ablation.css";
@@ -18,13 +19,34 @@ const go = (hash: string) => {
   window.location.hash = hash;
 };
 
+const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+
+/** The head of both screens of the page: what the ablation is, whether or not anything has loaded yet. */
+function AblationHead({ actions }: { actions?: ReactNode }) {
+  return (
+    <PageHeader
+      title="Ablation"
+      lead={
+        <>
+          The same messy notes, read by a regex parser and by <Term id="muse">Muse</Term>, each reading scored against the one a person approved.
+        </>
+      }
+      actions={actions}
+    />
+  );
+}
+
 export interface LauncherProps {
   api: AblationApi;
+  /** The ablations on record: null while they are being listed. */
   runs: RunListing[] | null;
+  /** Why they could not be listed. The ones on record are then unknown, which is not the same as none. */
+  listError?: string | null;
+  onRetryList?: () => void;
 }
 
 /** Where an ablation is started (the generator's notes, on the practice backend, at no cost) or picked from the ones on record. */
-export function Launcher({ api, runs }: LauncherProps) {
+export function Launcher({ api, runs, listError = null, onRetryList }: LauncherProps) {
   const [form, setForm] = useState<LauncherForm>(defaultLauncher);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +64,9 @@ export function Launcher({ api, runs }: LauncherProps) {
 
   return (
     <div className="abl abl--launch">
+      <AblationHead />
       <section className="panel abl__start" aria-label="Start an ablation">
         <h3 className="panel__title">Run the ablation</h3>
-        <p className="abl__lead">The same notes through the regex parser and through Muse, each reading scored against the approved one.</p>
         <div className="abl__fields">
           <label className="abl__field">
             <span>Emails</span>
@@ -80,8 +102,19 @@ export function Launcher({ api, runs }: LauncherProps) {
       </section>
       <section className="panel abl__runs" aria-label="Ablations on record">
         <h3 className="panel__title">On record</h3>
-        {runs === null ? (
-          <p className="abl__hint">Loading…</p>
+        {listError !== null ? (
+          <div className="abl__error" role="alert">
+            <p>Could not list the ablations on record ({listError}).</p>
+            {onRetryList && (
+              <button type="button" className="btn" onClick={onRetryList}>
+                Try again
+              </button>
+            )}
+          </div>
+        ) : runs === null ? (
+          <SkeletonGroup label="Loading the ablations on record">
+            <SkeletonText lines={3} />
+          </SkeletonGroup>
         ) : runs.length === 0 ? (
           <p className="abl__hint">No ablation has been recorded on this server yet.</p>
         ) : (
@@ -98,6 +131,52 @@ export function Launcher({ api, runs }: LauncherProps) {
   );
 }
 
+/** What went wrong asking the server for a run, and whether the page is going to ask again by itself. */
+export interface Problem {
+  message: string;
+  retrying: boolean;
+}
+
+const asking = (problem: Problem): string => (problem.retrying ? `Asking again every ${RETRY_MS / 1000} seconds.` : "");
+
+/** The ablation could not be loaded at all: what the server said, and the way out. */
+export function AblationFailed({ problem, onRetry }: { problem: Problem; onRetry: () => void }) {
+  return (
+    <EmptyState
+      tone="bad"
+      title="This ablation could not be loaded"
+      actions={
+        <>
+          <button type="button" className="btn btn--on" onClick={onRetry}>
+            Try again
+          </button>
+          <a className="btn" href={ablationHash(null)}>
+            All ablations
+          </a>
+        </>
+      }
+    >
+      {problem.message} {asking(problem)}
+    </EmptyState>
+  );
+}
+
+/** A later asking failed (the server stopped while the ablation was scoring): what was loaded stays, with the reason above it. */
+export function AblationBanner({ problem, onRetry }: { problem: Problem; onRetry: () => void }) {
+  return (
+    <div className="abl__error" role="alert">
+      <p>
+        {problem.message} {asking(problem)}
+      </p>
+      {!problem.retrying && (
+        <button type="button" className="btn" onClick={onRetry}>
+          Try again
+        </button>
+      )}
+    </div>
+  );
+}
+
 export interface AblationFlowProps {
   api: AblationApi;
   runId: string | null;
@@ -108,9 +187,13 @@ export interface AblationFlowProps {
 /** `#/ablation` and `#/ablation/<run>`: asks the server for the run, and keeps asking while it is still scoring. */
 export function AblationFlow({ api, runId, loadRuns }: AblationFlowProps) {
   const [run, setRun] = useState<AblationStatus | null>(null);
-  const [problem, setProblem] = useState<{ message: string; retrying: boolean } | null>(null);
+  const [problem, setProblem] = useState<Problem | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [runs, setRuns] = useState<RunListing[] | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
+  // bumped to ask again by hand, which starts the asking over
+  const [attempt, setAttempt] = useState(0);
+  const [listAttempt, setListAttempt] = useState(0);
 
   useEffect(() => {
     setRun(null);
@@ -140,39 +223,69 @@ export function AblationFlow({ api, runId, loadRuns }: AblationFlowProps) {
       stopped = true;
       window.clearTimeout(timer);
     };
-  }, [api, runId]);
+  }, [api, runId, attempt]);
 
   useEffect(() => {
     if (runId !== null) return;
     let live = true;
     setRuns(null);
+    setListError(null);
     loadRuns().then(
       (found) => live && setRuns(ablationRuns(found)),
-      () => live && setRuns([]),
+      (error) => live && setListError(messageOf(error)),
     );
     return () => {
       live = false;
     };
-  }, [runId, loadRuns]);
+  }, [runId, loadRuns, listAttempt]);
 
-  if (runId === null) return <Launcher api={api} runs={runs} />;
+  if (runId === null) return <Launcher api={api} runs={runs} listError={listError} onRetryList={() => setListAttempt((n) => n + 1)} />;
+
+  const head = (
+    <AblationHead
+      actions={
+        <>
+          <span className="mono abl__runid">{runId}</span>
+          <a className="btn" href={ablationHash(null)}>
+            All ablations
+          </a>
+        </>
+      }
+    />
+  );
+  const again = () => setAttempt((n) => n + 1);
+
+  if (run === null) {
+    return (
+      <div className="abl">
+        {head}
+        {problem === null ? (
+          // the shape of the result, so the page does not jump when it arrives
+          <SkeletonGroup label="Loading the ablation" className="skeleton-group--stack">
+            <Skeleton width={420} height={44} />
+            <Skeleton height={72} />
+            <Skeleton height={160} />
+            <Skeleton height={320} />
+          </SkeletonGroup>
+        ) : (
+          <AblationFailed problem={problem} onRetry={again} />
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="abl__page">
-      <header className="abl__bar-head">
-        <a className="abl__back" href={ablationHash(null)}>
-          ← Ablations
-        </a>
-        <span className="mono abl__runid">{runId}</span>
-      </header>
-      {problem !== null && (
-        <p className="abl__error" role="alert">
-          {problem.message}
-          {problem.retrying ? ` Asking again every ${RETRY_MS / 1000} seconds.` : ""}
-        </p>
-      )}
-      {run === null && problem === null && <p className="abl__hint">Loading…</p>}
-      {run !== null && <AblationView run={run} filter={filter} onFilter={setFilter} />}
-    </div>
+    <AblationView
+      run={run}
+      filter={filter}
+      onFilter={setFilter}
+      top={
+        <>
+          {head}
+          {problem !== null && <AblationBanner problem={problem} onRetry={again} />}
+        </>
+      }
+    />
   );
 }
 

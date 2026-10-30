@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { systemName } from "../assumptions";
 import { CLAIMS, type Claims } from "./claims";
-import { HelpsView } from "./HelpsPage";
+import { HelpsView, type HelpsViewProps } from "./HelpsPage";
 import { regimeRows } from "./regime";
 import { occurrences, parsedSample, plainText } from "./testing";
 import { WhereItHelps, type WhereItHelpsProps } from "./WhereItHelps";
@@ -193,25 +193,65 @@ describe("what the panel does not say", () => {
 });
 
 describe("the page", () => {
-  const view = (state: Parameters<typeof HelpsView>[0]["state"]): string => renderToStaticMarkup(createElement(HelpsView, { state }));
+  const view = (state: HelpsViewProps["state"], onRetry?: () => void): string => renderToStaticMarkup(createElement(HelpsView, { state, onRetry }));
+  const retry = () => undefined;
+  const every: HelpsViewProps["state"][] = [
+    { status: "loading" },
+    { status: "missing" },
+    { status: "unreachable", reason: "the server answered 500" },
+    { status: "invalid", reason: 'comparisons[3].verdict: unexpected "maybe"' },
+    { status: "ready", honesty: parsedSample() },
+  ];
 
-  it("holds a place while the file loads", () => {
-    expect(plainText(view({ status: "loading" }))).toContain("Loading the verdicts");
+  it("opens with the same head in every state, so a stranger knows where they are before anything has loaded", () => {
+    for (const state of every) {
+      const markup = view(state, retry);
+      expect(markup.match(/<h1/g), state.status).toHaveLength(1);
+      expect(markup, state.status).toContain('<h1 class="pagehead__title">Where it helps</h1>');
+      expect(plainText(markup), state.status).toContain("The swarm against each rival, at every setting the bench ran.");
+    }
   });
 
-  it("says plainly that there are no verdicts when the server has no file, and shows nothing in their place", () => {
-    const text = plainText(view({ status: "missing" }));
-    expect(text).toContain("No verdicts yet: the server has no bench/results/honesty.json (GET /api/bench/honesty answered 404).");
+  it("holds a place while the file loads, and says what it waits for", () => {
+    const markup = view({ status: "loading" });
+    expect(plainText(markup)).toContain("Loading the verdicts");
+    expect(markup).toContain('role="status"');
+    expect(markup).toContain("skeleton-group--stack");
+  });
+
+  it("says plainly that there are no verdicts when the server has no file, shows nothing in their place, and offers the next step", () => {
+    const markup = view({ status: "missing" }, retry);
+    const text = plainText(markup);
+    expect(text).toContain("No verdicts yet");
+    expect(text).toContain("The server has no bench/results/honesty.json (GET /api/bench/honesty answered 404).");
     expect(text).toContain("fractalswarm bench verdicts <results dirs> --prereg");
     expect(text).not.toContain("Regime map");
+    expect(text).toContain("Check again");
+    expect(markup).toContain('href="#/charts"');
   });
 
-  it("says why the file could not be loaded or read, and shows none of it", () => {
-    const unreachable = plainText(view({ status: "unreachable", reason: "the server answered 500" }));
-    expect(unreachable).toContain("The verdicts could not be loaded: the server answered 500.");
-    const invalid = plainText(view({ status: "invalid", reason: 'comparisons[3].verdict: unexpected "maybe"' }));
-    expect(invalid).toContain('The verdicts could not be read: comparisons[3].verdict: unexpected "maybe".');
-    for (const text of [unreachable, invalid]) expect(text).not.toContain("Regime map");
+  it("says why the file could not be loaded or read, shows none of it, and offers to ask again", () => {
+    const unreachable = view({ status: "unreachable", reason: "the server answered 500" }, retry);
+    expect(plainText(unreachable)).toContain("The verdicts could not be loaded");
+    expect(plainText(unreachable)).toContain("the server answered 500.");
+    expect(plainText(unreachable)).toContain("Try again");
+    const invalid = view({ status: "invalid", reason: 'comparisons[3].verdict: unexpected "maybe"' }, retry);
+    expect(plainText(invalid)).toContain("The verdicts could not be read");
+    expect(plainText(invalid)).toContain('comparisons[3].verdict: unexpected "maybe".');
+    expect(plainText(invalid)).toContain("The panel shows nothing rather than part of the numbers.");
+    for (const markup of [unreachable, invalid]) {
+      expect(markup).toContain('role="alert"');
+      expect(plainText(markup)).not.toContain("Regime map");
+    }
+  });
+
+  it("offers no button to ask again when nothing is there to ask with", () => {
+    for (const state of every.slice(1, 4)) expect(view(state), state.status).not.toContain("<button");
+  });
+
+  it("puts the rival choice in the head once the verdicts are there", () => {
+    const markup = view({ status: "ready", honesty: parsedSample() });
+    expect(markup).toMatch(/pagehead__actions[^]*<select/);
   });
 
   it("draws the panel for a file it could read", () => {

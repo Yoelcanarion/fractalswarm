@@ -2,6 +2,7 @@ import { escalationState, timeLeftMs, type EscalationState, type HumanEscalation
 import type { ViewState } from "../lib/reducer";
 import { AnswerBox } from "./AnswerBox";
 import { Card, GenericRows, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
+import { Hint } from "./ui";
 
 const STEP: Record<Step, string> = { retry: "retry", reassign: "reassign", lost: "agent lost" };
 const STATUS: Record<TrailStatus, { label: string; tone: "good" | "warn" | "bad" }> = {
@@ -62,7 +63,7 @@ export function EscalationsPanel({ view, runId }: { view: ViewState; runId?: str
     <Card
       title="Escalations"
       wide
-      hint="the replanning ladder: retry → reassign → squad replan → parent → human (spec §5.5)"
+      hint="the ladder a failing contract climbs: retry → reassign → squad replan → parent → human"
     >
       <div className="pstats">
         <PStat label="1 · retries" value={steps.retry} title="same agent, with the verifier's feedback" />
@@ -110,10 +111,12 @@ export function EscalationsPanel({ view, runId }: { view: ViewState; runId?: str
                   <td className="mono">{trail.key}</td>
                   <td>
                     {runsOf(trail.rejections).map((run) => (
-                      <span key={run.first.seq} className="step" title={`attempt ${run.first.attempt} · t = ${virtualSeconds(run.first.ts)}`}>
-                        {STEP[run.first.step]}
-                        {run.count > 1 ? ` ×${run.count}` : ""} <span className="muted">@{run.first.stage}</span>
-                      </span>
+                      <Hint key={run.first.seq} label={`attempt ${run.first.attempt} · t = ${virtualSeconds(run.first.ts)}`}>
+                        <span className="step">
+                          {STEP[run.first.step]}
+                          {run.count > 1 ? ` ×${run.count}` : ""} <span className="muted">@{run.first.stage}</span>
+                        </span>
+                      </Hint>
                     ))}
                   </td>
                   <td>

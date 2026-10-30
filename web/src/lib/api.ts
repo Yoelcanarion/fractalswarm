@@ -18,6 +18,12 @@ async function json<T>(response: Response): Promise<T> {
 
 export const listRuns = () => fetch("api/runs").then((r) => json<RunListing[]>(r));
 
+/** One event of a run by its seq (seqs run 1 to the number of events), or null when the log has none there. */
+export async function fetchEventAt(runId: string, seq: number): Promise<RunEvent | null> {
+  const page = await fetch(`api/runs/${encodeURIComponent(runId)}/events?from_seq=${seq}&limit=1`).then((r) => json<{ events: RunEvent[] }>(r));
+  return page.events[0] ?? null;
+}
+
 /** What the server can do (`GET api/capabilities`). A server without the endpoint offers the
  * controls that predate it and nothing else. */
 export async function fetchCapabilities(): Promise<Capabilities> {

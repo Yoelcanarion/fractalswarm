@@ -8,6 +8,7 @@ import type { ViewState } from "../lib/reducer";
 import { ControlButton, useControlState } from "./ControlButton";
 import { KeyValues } from "./KeyValues";
 import { Card, GenericRows, money, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
+import { Hint, Term } from "./ui";
 
 interface Props {
   runId: string;
@@ -92,7 +93,8 @@ export function PlanView({ runId, view, live }: Props) {
         </div>
         {approval?.by === "auto" && (
           <div className="pevent">
-            Approved automatically: the TaskSpec has <span className="mono">auto_approve</span> (bench mode). A run that waits for a human enables the buttons above.
+            Approved automatically: the <Term id="taskSpec">task spec</Term> asked for it (<span className="mono">auto_approve</span>). A run that waits for a
+            person enables the buttons above.
           </div>
         )}
         {status === "none" && !live && <div className="pevent">This run has no plan.proposed event.</div>}
@@ -118,10 +120,18 @@ export function PlanView({ runId, view, live }: Props) {
                   </thead>
                   <tbody>
                     {tracks.map((track) => (
-                      <tr key={track.id} title={track.acceptance}>
-                        <td className="mono">{track.id}</td>
-                        <td title={track.talks.join(", ")}>
-                          {track.talks.length} <span className="muted mono">{clip(track.talks.slice(0, 5).join(" "), 28)}</span>
+                      <tr key={track.id}>
+                        <td className="mono">
+                          <Hint focusable label={track.acceptance}>
+                            <span>{track.id}</span>
+                          </Hint>
+                        </td>
+                        <td>
+                          <Hint label={track.talks.join(", ")}>
+                            <span>
+                              {track.talks.length} <span className="muted mono">{clip(track.talks.slice(0, 5).join(" "), 28)}</span>
+                            </span>
+                          </Hint>
                         </td>
                         <td>{track.risk === null ? "–" : track.risk.toFixed(2)}</td>
                         <td>{track.priority ?? "–"}</td>
@@ -153,7 +163,7 @@ export function PlanView({ runId, view, live }: Props) {
           )}
         </Card>
 
-        <Card title="Feasibility report" hint="spec §12: at plan approval">
+        <Card title="Feasibility report" hint="written when the plan is approved">
           <div className="pstats">
             <PStat label="run budget" value={cap === null ? "none" : money(cap, 2)} />
           </div>

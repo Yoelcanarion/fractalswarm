@@ -1,3 +1,4 @@
+import { defineTerm } from "../lib/glossary";
 import { isInfraKind } from "../lib/layout";
 import type { ViewState } from "../lib/reducer";
 import { Stat } from "./ui";
@@ -16,12 +17,12 @@ export function Counters({ view }: { view: ViewState }) {
         animate={false}
         label="coordination tokens"
         value={c.coordinationTokens}
-        hint="LLM tokens spent on membership, ownership and takeover"
+        hint={defineTerm("coordinationTokens")}
       />
       <Stat animate={false} label="actors alive" value={alive} />
       <Stat animate={false} label="down" value={down} tone={down > 0 ? "bad" : "neutral"} hint="killed, declared dead or restarting" />
-      <Stat animate={false} label="adoptions" value={c.adoptions} />
-      <Stat animate={false} label="member epoch" value={view.memberEpoch} />
+      <Stat animate={false} label="adoptions" value={c.adoptions} hint="a dead orchestrator's subtree taken over by a survivor" />
+      <Stat animate={false} label="member epoch" value={view.memberEpoch} hint={defineTerm("memberEpoch")} />
       <Stat animate={false} label="LLM calls" value={c.llmCalls} />
       <Stat animate={false} label="spent" prefix="$" value={c.spentUsd} decimals={4} />
       <Stat animate={false} label="messages" value={c.messages} />

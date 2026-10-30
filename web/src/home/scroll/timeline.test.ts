@@ -1,137 +1,166 @@
 import { describe, expect, it } from "vitest";
 
-import { buildTimeline, clamp01, interpolate, smoothstep, type StepSpec } from "./timeline";
+import { buildPlan, clamp01, defaultPlay, MAIN, MAX_SECONDS, MIN_SECONDS, stepAtLine, type Block, type StepSpec } from "./timeline";
 
-const steps: StepSpec[] = [
-  { id: "a", at: 0 },
-  { id: "b", at: 0.5, weight: 2 },
-  { id: "c", at: 1, hold: 1 },
-];
-
-describe("interpolate", () => {
-  const points: [number, number][] = [
-    [0, 0],
-    [2, 10],
-    [4, 10],
-    [8, 0],
-  ];
-  it("is linear between points and flat beyond the ends", () => {
-    expect(interpolate(points, -5)).toBe(0);
-    expect(interpolate(points, 1)).toBe(5);
-    expect(interpolate(points, 3)).toBe(10);
-    expect(interpolate(points, 6)).toBe(5);
-    expect(interpolate(points, 99)).toBe(0);
-  });
-
-  it("copes with a repeated x and with no points", () => {
-    expect(interpolate([[1, 3], [1, 7]], 1)).toBe(3);
-    expect(interpolate([], 4)).toBe(0);
-  });
-});
-
-describe("clamp01 and smoothstep", () => {
-  it("stay inside 0..1", () => {
+describe("clamp01", () => {
+  it("stays inside 0..1", () => {
     expect([clamp01(-1), clamp01(0.3), clamp01(4)]).toEqual([0, 0.3, 1]);
-    expect(smoothstep(-2)).toBe(0);
-    expect(smoothstep(2)).toBe(1);
-    expect(smoothstep(0.5)).toBe(0.5);
   });
 });
 
-describe("a stage timeline", () => {
-  const timeline = buildTimeline(steps);
+describe("a plan", () => {
+  const specs: StepSpec[] = [
+    { id: "a", at: 0, layers: { strip: 0, tree: 1 } },
+    { id: "b", at: 0.25, play: 1.2 },
+    { id: "c", at: 0.5, play: 2, to: { hrw: 1 }, layers: { tree: 0.12, hrw: 1 } },
+    { id: "d", at: 1, play: 1.5, layers: { tree: 1, strip: 1 } },
+  ];
+  const plan = buildPlan(specs);
 
-  it("is as high as its blocks, and each block starts where the last one ends", () => {
-    expect(timeline.height).toBe(4);
-    expect(timeline.blocks.map((b) => [b.start, b.centre, b.end])).toEqual([
-      [0, 0.5, 1],
-      [1, 2, 3],
-      [3, 3.5, 4],
+  it("knows its channels and layers from what the steps name", () => {
+    expect(plan.channels).toEqual(["hrw"]);
+    expect(plan.layerNames).toEqual(["strip", "tree", "hrw"]);
+    expect(plan.steps.map((s) => s.id)).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("targets the main channel with `at`", () => {
+    expect(plan.steps.map((_, i) => plan.target(i, MAIN))).toEqual([0, 0.25, 0.5, 1]);
+  });
+
+  it("keeps a channel's last target until a step names it again, and starts it at 0", () => {
+    expect([0, 1, 2, 3].map((i) => plan.target(i, "hrw"))).toEqual([0, 0, 1, 1]);
+  });
+
+  it("keeps a layer's last value until a step names it again, and starts it at 1", () => {
+    expect([0, 1, 2, 3].map((i) => plan.layer(i, "tree"))).toEqual([1, 1, 0.12, 1]);
+    expect([0, 1, 2, 3].map((i) => plan.layer(i, "strip"))).toEqual([0, 0, 0, 1]);
+    // `hrw` is first named by step c: before it the layer is at its starting value
+    expect([0, 1, 2, 3].map((i) => plan.layer(i, "hrw"))).toEqual([1, 1, 1, 1]);
+  });
+
+  it("answers for a step outside the plan with the nearest one", () => {
+    expect(plan.target(-3, MAIN)).toBe(0);
+    expect(plan.target(99, MAIN)).toBe(1);
+    expect(plan.layer(99, "tree")).toBe(1);
+  });
+
+  it("gives every step the least height of half a screen unless it says more", () => {
+    expect(plan.steps.map((s) => s.weight)).toEqual([0.5, 0.5, 0.5, 0.5]);
+    expect(buildPlan([{ id: "x", at: 0, weight: 1 }]).steps[0].weight).toBe(1);
+  });
+
+  it("plays a step that does not say in between 0.8 and 1.4 seconds, longer for a longer way", () => {
+    expect(defaultPlay(0)).toBe(0.8);
+    expect(defaultPlay(0.1)).toBeCloseTo(1.04);
+    expect(defaultPlay(0.9)).toBe(1.4);
+    expect(defaultPlay(-0.1)).toBeCloseTo(1.04);
+    const tour = buildPlan([
+      { id: "a", at: 0 },
+      { id: "b", at: 0.1 },
+      { id: "c", at: 1 },
     ]);
+    expect(tour.steps.map((s) => s.play)).toEqual([0.8, 1.04, 1.4]);
   });
 
-  it("puts the reading line at the anchor at the top and at the end of the pinned scroll", () => {
-    expect(timeline.readingLine(0)).toBe(0.5);
-    expect(timeline.readingLine(1)).toBe(3.5);
-    expect(timeline.readingLine(-1)).toBe(0.5);
-    expect(timeline.readingLine(9)).toBe(3.5);
-    const lower = buildTimeline(steps, { anchor: 0.7 });
-    expect(lower.readingLine(0)).toBeCloseTo(0.7);
-    expect(lower.readingLine(1)).toBeCloseTo(3.7);
+  it("rejects what cannot be played", () => {
+    expect(() => buildPlan([])).toThrow();
+    expect(() => buildPlan([{ id: "a", at: 0 }, { id: "a", at: 1 }])).toThrow(/twice/);
+    expect(() => buildPlan([{ id: "a", at: 0, weight: 0 }])).toThrow(/weight/);
+    expect(() => buildPlan([{ id: "a", at: 0, play: 0 }])).toThrow(/play/);
+    expect(() => buildPlan([{ id: "a", at: Number.NaN }])).toThrow(/at/);
+    expect(() => buildPlan([{ id: "a", at: 0, to: { [MAIN]: 1 } }])).toThrow(/main channel/);
   });
 
-  it("says which block is under the reading line", () => {
-    expect(timeline.stepAt(0)).toBe(0);
-    expect(timeline.stepAt(0.2)).toBe(1); // the line is at 1.1 vh, in block b (1 to 3)
-    expect(timeline.stepAt(0.8)).toBe(1); // 2.9 vh: still b
-    expect(timeline.stepAt(0.9)).toBe(2); // 3.2 vh
-    expect(timeline.stepAt(1)).toBe(2);
+  it("keeps every target inside 0..1", () => {
+    const wild = buildPlan([{ id: "a", at: 4, to: { x: -2 }, layers: { y: 7 } }]);
+    expect([wild.target(0, MAIN), wild.target(0, "x"), wild.layer(0, "y")]).toEqual([1, 0, 1]);
+  });
+});
+
+describe("how long a move takes", () => {
+  const plan = buildPlan([
+    { id: "a", at: 0 },
+    { id: "b", at: 0.1, play: 1 },
+    { id: "c", at: 0.2, play: 1.4 },
+    { id: "d", at: 0.9, play: 2.5 },
+    { id: "e", at: 1, play: 1 },
+  ]);
+
+  it("is the step's own play for one step, either way", () => {
+    expect(plan.duration(0, 1)).toBe(1);
+    expect(plan.duration(1, 2)).toBe(1.4);
+    expect(plan.duration(3, 2)).toBe(2.5);
+    expect(plan.duration(2, 1)).toBe(1.4);
   });
 
-  it("gives the visual each step's keyframe when its card is on the reading line", () => {
-    timeline.blocks.forEach((block, i) => {
-      expect(timeline.visualAt(timeline.progressAtStep(i))).toBeCloseTo(block.at, 10);
-    });
+  it("is nothing for no move", () => {
+    expect(plan.duration(2, 2)).toBe(0);
   });
 
-  it("holds the visual still around a card and moves it linearly in between", () => {
-    const at = (line: number) => timeline.visualAt((line - 0.5) / 3);
-    // block b: centre 2, weight 2, hold 0.4 -> flat from 1.6 to 2.4
-    expect(at(1.7)).toBeCloseTo(0.5);
-    expect(at(2.0)).toBeCloseTo(0.5);
-    expect(at(2.3)).toBeCloseTo(0.5);
-    // between the end of a's hold (0.7) and the start of b's (1.6): from 0 to 0.5, so halfway is 1.15
-    expect(at(1.15)).toBeCloseTo(0.25, 5);
-    expect(at(0.6)).toBeCloseTo(0);
-  });
-
-  it("counts the reading line in steps: whole numbers on the cards, fractions between them", () => {
-    timeline.blocks.forEach((_, i) => expect(timeline.positionAt(timeline.progressAtStep(i))).toBeCloseTo(i, 10));
-    expect(timeline.positionAt(0)).toBe(0);
-    expect(timeline.positionAt(1)).toBe(2);
-    expect(timeline.positionAt((1.25 - 0.5) / 3)).toBeCloseTo(0.5, 10); // half-way between centres 0.5 and 2 is 1.25 vh
-  });
-
-  it("never runs backwards when the keyframes rise, and stays inside the first and last keyframe", () => {
-    let last = -1;
-    for (let i = 0; i <= 200; i++) {
-      const value = timeline.visualAt(i / 200);
-      expect(value).toBeGreaterThanOrEqual(last - 1e-12);
-      expect(value).toBeGreaterThanOrEqual(0);
-      expect(value).toBeLessThanOrEqual(1);
-      last = value;
+  it("plays a jump over several steps faster than the steps one after the other, within bounds", () => {
+    expect(plan.duration(0, 2)).toBeCloseTo((1 + 1.4) * 0.55);
+    expect(plan.duration(0, 3)).toBeCloseTo((1 + 1.4 + 2.5) * 0.55);
+    for (let from = 0; from < 5; from++) {
+      for (let to = 0; to < 5; to++) {
+        if (from === to) continue;
+        const seconds = plan.duration(from, to);
+        expect(seconds).toBeGreaterThanOrEqual(MIN_SECONDS);
+        expect(seconds).toBeLessThanOrEqual(MAX_SECONDS);
+      }
     }
   });
 
-  it("fades a card out as it leaves the reading line", () => {
-    const centred = timeline.progressAtStep(1);
-    expect(timeline.cardOpacity(centred, 1)).toBe(1);
-    expect(timeline.cardOpacity(centred, 0)).toBe(0);
-    expect(timeline.cardOpacity(centred, 2)).toBe(0);
-    // 0.3 vh away: part-way, and the same on either side
-    const near = (offset: number) => timeline.cardOpacity((2 + offset - 0.5) / 3, 1);
-    expect(near(0.3)).toBeGreaterThan(0);
-    expect(near(0.3)).toBeLessThan(1);
-    expect(near(0.3)).toBeCloseTo(near(-0.3), 10);
+  it("takes as long to go back as to come", () => {
+    expect(plan.duration(4, 1)).toBe(plan.duration(1, 4));
+  });
+});
+
+describe("the step under the reading line", () => {
+  // three blocks one after the other, 600 px each
+  const blocks: Block[] = [
+    { start: 0, end: 600 },
+    { start: 600, end: 1200 },
+    { start: 1200, end: 1800 },
+  ];
+
+  it("is the block that holds the line", () => {
+    expect(stepAtLine(blocks, 100, 0, 0)).toBe(0);
+    expect(stepAtLine(blocks, 700, 0, 0)).toBe(1);
+    expect(stepAtLine(blocks, 1700, 0, 0)).toBe(2);
   });
 
-  it("clamps the progress that brings a card to the reading line", () => {
-    expect(timeline.progressAtStep(0)).toBe(0);
-    expect(timeline.progressAtStep(2)).toBe(1);
-    expect(timeline.progressAtStep(1)).toBeCloseTo(0.5);
+  it("clamps above the first block and below the last", () => {
+    expect(stepAtLine(blocks, -500, 1, 0)).toBe(0);
+    expect(stepAtLine(blocks, 9000, 0, 0)).toBe(2);
   });
 
-  it("copes with a stage that is one viewport high, which never pins", () => {
-    const one = buildTimeline([{ id: "only", at: 0.7 }]);
-    expect(one.height).toBe(1);
-    expect(one.visualAt(0)).toBeCloseTo(0.7);
-    expect(one.visualAt(1)).toBeCloseTo(0.7);
-    expect(one.progressAtStep(0)).toBe(0);
-    expect(one.stepAt(0.5)).toBe(0);
+  it("crosses several blocks at once when the line does", () => {
+    expect(stepAtLine(blocks, 1500, 0, 40)).toBe(2);
+    expect(stepAtLine(blocks, 50, 2, 40)).toBe(0);
   });
 
-  it("refuses a stage with no steps, or a step with no height", () => {
-    expect(() => buildTimeline([])).toThrow(/at least one/);
-    expect(() => buildTimeline([{ id: "x", at: 0, weight: 0 }])).toThrow(/weight/);
+  it("holds the step until the line is a margin past the boundary, from either side", () => {
+    // going down through the boundary at 600
+    expect(stepAtLine(blocks, 620, 0, 40)).toBe(0);
+    expect(stepAtLine(blocks, 641, 0, 40)).toBe(1);
+    // coming back up through it
+    expect(stepAtLine(blocks, 580, 1, 40)).toBe(1);
+    expect(stepAtLine(blocks, 559, 1, 40)).toBe(0);
+  });
+
+  it("does not flicker when the line shakes about a boundary", () => {
+    let step = 0;
+    const seen = new Set<number>();
+    for (const line of [590, 610, 595, 612, 605, 598, 615, 600]) {
+      step = stepAtLine(blocks, line, step, 40);
+      seen.add(step);
+    }
+    expect([...seen]).toEqual([0]);
+  });
+
+  it("copes with a stage that has no blocks yet and with a current step outside the blocks", () => {
+    expect(stepAtLine([], 300, 0, 40)).toBe(0);
+    expect(stepAtLine(blocks, 700, 9, 0)).toBe(1);
+    expect(stepAtLine(blocks, 700, -4, 0)).toBe(1);
   });
 });

@@ -6,6 +6,7 @@ import type { ViewState } from "../lib/reducer";
 import { cellCollision, cellKey, openCollisions, rulingsEnd, type Cell, type Collision } from "../lib/schedule";
 import { useRunStore } from "../store";
 import { ClockScope } from "./ClockScope";
+import { Term } from "./ui";
 
 function squadColor(view: ViewState, squad: string, squads: string[]): string {
   if (view.actors[squad]) return colorOf(view, squad);
@@ -58,13 +59,11 @@ export const GridCell = memo(function GridCell({ cell, collision, color, fresh }
     ...(color ? { "--squad": color } : {}),
     ...(ruled ? glowVars(collision.resolvedTs!, fadeLife(RESOLVED_LIFE_MS)) : {}),
   } as CSSProperties;
+  const detail = cell ? `${cell.talkId} · ${cell.squad}${cell.speaker ? ` · ${cell.speaker}` : ""}` : "";
   return (
-    <td
-      className={classes}
-      style={style}
-      title={cell ? `${cell.talkId} · ${cell.squad}${cell.speaker ? ` · ${cell.speaker}` : ""}` : ""}
-    >
+    <td className={classes} style={style} title={detail}>
       {cell && <span className="cell__talk">{cell.title ?? cell.talkId}</span>}
+      {cell && <span className="sr-only">{detail}</span>}
       {open && <span className="cell__tag cell__tag--bad">collision</span>}
       {ruled && (
         <span className="cell__tag cell__tag--ruling">
@@ -90,7 +89,7 @@ export function ScheduleGrid({ view }: { view: ViewState }) {
   if (schedule.rooms.length === 0 || schedule.slots.length === 0) {
     return (
       <div className="empty">
-        No schedule in this run yet. The T2 grid fills in as sessions place talks (
+        No schedule in this run yet. The <Term id="t2">T2</Term> grid fills in as sessions place talks (
         <code>schedule.placed</code>).
       </div>
     );

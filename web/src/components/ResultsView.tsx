@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
 import { asNumber, asStrings, digest } from "../lib/generic";
+import { defineTerm } from "../lib/glossary";
 import type { ViewState } from "../lib/reducer";
 import { outcomeOf, placementsOf, type Outcome } from "../lib/results";
 import { useRunStore } from "../store";
@@ -94,7 +95,7 @@ export function ResultsView({ view }: { view: ViewState }) {
             <span className="results__outcome">{OUTCOME[outcome].label}</span>
           </Pill>
           <div>
-            <h1>{task ? task.task : "Results"}</h1>
+            <h2 className="results__task">{task ? task.task : "Result"}</h2>
             <div className="muted">
               {task
                 ? `reported by ${task.actor} at t = ${virtualSeconds(task.ts)} · task.result, event ${task.seq}`
@@ -108,7 +109,7 @@ export function ResultsView({ view }: { view: ViewState }) {
           {soft !== null && <PStat label="soft score" value={soft.toFixed(2)} />}
           <PStat label="gaps" value={gaps.length} tone={gaps.length > 0 ? "warn" : ""} />
           <PStat label="spent" value={money(economy.spentUsd)} />
-          <PStat label="coordination tokens" value={view.counters.coordinationTokens} tone="good" title="LLM tokens spent on membership, ownership and takeover" />
+          <PStat label="coordination tokens" value={view.counters.coordinationTokens} tone="good" title={defineTerm("coordinationTokens")} />
         </div>
         {outcome === "pending" && (
           <div className="results__wait">
@@ -132,7 +133,7 @@ export function ResultsView({ view }: { view: ViewState }) {
           {task ? <Schedule report={report} /> : <Nothing>The schedule is part of the final report.</Nothing>}
         </Card>
 
-        <Card title="Goals and verification" hint="spec §11">
+        <Card title="Goals and verification" hint="each goal, and how it was checked">
           <div className="pstats">
             <PStat label="contracts verified" value={`${contracts.verified} / ${contracts.created}`} />
             <PStat label="rejected" value={contracts.rejected} tone={contracts.rejected > 0 ? "warn" : ""} />

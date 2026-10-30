@@ -10,7 +10,7 @@ export function CollisionsPanel({ view }: { view: ViewState }) {
   const rows = [...collisions.rows].reverse();
 
   return (
-    <Card title="Collisions log" hint="spec §6">
+    <Card title="Collisions log" hint="booking conflicts between squads, and who resolved them">
       <div className="pstats">
         <PStat label="collisions" value={collisions.rows.length} tone={collisions.rows.length > 0 ? "warn" : ""} />
         <PStat label="open" value={open} tone={open > 0 ? "bad" : ""} />
@@ -40,7 +40,7 @@ export function CollisionsPanel({ view }: { view: ViewState }) {
                 {row.conflicts.length > 0 && (
                   <div className="crow__keys mono">
                     {row.conflicts.slice(0, KEYS_SHOWN).map((c) => (
-                      <span key={c.key} title={c.holder ? `held by ${c.holder}` : ""}>
+                      <span key={c.key}>
                         {c.key}
                         {c.reason ? ` (${c.reason}${c.holder ? ` by ${c.holder}` : ""})` : ""}{" "}
                       </span>

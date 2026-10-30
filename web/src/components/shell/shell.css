@@ -1,0 +1,72 @@
+/* The top of the app: the four places and, under them, the views of the place the person is in (a run's, the evidence's).
+ * The places and their tabs reuse the app's `.topbar`, `.brand` and `.tab` rules. */
+
+.shell {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* A way past the bars to the page for the keyboard: out of sight until it takes focus. */
+.shell__skip {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-3);
+  z-index: var(--z-toast);
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.shell__skip:focus-visible {
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip-path: none;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: var(--fs-body);
+  box-shadow: var(--shadow-raised);
+}
+
+/* The second row: quieter than the places above it, and as low as a row of tabs can be. */
+.subnav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-height: 44px;
+  padding: var(--space-1) 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.subnav .tab {
+  padding: 6px 12px;
+}
+
+/* The run picked and its state sit at the end of the row, so that what arrives after the page (the scenario, the status) moves nothing
+   that was already there; the picker is one width, since a select is as wide as its longest option and the list arrives late. */
+.subnav__context {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  margin-left: auto;
+}
+
+.subnav select {
+  flex: none;
+  width: 240px;
+}
+
+@media (max-height: 820px) {
+  .subnav {
+    min-height: 40px;
+  }
+}

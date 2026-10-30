@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import { describeCells, editWords, shortHash } from "./format";
-import { isWorking, phaseFor, phaseOf, stepOf } from "./flow";
+import { isWorking, phaseFor, phaseOf, startingReading, stepOf } from "./flow";
 import { intakeHash, parseIntakeRoute } from "./route";
 import { fixture, museReading, stateOf } from "./testing";
 
@@ -101,5 +101,33 @@ describe("words", () => {
 
   it("shortens a hash", () => {
     expect(shortHash("08e68651a1ffedcba9876543210")).toBe("08e68651a1ff");
+  });
+});
+
+describe("the rows a review starts from", () => {
+  it("is Muse's reading for a reading that waits for review", () => {
+    const state = stateOf("intake.proposed.json");
+    const start = startingReading(state);
+    expect(start?.working).toBe(start?.original);
+    expect(start?.original).toBe(state.proposal);
+  });
+
+  it("is the approved version for an approved intake, compared against Muse's, when the server keeps it", () => {
+    const state = stateOf("intake.approved.json");
+    const approvedReading = { ...museReading(), talks: museReading().talks.slice(0, 3) };
+    const start = startingReading({ ...state, approved: { ...state.approved!, proposal: approvedReading } });
+    expect(start?.original).toBe(state.proposal);
+    expect(start?.working).toBe(approvedReading);
+    expect(start?.working).not.toBe(start?.original);
+  });
+
+  it("falls back to Muse's reading when an older server does not send the approved one", () => {
+    const state = stateOf("intake.approved.json");
+    expect(startingReading(state)?.working).toBe(state.proposal);
+  });
+
+  it("is nothing while there is no reading", () => {
+    expect(startingReading(stateOf("intake.started.json"))).toBeNull();
+    expect(startingReading(stateOf("intake.refused.json"))).toBeNull();
   });
 });

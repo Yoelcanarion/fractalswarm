@@ -7,7 +7,8 @@ import { axis, GRID, TOOLTIP_LABEL_STYLE, TOOLTIP_STYLE } from "../lib/chart";
 import { useFirstDraw } from "../lib/chartMotion";
 import { compact } from "../lib/generic";
 import type { ViewState } from "../lib/reducer";
-import { Card, GenericRows, money, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
+import { Card, GenericRows, money, Nothing, percent, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
+import { Hint, Term } from "./ui";
 
 const AXIS = axis(12);
 
@@ -18,7 +19,9 @@ const LEVELS: Record<LadderLevel, { label: string; tone: "good" | "warn" | "bad"
   stop: { label: "stop", tone: "bad", what: "partial result" },
 };
 
-// What each level changes (spec §7.4).
+// What each level of the budget ladder changes.
+const LADDER_BAR = "Committed money (spent + reserved) against the run cap; the model ladder steps down at 80, 90 and 95%";
+
 const LADDER_MEANING: Record<LadderLevel, string> = {
   L0: "full models, speculative execution allowed",
   L1: "cheaper model or effort, no speculative execution, scale down",
@@ -85,7 +88,11 @@ export function MarketPanel({ view }: { view: ViewState }) {
       wide
       hint={
         <>
-          {view.marketEpoch > 0 ? `market epoch ${view.marketEpoch} · ` : ""}
+          {view.marketEpoch > 0 && (
+            <>
+              <Term id="marketEpoch">market epoch</Term> {view.marketEpoch} ·{" "}
+            </>
+          )}
           {economy.settled} calls settled · {economy.cancelled} cancelled in flight
         </>
       }
@@ -111,7 +118,7 @@ export function MarketPanel({ view }: { view: ViewState }) {
         <PStat label="refused" value={economy.refusedCount} tone={economy.refusedCount > 0 ? "bad" : ""} title="calls the budget caps refused" />
       </div>
 
-      <div className="ladder" title="committed money (spent + reserved) against the run cap; the model ladder steps down at 80, 90 and 95%">
+      <div className="ladder" role="img" aria-label={`${percent(Math.min(share, 1))} of the run cap is committed (spent + reserved). The model ladder steps down at 80, 90 and 95%.`} title={LADDER_BAR}>
         <i className={`ladder__fill ladder__fill--${LEVELS[level].tone}`} style={{ width: `${Math.min(share, 1) * 100}%` }} />
         {[LADDER.L1, LADDER.L2, LADDER.stop].map((at, i) => (
           <b key={at} className="ladder__tick" style={{ left: `${at * 100}%` }}>
@@ -169,8 +176,10 @@ export function MarketPanel({ view }: { view: ViewState }) {
                 // A squad the market has capped is measured against its cap, the rest against the biggest spender.
                 const capped = row.cap !== null && row.cap > 0;
                 const filled = Math.min(used / (capped ? row.cap! : mostSpent), 1);
+                const calls = `${row.calls} calls${row.refused ? `, ${row.refused} refused` : ""}`;
                 return (
-                  <li key={row.squad} title={`${row.calls} calls${row.refused ? `, ${row.refused} refused` : ""}`}>
+                  <li key={row.squad} title={calls}>
+                    <span className="sr-only">{calls}</span>
                     <span className="mono bars__name">{row.squad}</span>
                     <span className="bars__track">
                       <i className={capped && filled >= 0.9 ? "bars__fill--bad" : ""} style={{ width: `${filled * 100}%` }} />
@@ -200,18 +209,22 @@ export function MarketPanel({ view }: { view: ViewState }) {
               {head && head.grants.length > 0 && (
                 <div className="spendchips">
                   {head.grants.slice(0, 5).map((grant) => (
-                    <span key={grant.child} className="spendchip" title="granted to this child for the next epoch">
-                      <b>{grant.child}</b> {money(grant.usd, 3)}
-                    </span>
+                    <Hint key={grant.child} label="granted to this child for the next epoch">
+                      <span className="spendchip">
+                        <b>{grant.child}</b> {money(grant.usd, 3)}
+                      </span>
+                    </Hint>
                   ))}
                 </div>
               )}
               {auction.epochs.length > 0 && (
                 <div className="spendchips">
                   {auction.epochs.slice(-5).map((epoch) => (
-                    <span key={epoch.seq} className="spendchip" title={`t = ${virtualSeconds(epoch.ts)} · ${epoch.completions} completions`}>
-                      {epoch.goalId} e{epoch.epoch} <span className="muted">{epoch.reason}</span>
-                    </span>
+                    <Hint key={epoch.seq} label={`t = ${virtualSeconds(epoch.ts)} · ${epoch.completions} completions`}>
+                      <span className="spendchip">
+                        {epoch.goalId} e{epoch.epoch} <span className="muted">{epoch.reason}</span>
+                      </span>
+                    </Hint>
                   ))}
                 </div>
               )}

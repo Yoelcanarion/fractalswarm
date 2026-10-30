@@ -27,10 +27,10 @@ export function SkeletonText({ lines = 3 }: { lines?: number }) {
   );
 }
 
-/** Announces "Loading ..." once and marks its contents busy. */
-export function SkeletonGroup({ label = "Loading", children }: { label?: string; children: ReactNode }) {
+/** Announces "Loading ..." once and marks its contents busy. `skeleton-group--stack` spaces the blocks inside it. */
+export function SkeletonGroup({ label = "Loading", className = "", children }: { label?: string; className?: string; children: ReactNode }) {
   return (
-    <div className="skeleton-group" role="status" aria-busy="true">
+    <div className={["skeleton-group", className].filter(Boolean).join(" ")} role="status" aria-busy="true">
       <span className="sr-only">{label}…</span>
       {children}
     </div>

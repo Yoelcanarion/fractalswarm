@@ -1,4 +1,3 @@
-import { m, useTransform, type MotionValue } from "motion/react";
 import { useMemo } from "react";
 
 import { COPY } from "../copy";
@@ -7,8 +6,7 @@ import { facts, finish, runSetting, settingText, takeover, treeBeats } from "../
 import { ChapterHead, Setting, StepText } from "../parts/Chapter";
 import { Claim } from "../parts/Claim";
 import { Figure } from "../parts/Figure";
-import { Stage, type StageStep } from "../scroll/Stage";
-import { clamp01 } from "../scroll/timeline";
+import { Layer, Stage, type StageStep, type StageVisualContext } from "../scroll/Stage";
 import { slice, useStory, type Story } from "../story";
 import { Viz } from "../visuals";
 import { TREE_KEYFRAMES } from "../viz/keyframes";
@@ -16,9 +14,6 @@ import { TREE_KEYFRAMES } from "../viz/keyframes";
 // Where the kill sequence of the demo bundle sits in the tree's progress, read from the log by W7's timeline.
 // The text below follows these names.
 const BEATS = treeBeats(TREE_KEYFRAMES);
-
-/** Where, on the reading line, the survivors' panels play from 0 to 1 (the heir step is index 4 of the steps below). */
-const HRW_PLAY = [3.7, 4.4] as const;
 
 export function Solution() {
   const story = useStory();
@@ -28,25 +23,32 @@ export function Solution() {
   const run = takeover(story);
   const setting = settingText(story, runSetting(story));
 
-  const steps: StageStep[] = useMemo(() => {
+  // Each step names where the tree's progress goes while it is current and how long it takes to get there (`play`, in
+  // seconds: the tree's own clock is 36 s long, so these are speed-ups of the recorded run, and the reading time is the
+  // step's). The survivors' panels play on a channel of their own (`hrw`), and the hash strip, the tree and the panels
+  // are layers that come and go by step.
+  const steps = useMemo((): StageStep[] => {
     const s = COPY.solution.steps;
     const chain = run.rootChain.length ? `${s.again.more} ${run.rootChain.join(" → ")}.` : s.again.more;
     return [
       {
         id: "intro",
         at: 0,
-        weight: 0.9,
+        weight: 0.8,
+        layers: { strip: 0, tree: 1, hrw: 0 },
         content: (
           <ChapterHead id="solution" number="02" eyebrow={COPY.solution.eyebrow} title={COPY.solution.title}>
             <p>{COPY.solution.lede(f)}</p>
           </ChapterHead>
         ),
       },
-      { id: "tree", at: kf.grown, weight: 0.8, content: <StepText lead={s.tree.lead} more={s.tree.more} /> },
+      { id: "tree", at: kf.grown, play: 1.2, content: <StepText lead={s.tree.lead} more={s.tree.more} /> },
       {
         id: "log",
         at: kf.log,
-        weight: 0.8,
+        weight: 0.6,
+        play: 1.1,
+        layers: { strip: 1 },
         content: (
           <>
             <Claim id="S6" className="home-claim--lead" />
@@ -55,12 +57,16 @@ export function Solution() {
           </>
         ),
       },
-      { id: "kill", at: kf.kill1, weight: 0.9, content: <StepText lead={s.kill.lead} more={s.kill.more} /> },
+      { id: "kill", at: kf.kill1, play: 1.1, content: <StepText lead={s.kill.lead} more={s.kill.more} /> },
+      // The heartbeats stop, the survivors agree the root is dead and each works out the heir alone: the tree goes back and the
+      // panels play on top of it, from the verdict to the heir.
       {
         id: "heir",
         at: kf.heir1,
-        weight: 1.2,
-        hold: 0.7,
+        weight: 0.6,
+        play: 2.6,
+        to: { hrw: 1 },
+        layers: { tree: 0.12, hrw: 1 },
         content: (
           <>
             <Claim id="S1" className="home-claim--lead" />
@@ -70,13 +76,14 @@ export function Solution() {
           </>
         ),
       },
-      { id: "adopt", at: kf.adopt1, weight: 0.8, content: <StepText lead={s.adopt.lead} more={s.adopt.more} /> },
-      // The other four kills run between the adoption and this step: a tall block gives each of them about a third of a screen.
-      { id: "again", at: kf.kill5, weight: 2, hold: 0.1, content: <StepText lead={s.again.lead} more={chain} /> },
+      { id: "adopt", at: kf.adopt1, play: 1.2, layers: { tree: 1, hrw: 0 }, content: <StepText lead={s.adopt.lead} more={s.adopt.more} /> },
+      // The other four kills play between the adoption and this step, in two and a half seconds.
+      { id: "again", at: kf.kill5, play: 2.5, content: <StepText lead={s.again.lead} more={chain} /> },
       {
         id: "done",
         at: kf.settled,
-        weight: 1.1,
+        play: 1.8,
+        weight: 0.9,
         content: (
           <>
             <StepText lead={s.done.lead} />
@@ -101,42 +108,27 @@ export function Solution() {
         id="solution-stage"
         label={COPY.solution.visual}
         steps={steps}
-        visual={({ progress, position, still }) => <SolutionVisual story={story} progress={progress} position={position} still={still} />}
+        visual={({ progress, channels, still }) => <SolutionVisual story={story} progress={progress} channels={channels} still={still} />}
       />
     </section>
   );
 }
 
-function SolutionVisual({
-  story,
-  progress,
-  position,
-  still,
-}: {
-  story: Story | null;
-  progress: MotionValue<number>;
-  position: MotionValue<number>;
-  still: boolean;
-}) {
-  // The survivors' panels take the tree's place while they work out the heir, then give it back. The tree's clock holds
-  // still from the verdict to the heir, a sliver of its progress (a tenth of a screen of scroll), so the panels do not
-  // follow it: they follow the reading line (`position`: 4 is the heir card), which crosses the heir step's block, where
-  // the tree is held, between about 3.6 and 4.4. That is most of a screen of scroll for the panels to work in.
-  const hrwProgress = useTransform(position, (v) => clamp01((v - HRW_PLAY[0]) / (HRW_PLAY[1] - HRW_PLAY[0])));
-  const hrwOpacity = useTransform(position, [3.4, 3.7, 4.45, 4.9], [0, 1, 1, 0]);
-  const treeOpacity = useTransform(position, [3.4, 3.7, 4.45, 4.9], [1, 0.12, 0.12, 1]);
-  const stripOpacity = useTransform(position, [1.3, 2], [0, 1]);
+function SolutionVisual({ story, progress, channels, still }: { story: Story | null; progress: StageVisualContext["progress"]; channels: StageVisualContext["channels"]; still: boolean }) {
   return (
     <div className="home-solution">
-      <m.div className="home-solution__tree" style={{ opacity: still ? 1 : treeOpacity }}>
+      <Layer name="tree" className="home-solution__tree">
         <Viz name="SwarmTree" data={slice(story, "tree")} progress={progress} still={still} pacing="story" />
-      </m.div>
-      <m.div className="home-solution__hrw" style={{ opacity: still ? 0 : hrwOpacity }}>
-        <Viz name="HrwPanels" data={slice(story, "hrw")} progress={hrwProgress} still={still} />
-      </m.div>
-      <m.div className="home-solution__strip" style={{ opacity: still ? 1 : stripOpacity }}>
+      </Layer>
+      {/* the survivors' panels have no place of their own in the still page: they are one of the tree's moments */}
+      {!still && (
+        <Layer name="hrw" className="home-solution__hrw">
+          <Viz name="HrwPanels" data={slice(story, "hrw")} progress={channels.hrw} still={false} />
+        </Layer>
+      )}
+      <Layer name="strip" className="home-solution__strip">
         <Viz name="HashStrip" data={slice(story, "hashes")} progress={progress} still={still} />
-      </m.div>
+      </Layer>
     </div>
   );
 }

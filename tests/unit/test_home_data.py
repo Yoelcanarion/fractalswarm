@@ -377,3 +377,101 @@ def test_the_verdicts_name_their_setting(committed: dict):
     }
     seeds = {s for c in verdicts["comparisons"] for s in c["seeds"]}
     assert seeds <= set(headline["seeds"])
+
+
+def recorded_reading(generator: ModuleType, speaker: str) -> dict:
+    """What the bundle's own events say about one speaker's email and availability fact, read
+    straight from events.jsonl, apart from the generator's code."""
+    emails: dict[str, dict] = {}
+    readings = []
+    with (REPO / generator.DEFAULT_BUNDLE / "events.jsonl").open(encoding="utf-8") as fh:
+        for line in fh:
+            event = json.loads(line)
+            payload = event["payload"]
+            if event["type"] == "effect.started" and payload.get("kind") == "llm":
+                messages = payload["request"].get("input")
+                first = messages[0].get("content") if isinstance(messages, list) else None
+                block = re.search(
+                    r"<<<UNTRUSTED emails\n(.*?)\nEND UNTRUSTED emails>>>", first or "", re.S
+                )
+                for item in json.loads(block.group(1)) if block else []:
+                    emails.setdefault(item["speaker_id"], item)
+            if event["type"] == "effect.completed" and payload.get("kind") == "llm":
+                for item in payload["result"].get("output") or []:
+                    if item.get("name") != "memory.publish_fact":
+                        continue
+                    args = json.loads(item["arguments"])
+                    if args["key"] == f"speaker:{speaker}:availability":
+                        readings.append(
+                            (event["seq"], payload["effect_id"], payload["result"]["model"], args)
+                        )
+    return {"email": emails[speaker], "readings": readings}
+
+
+def test_the_extraction_is_the_email_as_a_recorded_call_read_it(
+    generator: ModuleType, committed: dict
+):
+    example = committed["extraction"]
+    recorded = recorded_reading(generator, "S12")
+    assert example["email"] == recorded["email"]["body"]
+    first_seq, first_effect, model, args = recorded["readings"][0]
+    assert committed["sources"]["extraction"] == {
+        "path": "demo/backup/events.jsonl",
+        "runId": committed["sources"]["bundle"]["runId"],
+        "head": committed["hashes"]["head"],
+        "effect": first_effect,
+        "seq": first_seq,
+        "speaker": "S12",
+        "email": recorded["email"]["id"],
+        "readings": len(recorded["readings"]),
+        "agreeing": len(recorded["readings"]),
+    }
+    assert model in example["model"] and "not a real person" in example["model"]
+    # what the model published is what the constraints say, slot index for slot index
+    value = json.loads(args["value_json"])
+    assert value == {
+        "available": [
+            {"day": 1, "slots": list(range(9))},
+            {"day": 2, "slots": list(range(2, 9))},
+        ],
+        "preference": "none",
+    }
+    assert [c["text"] for c in example["constraints"]] == [
+        "Day 2: from 10:30",
+        "Day 1: any time",
+        "No time preference",
+    ]
+
+
+def test_each_constraint_points_at_the_words_it_is_read_from(committed: dict):
+    example = committed["extraction"]
+    email = example["email"]
+    spans = [tuple(c["source"]) for c in example["constraints"]]
+    assert spans == sorted(spans), "in the order of the email"
+    for (_, end), (start, _) in zip(spans, spans[1:], strict=False):
+        assert end <= start, "no two overlap"
+    assert email.isascii(), "offsets count the same in Python and in the page"
+    for constraint in example["constraints"]:
+        start, end = constraint["source"]
+        assert 0 <= start < end <= len(email)
+    said = {c["text"]: email[c["source"][0] : c["source"][1]] for c in example["constraints"]}
+    assert "10:30" in said["Day 2: from 10:30"] and "day 2" in said["Day 2: from 10:30"]
+    assert "other day" in said["Day 1: any time"]
+    assert said["No time preference"].startswith("No preference")
+
+
+def test_slots_are_put_in_the_words_of_the_clock(generator: ModuleType):
+    every = [
+        {"index": 0, "start": "09:00", "end": "09:45"},
+        {"index": 1, "start": "09:45", "end": "10:30"},
+        {"index": 2, "start": "10:30", "end": "11:15"},
+        {"index": 3, "start": "14:00", "end": "14:45"},
+    ]
+    words = generator.slot_words
+    assert words(1, [0, 1, 2, 3], every) == "Day 1: any time"
+    assert words(2, [2, 3], every) == "Day 2: from 10:30"
+    assert words(2, [0, 1], every) == "Day 2: until 10:30"
+    assert words(1, [1, 2], every) == "Day 1: 09:45 to 11:15"
+    assert words(2, [], every) == "Day 2: not available"
+    with pytest.raises(AssertionError, match="not one stretch"):
+        words(1, [0, 2], every)

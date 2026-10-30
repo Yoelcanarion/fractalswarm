@@ -6,14 +6,22 @@ import { MarketPanel } from "../components/MarketPanel";
 import { MemoryPanel } from "../components/MemoryPanel";
 import { RunControls } from "../components/RunControls";
 import { RunFrame } from "../components/RunFrame";
+import { Term } from "../components/ui";
 import { useRunStore } from "../store";
 
-/** The supporting panels (spec §16, Day 9): each is a projection of the events up to the playhead. */
+/** The supporting panels: each is a projection of the events up to the playhead. */
 export function PanelsPage() {
   const runId = useRunStore((s) => s.runId);
   const view = useRunStore((s) => s.view);
   return (
-    <RunFrame>
+    <RunFrame
+      title="Panels"
+      lead={
+        <>
+          Money, rate limits, <Term id="breaker">breakers</Term>, memory, booking conflicts and escalations, as they stood at the <Term id="playhead">playhead</Term>.
+        </>
+      }
+    >
       <RunControls runId={runId!} view={view} />
       <div className="pgrid">
         <MarketPanel view={view} />

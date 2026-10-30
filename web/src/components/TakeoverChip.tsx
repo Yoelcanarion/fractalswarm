@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 
 import { describeTakeover, logHasTakeover } from "../lib/takeover";
 import { useRunStore } from "../store";
+import { Hint } from "./ui";
 
 /** "Takeover OK ✓" once the server has re-derived every heir from the log and found none different
  * from the one the run used. It sits next to the replay badge: that one proves the run replays, this
@@ -31,17 +32,17 @@ export function TakeoverChip() {
       return <span className="badge badge--muted">Checking takeover…</span>;
     case "error":
       return (
-        <span className="badge badge--muted" title={takeover.error}>
-          Takeover check unavailable
-        </span>
+        <Hint focusable label={takeover.error}>
+          <span className="badge badge--muted">Takeover check unavailable</span>
+        </Hint>
       );
     case "done": {
       const chip = describeTakeover(takeover.report, inLog);
       const tone = chip.tone === "good" ? "badge--good badge--big" : chip.tone === "bad" ? "badge--bad badge--big" : "badge--muted";
       return (
-        <span className={`badge ${tone}`} title={chip.detail}>
-          {chip.text}
-        </span>
+        <Hint focusable label={chip.detail}>
+          <span className={`badge ${tone}`}>{chip.text}</span>
+        </Hint>
       );
     }
   }

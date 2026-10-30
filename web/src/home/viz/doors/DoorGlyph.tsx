@@ -71,22 +71,25 @@ function Live({ part }: { part: Part }) {
   );
 }
 
-/** A chain of recorded steps, each linked to the one before it and checked. */
+/** The table the door opens on: a row for each recorded run, with its name, its REPLAY chip and its head, and a check once it is verified. */
 function Replays({ part }: { part: Part }) {
-  const xs = [12, 64, 116, 168] as const;
+  const names = [30, 38, 26, 34] as const;
+  const heads = [22, 18, 24, 20] as const;
+  const { rows } = GEOM.replays;
   return (
     <>
-      {xs.map((x) => (
-        <g key={x}>
-          <rect className="hv-dg-box" x={x} y="24" width="40" height="44" rx="5" />
-          <path className="hv-dg-ink hv-dg-ink--fine" d={`M${x + 8} 36H${x + 32}M${x + 8} 46H${x + 24}M${x + 8} 56H${x + 32}`} />
+      <rect className="hv-dg-box" x="8" y="6" width="204" height="98" rx="7" />
+      <path className="hv-dg-ink hv-dg-ink--fine" d="M20 18H40M90 18H112M142 18H160M184 18H198" />
+      <path className="hv-dg-soft" d="M8 28H212" />
+      {rows.map((y, i) => (
+        <g key={y}>
+          <line className="hv-dg-ink" x1="20" y1={y} x2={20 + names[i]!} y2={y} />
+          <rect className="hv-dg-chip" x="90" y={y - 5} width="34" height="10" rx="3" />
+          <line className="hv-dg-ink hv-dg-ink--fine" x1="142" y1={y} x2={142 + heads[i]!} y2={y} />
+          {i < rows.length - 1 && <path className="hv-dg-soft" d={`M8 ${y + 8.5}H212`} />}
         </g>
       ))}
-      {[0, 1, 2].map((i) => (
-        <line key={i} className="hv-dg-edge" x1={xs[i]! + 40} y1="46" x2={xs[i + 1]!} y2="46" />
-      ))}
-      {[0, 1, 2].map((i) => part(`link-${i}`, <line className="hv-dg-ok hv-dg-ok--thin" x1={xs[i]! + 40} y1="46" x2={xs[i + 1]!} y2="46" />))}
-      {xs.map((_, i) => part(`check-${i}`, <path className="hv-dg-ok" d="M-7 0L-2.5 4.5L7 -6" />))}
+      {rows.map((_, i) => part(`check-${i}`, <path className="hv-dg-ok" d="M-7 0L-2.5 4.5L7 -6" />))}
     </>
   );
 }
