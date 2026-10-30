@@ -22,6 +22,21 @@
   margin-left: auto;
 }
 
+/* On a laptop screen the strip is one row, not two: the cache share, the token counts and the hash (all in the hints, and the first two in
+   the lens) give way to the two proofs, and the gaps close up. A media query, not a container query. */
+@media (max-width: 1500px) {
+  .runstrip,
+  .runstrip .meter {
+    column-gap: 12px;
+  }
+  .meter__tok,
+  .meter > :has(> .meter__cache),
+  .meter__sep:has(+ * > .meter__cache),
+  .verify__head {
+    display: none;
+  }
+}
+
 /* ---- the Muse meter ---- */
 .meter {
   display: flex;

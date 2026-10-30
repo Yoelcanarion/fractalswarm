@@ -33,21 +33,19 @@ export interface TopBarProps {
 }
 
 function RunBar({ view, runId, runs, runStatus, scenario, blocked, onPickRun }: Omit<TopBarProps, "where"> & { view: RunView }) {
+  // the run that is open is an option from the first paint, before the list of runs has arrived
+  const options = runId === null || runs.some((run) => run.id === runId) ? runs : [{ id: runId }, ...runs];
   return (
     <div className="subnav">
-      <div className="subnav__context">
-        {runId !== null && (
-          <select value={runId} onChange={(event) => onPickRun(event.target.value)} aria-label="Run">
-            {runs.map((run) => (
-              <option key={run.id} value={run.id}>
-                {run.id}
-              </option>
-            ))}
-          </select>
-        )}
-        {scenario && <span className="mono muted">{scenario.split(":").at(-1)}</span>}
-        <StatusBadge status={runStatus} />
-      </div>
+      {runId !== null && (
+        <select value={runId} onChange={(event) => onPickRun(event.target.value)} aria-label="Run">
+          {options.map((run) => (
+            <option key={run.id} value={run.id}>
+              {run.id}
+            </option>
+          ))}
+        </select>
+      )}
       <nav className="tabs" aria-label="Views of this run">
         {RUN_VIEWS.map((name) => (
           <a key={name} className={name === view ? "tab tab--on" : "tab"} href={runViewHash(runId, name)} aria-current={name === view ? "page" : undefined}>
@@ -60,6 +58,10 @@ function RunBar({ view, runId, runs, runStatus, scenario, blocked, onPickRun }: 
           </a>
         ))}
       </nav>
+      <div className="subnav__context">
+        {scenario && <span className="mono muted">{scenario.split(":").at(-1)}</span>}
+        <StatusBadge status={runStatus} />
+      </div>
     </div>
   );
 }

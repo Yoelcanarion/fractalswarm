@@ -28,7 +28,7 @@ export function VerifyBadge() {
         return (
           <Hint focusable label={`${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head}`}>
             <span className="badge badge--good badge--big">
-              Replay verified ✓ hash match <span className="mono">{report.replayed_head.slice(0, 12)}</span>
+              Replay verified ✓ hash match <span className="mono verify__head">{report.replayed_head.slice(0, 12)}</span>
             </span>
           </Hint>
         );

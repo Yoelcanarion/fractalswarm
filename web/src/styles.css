@@ -231,9 +231,10 @@ textarea {
 
 .panel__title {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 2px 10px;
   font-size: var(--fs-body);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -369,6 +370,10 @@ textarea {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+}
+
+.run__side > .chaos {
+  flex: none;
 }
 
 /* ---- counters ---- */
@@ -531,7 +536,8 @@ textarea {
 .actor__adopted {
   margin-top: 4px;
   font-size: var(--fs-label);
-  color: var(--owner);
+  /* the owner's track colour, pulled toward the text colour: the colour itself is 4.4:1 on the card for some tracks */
+  color: color-mix(in srgb, var(--owner) 60%, var(--text-primary));
   font-weight: 600;
 }
 
@@ -1115,6 +1121,33 @@ textarea {
   }
   .run__canvas {
     min-height: 420px;
+  }
+}
+
+/* A short screen (a laptop's 768 px): the run page fills it when it fits and scrolls when it does not. At a screen's height it is exactly
+   as tall as the screen, so here the panels were squeezed and what did not fit (the tree, the chaos list) ran under the replay bar. The
+   panels keep one height of their own (a definite one, so that the tree's camera is not fitted to a canvas that then changes size as the
+   schedule fills in), and the replay bar stays in view while the page scrolls, with a shadow in the page's colour over the gap under it. */
+@media (max-height: 900px) {
+  .run {
+    height: auto;
+    min-height: 100%;
+  }
+  .run__main {
+    flex: 1 0 560px;
+  }
+  .run > .timeline {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    box-shadow: 0 12px 0 0 var(--bg);
+  }
+}
+
+/* The bars above the page are 8 px and 4 px lower here: the page is what the screen is for. */
+@media (max-height: 820px) {
+  .topbar {
+    height: 52px;
   }
 }
 

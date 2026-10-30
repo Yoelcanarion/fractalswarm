@@ -50,9 +50,23 @@
   padding: 6px 12px;
 }
 
+/* The run picked and its state sit at the end of the row, so that what arrives after the page (the scenario, the status) moves nothing
+   that was already there; the picker is one width, since a select is as wide as its longest option and the list arrives late. */
 .subnav__context {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
+  margin-left: auto;
+}
+
+.subnav select {
+  flex: none;
+  width: 240px;
+}
+
+@media (max-height: 820px) {
+  .subnav {
+    min-height: 40px;
+  }
 }
