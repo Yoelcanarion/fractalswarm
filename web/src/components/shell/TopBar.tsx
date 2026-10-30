@@ -29,10 +29,13 @@ export interface TopBarProps {
   scenario: string | null;
   /** Quarantined emails and blocked subgoals: a count on the Security view. */
   blocked: number;
+  /** A run is about to open: the status badge holds its place until the status is known. With no run to open, and for a run that failed
+   * to load, there is no status to wait for and no badge. */
+  opening?: boolean;
   onPickRun: (id: string) => void;
 }
 
-function RunBar({ view, runId, runs, runStatus, scenario, blocked, onPickRun }: Omit<TopBarProps, "where"> & { view: RunView }) {
+function RunBar({ view, runId, runs, runStatus, scenario, blocked, opening = false, onPickRun }: Omit<TopBarProps, "where"> & { view: RunView }) {
   // the run that is open is an option from the first paint, before the list of runs has arrived
   const options = runId === null || runs.some((run) => run.id === runId) ? runs : [{ id: runId }, ...runs];
   return (
@@ -60,7 +63,7 @@ function RunBar({ view, runId, runs, runStatus, scenario, blocked, onPickRun }: 
       </nav>
       <div className="subnav__context">
         {scenario && <span className="mono muted">{scenario.split(":").at(-1)}</span>}
-        <StatusBadge status={runStatus} />
+        {(runStatus !== null || opening) && <StatusBadge status={runStatus} />}
       </div>
     </div>
   );

@@ -82,6 +82,14 @@ describe("a run's own views", () => {
     expect(nav(markup, "Views of this run")).toContain('href="#/run//plan"');
   });
 
+  it("hold the status badge's place while a run opens, and show none when there is no run to wait for", () => {
+    const where: Where = { page: "run", runId: null, view: "overview" };
+    const none = { runId: null, runs: [], runStatus: null, scenario: null };
+    expect(bar(where, none)).not.toContain('class="badge');
+    expect(bar(where, { ...none, opening: true })).toContain('class="badge');
+    expect(bar(inRun)).toContain('class="badge');
+  });
+
   it("are not in the other places", () => {
     for (const where of [{ page: "arena" }, { page: "runs" }, { page: "intake" }] as Where[]) {
       expect(bar(where)).not.toContain("subnav");
