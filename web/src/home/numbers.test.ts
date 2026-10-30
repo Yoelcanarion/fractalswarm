@@ -9,7 +9,6 @@ import {
   gateCrashes,
   heroReading,
   heroSetting,
-  lanesBeats,
   proofSteps,
   realFalseDeaths,
   runSetting,
@@ -17,14 +16,9 @@ import {
   takeover,
   taskName,
   tokens,
-  treeBeats,
-  waitedSeconds,
 } from "./numbers";
 import { bundledStory, claimState, resolveClaim, slice } from "./story";
 import { fixtureClaimText, FIXTURE_STORY } from "./testing";
-import { TREE_KEYFRAMES } from "./viz/keyframes";
-
-const ascending = (values: number[]) => expect(values).toEqual([...values].sort((a, b) => a - b));
 
 describe("what the page reads from the story", () => {
   it("reads the last point of a workflow of the hero chart", () => {
@@ -59,7 +53,6 @@ describe("what the page reads from the story", () => {
     expect(tokens(null)).toEqual({ coordination: null, recovery: null });
     expect(proofSteps(null)).toEqual([]);
     expect(assumptions(null)).toEqual([]);
-    expect(Number.isNaN(waitedSeconds(null, lanesBeats(null), 0.5))).toBe(true);
   });
 
   it("writes the setting of a result with its task, failures, model and seeds", () => {
@@ -128,49 +121,6 @@ describe("the numbers the page prints beside a claim are the numbers of its word
     for (const item of [...found.fastRestart, ...(found.perProcess ? [found.perProcess] : [])]) expect(text, written(item)).toContain(written(item));
     const [c2, c3] = found.falseDeaths.map(written);
     expect(text).toContain(`${c2}–${c3} per run at C2–C3`);
-  });
-});
-
-describe("where the text sits in the visuals' progress", () => {
-  it("takes the beats of the lanes from the data, in order", () => {
-    const beats = lanesBeats(bundledStory);
-    expect(beats).toEqual(bundledStory.lanes.central.keyframes);
-    ascending([beats.filled, beats.crash, beats.restart, beats.redone, beats.end]);
-  });
-
-  it("falls back to ordered defaults where the data names no beat", () => {
-    const beats = lanesBeats(null);
-    ascending([beats.filled, beats.crash, beats.restart, beats.redone, beats.end]);
-  });
-
-  it("counts the stall of the run up from the crash to the restart, and holds it", () => {
-    const beats = { filled: 0.2, crash: 0.4, restart: 0.6, redone: 0.8, end: 1 };
-    expect(waitedSeconds(100, beats, 0)).toBe(0);
-    expect(waitedSeconds(100, beats, 0.4)).toBe(0);
-    expect(waitedSeconds(100, beats, 0.5)).toBeCloseTo(50, 9);
-    expect(waitedSeconds(100, beats, 0.6)).toBe(100);
-    expect(waitedSeconds(100, beats, 1)).toBe(100);
-    expect(Number.isNaN(waitedSeconds(null, beats, 0.5))).toBe(true);
-    expect(waitedSeconds(100, { ...beats, restart: 0.4 }, 0.5)).toBe(100);
-  });
-
-  it("ends the real count on the stall time of the real run", () => {
-    const beats = lanesBeats(bundledStory);
-    expect(waitedSeconds(bundledStory.lanes.central.stallS, beats, 1)).toBe(bundledStory.lanes.central.stallS);
-  });
-
-  it("puts the moments of the real kill sequence in order, under the names the text uses", () => {
-    const beats = treeBeats(TREE_KEYFRAMES);
-    for (const name of Object.keys(beats)) expect(TREE_KEYFRAMES, name).toHaveProperty(name);
-    ascending([beats.grown, beats.log, beats.kill1, beats.verdict1, beats.heir1, beats.adopt1, beats.kill5, beats.settled]);
-    expect(beats.settled).toBeLessThanOrEqual(1);
-  });
-
-  it("lets W7 name a moment and keeps its own default for the rest", () => {
-    expect(treeBeats({ kill1: 0.5, bogus: 3 }).kill1).toBe(0.5);
-    expect(treeBeats({}).settled).toBe(1);
-    expect(treeBeats({ kill1: Number.NaN }).kill1).toBe(treeBeats({}).kill1);
-    for (const value of Object.values(treeBeats({}))) expect(Number.isFinite(value)).toBe(true);
   });
 });
 

@@ -1,65 +1,222 @@
-# W7 `home-viz` — notes
+# W7 `home-viz`: notes
 
-Branch `Yoelcanarion/arena-home-viz` (from `Yoelcanarion/arena`; arena merged in on Oct 30 with R5 and R6). Brief:
-`.plans/arena/w6-home.md`. **Stopped by Yoel on Oct 30, 12:00 CET** (all Phase 2 work paused); everything is
-committed as a WIP commit, nothing pushed or merged. W6's page is in the `arena-home` worktree (`Yoelcanarion/arena-home`,
-commit `8bd4f1f`, read only for me); its contract is its `.plans/notes/arena-home.md` and `web/src/home/storyTypes.ts`.
+Branch `Yoelcanarion/arena-home-viz`, a worker branch of `Yoelcanarion/arena`. Brief: `.plans/arena/w6-home.md`. W6's side of the
+seam (the page, the stages, the copy) is in `.plans/notes/arena-home.md`. Everything up to 146bbe8 is merged into arena; the
+commits after it (the DotPlot below a thousand pixels, the motion guard, this file) are on the branch and wait for a merge_ready.
+Nothing here was pushed to `master`; no real call was made; nothing was written to `~/.fractalswarm`.
 
-## Done (tested, not yet seen in a browser)
+## What W7 owns
 
-- **Data:** `scripts/build_home_data.py` writes `web/src/home/data/story.json` (about 67 KB, deterministic, sorted keys);
-  types in `web/src/home/data/types.ts`; `tests/unit/test_home_data.py` (14 tests). The file follows W6's contract: claims
-  `{text,status,state}`, facts, hero (the v1 file's own shape), headline, finish, takeover, failures, assumptions rows, tokens,
-  proof, and one self-contained slice per visual (tree, lanes.central, hrw, hashes). `extraction` and `ablation` are NOT in it
-  yet; the page keeps its PENDING tags (the coordinator's decision is Next, step 0).
-  Regenerate: `uv run python -I -X utf8 scripts/build_home_data.py --central-run C:/Users/yogar/orca/workspaces/work-orquestrator/arena-coord2/bench/results/v1/runs/central__t2_conference__C3__s1`
-- **SwarmTree** (`viz/tree/*`, pure frame function plus a DOM painter, default pacing `story`, optional `hero`),
-  **`viz/keyframes.ts`** (`TREE_KEYFRAMES` under W6's names, `TREE_HERO_KEYFRAMES`, `TREE_HERO_SECONDS` 9.1,
-  `TREE_STORY_SECONDS` 36.75), **HrwPanels** (`viz/hrw/*`), **HashStrip** (`viz/hash/*`), shared helpers (`viz/shared.ts`),
-  `viz/playback.ts`, and a lab with the tree section only (`viz/lab/*`, standalone at `/src/home/viz/lab/index.html`).
-- Checks at the last commit: `npx vitest run --maxWorkers=1` in `web/` 79 files / 1195 tests pass; `npx tsc --noEmit -p .` clean;
-  `uv run pytest tests/unit/test_home_data.py` 14 pass; ruff check and format clean. Nothing in `src/fractalswarm/` was touched,
-  so the full pytest and the $0 reference comparison were not run.
-- Status already sent to the coordinator (msg_ebdf99d6c782): the six differences W6 must know (no rename needed).
+`web/src/home/viz/**` (the visuals and their tests, the standalone lab), `web/src/home/data/**` (`story.json`, `types.ts`),
+`scripts/build_home_data.py` and `tests/unit/test_home_data.py`, `chapters/Hero.tsx`, `chapters/hero.css`, `chapters/hero.test.ts`.
+Two lines of W6's, applied on my branch with the coordinator's word: `ease: "linear"` in `hooks.ts` and `chapters/Enter.tsx`.
+The page imports everything from `viz/index.ts`; a visual is a component of `{ progress, data, still?, stillAt? }` and the page
+decides what drives `progress` (the scroll's stage clock, the time of a loop, the pointer on a door).
 
-## Not done
+## The data
 
-- **Never seen in a browser:** no screenshots, no fps run, no `npm run build`, no `demo --verify` (HOLD was never lifted by a RELEASE).
-- `HrwPanels` and `HashStrip` exist but are not yet exported from `viz/index.ts` and have no lab section.
-- Not started: **WorkLanes, LineDraw, DotPlot, PairedBars, RegimeStrip, TokenBar, CountUp, DoorGlyph**, and the lab sections for them.
-  Nothing is half-written in the tree.
+`scripts/build_home_data.py` writes `web/src/home/data/story.json` (67 KB, sorted keys, deterministic). It holds no number of its
+own: every figure is read from a committed result or from a recorded run, and `sources` says where each came from. The claims are
+copied from `docs/claims.md` by row id, in the row's wording.
 
-## Next, in order
+- The page reads the bundle `demo/final` now: run `final-kill-half-1`, 8,771 events, 121.2 s, head `a199a768072b817c406b85822f3fe647`,
+  5 coordinators killed (o0 at 53.3 s, o2.1 at 63.5 s, o1 at 65.5 s, o3.2 at 74.2 s, o2 at 90.4 s), 7 HRW rounds, 48 of 48 talks, 0 hard
+  violations, 0 duplicate calls, 0 coordination tokens, $0.478. `proof.lines` is `MATCH  final: 8771 events, head a199a768...`.
+- Regenerate: `uv run python scripts/build_home_data.py` (`--check` exits 1 when the file is stale; `--bundle demo/final` is the
+  default; `--central-run <dir>` when `central__t2_conference__C3__s1` is not in this checkout, since `lanes.central` is carried over
+  from the committed file when its source is absent).
+- **`--hero-set v1|headline-10`** picks the result set the hero chart and the figures beside R5 are read from. `headline-10` stops with
+  "the headline-10 reading cannot be the hero yet" while `bench/results/headline-10/results.json` does not exist, and
+  `test_home_data.py` holds that. The coordinator runs it when the 10-seed results exist; I did not run it. `hero.seedCount` and the
+  chart's setting line come from the data, so nothing in `LineDraw` is written for two seeds.
+- Slices added by me this week: `extraction` (below). `ablation` stays absent and its door keeps the PENDING tag.
+- `tests/unit/test_home_data.py`: 22 tests (the slices against the committed results, the claims against `docs/claims.md`, the email
+  and the facts re-read straight from `events.jsonl`, spans in order and inside the email, `slot_words`). ruff check and format clean.
 
-0. **Extraction slice, decided by the coordinator** (msg_d946f75595eb, Oct 30, 11:52 CET, read after the stop): yes, take it
-   from the recorded bundle `demo/backup`: one email and the facts Muse Spark drew from it, each with its source span, read from
-   the `effect.started` prompt and the `effect.completed` output of that call. Pick the messiest email that gives 2 or 3
-   constraints (the generator's emails are synthetic, so no PII). **Do not build `ablation`:** it stays absent and its door keeps
-   the PENDING tag. The coordinator forwards my six points to W6. It gives no order between this and WorkLanes; my plan is this
-   first, as a small data task whose slice W6's page reads. "Keep going with WorkLanes, then the charts" is steps 2 and 3 below.
-1. Export `HrwPanels`, `HashStrip` from `viz/index.ts`; add their lab sections (slider per visual, `story.hrw`, `story.hashes`).
-2. **WorkLanes** (canvas, data `lanes.central`: 14 lanes, 118 bars `[lane,startMs,endMs,kind,costMicroUsd,cause]`, kinds
-   counted 0 / cutOff 1 / again 2 / other 3, causes none 0 / crash 1 / kill 2 / other 3, duration 345.3 s, crashes at
-   45.8 / 66.2 / 84.9 / 112.8 / 140.7 s, stall spans total 101.8 s, wasted $0.187 of $0.433). W6 draws the stall counter as
-   `stallS × clamp((p − crash)/(restart − crash))` from `lanes.central.keyframes` (filled .28, crash .33, restart .62, redone .78,
-   end 1), so the lanes' time map must make the *cumulative stall linear in progress* between `crash` and `restart`:
-   `[0,filled]` t 0→44 s; `[filled,crash]` a slow beat to the first crash; `[crash,restart]` t 45.8→279.5 s with stall spans
-   getting time in proportion to their length and work gaps squeezed; `[restart,redone]` hold at 279.5 s while the cut-off (red)
-   and redone (amber) bars and the "thrown away" tally are shown; `[redone,end]` 279.5→345.3 s. Stall spans hatched grey with
-   their durations; no second stall counter. Canvas colours are read from the CSS tokens once per theme change.
-3. Charts, hand-built SVG, direct labels, real axes, text alternative, tokens only (the `dataviz` skill applies):
-   **LineDraw** (hero series; swarm, durable-max and central in full colour, the rest quiet; axes first, then lines; names its
-   setting: T2, real model, 2 seeds), **DotPlot** (headline, per seed, 3 seeds), **PairedBars** (verdicts, with the $0 gate note),
-   **RegimeStrip** (holds = accent, ties = neutral, fails = rival neutral; fake model, T2 C3), **TokenBar** (`--model-*` tokens,
-   coordination and recovery 0), **CountUp**, **DoorGlyph** (7 doors: arena, live, replays, new-task, director, numbers,
-   ablation). Export under exactly these names from `viz/index.ts`.
-4. Notes update, tests, then `merge_ready`. At a RELEASE: dev server on port 5175, screenshots (1920×1080, 1366×768, 390×844;
-   dark, light, reduced motion), a critical look, fps, build, `demo --verify --no-serve --no-browser` against `proof.lines`;
-   iterate the beats in the order 2, 0, 1, 4, 5, 3. One `worker_done` at the end.
+### The extraction slice (Models chapter)
 
-## Rules that still apply (brief and CLAUDE.md)
+One speaker's email as the `extract` call of the bundle read it, and the three constraints that call published through
+`memory.publish_fact`, in words, each with the stretch of the email it is read from: speaker S12, effect `eff-3895.0`
+(event 4564), 2 readings that agree. Constraints: "Day 2: from 10:30" (chars 156-220), "Day 1: any time" (221-244), "No time preference"
+(246-282). The run publishes the same reading twice. The facts are the model's; the map from a constraint to its words is mine,
+written in the script and checked to occur once. The caption says the email is generated for the test and is not a real person's.
+Additive: schema stays 1; `sources.extraction` names the effect, the event, the speaker and the email.
 
-Fake LLM only, no real calls; before any run set `FRACTALSWARM_RUNS_DIR` and `FRACTALSWARM_LEDGER_PATH` to scratch dirs and never
-write to `~/.fractalswarm`; media queries only (no container queries), colours only through tokens (both themes), animate
-transform and opacity only; claims copied by id from `docs/claims.md`, `pending` rows with a visible PENDING tag; W6 and W7 talk
-only through the coordinator; only `viz/**`, `data/**`, the generator, its test and this file are mine.
+## The visuals
+
+All are pure frames of a progress plus a painter that writes only what changed (`Pen` skips a write of the same value; `Pen.text()`
+changes its one text node in place). No SVG filter, no blur, colours only through tokens, media queries only (no container queries),
+reduced motion and `?still` give one complete frame. Each prints its setting unless the page passes `setting={false}`.
+
+| Visual | Files | What it is |
+| --- | --- | --- |
+| `SwarmTree` | `viz/tree/*` | The log as a tree of brains and agents: grow, work, kill, memorial row, takeover by HRW, re-wire. Two pacings (`story`, `hero`), plus the ambient layer. |
+| `WorkLanes` | `viz/lanes/*` | One lane per actor, one bar per LLM call; the time map is piecewise linear (stalls by their length, work by the root of its length) so the stall counter is a straight line of the progress between the crash and the restart. |
+| `HrwPanels` | `viz/hrw/*` | One panel per survivor, every candidate's real score computed digit by digit, the heir where all agree. Fits the box in three tiers (`full`, `compact`, `tiny`). |
+| `HashStrip` | `viz/hash/*` | A sample of the log's events with their real hashes; the chain and the head. |
+| `LineDraw`, `DotPlot`, `PairedBars`, `RegimeStrip`, `TokenBar` | `viz/charts/*` | The evidence: hand-built SVG, direct labels, real axes, a text alternative and a table for each. |
+| `CountUp` | `viz/parts/*` | A number that counts once to the number it is; the end number's width is kept from the first frame. |
+| `DoorGlyph` | `viz/doors/*` | One pictogram for each of six doors (arena, live, replays, director, numbers, ablation); progress is the pointer on the door. |
+
+### The hero: a loop and an ambient layer (`chapters/Hero.tsx`, `viz/loop.ts`, `useLoop.ts`, `viz/tree/ambient.ts`)
+
+Yoel's verdict on the home was that the hero should never stop. The tree plays on a clock of its own: grow 1.3 s, run 8.8 s at constant
+speed, rest 1.8 s on the settled tree, fold 0.9 s into the root, again. The clock of the recorded run restarts with the loop. Off
+screen or in a hidden tab there is no animation frame at all (IntersectionObserver and `visibilitychange`); with reduced motion or
+`?still` there is one frozen frame (the end of the run). The ambient layer runs in every phase, the rest included: comets along live
+edges (root to leaves and back in alternate sweeps, brighter where a model call is in flight), a halo breathing round live brains and a
+ring pinging round agents that work. It reads busy or waiting from the recorded frame and carries no number and no label, so the
+recorded frames keep their meaning. The scroll-linked fade is gone: the hand-over is a `data-leaving` attribute flipped by an
+IntersectionObserver and a CSS transition. The line under the figure says it is a recorded run replayed on a loop and gives its setting,
+derived from the data (`hero.test.ts` pins "T2 conference planning · 5 coordinators crashed · real model · 1 seed").
+
+Measured on the hero alone, 1920x1080, Vite dev server (bundle `demo/backup`, before the move to `demo/final`):
+
+| | fps | frame p50 / p95 / p99 / max | over 17 ms | CPU per frame |
+| --- | --- | --- | --- | --- |
+| Chromium 130 headless, before (scroll-linked) | 59.9 | 16.7 / 16.7 / 16.8 / 33.4 ms | 0.2% | 2.85 ms |
+| Chromium 130 headless, loop, 30 s, all phases | 60 | 16.7 / 16.8 / 16.8 / 16.8 ms | 0% | 3.96 ms |
+| Firefox 1465 headless, 165 Hz display, 30 s | 164.9 | 6.1 / 6.1 / 6.1 / 6.1 ms | 0% | n/a |
+
+Five minutes of looping in Chromium (GC forced): heap 21.9 MB at 5 s and 22.3 MB at 300 s (flat from 180 s), 6,699 DOM nodes at both
+ends, 183 listeners at both ends. Writes per frame: run 60 (transform 31, opacity 17, r 7, edge `d` 3.5), rest 36 (all ambient),
+grow 52. The numbers on `demo/final`, which is 2.6 s longer, are taken again at a RELEASE (see the end).
+
+## The motion rules (Yoel's "crude" motion, item 2)
+
+**The rule, page-wide (coordinator, Oct 30): the progress that drives a visual is linear in time, and each element eases itself once,
+over its own stretch of it.** The finding behind it: the page eased every time-driven draw twice. `useEnterProgress` and the door hover
+eased the progress with the strong ease-out, and the visuals then eased each element again inside its own span, which squeezed every
+stretch into the first fifth of the time and flattened every stagger. Measured on the page, on a stepped clock, before and after the
+two linear lines:
+
+| Draw | Before | After |
+| --- | --- | --- |
+| Token bars' wipe (1.2 s) | 0.79 at 100 ms, 1.00 at 200 ms | 0.01 at 100 ms, 0.24 at 300 ms, 0.55 at 400 ms, 0.93 at 600 ms, 1.00 at 800 ms |
+| Arena door, the X (0.9 s hover) | 0.90 at 50 ms, 1.00 at 100 ms | 0.33 at 150 ms, 0.67 at 200 ms, 0.93 at 300 ms, 1.00 at 400 ms |
+| Live door | all over by 350 ms | stream to 450 ms, tree fills 360-720 ms, crosshair lands 650-870 ms |
+
+Audit of what is left (Oct 30 evening, by reading every file under `home/`): the drivers are the enter progress, the door hover, the
+stage clock (`scroll/tween.ts`: a ramp of at most 0.2 s up to a constant speed and down again, W6's), the hero loop (`viz/loop.ts`),
+and the lab's playback; all are linear. `animate()` with an ease appears once, in `parts/Figure.tsx`, the count-up of a number, which has
+no visual in it. There is no spring. Inside the visuals each element is one `smoothstep`, `easeOutCubic` or `easeInOutCubic` of a
+`span(p, a, b)`. The bare spans are constant motion on purpose: the numbers door's marker ("an even pace"), the pulses of the live and
+ablation doors, the ambient comets (half linear, half smoothstep), and the lanes' stall counter, which counts seconds. The one bare
+fade was the dot plot's row opacity; it is `smoothstep` now. `viz/drivers.test.ts` holds all of this: the two drivers say
+`ease: "linear"`, a scan of every source file allows `animate()` only with a linear ease (but for `Figure.tsx`) and no `useSpring`, and a
+staged stretch of a linear 1.4 s draw takes over 0.25 s where an eased driver gave it under 0.1 s.
+
+What a frame paints (read, not yet measured with `?frames` on the visuals other than the hero): every painter goes through `Pen`, so a
+frame writes only the attributes that changed; layout reads (`clientWidth`, `getBoundingClientRect`, `offsetLeft`) are in the
+measuring hooks that run on resize (`charts/parts.tsx`, `WorkLanes`, `HashStrip`, the door's `useWide`), never in an `apply`; there is no
+SVG filter and no React render during a motion. Two deliberate exceptions to "transform and opacity only": the SVG attributes the tree
+and the charts write (`d`, `r`, `stroke-dashoffset`) which are repaint-only, and the HRW score digits, which are revealed with
+`clip-path: inset()` (paint only, no layout).
+
+## Doors (`viz/doors/*`, `viz.css`)
+
+- **One glyph height.** The svg is `--door-glyph-h` tall (140 px unless the page sets it) for all six doors at every width measured
+  (1920, 1440, 1280, 1024, 768, 390), so the box no longer depends on the window or on the drawing. The glyph box is 161.8 or 183.5 px in
+  the replays and numbers cards because W6's grid stretches it (`1fr` row); that is `home.css`, not the drawing.
+- **Clapper.** Its open pose reached 18.2 px above its glyph box and touched the card's edge; it is 5.9 px inside it now. A test turns
+  it through its whole closing and holds every corner in the canvas (it fails when the clapper opens to 30 degrees).
+- **Wide doors.** The arena's drawing was 245.6 px of a 682 px box (36%) and the live run's 268.8 px; now 580.4 px (85%) and 584.4 px at
+  1920, 523 of 551 px at 1440 and 451 of 475 px at 1280. Each has a second drawing on a 480-unit canvas (the swarm with three
+  coordinators over six sessions beside a supervisor with six workers; a text of six lines, a long arrow, a tree of three over six),
+  used when the glyph's box is at least 3.2 times wider than tall (`WIDE_FROM`), decided in a layout effect before the first paint, so
+  it does not depend on W6's breakpoints. Below that (1024, 390) the compact drawing stays.
+- The numbers chart starts at the same left edge as the others (10 units); the marker runs to 4 units past the end.
+- Tests: the drawings are scanned (circles, rectangles, lines, paths) and held inside their canvas with 2 units of air, and where each
+  moving part ends up is held there too, for all six doors in both sizes (49 tests in `doors.test.ts`).
+
+## What W6 found, and what changed (Oct 30)
+
+1. **`LineDraw` negative `<rect>`.** A 154 px container made the plot narrower than nothing and the console said
+   `<rect> attribute width: A negative value is not valid, "-18.00"`. The clip rect is clamped. (Playwright's full-page screenshot goes
+   through a 1x1 window and shows it too.) Other geometry at container widths under about 200 px was not audited.
+2. **KILLED label over an empty row.** It was on for about a second of the hero loop (2.9 to 3.9 s) with nothing under it; it comes in
+   when the first dead brain sets off for the memorial row. A test walks the whole run (`render.test.ts`).
+3. **`HrwPanels` in Firefox.** `apply()` costs 0.2 ms at the median and 0.5 ms at p95 in Chromium, so the cost is not my JavaScript.
+   What changed: a score is drawn once, whole, and clipped to the digits computed (`clip-path: inset`), so a step of the reveal is one
+   style write per row instead of two text nodes rebuilt in each of the nine panels' rows. Headless Firefox, the heir and adopt steps,
+   2 passes of 15 s, three runs each, 165 Hz so one frame is 6.1 ms: frames over 20 ms **6, 8, 9 before and 0, 1, 7 after**; frames over
+   two refreshes (12 ms) 86, 82, 85 before and 76, 72, 102 after, which is no change. The machine was busy, so the runs vary. A
+   `will-change` on the panels, no row transition and no clip on the bars did not help; with the digits hidden entirely the frames over
+   20 ms fell to 3, so what is left is the panels' repaint in software rendering. Chromium, same pass: 789 frames, p99 and max 16.8 ms.
+4. **`DotPlot` below about 1000 px** (W6 saw it at 820 and 944 px). Two collisions, both in the layout. (a) The header of a panel (title
+   and subtitle) was allowed to run to the edge of the mean column, where the right-aligned "mean" ends, so the long subtitle of the
+   extra-cost panel overlapped it from 822 to 878 px wide, and in the stacked layout at 430x340 by 33 px. It stops 12 px short of the
+   label now, and the short subtitle is used where the long one does not fit. (b) The vertical grid and the zero line ran through the
+   band that carries a group's title, so "5 coordinators killed (C3)" was crossed by the axis wherever the row labels are short (the
+   names turn short below 967 px, and always when stacked). The grid is drawn for the rows of each group now (`panel.spans`) and the
+   title comes from the layout. The test holds the header against the mean column, the grid against every title and the title against
+   the mean column for widths from 350 to 1700 in steps of 10 at five heights; the old header rule fails it at 820x420. The labels are
+   still the claims' own names from 967 px up and the short ones below; I left those tiers alone.
+
+## The redesign (Oct 30, evening; `.plans/arena/redesign.md`)
+
+The six pieces W6 asked for, each in its own file under `web/src/home/viz/` (W6 imports the files, not `index.ts`), and each reading
+`useStill()` (`../hooks`) and `useStory()` (`../story`) itself through `viz/page.ts`; the props of the brief are all it takes, and
+`still`, `data` and `className` are optional extras for the lab and the tests.
+
+| Piece | File | Props | What it is |
+| --- | --- | --- | --- |
+| `ProblemFilm` | `film/ProblemFilm.tsx` | `{ play }` | `WorkLanes` over the in-process supervisor's recorded lanes, one 7 s playhead under the shared ease, per increment of `play` |
+| `StepDrawing` | `steps/StepDrawing.tsx` | `{ step: log\|heir\|adopt, active }` | three svg drawings moved by CSS transitions on `data-on`, delays spread over about 0.9 s; the heir's bars are the first recorded round's fractions |
+| `KillDemo` | `demo/KillDemo.tsx` | `{}` | the hero's tree with the real heir rule in TypeScript; `note` prints the "illustration" sentence |
+| `ProofBars` | `charts/ProofBars.tsx` | `{ play }` | one svg, measured to its width (see below) |
+| `GrowNumber` | `parts/GrowNumber.tsx` | `{ value, format, play }` | HTML number; a missing value is a dash; the end width is kept from the first frame |
+| `DoorThumb` | `doors/DoorThumb.tsx` | `{ door: string }` | the door's glyph going there and back (a triangle wave of 2.4 s a leg run through the ease), only while on screen |
+
+- **The shared ease** (`viz/ease.ts`, `--ease-play` in `viz.css`): `cubic-bezier(0.3, 0.05, 0.7, 0.95)`. Its peak speed is 1.357 times
+  the mean and it has covered 12.8% of the way at 20% of the time (the limits are 1.6 and 10%). `SECONDS` holds the durations: numbers
+  and bars 1.6, film 7, hover 0.8, a takeover 2.6. `ease.test.ts` holds the limits, that the CSS token is the same curve, and the
+  durations.
+- **The heir rule in TypeScript** (`viz/hrw/`): BLAKE2b with an 8-byte digest over the canonical JSON `["hrw", key, member]`, rank by
+  score then id, `capacity = max(1, ceil(1.25 K / N))`, `remap` keeps the survivors and moves orphans in `(-priority, key)` order. The
+  test holds the Python vectors (block boundaries, UTF-8, seven remap cases) and every score and ranking of the recorded run.
+- **The click demo** (`viz/demo/`): `sim.ts` is the rules, `stage.ts` the picture over time, `KillDemo.tsx` the DOM. Replaying
+  `o0, o2.1, o1, o3.2, o2` gives the recorded run's 7 rounds, every score, the survivors and the adoptions; 300 random click orders
+  keep one tree. A kill: a flash, the neighbours notice at about 0.4 s, suspect, the verdict, the candidates' scores, the heir's crown,
+  the orphans re-wire, the dead go to the KILLED row. Takeovers overlap and nothing jumps. Tab and Enter, tap, "Kill half" (five kills
+  in turn), "Reset", one `aria-live` line, a reset after 16 s idle or 4.5 s with everyone down ("There is nobody left to take over."),
+  instant changes under reduced motion and `?still`. It carries no time, hash, cost or count from a run.
+- **ProofBars** is one svg, because the page counts the words of its HTML and not those drawn inside an svg, and the chart needs the
+  rivals' names, the setting and the numbers. Against the in-process supervisor it is a bar and a number each (stall 14.6 s against
+  92.6 s, extra cost +6.6% against +75.6%, the setting "Real model · T2 conference · C3 · 2 seeds"). Against the ideal durable
+  supervisor the data's verdict is a tie (the rule is "every seed agrees and the difference reaches the minimum effect"), and two bars
+  of the means, 10.3 s and 32.0 s, would read as a win. So each seed is a dot on one shared axis (swarm 7.1, 22.6, 1.2; durable-max
+  9.8, 0, 86.2 s; the extra-cost axis is signed, with a zero line), the swarm's filled and the rival's a ring, and the chip beside it
+  prints the data's verdict as it is. Every bar, number and line of dots has its own eased share (`shareAt`): lines start 0.05 s apart
+  and end together at 1.6 s. One frame loop writes them through `Pen`, only while the chart is on screen.
+- **Words**: `KillDemo` adds nine ("Click a coordinator to crash it." + "Kill half" + "Reset"); its sentence "An illustration in your
+  browser, not a real run." is off by default because the page prints it above the demo. The film, the drawings, the thumbnails and
+  ProofBars draw their words inside an svg: none are counted.
+
+Deviations from the brief: (1) when a whole group of coordinators dies the demo gives its goals to the owner of the parent goal, where
+the run spawns a new member; all of one coordinator's fallback goals go to one heir, so the tree stays one tree. (2) A takeover takes
+2.6 s, not 2: about 1 s of notice plus the takeover itself (the brief's range of 1.2 to 2 s is for the takeover, which is 1.6 s). (3)
+Against the ideal durable supervisor ProofBars draws seeds, not bars, for the reason above; the brief says "bars against both rivals".
+(4) The step drawings take about 0.9 s from the first part to the last, a little over the 0.6 to 0.9 s of a hover.
+
+## Checks (Oct 30, 21:10 CET, HOLD: no browser, no build)
+
+- `npx tsc --noEmit -p .` clean. `npx vitest run --maxWorkers=1 src/home`: 35 files, 530 tests passed (`src/home/viz`: 21 files, 368).
+- `uv run pytest tests/unit/test_home_data.py`: 22 passed; `build_home_data.py --check`: story.json is current; ruff check and format clean.
+- I touch nothing under `src/fractalswarm/`, so the full pytest and the $0 reference comparison are run at the merge point, not by me
+  before it.
+
+## Not done yet (waits for a RELEASE)
+
+- My lanes and panels at W6's new pace (about 1 s per step) in a browser, with shots.
+- Frames at 1920x1080 for the visuals other than the hero (`?frames` before and after, at a moment of low load) and the hero loop's
+  numbers on `demo/final`.
+- The scratch `vite build`, the real `demo --verify --no-serve --no-browser` against `proof.lines`, and the $0 references (43 of 43).
+- DotPlot at 820, 944, 1000 and 1147 px in a browser, dark and light.
+
+## Rules kept
+
+Fake LLM only (never `--backend real`, never `--confirm-real-spend`); any run of mine sets `FRACTALSWARM_RUNS_DIR` and
+`FRACTALSWARM_LEDGER_PATH` to scratch dirs; claims only from `docs/claims.md` (the visuals' own test bans "valid" outside a claim,
+"every run finished", "simpler/cheaper/more reliable" and "first"); every result names its setting (task, model, seeds, failure
+profile).
