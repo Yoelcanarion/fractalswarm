@@ -21,10 +21,11 @@ export function PStat({ label, value, tone = "", title }: { label: string; value
   );
 }
 
-/** A horizontal bar: ``share`` of the track is filled, 0..1. */
+/** A horizontal bar: ``share`` of the track is filled, 0..1. A plain block: the class `meter` belongs to the Muse meter (a flex row,
+ * styles/lens.css), and on this wrapper it squeezed the track to nothing, so the bar did not show. */
 export function Meter({ share, label, detail, tone = "" }: { share: number | null; label: ReactNode; detail?: string; tone?: Tone }) {
   return (
-    <div className="meter">
+    <div>
       <div className="meter__head">
         <span>{label}</span>
         <span className="muted mono">{detail ?? (share === null ? "not reported" : percent(share))}</span>

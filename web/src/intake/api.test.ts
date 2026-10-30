@@ -147,6 +147,23 @@ describe("what the page makes of each answer", () => {
   });
 });
 
+describe("which runs the server lists", () => {
+  it("are the ids of its list, and the list is asked for as the Runs page asks for it", async () => {
+    const { api, seen } = serving(() => ({ body: [{ id: "demo-backup", events: 8177 }, { id: "pair-1-swarm" }, { events: 3 }, null] }));
+    expect([...(await api.listedRuns())].sort()).toEqual(["demo-backup", "pair-1-swarm"]);
+    expect(seen[0].path).toBe("api/runs");
+  });
+
+  it("are none when the server answers with an error or something else, and when it cannot be reached", async () => {
+    expect((await serving(() => ({ status: 500, body: { detail: "x" } })).api.listedRuns()).size).toBe(0);
+    expect((await serving(() => ({ body: { runs: [] } })).api.listedRuns()).size).toBe(0);
+    const down = createIntakeApi(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    expect((await down.listedRuns()).size).toBe(0);
+  });
+});
+
 describe("when a call goes wrong", () => {
   it("says what the server said: its error, as it words it", async () => {
     for (const name of ["error.empty-talks.json", "error.unknown-intake.json", "error.already-approved.json"]) {

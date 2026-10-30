@@ -541,8 +541,15 @@ textarea {
   font-weight: 600;
 }
 
+/* Finished, dead and restarting cards are quieter by colour, not by `opacity`: a fade took the text down with it, to 2:1 for the
+   meta on a dead card, and no token can account for it (the contrast guard reads these three states). */
 .actor--stopped {
-  opacity: 0.55;
+  border-color: color-mix(in srgb, var(--owner) 45%, var(--surface-2));
+  box-shadow: none;
+}
+
+.actor--stopped .actor__id {
+  color: var(--text-secondary);
 }
 
 .actor--suspected {
@@ -564,9 +571,8 @@ textarea {
   box-shadow: none;
 }
 
-.actor--restarting .actor__id,
-.actor--restarting .actor__meta {
-  opacity: 0.6;
+.actor--restarting .actor__id {
+  color: var(--text-secondary);
 }
 
 .actor__state {
@@ -597,9 +603,8 @@ textarea {
   box-shadow: none;
 }
 
-.actor--down .actor__id,
-.actor--down .actor__meta {
-  opacity: 0.45;
+.actor--down .actor__id {
+  color: var(--text-secondary);
 }
 
 .actor__x {

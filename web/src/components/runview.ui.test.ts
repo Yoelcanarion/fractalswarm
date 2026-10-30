@@ -16,7 +16,7 @@ import { ResultsPage } from "../pages/ResultsPage";
 import { RunPage } from "../pages/RunPage";
 import { SecurityPage } from "../pages/SecurityPage";
 import { createRunStore, RunStoreProvider, type RunApi, type RunStoreApi } from "../store";
-import { PStat, Pill } from "./PanelParts";
+import { Meter, PStat, Pill } from "./PanelParts";
 import { RunFrame, RunGate } from "./RunFrame";
 import { GuideButton, GuideStrip, useGuide, type Guide } from "./RunGuide";
 
@@ -260,6 +260,16 @@ describe("the guide", () => {
     };
     renderToStaticMarkup(createElement(Probe));
     expect(seen).toBe(true);
+  });
+});
+
+describe("a meter of a panel", () => {
+  it("is a plain block of a head and a track: not the Muse meter's flex row, which left the bar no width", () => {
+    const out = renderToStaticMarkup(createElement(Meter, { share: 0.4, label: "requests left", detail: "2,999 of 3,000" }));
+    expect(out).not.toMatch(/class="meter"/);
+    expect(out).toContain('class="meter__head"');
+    expect(out).toContain('class="meter__track"');
+    expect(out).toContain("width:40%");
   });
 });
 

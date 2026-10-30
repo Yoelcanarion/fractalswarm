@@ -16,13 +16,38 @@ const LENS = join(SRC, "styles", "lens.css");
  * that styles.css's rule for the same class leaves alone. */
 const ADDS_TO = ["run", "timeline", "actor"];
 
-function stylesheets(dir: string): string[] {
+function filesWith(dir: string, ending: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
-    if (statSync(path).isDirectory()) return stylesheets(path);
-    return path.endsWith(".css") ? [path] : [];
+    if (statSync(path).isDirectory()) return filesWith(path, ending);
+    return path.endsWith(ending) ? [path] : [];
   });
 }
+
+const stylesheets = (dir: string): string[] => filesWith(dir, ".css");
+
+/** The class names a source file puts in its `className` attributes: a plain string, or a template with its `${}` parts left out (a
+ * template is read up to the first template nested in it). */
+export function classesUsed(source: string): Set<string> {
+  const used = new Set<string>();
+  for (const attribute of source.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`)/g)) {
+    const text = (attribute[1] ?? attribute[2] ?? "").replace(/\$\{[^}]*\}/g, " ");
+    for (const token of text.split(/\s+/)) if (/^[A-Za-z_][\w-]*$/.test(token)) used.add(token);
+  }
+  return used;
+}
+
+/** Where a component outside `components/lens/` puts a class that only the lens's stylesheet styles, on purpose: the run page's strip
+ * and the replay chip's hash are the lens's own, and `run` and `timeline` are the base classes it adds to (`ADDS_TO`). */
+const LENS_CLASSES_OUTSIDE = [
+  ".run: components/RunFrame.tsx",
+  ".run: pages/RunPage.tsx",
+  ".runstrip: App.tsx",
+  ".runstrip: components/RunStrip.tsx",
+  ".runstrip__proof: components/RunStrip.tsx",
+  ".timeline: components/Timeline.tsx",
+  ".verify__head: components/VerifyBadge.tsx",
+];
 
 /** The class a rule starts its selector with, for every selector of every rule (`.crow:hover .x, .crow[a] {` gives `crow`). */
 export function ownedClasses(css: string): Set<string> {
@@ -71,5 +96,23 @@ describe("the Muse lens's stylesheet", () => {
 
   it("still adds to the base classes the list above names (the list does not go stale)", () => {
     for (const name of ADDS_TO) expect(lens.has(name)).toBe(true);
+  });
+
+  it("styles no markup but its own and the places listed: a class it owns on other markup restyles it", () => {
+    // `meter` was on the panels' bar wrapper too: the lens's flex row left the bar no width, and no sheet-to-sheet check could see it
+    const found: string[] = [];
+    for (const path of filesWith(SRC, ".tsx")) {
+      const where = relative(SRC, path).replace(/\\/g, "/");
+      if (where.startsWith("components/lens/")) continue;
+      for (const name of classesUsed(readFileSync(path, "utf-8"))) if (lens.has(name)) found.push(`.${name}: ${where}`);
+    }
+    expect(found.sort()).toEqual([...LENS_CLASSES_OUTSIDE].sort());
+  });
+});
+
+describe("the classes a component uses", () => {
+  it("are the ones its attributes name, with a template's parts left out", () => {
+    const source = '<a className="one two"/> <b className={`three ${x ? "four" : ""} five`}/> <i className={cls}/>';
+    expect([...classesUsed(source)].sort()).toEqual(["five", "one", "three", "two"]);
   });
 });

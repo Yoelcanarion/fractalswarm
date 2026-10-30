@@ -127,6 +127,26 @@ export function requestFor(body: Record<string, unknown>, gate: Gate, typed: str
   return gate.launch ? { send: confirmed(body, gate.token, typed) } : { refused: gate.reason };
 }
 
+/** The runs a launch started: both sides of a pair, or the one run. */
+export const startedRuns = (launch: { left: string; right: string } | { run_id: string }): string[] => ("left" in launch ? [launch.left, launch.right] : [launch.run_id]);
+
+const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Waits until every one of the runs is on the server's list, or the tries run out (and says which). The server accepts a launch (202)
+ * before its runs are on the list, so a page opened at once on one of them finds none, and stays on that. */
+export async function untilRunsListed(
+  listed: () => Promise<ReadonlySet<string>>,
+  runs: readonly string[],
+  { tries = 40, everyMs = 400, sleep = pause }: { tries?: number; everyMs?: number; sleep?: (ms: number) => Promise<void> } = {},
+): Promise<boolean> {
+  for (let attempt = 0; attempt < tries; attempt += 1) {
+    const there = await listed();
+    if (runs.every((id) => there.has(id))) return true;
+    await sleep(everyMs);
+  }
+  return false;
+}
+
 /** Where the person goes to watch it: the arena for a pair, the run page for one run. */
 export const watchHash = (launch: { left: string; right: string } | { run_id: string }): string =>
   "left" in launch ? `#/arena/${encodeURIComponent(launch.left)}/${encodeURIComponent(launch.right)}` : `#/run/${encodeURIComponent(launch.run_id)}`;

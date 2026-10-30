@@ -163,6 +163,35 @@ describe("the button modifiers", () => {
   });
 });
 
+describe("the text on a dead, a restarting and a finished tree card", () => {
+  // These cards were once faded by `opacity`, which composites the text over the tint: the meta on a dead card read at 2:1 and its id at
+  // 4:1 (3:1 in the light theme). Now their text has colours of its own, and they are what is checked here.
+  const CARDS: [string, string][] = [
+    ["actor--down", "--danger-bg"],
+    ["actor--restarting", "--warn-bg"],
+    ["actor--stopped", "--surface-2"],
+  ];
+  const rules = readRules(withoutComments(readFileSync(`${SRC}/styles.css`, "utf-8")));
+  const colourOf = (selector: string): string | undefined => {
+    const own = rules.filter((rule) => rule.selector.split(",").some((one) => one.trim() === selector)).map((rule) => token(rule.decls.get("color")));
+    return own.filter(Boolean).at(-1);
+  };
+
+  it.each(CARDS)("%s: nothing on it is faded by opacity", (card) => {
+    const faded = rules.filter((rule) => rule.selector.includes(card) && rule.decls.has("opacity")).map((rule) => rule.selector);
+    expect(faded).toEqual([]);
+  });
+
+  describe.each(Object.entries(themes()))("%s theme", (theme, tokens) => {
+    it.each(CARDS)("%s: its id and its meta are at AA on the card", (card, background) => {
+      const id = colourOf(`.${card} .actor__id`) ?? colourOf(".actor__id") ?? "--text-primary";
+      const meta = colourOf(`.${card} .actor__meta`) ?? colourOf(".actor__meta");
+      expect(meta, `${card}'s meta has a colour`).toBeDefined();
+      for (const text of [id, meta!]) expect(contrast(tokens[text], tokens[background]), `${text} on ${background} (${theme})`).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+});
+
 describe("the colours the sheets pair", () => {
   it("finds pairs to check", () => {
     expect(all.length).toBeGreaterThan(40);
