@@ -39,8 +39,11 @@ function OutcomeStrip({ honesty, claims }: { honesty: Honesty; claims: Claims })
       </div>
       <div className="outcome__body">
         <p className="outcome__read">
-          <b>Pre-registered outcome {outcome.label}</b>, read against the {systemName(outcome.against)}
-          {task}.
+          {/* one item of the row, not three: the row's gap would otherwise open a space before the comma */}
+          <span>
+            <b>Pre-registered outcome {outcome.label}</b>, read against the {systemName(outcome.against)}
+            {task}.
+          </span>
           {outcome.gate.length > 0 && <span className="outcome__at"> At the default settings:</span>}
           {outcome.gate.map((point) => (
             <span key={`${point.task}:${point.profile}`} className={`outcome__gate outcome__gate--${point.locality === "n/a" ? "na" : point.locality}`}>

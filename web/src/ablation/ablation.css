@@ -10,8 +10,10 @@
   margin: 0 auto;
 }
 
+/* The form keeps its measure, and its left edge with the other pages of the evidence: the title does not move when the tab does. */
 .abl--launch {
   max-width: 960px;
+  margin: 0;
 }
 
 /* The shared page head (components/ui PageHeader): the page's flex gap already spaces it from what follows. */
