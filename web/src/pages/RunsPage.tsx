@@ -6,7 +6,7 @@ import { RunsKey } from "../components/catalogue/RunsKey";
 import { RunsTable, type Sort } from "../components/catalogue/RunsTable";
 import { RunsToolbar } from "../components/catalogue/RunsToolbar";
 import { NewTaskForm } from "../components/NewTaskForm";
-import { EmptyState, PageHeader, Skeleton, SkeletonGroup } from "../components/ui";
+import { EmptyState, PageHeader, Skeleton, SkeletonGroup, Term } from "../components/ui";
 import { fetchEventAt, verifyRun } from "../lib/api";
 import {
   filterRows,
@@ -140,7 +140,11 @@ export function RunsPage() {
     <div className="runs">
       <PageHeader
         title="Runs"
-        lead="Every run this server holds. A recorded run replays from its log; a live run streams while it is written."
+        lead={
+          <>
+            Every run this server holds. A recorded run replays from its log and has a <Term id="replay">replay check</Term>; a live run streams while it is written.
+          </>
+        }
         actions={
           <button type="button" className="btn btn--on" onClick={openStart}>
             Start a run

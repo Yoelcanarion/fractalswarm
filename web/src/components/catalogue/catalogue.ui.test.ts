@@ -258,6 +258,9 @@ describe("the page", () => {
     const t = text(out);
     expect(out.match(/<h1/g)).toHaveLength(1);
     expect(t).toContain("Runs");
+    // the page a "Replays" door opens says what it promises: a replay check, defined where it is named
+    expect(out).toMatch(/<span class="term">replay check<\/span>/);
+    expect(out).toContain("Rebuilds the run from its recorded log and compares every event");
     expect(t).toContain("Live now");
     expect(t).toContain("1 live · 1 recorded · 1 interrupted");
     expect(out).toContain('href="#/run/old-1"');
