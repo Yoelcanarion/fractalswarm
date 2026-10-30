@@ -360,7 +360,24 @@ def mean(values: list[float]) -> float:
     return sum(values) / len(values)
 
 
-def numbers_slice(v1: list[dict[str, Any]], head: list[dict[str, Any]], structure: dict[str, Any]):
+def validity(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """How many of a set's runs have a valid result, counted from its rows and never assumed.
+    The runs that are not valid are named: one such run (``swarm__t2_conference__C0__s5``, in the
+    10-seed extension) exists, so nothing in the data may say that every run was valid."""
+    invalid = [x["cell"] for x in rows if not x["valid"]]
+    return {
+        "runs": len(rows),
+        "valid": len(rows) - len(invalid),
+        "invalid": sorted(invalid, key=natural),
+    }
+
+
+def numbers_slice(
+    v1: list[dict[str, Any]],
+    head: list[dict[str, Any]],
+    structure: dict[str, Any],
+    head10: list[dict[str, Any]] | None = None,
+):
     """The figures the claims quote, each recomputed from the result rows."""
 
     def cell_mean(rows: list[dict[str, Any]], workflow: str, task: str, profile: str, key: str):
@@ -420,6 +437,11 @@ def numbers_slice(v1: list[dict[str, Any]], head: list[dict[str, Any]], structur
             "swarmC3Completed": sum(1 for x in swarm_c3 if x["completed"] and x["valid"]),
             "allRuns": len(everything),
             "allCompleted": completed,
+        },
+        "validity": {
+            "v1": validity(v1),
+            "headline": validity(head),
+            "headline10": validity(head10) if head10 is not None else None,
         },
         "structure": structure,
         "source": [f"{V1}/results.json", f"{HEADLINE}/results.json"],
@@ -1290,8 +1312,26 @@ def central_lanes(
     return kept, previous["sources"]["lanesCentral"]
 
 
+def central_setting(central: dict[str, Any]) -> dict[str, Any]:
+    """What the recorded run was, from its id (workflow, task, profile, seed) and its marks."""
+    workflow, task, profile, seed = central["runId"].split("__")
+    return {
+        "label": WORKFLOWS[workflow],
+        "task": task,
+        "profile": profile,
+        "seed": seed.removeprefix("s"),
+        "real": True,  # docs/claims.md S4: "the 96 real runs of bench/results/v1"
+        "crashes": sum(1 for m in central["marks"] if m["kind"] == "crash"),
+    }
+
+
 def with_page_fields(central: dict[str, Any]) -> dict[str, Any]:
-    return {**central, "stallS": central["metrics"]["stallS"], "keyframes": LANES_KEYFRAMES}
+    return {
+        **central,
+        "setting": central_setting(central),
+        "stallS": central["metrics"]["stallS"],
+        "keyframes": LANES_KEYFRAMES,
+    }
 
 
 def facts_slice(tree: dict[str, Any], finish: dict[str, Any]) -> dict[str, Any]:
@@ -1448,7 +1488,7 @@ def build(
         "tasks": TASKS,
         "workflows": WORKFLOWS,
         "profiles": profiles_slice(),
-        "numbers": numbers_slice(v1_rows, head_rows, structure),
+        "numbers": numbers_slice(v1_rows, head_rows, structure, result_rows(HEADLINE_10)),
         "facts": facts,
         "tree": tree,
         "takeover": takeover,
