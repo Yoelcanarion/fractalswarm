@@ -146,7 +146,7 @@ function Helps() {
         <Reveal delay={100}>
           <p className="home-beat__verdict">{COPY.evidence.helps.cost}</p>
           <div className="home-figures">
-            <Figure value={cost.perRun} format={(n) => figure(n)} label={COPY.evidence.helps.perRun} tone="loss" size="stat" />
+            <Figure value={cost.perRun} format={(n) => figure(n, 1)} label={COPY.evidence.helps.perRun} tone="loss" size="stat" />
           </div>
         </Reveal>
       )}

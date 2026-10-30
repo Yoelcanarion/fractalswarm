@@ -8,7 +8,9 @@ import { describe, expect, it } from "vitest";
 import { CHAPTERS } from "./chapters";
 import { COPY, TAGLINE } from "./copy";
 import { DOORS } from "./doors";
+import { figure } from "./format";
 import { HomeView } from "./HomePage";
+import { realFalseDeaths } from "./numbers";
 import type { Story } from "./data/types";
 import { bundledStory } from "./story";
 import { fixtureClaimText, FIXTURE_STORY, UNIVERSAL } from "./testing";
@@ -196,6 +198,13 @@ describe("the home page, rendered with the real story", () => {
 
   it("says nothing of its own that reads as every run being valid", () => {
     for (const [pattern, name] of UNIVERSAL) expect(pattern.test(outsideClaims), `"${name}" outside a claim`).toBe(false);
+  });
+
+  it("writes the real false deaths beside R4 at one decimal, the way its row writes them", () => {
+    const cost = realFalseDeaths(bundledStory);
+    expect(cost, "the real story has the false deaths of the headline rows").not.toBeNull();
+    const helps = /<article[^>]*aria-labelledby="helps-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
+    expect(plain(helps)).toContain(`${figure(cost!.perRun, 1)} ${COPY.evidence.helps.perRun}`);
   });
 
   it("lets only R6 say it, in the row's words, with the setting and the link to R2 and R3 beside it", () => {
