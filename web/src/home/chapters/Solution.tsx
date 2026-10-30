@@ -17,6 +17,9 @@ import { TREE_KEYFRAMES } from "../viz/keyframes";
 // The text below follows these names.
 const BEATS = treeBeats(TREE_KEYFRAMES);
 
+/** Where, on the reading line, the survivors' panels play from 0 to 1 (the heir step is index 4 of the steps below). */
+const HRW_PLAY = [3.7, 4.4] as const;
+
 export function Solution() {
   const story = useStory();
   const f = facts(story);
@@ -68,7 +71,8 @@ export function Solution() {
         ),
       },
       { id: "adopt", at: kf.adopt1, weight: 0.8, content: <StepText lead={s.adopt.lead} more={s.adopt.more} /> },
-      { id: "again", at: kf.kill5, weight: 1.3, hold: 0.1, content: <StepText lead={s.again.lead} more={chain} /> },
+      // The other four kills run between the adoption and this step: a tall block gives each of them about a third of a screen.
+      { id: "again", at: kf.kill5, weight: 2, hold: 0.1, content: <StepText lead={s.again.lead} more={chain} /> },
       {
         id: "done",
         at: kf.settled,
@@ -114,11 +118,13 @@ function SolutionVisual({
   position: MotionValue<number>;
   still: boolean;
 }) {
-  // The survivors' panels take the tree's place while they work out the heir (the tree's clock holds from the verdict to
-  // the heir), then give it back.
-  const hrwProgress = useTransform(progress, (v) => clamp01((v - BEATS.verdict1) / Math.max(BEATS.heir1 - BEATS.verdict1, 1e-6)));
-  const hrwOpacity = useTransform(position, [3.5, 3.95, 4.45, 4.9], [0, 1, 1, 0]);
-  const treeOpacity = useTransform(position, [3.5, 3.95, 4.45, 4.9], [1, 0.12, 0.12, 1]);
+  // The survivors' panels take the tree's place while they work out the heir, then give it back. The tree's clock holds
+  // still from the verdict to the heir, a sliver of its progress (a tenth of a screen of scroll), so the panels do not
+  // follow it: they follow the reading line (`position`: 4 is the heir card), which crosses the heir step's block, where
+  // the tree is held, between about 3.6 and 4.4. That is most of a screen of scroll for the panels to work in.
+  const hrwProgress = useTransform(position, (v) => clamp01((v - HRW_PLAY[0]) / (HRW_PLAY[1] - HRW_PLAY[0])));
+  const hrwOpacity = useTransform(position, [3.4, 3.7, 4.45, 4.9], [0, 1, 1, 0]);
+  const treeOpacity = useTransform(position, [3.4, 3.7, 4.45, 4.9], [1, 0.12, 0.12, 1]);
   const stripOpacity = useTransform(position, [1.3, 2], [0, 1]);
   return (
     <div className="home-solution">
