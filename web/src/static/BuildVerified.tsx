@@ -24,6 +24,15 @@ export function whereChecked(stamp: BuildStamp | null): string {
   return `Checked when this page was built, at commit ${stamp.commit_short.slice(0, 7)} on ${stamp.built_at.slice(0, 10)}, not in your browser.`;
 }
 
+/** The same truth for a place that shows a verdict as plain words (the Runs page's verify cell), in the static build only:
+ * in place of "Replay verified" and "N events re-run from run.started", which would say a replay ran just now. */
+export function verifiedAtBuild(report: VerifyReport): { label: string; detail: string } {
+  return {
+    label: "Replay verified at build",
+    detail: `${whereChecked(readStamp(report))} Recorded and replayed head ${report.replayed_head.slice(0, 12)}. Check it yourself: ${COMMAND}`,
+  };
+}
+
 export function BuildVerified({ report }: { report: VerifyReport }) {
   const stamp = readStamp(report);
   return (

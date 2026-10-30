@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { COMMAND } from "./answers";
 import { buildDetail, buildNote, isHome } from "./Banner";
-import { readStamp, whereChecked } from "./BuildVerified";
+import { readStamp, verifiedAtBuild, whereChecked } from "./BuildVerified";
 import { megabytes, overall, SHOW_FROM_BYTES, type LoadProgress } from "./progress";
 import { VERIFY, makeSite } from "./testing";
 
@@ -59,6 +59,15 @@ describe("what the verify badge says about the report", () => {
     const { static: _stamp, ...bare } = VERIFY;
     expect(readStamp(bare)).toBeNull();
     expect(readStamp({ static: { commit_short: 3 } })).toBeNull();
+  });
+
+  it("gives a plain-words verdict for a table cell, which never says a replay ran just now", () => {
+    const words = verifiedAtBuild(VERIFY as never);
+    expect(words.label).toBe("Replay verified at build");
+    expect(words.detail).toContain("not in your browser");
+    expect(words.detail).toContain("commit ccccccc on 2026-10-30");
+    expect(words.detail).toContain("uv run fractalswarm demo --verify");
+    expect(`${words.label} ${words.detail}`).not.toMatch(/re-run|replaying|just now/i);
   });
 
   it("says where the check was made, whether or not it can say when", () => {
