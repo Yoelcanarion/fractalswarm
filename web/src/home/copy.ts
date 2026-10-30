@@ -25,7 +25,7 @@ export const word = (n: number | null | undefined): string =>
 const plural = (n: number | null | undefined, one: string, many: string = `${one}s`): string => (n === 1 ? one : many);
 
 export const COPY = {
-  title: "FractalSwarm: kill half the brains, it still finishes",
+  title: `FractalSwarm · ${TAGLINE}`,
   description:
     "Kill half the brains. It still finishes. FractalSwarm is a multi-agent runtime on Muse Spark and Muse Wonder. Scroll through the problem, the design and the evidence, then step into the simulation.",
 
