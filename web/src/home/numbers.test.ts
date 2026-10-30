@@ -9,7 +9,6 @@ import {
   gateCrashes,
   heroReading,
   heroSetting,
-  lanesBeats,
   proofSteps,
   realFalseDeaths,
   runSetting,
@@ -17,14 +16,9 @@ import {
   takeover,
   taskName,
   tokens,
-  treeBeats,
-  waitedSeconds,
 } from "./numbers";
 import { bundledStory, claimState, resolveClaim, slice } from "./story";
 import { fixtureClaimText, FIXTURE_STORY } from "./testing";
-import { TREE_KEYFRAMES } from "./viz/keyframes";
-
-const ascending = (values: number[]) => expect(values).toEqual([...values].sort((a, b) => a - b));
 
 describe("what the page reads from the story", () => {
   it("reads the last point of a workflow of the hero chart", () => {
@@ -37,10 +31,10 @@ describe("what the page reads from the story", () => {
     expect(heroSetting(FIXTURE_STORY)).toEqual({ task: "t2_conference", real: true, seeds: 7, crashes: 5, profile: "C3" });
   });
 
-  it("reads the crash counts of the gate's two profiles from the hero chart, and none where it has no points", () => {
+  it("reads the crash counts of the gate's two profiles from the failure profiles, and none where they are missing", () => {
     expect(gateCrashes(FIXTURE_STORY)).toEqual([3, 5]);
     expect(gateCrashes(null)).toEqual([]);
-    expect(gateCrashes({ ...FIXTURE_STORY, hero: { ...FIXTURE_STORY.hero, series: {} } })).toEqual([]);
+    expect(gateCrashes({ ...FIXTURE_STORY, profiles: { ...FIXTURE_STORY.profiles, items: {} } })).toEqual([]);
   });
 
   it("counts the facts of the example", () => {
@@ -59,7 +53,6 @@ describe("what the page reads from the story", () => {
     expect(tokens(null)).toEqual({ coordination: null, recovery: null });
     expect(proofSteps(null)).toEqual([]);
     expect(assumptions(null)).toEqual([]);
-    expect(Number.isNaN(waitedSeconds(null, lanesBeats(null), 0.5))).toBe(true);
   });
 
   it("writes the setting of a result with its task, failures, model and seeds", () => {
@@ -97,7 +90,7 @@ describe("what the page reads from the story", () => {
 
   it("keeps the real runs' false deaths apart: they belong to R4's setting, not to R3's figures", () => {
     expect(failures(FIXTURE_STORY).falseDeaths.some((item) => /real model/.test(item.label))).toBe(false);
-    expect(realFalseDeaths(FIXTURE_STORY)).toEqual({ perRun: 2.5, runs: 3 });
+    expect(realFalseDeaths(FIXTURE_STORY)).toEqual({ perRun: 2.5, runs: 10 });
     expect(realFalseDeaths(bundledStory)?.runs).toBe(bundledStory.headline?.seedCount);
   });
 
@@ -131,49 +124,6 @@ describe("the numbers the page prints beside a claim are the numbers of its word
   });
 });
 
-describe("where the text sits in the visuals' progress", () => {
-  it("takes the beats of the lanes from the data, in order", () => {
-    const beats = lanesBeats(bundledStory);
-    expect(beats).toEqual(bundledStory.lanes.central.keyframes);
-    ascending([beats.filled, beats.crash, beats.restart, beats.redone, beats.end]);
-  });
-
-  it("falls back to ordered defaults where the data names no beat", () => {
-    const beats = lanesBeats(null);
-    ascending([beats.filled, beats.crash, beats.restart, beats.redone, beats.end]);
-  });
-
-  it("counts the stall of the run up from the crash to the restart, and holds it", () => {
-    const beats = { filled: 0.2, crash: 0.4, restart: 0.6, redone: 0.8, end: 1 };
-    expect(waitedSeconds(100, beats, 0)).toBe(0);
-    expect(waitedSeconds(100, beats, 0.4)).toBe(0);
-    expect(waitedSeconds(100, beats, 0.5)).toBeCloseTo(50, 9);
-    expect(waitedSeconds(100, beats, 0.6)).toBe(100);
-    expect(waitedSeconds(100, beats, 1)).toBe(100);
-    expect(Number.isNaN(waitedSeconds(null, beats, 0.5))).toBe(true);
-    expect(waitedSeconds(100, { ...beats, restart: 0.4 }, 0.5)).toBe(100);
-  });
-
-  it("ends the real count on the stall time of the real run", () => {
-    const beats = lanesBeats(bundledStory);
-    expect(waitedSeconds(bundledStory.lanes.central.stallS, beats, 1)).toBe(bundledStory.lanes.central.stallS);
-  });
-
-  it("puts the moments of the real kill sequence in order, under the names the text uses", () => {
-    const beats = treeBeats(TREE_KEYFRAMES);
-    for (const name of Object.keys(beats)) expect(TREE_KEYFRAMES, name).toHaveProperty(name);
-    ascending([beats.grown, beats.log, beats.kill1, beats.verdict1, beats.heir1, beats.adopt1, beats.kill5, beats.settled]);
-    expect(beats.settled).toBeLessThanOrEqual(1);
-  });
-
-  it("lets W7 name a moment and keeps its own default for the rest", () => {
-    expect(treeBeats({ kill1: 0.5, bogus: 3 }).kill1).toBe(0.5);
-    expect(treeBeats({}).settled).toBe(1);
-    expect(treeBeats({ kill1: Number.NaN }).kill1).toBe(treeBeats({}).kill1);
-    for (const value of Object.values(treeBeats({}))) expect(Number.isFinite(value)).toBe(true);
-  });
-});
-
 describe("the story's claims", () => {
   it("resolve to the row's own words and the state the generator gave", () => {
     expect(resolveClaim(FIXTURE_STORY, "R2")).toEqual({ id: "R2", text: fixtureClaimText("R2"), state: "allowed" });
@@ -193,7 +143,7 @@ describe("the story's claims", () => {
   });
 
   it("walk a dotted path and stop at the first gap", () => {
-    expect(slice(FIXTURE_STORY, "hero.series.swarm.points")).toHaveLength(4);
+    expect(slice(FIXTURE_STORY, "hero.series.swarm.points")).toHaveLength(2);
     expect(slice(FIXTURE_STORY, "hero.series.nobody.points")).toBeUndefined();
     expect(slice(null, "a")).toBeUndefined();
   });

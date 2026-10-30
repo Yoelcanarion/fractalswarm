@@ -2,6 +2,9 @@
 // checked as text. Claims are never typed here: they come from docs/claims.md through the data file (parts/Claim).
 // Numbers are never typed here either: a sentence that needs one takes it from the data (`facts`).
 //
+// The page is short on purpose (Yoel, Oct 30): a title and one sentence to a section, about 200 words in all with every
+// "See more" closed, and the nuance folded. `words.test.ts` holds that number; a sentence added here has to pay for itself.
+//
 // Rules the guard test holds this file to: no "simpler", "cheaper", "more reliable", "first", and not the old
 // tagline's second half.
 
@@ -27,9 +30,12 @@ const plural = (n: number | null | undefined, one: string, many: string = `${one
 export const COPY = {
   title: `FractalSwarm · ${TAGLINE}`,
   description:
-    "Kill half the brains. It still finishes. FractalSwarm is a multi-agent runtime on Muse Spark and Muse Wonder. Scroll through the problem, the design and the evidence, then step into the simulation.",
+    "Kill half the brains. It still finishes. FractalSwarm is a multi-agent runtime on Muse Spark and Muse Wonder. Kill a coordinator yourself, watch the rest take over, then step into the simulation.",
 
-  bar: { brand: "FractalSwarm", enter: "Enter the simulation", enterShort: "Enter", skip: "Skip to the story", rail: "Chapters" },
+  bar: { brand: "FractalSwarm", enter: "Enter the simulation", enterShort: "Enter", skip: "Skip to the story", home: "Back to the home page" },
+
+  seeMore: "See more",
+  repeat: "Repeat",
 
   labels: { stalled: "stalled", extraCost: "extra cost" },
 
@@ -37,60 +43,74 @@ export const COPY = {
   rivalReason: "In-process: its workers die with it, so most of the gap comes from that design.",
 
   hero: {
-    kicker: "FractalSwarm · multi-agent runtime on Muse Spark and Muse Wonder",
-    conditions: "Where this holds, and where it does not",
-    how: "See how it works",
-    enter: "Enter the simulation",
+    kicker: "Muse Spark · Muse Wonder",
+    line: "AI agents led by a tree of small coordinators. Any of them can die mid-run, and the rest take over its work.",
+    kill: "Kill one yourself",
     object: "The real tree of a recorded run: a root, its tracks and sessions, and their agents. Coordinators are killed one after another, and it heals.",
   },
 
   problem: {
-    eyebrow: "The problem",
     title: "A team that depends on one coordinator.",
-    example: (f: Facts) =>
-      `Take a real job: plan a conference from messy emails. ${f.talks ?? "—"} talks, ${word(f.tracks)} tracks, ${word(f.days)} ${plural(f.days, "day")}. A team of AI agents reads the emails and places the talks.`,
-    visual: "Work lanes of a real run of an in-process supervisor: one lane per agent, one bar per model call, on a shared clock.",
-    steps: {
-      team: { lead: "The team has one coordinator.", more: "It plans, assigns and checks the work." },
-      crash: { lead: "Then it crashes.", more: "The work waits." },
-      twice: {
-        lead: "In the simplest setup, the workers run inside the coordinator, so they die with it.",
-        more: "Their calls were already paid for. Now they are paid for again.",
-      },
-      numbers: { lead: "That is what it cost, in real runs.", rival: "In-process supervisor", swarm: "FractalSwarm" },
-      better: {
-        lead: "A better supervisor fixes the paying twice: its workers survive, and a standby takes over.",
-        more: "But then you run a supervisor, a standby and something to watch them. Even an ideal one has to stop to recover.",
-      },
+    line: "In the simplest setup its workers die with it, and their calls are paid for twice.",
+    film: "Work lanes of a real run of an in-process supervisor: one lane per agent, one bar per model call, on a shared clock. The coordinator crashes, the work waits, and the calls it had already made are made again.",
+    more: {
+      example: (f: Facts) =>
+        `The job: plan a conference from messy emails. ${f.talks ?? "—"} talks, ${word(f.tracks)} tracks, ${word(f.days)} ${plural(f.days, "day")}. A team of AI agents reads the emails and places the talks.`,
+      numbers: "That is what it cost, in real runs.",
+      rival: "In-process supervisor",
+      swarm: "FractalSwarm",
+      better: "A better supervisor fixes the paying twice: its workers survive, and a standby takes over.",
+      betterMore: "But then you run a supervisor, a standby and something to watch them. Even an ideal one has to stop to recover.",
     },
     parts: { supervisor: "Supervisor", standby: "Standby", watcher: "Watcher", workers: "Workers" },
-    waiting: "the work is waiting, in this recorded run",
-    question: "Can a team recover without one?",
   },
 
   solution: {
-    eyebrow: "The solution",
     title: "A tree of small coordinators.",
-    lede: (f: Facts) =>
-      `${word(f.orchestrators)} coordinators, called brains here, each lead a few agents. Any of them can die, the root included.`,
-    visual: "The real tree of a recorded run: the root, its tracks and sessions, and the agents. Brains die one by one, and the survivors take over.",
-    steps: {
-      tree: { lead: "Replace the one coordinator with a tree of small ones.", more: "A brain is a coordinator. An agent is a worker." },
-      log: {
-        more: "Every event in the log carries the hash of the one before it.",
-        limit: "The log is a central component. The swarm removes the coordinator as a single point of decision, not every single point of failure.",
-      },
-      kill: { lead: "Kill the root.", more: "Its heartbeats stop. The others count the seconds until they agree it is dead." },
-      heir: { more: "Each survivor works it out alone. No arrows between the panels: nothing was sent." },
-      adopt: { lead: "The heir adopts the work, and every result already in the log.", more: "Its subtree re-wires to the heir." },
-      again: { lead: "Again.", more: "A session, a track, another session, another track. The root moves from one brain to the next." },
-      done: { lead: "This run still finishes." },
+    line: "The survivors read the same log and each works out the same heir, so nobody votes.",
+    cards: {
+      log: { title: "One shared log", drawing: "Each new event is added to the log and carries the hash of the one before it." },
+      heir: { title: "Everyone finds the same heir", drawing: "Each survivor computes the heir alone, from the log. No message passes between them." },
+      adopt: { title: "The heir takes over", drawing: "The heir adopts the dead coordinator's work, and its subtree is wired to the heir." },
     },
-    finish: { placed: "talks placed", violations: "hard violations", duplicates: "duplicate calls", cost: "cost" },
+    demo: { title: "Kill one yourself", label: "An illustration in your browser, not a real run." },
+    more: {
+      terms: "The terms of the design, in the words of docs/claims.md.",
+      limit: "The log is a central component. The swarm removes the coordinator as a single point of decision, not every single point of failure.",
+    },
+  },
+
+  proof: {
+    title: "What the real runs show.",
+    bars: "Time stalled and extra cost when five of ten coordinators crash: the swarm against an in-process supervisor and against an ideal durable one.",
+    conditions: "Conditions and limits",
+    check: "Check it:",
+    more: {
+      lead: "The rest of the evidence is on its own page: the models, the fair fight, the charts, where it helps and where it does not.",
+      link: "Open the evidence",
+      proves: "Replay proves that this code produces the recorded run from the recorded model outputs. It does not prove where those outputs came from.",
+      terminal: "The output of the commands, from the recorded demo run.",
+      provenance: "Every number on this page comes from a committed result or a recorded run. Every claim is a row of docs/claims.md.",
+    },
+  },
+
+  enter: {
+    title: "Pick a door.",
+    line: "Watch recorded runs, or break one.",
+    closed: "Needs the local server",
+  },
+
+  footer: "Meta Global AI Developer Hackathon",
+
+  // ---- the evidence page (#/evidence): a plain document, nothing on it moves ----
+
+  evidencePage: {
+    title: "The evidence",
+    lede: "Everything the home page leaves out, with the settings and the limits. Every number is read from a committed result or a recorded run.",
+    back: "Back to the story",
   },
 
   models: {
-    eyebrow: "Why Meta’s models matter",
     title: "The hard part of this task is reading people.",
     email: "A message from a speaker, as it arrived.",
     constraints: "What Muse Spark read in it. Each constraint points at the sentence it came from.",
@@ -114,7 +134,6 @@ export const COPY = {
   },
 
   evidence: {
-    eyebrow: "The evidence",
     title: "What the runs show, and what they do not.",
     fair: {
       lead: "We built the strongest rival we could implement fairly.",
@@ -127,14 +146,14 @@ export const COPY = {
     hero: { lead: "Waiting and extra cost, as coordinators die." },
     tie: { word: "Tie.", note: "Stall time and extra cost, one dot per seed, against an ideal durable supervisor." },
     helps: {
-      lead: "Where it helps.",
+      lead: "Locality ties too.",
       // `crashes` is read from the data ("three and five"), so the sentence follows the pre-registered profiles.
       gate: (crashes: string) => `With a fake model, at our pre-registered gate, this measure tied at ${crashes} crashes.`,
-      cost: "What it costs: its failure detector declared live coordinators dead on these runs.",
+      cost: "One loss: its failure detector declared live coordinators dead on these runs.",
       perRun: "false deaths per run",
     },
     fails: {
-      lead: "Where it does not.",
+      lead: "Where it does worse.",
       wins: "Here the supervisor wins.",
       fast: "A fast external restart",
       times: "×",
@@ -144,19 +163,10 @@ export const COPY = {
     },
     proof: {
       lead: "You do not have to trust us.",
-      terminal: "The output of the command, from the recorded demo run.",
-      proves: "Replay proves that this code produces the recorded run from the recorded model outputs. It does not prove where those outputs came from.",
+      finished: "The recorded run that the home page replays.",
     },
+    finish: { placed: "talks placed", violations: "hard violations", duplicates: "duplicate calls", cost: "cost" },
   },
-
-  enter: {
-    eyebrow: "Enter the simulation",
-    title: "Pick a door.",
-    lede: "Everything above is a recorded run. Behind these doors you can watch more of them, or break one yourself.",
-    closed: "Needs the local server",
-  },
-
-  footer: "Every number on this page comes from a committed result or a recorded run. Every claim is a row of docs/claims.md.",
 } as const;
 
 /** The sentences the guard test scans: everything in COPY, flattened. */

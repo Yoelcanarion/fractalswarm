@@ -42,6 +42,55 @@ export function claimRows(): ClaimRow[] {
   return rows;
 }
 
+const VOID_TAGS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
+
+// Never on the screen as words: the skip link until it is focused, the screen-reader text, the phone's short label of the way
+// in (the long one is on a wide screen) and the placeholders of components that have not landed.
+const NOT_SEEN_CLASS = /\b(home-sr|home-skip|home-bar__short|home-placeholder)\b/;
+
+const decode = (text: string): string =>
+  text.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+
+/** The text a person sees in a page rendered to a string, with every "See more" closed: what sits in a closed `details` but its
+ * summary, in an element that is `aria-hidden` or `hidden`, in a script or a style, or that the list above names, is left out.
+ * Text inside an svg is left out: the labels of a drawing come and go with its animation, and W7 keeps them few. */
+export function visibleText(html: string): string {
+  const out: string[] = [];
+  const stack: { tag: string; hide: boolean }[] = [];
+  const token = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][\w:-]*)((?:"[^"]*"|'[^']*'|[^'">])*?)(\/?)>|([^<]+)/g;
+  for (const match of html.matchAll(token)) {
+    const [whole, closing, tag, attrs = "", selfClosing, text] = match;
+    if (text !== undefined) {
+      if (!stack.some((element) => element.hide)) out.push(decode(text));
+      continue;
+    }
+    if (whole.startsWith("<!--")) continue;
+    const name = tag.toLowerCase();
+    if (closing) {
+      for (let i = stack.length - 1; i >= 0; i--) {
+        if (stack[i].tag === name) {
+          stack.length = i;
+          break;
+        }
+      }
+      continue;
+    }
+    if (selfClosing || VOID_TAGS.has(name)) continue;
+    const parent = stack[stack.length - 1];
+    const hide =
+      ["script", "style", "title", "desc", "svg"].includes(name) ||
+      /\baria-hidden="true"/.test(attrs) ||
+      /\shidden(=""|\s|$)/.test(` ${attrs}`) ||
+      NOT_SEEN_CLASS.test(/class="([^"]*)"/.exec(attrs)?.[1] ?? "") ||
+      (parent?.tag === "details" && name !== "summary");
+    stack.push({ tag: name, hide });
+  }
+  return out.join(" ").replace(/\s+/g, " ").trim();
+}
+
+/** The words a person reads on the page: the pieces of the visible text that hold a letter or a digit (a dot or an arrow is not a word). */
+export const visibleWords = (html: string): string[] => visibleText(html).split(" ").filter((piece) => /[\p{L}\p{N}]/u.test(piece));
+
 /** A claim's words as the page shows them: the row's text without the quotation marks around it. */
 export const claimWords = (text: string): string => text.replace(/^"|"$/g, "");
 
@@ -144,3 +193,40 @@ function madeUp(): Story {
 }
 
 export const FIXTURE_STORY: Story = madeUp();
+
+/** A page rendered to a string, as plain text: tags out, entities decoded, spacing squeezed. Everything in the markup, folds included. */
+export const plain = (html: string): string =>
+  html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ");
+
+export const countOf = (html: string, needle: string): number => html.split(needle).length - 1;
+
+export interface DrawnClaim {
+  id: string;
+  state: string;
+  /** "1/2" for the first sentence of two, null for a whole claim. */
+  part: string | null;
+  body: string;
+}
+
+/** The claims drawn in a page rendered to a string. */
+export const drawnClaims = (html: string): DrawnClaim[] =>
+  [...html.matchAll(/<p class="home-claim[^"]*" data-claim="(\w+)" data-state="(\w+)"(?: data-part="([\d/]+)")?>([\s\S]*?)<\/p>/g)].map((m) => ({
+    id: m[1],
+    state: m[2],
+    part: m[3] ?? null,
+    body: m[4],
+  }));
+
+/** One section of the home page as markup: from its opening tag to the next section's (or the end of `main`). A drawing inside it may hold sections of its own. */
+export function sectionOf(html: string, id: string): string {
+  const start = html.indexOf(`<section id="${id}"`);
+  if (start < 0) return "";
+  const next = html.indexOf('<section id="', start + 1);
+  const end = next < 0 ? html.indexOf("</main>", start) : next;
+  return html.slice(start, end < 0 ? undefined : end);
+}

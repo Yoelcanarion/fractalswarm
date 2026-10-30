@@ -1,9 +1,11 @@
 // Jumping to a place on the page. The address bar is the app's router (`#/...`), so such a link cannot be a plain
 // `#id` anchor: it carries `#/?at=<id>`, which opens the page there when it is pasted, and a click on it
 // scrolls smoothly and rewrites the address without leaving the page or filling the history.
+//
+// This moves the page; it never reads where the page is scrolled to.
 
 import { prefersReducedMotion } from "../lib/motion";
-import type { Target } from "./chapters";
+import type { Target } from "./sections";
 import { targetHash } from "./route";
 
 interface Click {
@@ -18,9 +20,9 @@ const opensElsewhere = (event?: Click): boolean => !!event && (!!event.metaKey |
 
 export function scrollToTarget(target: Target, event?: Click): void {
   if (opensElsewhere(event)) return;
-  event?.preventDefault();
   const element = document.getElementById(target);
-  if (!element) return;
+  if (!element) return; // not on this page: the link goes where its address says
+  event?.preventDefault();
   element.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
   try {
     history.replaceState(null, "", targetHash(target));
@@ -41,7 +43,7 @@ export function scrollToTop(event?: Click): void {
   }
 }
 
-/** Opening at `#/?at=<id>`: jump there at once, after the layout is in place. */
-export function jumpToTarget(target: Target): void {
+/** Opening at `#/?at=<id>`, on the home page or the evidence page: jump there at once, after the layout is in place. */
+export function jumpToTarget(target: string): void {
   document.getElementById(target)?.scrollIntoView({ behavior: "auto", block: "start" });
 }

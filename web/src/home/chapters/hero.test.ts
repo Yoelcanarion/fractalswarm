@@ -9,7 +9,7 @@ import { bundledStory } from "../story";
 import { TREE_HERO_SECONDS } from "../viz/keyframes";
 import { HERO_LOOP, HERO_NOTE } from "./Hero";
 
-const render = (still: boolean): string => renderToStaticMarkup(createElement(HomeView, { story: bundledStory, still, active: -1 }));
+const render = (still: boolean): string => renderToStaticMarkup(createElement(HomeView, { story: bundledStory, still }));
 const heroOf = (html: string): string => /<section[^>]*class="home-hero"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
 const plain = (html: string): string => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
@@ -32,16 +32,35 @@ describe("the line under the hero's tree", () => {
     for (const line of Object.values(HERO_NOTE)) expect(line).not.toMatch(/\blive\b|real[- ]time|streaming/i);
   });
 
-  it("names the setting of the run the tree draws, next to it", () => {
+  it("sits under the tree, and the setting of the run is no longer printed there: the page is held to about 200 words", () => {
     const hero = plain(heroOf(render(false)));
     expect(hero).toContain(HERO_NOTE.loop);
-    expect(hero).toContain("T2 conference planning · 5 coordinators crashed · real model · 1 seed");
+    expect(hero).not.toContain("real model");
   });
 
   it("says what a still frame is instead, since nothing is replayed", () => {
     const hero = plain(heroOf(render(true)));
     expect(hero).toContain(HERO_NOTE.still);
     expect(hero).not.toContain("on a loop");
+  });
+});
+
+describe("the hero's words", () => {
+  const hero = plain(heroOf(render(false)));
+
+  it("are the tagline, a line naming the two models, one sentence and one button that glides to the click demo", () => {
+    expect(hero).toContain("Kill half the brains. It still finishes.");
+    expect(hero).toContain("Muse Spark");
+    expect(hero).toContain("Muse Wonder");
+    expect(hero).toContain("AI agents led by a tree of small coordinators.");
+    const html = heroOf(render(false));
+    expect(html.match(/class="home-button/g)).toHaveLength(1);
+    expect(html).toContain('href="#/?at=demo"');
+    expect(hero).toContain("Kill one yourself");
+  });
+
+  it("do not hand over: nothing in the hero follows the scroll", () => {
+    expect(heroOf(render(false))).not.toContain("data-leaving");
   });
 });
 

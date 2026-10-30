@@ -32,7 +32,7 @@ export function TakeoverChip() {
       return <span className="badge badge--muted">Checking takeover…</span>;
     case "error":
       return (
-        <Hint focusable label={takeover.error}>
+        <Hint label={takeover.error}>
           <span className="badge badge--muted">Takeover check unavailable</span>
         </Hint>
       );
@@ -40,7 +40,7 @@ export function TakeoverChip() {
       const chip = describeTakeover(takeover.report, inLog);
       const tone = chip.tone === "good" ? "badge--good badge--big" : chip.tone === "bad" ? "badge--bad badge--big" : "badge--muted";
       return (
-        <Hint focusable label={chip.detail}>
+        <Hint label={chip.detail}>
           <span className={`badge ${tone}`}>{chip.text}</span>
         </Hint>
       );

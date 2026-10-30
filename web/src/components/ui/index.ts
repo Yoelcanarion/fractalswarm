@@ -2,6 +2,7 @@
 // documented where they are declared; their styles are in styles/ui.css.
 
 export { Card, type CardProps } from "./Card";
+export { Details, type DetailsProps } from "./Details";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export { Hint, type HintProps } from "./Hint";
 export { ModelBadge, modelFamily, type ModelBadgeProps, type ModelFamily } from "./ModelBadge";

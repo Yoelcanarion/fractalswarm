@@ -1,16 +1,19 @@
 # FractalSwarm benchmark report
 
-> Status: **the $0 sections, the headline, the reading in §5 and the results of the two real-model
+> Status: **the $0 sections, the headline, the reading in §5 and the results of the three real-model
 > matrices run so far (§3, §4.10) are written; the results of §8 are not.** §4.1–§4.9 report the
 > fake-LLM runs of the arena phase on the simulated clock: the rivals gate, the sensitivity sweeps,
 > an exploratory crash-time jitter sweep, the per-process view and the false deaths. §4.10 reports
 > the paid runs on the Meta Model API: 96 cells of six workflows and two tasks (`results/v1`, two
-> seeds, descriptive) and the 18 cells of the headline matrix (`results/headline`, three seeds, read
-> by the preregistered rules); §3 says what ran, on which models, at which commits and for how much.
-> Every number in §3 and §4 is read from files committed under `bench/results/` (`results.csv`,
-> `results.json`, `honesty.json`, `verdicts.txt`, the cell files), except where the text says it was
-> computed from the run logs or the progress log, which are not committed with the results. Later
-> real-model runs and the results of §8 are not written yet.
+> seeds, descriptive), the 18 cells of the headline matrix (`results/headline`, three seeds, read
+> by the preregistered rules) and the headline extended to ten seeds, with `central` added (80
+> cells, `results/headline-10`, §4.10.7: read by the same rules and reported next to the three-seed
+> reading, which it changes: locality against `durable-max` no longer holds on every seed); §3 says
+> what ran, on which models, at which commits and for how much. Every number in §3 and §4 is read
+> from files committed under `bench/results/` (`results.csv`, `results.json`, `honesty.json`,
+> `verdicts.txt`, the cell files), except where the text says it was computed from the run logs or
+> the progress log, which are not committed with the results. Later real-model runs and the results
+> of §8 are not written yet.
 
 **Headline (decision gate, Oct 29: outcome B). Resilience comparable to an ideal durable
 supervisor, without a central coordinator or a separate recovery mechanism.** Against
@@ -21,7 +24,11 @@ and it fails where an external supervisor detects and restarts within 0.5–1 s 
 the two are comparable, and the supervisor recovers sooner (§4.7); the swarm's failure detector
 produces false deaths, the supervisors' none (§4.8). Against the in-process supervisor
 (`central`), whose workers die with it, the swarm stalls 1.2 s against 34.3 s and pays −1.0%
-against +66.6% extra on T2 at C3 (§4.1, §4.2). What a headline may say is fixed in
+against +66.6% extra on T2 at C3 (§4.1, §4.2). On the real model, over ten seeds at T2 and C3, the
+swarm stalls 11.2 s against 42.8 s for `central` and pays +2.4% against +67.0% extra. Against
+`durable-max` it ties on preserved work, extra cost, time to recover and stall time, it loses on
+false deaths (1.90 per run against none), and the locality that three seeds showed does not hold
+at ten (§4.10.7). What a headline may say is fixed in
 `bench/PREREG.md` §7; the claims, each with its evidence, are in `docs/claims.md`.
 
 ## 1. Rivals and fairness rules (read these first)
@@ -140,45 +147,47 @@ are fixed in `bench/PREREG.md` before the gate runs.
 
 ### The real-model runs
 
-Two matrices ran on the Meta Model API with Contributor routing: **114 cells** in all, recorded from
-Oct 28 to Oct 30 and read in §4.10. Every cell completed and is valid. The clock is live (`clock:
-live` in all 114 run logs), so stall times, makespans, costs and call counts are those of the API on
-the day each cell ran, and a new run would not repeat them.
+Three matrices ran on the Meta Model API with Contributor routing: **176 distinct cells** in all (the
+third, the headline extended to ten seeds, contains the 18 cells of the second, byte for byte in
+their run logs), recorded from Oct 28 to Oct 30 and read in §4.10. Every cell completed, and 175 of
+the 176 are valid: the swarm at C0 on seed 5 of the ten-seed matrix is not (§4.10.7). The clock is
+live (`clock: live` in all 176 run logs), so stall times, makespans, costs and call counts are those
+of the API on the day each cell ran, and a new run would not repeat them.
 
 | Item | Value |
 |---|---|
-| Matrices | **v1**, `bench/matrix-rivals-real.yaml`: swarm, `durable-max`, `durable`, `central`, `single` and `pipeline` × T2 and T1 × C0–C3 × seeds 1–2 = **96 cells**, in `bench/results/v1`. **Headline**, `bench/matrix-headline.yaml`: swarm, `durable-max` and `durable` × T2 × C0 and C3 × seeds 1–3 = **18 cells**, in `bench/results/headline`. The scenarios, chaos profiles and seeds in the 114 run logs are those of these cells. |
-| The placeholder names | This section used to name `bench/matrix.yaml` and `bench/matrix-final.yaml`; neither is a matrix of record. `matrix.yaml` (chart v1: swarm, `central`, `single` and `pipeline` × T2 × C0–C3 × 2 seeds = 32 cells) recorded 29 of v1's cells on Oct 28 and was stopped with three `pipeline` cells left. `matrix-final.yaml` (the same four workflows × T2 and T1 = 64 cells) was not run. `matrix-rivals-real.yaml` replaced both: it writes to the same directory and skips a cell that has a result file, so it paid for the other 67 cells (32 for `durable-max` and `durable`, 32 for T1, and the 3 `pipeline` cells of chart v1). The headline has a directory of its own, because the harness would hand back v1's earlier cells instead of running new ones. |
+| Matrices | **v1**, `bench/matrix-rivals-real.yaml`: swarm, `durable-max`, `durable`, `central`, `single` and `pipeline` × T2 and T1 × C0–C3 × seeds 1–2 = **96 cells**, in `bench/results/v1`. **Headline**, `bench/matrix-headline.yaml`: swarm, `durable-max` and `durable` × T2 × C0 and C3 × seeds 1–3 = **18 cells**, in `bench/results/headline`. **Headline-10**, `bench/matrix-headline-10.yaml`: swarm, `durable-max`, `durable` and `central` × T2 × C0 and C3 × seeds 1–10 = **80 cells**, in `bench/results/headline-10`: the headline's 18 cells are copied in first, so 62 were run. The scenarios, chaos profiles and seeds in the 176 run logs are those of these cells. |
+| The placeholder names | This section used to name `bench/matrix.yaml` and `bench/matrix-final.yaml`; neither is a matrix of record. `matrix.yaml` (chart v1: swarm, `central`, `single` and `pipeline` × T2 × C0–C3 × 2 seeds = 32 cells) recorded 29 of v1's cells on Oct 28 and was stopped with three `pipeline` cells left. `matrix-final.yaml` (the same four workflows × T2 and T1 = 64 cells) was not run. `matrix-rivals-real.yaml` replaced both: it writes to the same directory and skips a cell that has a result file, so it paid for the other 67 cells (32 for `durable-max` and `durable`, 32 for T1, and the 3 `pipeline` cells of chart v1). The headline has a directory of its own, because the harness would hand back v1's earlier cells instead of running new ones, and so has headline-10. |
 | Models | Per role, read from the run logs: the table below. The root planner runs on `muse-wonder-1.0`, which has no Contributor variant. Every other role runs on `muse-spark-1.3` and goes to `muse-spark-1.3-contributor` when the call is opted in and the scanners find its content clean (spec §7.5). |
 | Topology | swarm: depth 2, 10 orchestrators, 12 agents (fanout [3, 2], 2 agents per leaf, in every swarm log). `durable-max`, `durable` and `central`: 1 coordinator, 12 agents. `single` and `pipeline` (secondary rows): `central`'s process with one worker and one contract in flight at a time (`actors/orchestrator.py`). |
-| Caps and pre-flight worst case | Run cap $0.50 on every cell (`run_cap_usd` in all 114 logs). The matrix cap is the worst case that `--dry-run` prints before a real run: **$33.50** for v1's 67 cells still to run (67 × $0.50) and **$9.00** for the headline (18 × $0.50). The 29 cells recorded first had $16.00 (`matrix.yaml`: 32 × $0.50). |
-| Actual spend | **$21.21** for the 114 cells, as the API reported it for their completed calls: $16.06 for v1 and $5.15 for the headline (the table below). The 67 cells paid for under the $33.50 cap cost $7.69, and the headline $5.15 against its $9.00. Two runs that were cut and run again cost $0.40 more (below). |
+| Caps and pre-flight worst case | Run cap $0.50 on every cell (`run_cap_usd` in all 176 logs). The matrix cap is the worst case that `--dry-run` prints before a real run: **$33.50** for v1's 67 cells still to run (67 × $0.50), **$9.00** for the headline (18 × $0.50) and **$31.00** for the 62 cells of headline-10 that remained once the headline's 18 were copied in (62 × $0.50). The 29 cells recorded first had $16.00 (`matrix.yaml`: 32 × $0.50). |
+| Actual spend | **$39.30** for the 176 cells, as the API reported it for their completed calls: $16.06 for v1 and $23.24 for headline-10, of which $5.15 is the headline's 18 cells (the table below). The 67 cells paid for under the $33.50 cap cost $7.69, the headline $5.15 against its $9.00, and the 62 more cells of headline-10 $18.09 against $31.00. Two runs that were cut and run again cost $0.40 more (below). |
 | Commits | The code each block of cells ran on: the table below. |
 | $0 gate (fake LLM) | Run: the next table and §4 |
 
-**Models by role.** Completed calls of the 114 runs by role and model, with their cost, read from the
+**Models by role.** Completed calls of the 176 runs by role and model, with their cost, read from the
 run logs (`effect.started` gives the role, `effect.completed` the model and the cost; the run bundles
 are not committed). Prices are per 1M tokens, input / cached input / output (`config/prices.yaml`,
 checked against Meta's pricing page on Oct 27).
 
 | Role | Model | Price | Calls | Cost |
 |---|---|---|---|---|
-| root planner | `muse-wonder-1.0` | $4.00 / $0.20 / $20.00 | 123 | $5.245 |
-| sub-planner | `muse-spark-1.3-contributor` | $0.10 / $0.002 / $0.20 | 828 | $0.196 |
-| sub-planner | `muse-spark-1.3` | $1.25 / $0.15 / $4.25 | 198 | $3.128 |
-| agent | `muse-spark-1.3-contributor` | $0.10 / $0.002 / $0.20 | 3,418 | $0.866 |
-| agent | `muse-spark-1.3` | $1.25 / $0.15 / $4.25 | 1,827 | $11.439 |
-| judge | `muse-spark-1.3-contributor` | $0.10 / $0.002 / $0.20 | 812 | $0.280 |
-| | | | **7,206** | **$21.154** |
+| root planner | `muse-wonder-1.0` | $4.00 / $0.20 / $20.00 | 195 | $8.936 |
+| sub-planner | `muse-spark-1.3-contributor` | $0.10 / $0.002 / $0.20 | 1,200 | $0.283 |
+| sub-planner | `muse-spark-1.3` | $1.25 / $0.15 / $4.25 | 388 | $6.155 |
+| agent | `muse-spark-1.3-contributor` | $0.10 / $0.002 / $0.20 | 5,397 | $1.273 |
+| agent | `muse-spark-1.3` | $1.25 / $0.15 / $4.25 | 3,545 | $22.139 |
+| judge | `muse-spark-1.3-contributor` | $0.10 / $0.002 / $0.20 | 1,301 | $0.437 |
+| | | | **12,026** | **$39.223** |
 
-By model, `muse-spark-1.3-contributor` took 5,058 of the 7,206 calls (70%) and $1.34 (6%) of the
-cost, `muse-spark-1.3` 2,025 calls (28%) and $14.57 (69%), and `muse-wonder-1.0` 123 calls (2%) and
-$5.25 (25%). The 96 runs that log their routing (the 18 cells of the first block predate the log) hold
-6,115 decisions: 4,504 "opted in and content is clean" (Contributor), 1,508 "scanners flagged PII or
-secrets; kept on the Standard model", and 103 "the role ladder keeps root_planner at L0 on Standard".
-The logs show 42 more calls that did not end normally (36 returned an incomplete answer, $0.057 in all,
-and 6 ended in an error) and 406 that were cancelled (278 agent, 79 sub-planner and 49 judge calls: the
-crashes and kills of the chaos profiles). There is no call on a coordination role (`coordinator`,
+By model, `muse-spark-1.3-contributor` took 7,898 of the 12,026 calls (65.7%) and $1.99 (5.1%) of the
+cost, `muse-spark-1.3` 3,933 calls (32.7%) and $28.29 (72.1%), and `muse-wonder-1.0` 195 calls (1.6%)
+and $8.94 (22.8%). The 158 runs that log their routing (the 18 cells of the first block predate the
+log) hold 11,342 decisions: 7,584 "opted in and content is clean" (Contributor), 3,583 "scanners
+flagged PII or secrets; kept on the Standard model", and 175 "the role ladder keeps root_planner at L0
+on Standard". The logs show 77 more calls that did not end normally (70 returned an incomplete answer,
+$0.074 in all, and 7 ended in an error) and 778 that were cancelled (547 agent, 126 sub-planner and 105
+judge calls: the crashes and kills of the chaos profiles). There is no call on a coordination role (`coordinator`,
 `supervisor`, `router`, `recovery`), which is why every coordination-token count in §4.10 is 0. This
 table is computed from the logs, not from a committed file; the cost of each cell is in `results.csv`.
 
@@ -193,25 +202,41 @@ table is computed from the logs, not from a committed file; the cost of each cel
 | swarm, `central`, `single`, `pipeline` ×8 each; T1 | 32 | Oct 29, 21:57 – Oct 30, 00:42 | `8cfc99e` | $1.553 | $1.517 |
 | **v1** | **96** | | | **$16.736** | **$16.060** |
 | **Headline**: swarm, `durable-max`, `durable` × T2 × C0, C3 × seeds 1–3 | 18 | Oct 30, 01:09–02:14 | `e307ca1` | $5.242 | $5.152 |
-| **All** | **114** | | | **$21.978** | **$21.212** |
+| **Headline-10**, the 62 cells added: `central` × T2 × C0, C3 × seeds 1–3 | 6 | Oct 30, 10:50–11:06 | `10c2ff7` | $2.303 | $1.957 |
+| swarm, `durable-max`, `durable`, `central`; seed 4 | 8 | Oct 30, 11:10–11:36 | `10c2ff7` | $2.448 | $2.319 |
+| the same; seed 5 | 8 | Oct 30, 11:40–15:53 | `10c2ff7` | $2.436 | $2.293 |
+| the same; seeds 6–7 | 16 | Oct 30, 15:56–17:01 | `10c2ff7` | $4.826 | $4.561 |
+| the same; seeds 8–10 | 24 | Oct 30, 20:48–22:30 | `10c2ff7` | $7.372 | $6.954 |
+| **Headline-10** (the headline's 18 and the 62) | **80** | | | **$24.627** | **$23.237** |
+| **All distinct cells** (v1 and headline-10) | **176** | | | **$41.363** | **$39.297** |
 
 *Cost of the cells is the sum of `cost_usd` in `bench/results/v1/results.csv` and
-`bench/results/headline/results.csv`; it counts an estimate for the calls that were cancelled (§2).
+`bench/results/headline-10/results.csv` (the headline's 18 cells are in both of the latter two
+directories, and are counted once); it counts an estimate for the calls that were cancelled (§2).
 Completed calls is the sum of the `cost_usd` that the API reported for the completed calls, read from
-the run logs (not committed): the 7,206 calls of the table of models, $21.154, and the 36 that returned
-an incomplete answer, $0.057. The difference between the two columns is that estimate ($0.766 in
-all). Totals are sums of the unrounded figures. The ledger (`fractalswarm spend`, read before and after each block; progress log)
-agrees with the completed calls to the cent: $4.54, $1.64, $1.52 and $5.15 for the last four blocks, and
+the run logs (not committed): the 12,026 calls of the table of models, $39.223, and the 70 that
+returned an incomplete answer, $0.074. The difference between the two columns is that estimate
+($2.066 in all). Totals are sums of the unrounded figures. The ledger (`fractalswarm spend`, read before and after each block; progress log)
+agrees with the completed calls to the cent: $4.54, $1.64, $1.52 and $5.15 for the last four blocks of
+v1 and the headline, and
 $3.06 for the evening of Oct 28, when it went from $8.7600 to $11.8194: the 11 cells of `f13b20a`
-($2.891) and the cut `pipeline` run ($0.168). The $8.90 that the progress log gives for the first 29
-cells is the sum of their `cost_usd`, estimate included; on completed calls alone they cost $8.37.*
+($2.891) and the cut `pipeline` run ($0.168). Of headline-10 only the 17 cells of its second chain
+(`central` C3 seed 5, seeds 6 and 7) can be read against the ledger alone: it went from $30.87 to
+$35.80 ($4.93) and their completed calls cost $4.926. The other chains ran beside real pairs and the
+demo bundle, which were paid from the same ledger, and are not compared. The $8.90 that the progress
+log gives for the first 29 cells is the sum of their `cost_usd`, estimate included; on completed calls
+alone they cost $8.37.*
 
 Each commit is the code that the progress log names for the start of its block. The logs agree with it:
 the recording times fall in the block's window, the 18 cells of `587c88f` have no `security.routed`
 event, the 11 of `f13b20a` have them and no `supervisor` or `intake` role in their role tables, and
 every later log has both. The handlers froze at the tag `handler-freeze` (`a5e9609`). The cells of
 `be9cd77` and `8cfc99e` ran on code with no difference under `src/fractalswarm` from the freeze
-(built web assets aside), and the headline's `e307ca1` differs from it only in `web/`. The 16 T2
+(built web assets aside), and the headline's `e307ca1` differs from it only in `web/`. The 62 cells
+of headline-10 all ran on `10c2ff7`, from one worktree that stayed there for every cell (progress log):
+it differs from the freeze in the API server (`api/app.py`, `api/catalog.py`, which no bench module
+imports), the built web assets, two integration tests, `CLAUDE.md` and the matrix file, and from
+`e307ca1` only in the two API modules. The 16 T2
 cells of `b66098b` ran before the last handler change, the answer path of the arbitration board
 (`dedde57`), which bench runs do not switch on; bench-side code (tables, verdicts, profiles, harness)
 changed too. **Replay.** A log replays on the code that recorded it. The headline's cells were
@@ -221,12 +246,15 @@ HEAD at their first LLM call, because the `security.routed` events came later, s
 their own commit and not at HEAD; 10 of the 11 of `f13b20a` MATCH at HEAD; and
 `single__t2_conference__C1__s1` replays at no commit (a re-run under the same run id hit a ledger
 error that never reached the cassette; later runs are fixed, this recording keeps the mismatch). The
-other 67 cells of v1 were not replayed for this report.
+other 67 cells of v1 and the 62 cells added in headline-10 were not replayed for this report.
 
 Two runs were cut before they finished and run again from the start: `single` C1 seed 1 (a memory
 incident on the machine, Oct 28, 18:40; $0.2357 settled) and `pipeline` C2 seed 2 (a pause at 20:30,
 at 6 of 18 contracts; $0.1680 settled). Their partial runs are kept outside the results
-(`runs/v1-interrupted`, not committed) and are not in any figure of §4.10.
+(`runs/v1-interrupted`, not committed) and are not in any figure of §4.10. A third cut happened in
+headline-10: the paid chain was stopped at a cell boundary on Oct 30 at 11:57, as `central` C3 seed 5
+started, with one call in flight (reserved, nothing settled); the harness deleted that partial run
+and the cell was run again from the start (recorded at 15:53).
 
 ### The $0 runs behind §4
 
@@ -879,15 +907,18 @@ outcome, settled at the decision gate on Oct 29, is at the top of this report.
 ### 4.10 The real-model runs
 
 Everything in this section is from the paid runs of §3: **v1** (`bench/results/v1`: six workflows ×
-T2 and T1 × C0–C3 × 2 seeds, 96 cells) and the **headline** matrix (`bench/results/headline`: swarm,
-`durable-max` and `durable` × T2 × C0 and C3 × 3 seeds, 18 cells). The clock is live, so a value is the
+T2 and T1 × C0–C3 × 2 seeds, 96 cells), the **headline** matrix (`bench/results/headline`: swarm,
+`durable-max` and `durable` × T2 × C0 and C3 × 3 seeds, 18 cells) and the **ten-seed headline**
+(`bench/results/headline-10`: those three workflows and `central` × T2 × C0 and C3 × 10 seeds, 80
+cells, the headline's 18 among them). The clock is live, so a value is the
 API's on the day the cell ran (§3). A table value is the mean over the seeds of one task, workflow and
 profile, with the metrics of §2 and the layout of §4.1–§4.4. These tables are laid out by hand from the
 committed files and not by `bench tables`, so `bench tables --check` does not cover them: the line
 under each names the file and the columns it is the mean of. **v1 has two seeds and is descriptive: no
 verdict is drawn from it.** The headline has three and is read by the rules of `bench/PREREG.md`,
-unchanged (§4, "How to read the verdicts"). Nothing is read again to rescue a result: no cell was
-dropped or run again for its value (§3 names the two that were cut and run again), the rules and floors
+unchanged (§4, "How to read the verdicts"); the ten-seed headline is read by the same rules and
+reported next to it (§4.10.7). Nothing is read again to rescue a result: no cell was
+dropped or run again for its value (§3 names the ones that were cut and run again), the rules and floors
 are those fixed before the gate, and the readings that go against the swarm are reported with the ones
 that go for it.
 
@@ -1141,7 +1172,8 @@ All profiles pooled, 8 runs per row:
 Every one of the 96 runs completed and is valid, at every profile (validity is §2's), and none spent an
 LLM token on coordination: the rivals' supervisors are code too, so they spend none either
 (`docs/claims.md` S4: a property of the design, never an advantage over the rivals). Six calls ended
-in an error in v1 and none in the headline: five `APIConnectionError: Connection error.` in
+in an error in v1 and none in the headline's 18 cells (the 62 added in headline-10 have one,
+§4.10.7): five `APIConnectionError: Connection error.` in
 `pipeline` C2 seed 2 and one ledger error (`IntegrityError: UNIQUE constraint failed:
 entries.reservation_id`) in `single` C1 seed 1, the two cells that were run again (§3). Every run
 still completed. `central` is the dearest on
@@ -1151,6 +1183,10 @@ work that it redoes, and the estimate for the cancelled calls is counted (§4.10
 they run one contract at a time.
 
 #### 4.10.5 The headline runs: T2 at C3, three seeds
+
+*This is the pre-registered reading, on three seeds, as it stood on Oct 30. The matrix was then
+extended to ten seeds (§4.10.7); the three seeds below are in both, and the other seven do not repeat
+the locality result of this sub-section.*
 
 ![The headline on the real model, T2: stall time and extra cost against the coordinators killed](results/headline/hero-t2_conference.png)
 
@@ -1207,15 +1243,14 @@ paid twice by a crash or a false death, in points of the run's C0 cost.*
   against 23.3% and 38.9%, idle agent-seconds 7.2 against 24.4 and 55.3. The ratios of the seed means
   are 0.31, 0.29 and 0.29 against `durable-max` and 0.14, 0.17 and 0.13 against `durable`; per seed the
   swarm's value is below half of `durable-max`'s every time (dependency time 0.07, 0.31 and 0.38;
-  blast radius 0.33, 0.25 and 0.30; idle agent-seconds 0.09, 0.31 and 0.37). `docs/claims.md` R4 words
-  it so: "On the real model, at the headline point (T2, C3: five coordinator crashes, half the agents
-  killed), recovery stayed local: the swarm's coordinator-dependency time, blast radius and idle
-  agent-seconds were below half of `durable-max`'s on every seed." It is allowed with its setting
-  there (real model, T2 at C3, three seeds), next to the $0 gate, where locality tied against
-  `durable-max` at C2 and C3 (§4.5, §4.9), and never as R1, the general claim, which is not claimed.
-  The outcome that §4.9 derives is the $0 gate's and the sweeps', and stays B. The v1 recording of
-  seed 1 of this same cell is not below half on any of the three metrics (ratios 0.90, 0.60 and 0.88),
-  and §4.10.6 reports it next to this result.
+  blast radius 0.33, 0.25 and 0.30; idle agent-seconds 0.09, 0.31 and 0.37). `docs/claims.md` R4
+  worded it so on Oct 30: "On the real model, at the headline point (T2, C3: five coordinator
+  crashes, half the agents killed), recovery stayed local: the swarm's coordinator-dependency time,
+  blast radius and idle agent-seconds were below half of `durable-max`'s on every seed." That
+  sentence is withdrawn: the seven seeds added to the matrix do not repeat it (§4.10.7), and R4 now
+  says what ten seeds show. The outcome that §4.9 derives is the $0 gate's and the sweeps', and stays
+  B. The v1 recording of seed 1 of this same cell is not below half on any of the three metrics
+  (ratios 0.90, 0.60 and 0.88), and §4.10.6 reports it next to this result.
 - **Preserved work (H1) ties against both rivals, and the swarm is below `durable-max` on two seeds
   of three.** Against `durable-max` it is a win, a loss and a loss (100.0, 77.8 and 62.5% against 87.5,
   92.0 and 79.2%); against `durable` a win, a win and a loss. Few calls stand behind the swarm's
@@ -1306,7 +1341,7 @@ changes listed in §3.*
   dependency time, blast radius and idle agent-seconds over `durable-max`'s were, in v1, 0.90, 0.60 and
   0.88 on seed 1 and 0.19, 0.29 and 0.34 on seed 2; in the headline, 0.07, 0.33 and 0.09 on seed 1 and
   0.31, 0.25 and 0.31 on seed 2. The headline's three seeds are all below half (§4.10.5), which is
-  what R4 says. Seed 1 of v1, the same cell recorded again, is below half on none of the three. (`cdt_s`,
+  what R4 said until the ten-seed reading (§4.10.7). Seed 1 of v1, the same cell recorded again, is below half on none of the three. (`cdt_s`,
   `blast_sessions_mean_pct` and `idle_agent_s` in the two `results.csv`; the swarm's v1 cells ran on the
   code of `587c88f` and the headline's on the frozen handlers.)
 - **With no chaos, seeds differ.** At C0 the cost of the two seeds of one workflow differs, relative
@@ -1321,20 +1356,234 @@ changes listed in §3.*
   the stall time are three of the nine rows of the table against `durable-max` in §4.10.5 (§6, unpaired
   API faults, says the same of the $0 runs). What all three seeds of the headline agree on is the
   swarm's locality (per-seed ratios up to 0.38 against `durable-max`) and its loss on false deaths.
-  Locality is a result of three seeds on one day: the bullet above shows the other recording of seed 1
-  not repeating it. At C3, `central`'s stall and extra cost are above those of the swarm and the two
+  Locality was a result of three seeds on one day: the bullet above shows the other recording of seed
+  1 not repeating it, and the seven seeds added in §4.10.7 do not repeat it either; the loss on false
+  deaths is the one reading that all ten seeds agree on against both supervisors. At C3, `central`'s stall and extra cost are above those of the swarm and the two
   durable supervisors on both tasks and both seeds (§4.10.1, §4.10.2); the size of its extra cost
   depends on the estimate for its cancelled calls.
 - **What two or three seeds cannot show.** They cannot rank the swarm and `durable-max` on stall,
   extra cost or preserved work: the seeds disagree. They cannot say how often locality falls below
-  half: seed 1 does on all three metrics in one recording and on none in the other. They cannot show
-  what a crash of the root or of a track lead costs: all 51 crashes of the real swarm cells (36 in v1,
-  15 in the headline) hit a session coordinator (`level` 2 in the `outages` of each cell file), because
+  half: seed 1 does on all three metrics in one recording and on none in the other (ten seeds say how
+  often, against `durable-max`: dependency time on 4 seeds of 10, blast radius on 7, idle
+  agent-seconds on 6, §4.10.7). They cannot show
+  what a crash of the root or of a track lead costs: all 86 crashes of the real swarm cells (36 in v1,
+  50 in the ten-seed headline, which holds the headline's 15) hit a session coordinator (`level` 2 in the `outages` of each cell file), because
   by fairness rule 1 (§1) a crash takes the coordinator with the most remaining owned work. The $0
   per-process probes (§4.7) crash the root, a track lead and a session coordinator one at a time. And
   they do not go beyond their setting: T2 at C3 for the headline, one crash plan per seed
   (20/35/50/65/80% of the contracts), failure detection of 5 s and supervisors that restart at once
   (§1), one model family on one API. The sweeps and the crash-time jitter are $0 runs only.
+
+#### 4.10.7 The ten-seed headline: T2 at C3, seeds 1–10
+
+![The ten-seed headline on the real model, T2: stall time and extra cost against the coordinators killed](results/headline-10/hero-t2_conference.png)
+
+*T2 in the ten-seed matrix, seeds 1–10: swarm, `central`, `durable-max` and `durable` at C0 and C3 (0
+and 5 coordinators killed). Points are means over seeds, whiskers min–max. The swarm's validity at C0
+reads 90%: one of its ten runs there is not valid (below). `bench/results/headline-10/hero-t2_conference.png`.*
+
+![Recovery metrics against the coordinators killed, T2, ten seeds](results/headline-10/recovery-t2_conference.png)
+
+*The recovery metrics of the same 80 cells, at C0 and C3. `bench/results/headline-10/recovery-t2_conference.png`.*
+
+**What this is.** The reading of §4.10.5 is the pre-registered one, on three seeds. While it was still
+running it was decided to extend the matrix to ten seeds and to add `central` as a rival
+(`bench/matrix-headline-10.yaml`), and the file says that the extension is reported next to the
+three-seed reading, in full, whatever it shows. This sub-section does that. The 80 cells are swarm,
+`durable-max`, `durable` and `central` × T2 × C0 and C3 × seeds 1–10. The 18 cells of seeds 1–3 of the
+first three workflows are the cells of §4.10.5, byte for byte in their run logs; the other 62 were
+recorded on Oct 30, on the code of `10c2ff7` (§3). Rules, floors, crash plans and caps are unchanged.
+`fractalswarm bench verdicts bench/results/headline-10` (PREREG sha `25d4a75919b3`) prints the T2 C3
+point as "gate C3", as it does for the headline, and the outcome as PENDING, because the directory has
+no sweeps.
+
+**What changed, and why.** Three seeds showed locality as a win on every seed against both
+supervisors, and `docs/claims.md` R4 worded it so. Ten seeds do not repeat it against `durable-max`:
+dependency time, blast radius and idle agent-seconds, which were wins on all three seeds, are ties on
+ten, because the seeds disagree. Nothing else flips, apart from time to recover, which was a tie on
+every seed and now disagrees between seeds. Against `durable-max` (verdict of the seeds together, the
+swarm's mean / the rival's; then the swarm's wins / ties / losses over the ten seeds):
+
+| Hypothesis | Seeds 1–3 (§4.10.5) | Seeds 1–10 | Seeds 1–10: wins / ties / losses |
+|---|---|---|---|
+| H1 Preserved work (%) | tie* (80.1 / 86.2) | tie* (82.0 / 90.5) | 1 / 4 / 5 |
+| H2 Extra cost (%) | tie* (-6.60 / 7.51) | tie* (2.35 / 8.14) | 5 / 0 / 5 |
+| H3 Time to recover (s) | tie (5.52 / 5.01) | tie* (6.11 / 5.01) | 0 / 5 / 5 |
+| H4a Dependency time (s) | win (6.9 / 22.3) | tie* (11.4 / 20.2) | 4 / 5 / 1 |
+| H4b Blast radius (% of sessions) | win (6.7 / 23.3) | tie* (9.0 / 21.0) | 7 / 3 / 0 |
+| H4c Idle agent-seconds | win (7.2 / 24.4) | tie* (13.9 / 20.0) | 6 / 3 / 1 |
+| H5 Unnecessary reassignments | loss (2.0 / 0.0) | loss (1.9 / 0.0) | 0 / 0 / 10 |
+| H6 Duplicated spend (points) | tie (0.03 / 0.00) | tie (0.06 / 0.00) | 0 / 10 / 0 |
+| Stall time (s; not a hypothesis) | tie* (10.3 / 32.0) | tie* (11.2 / 21.9) | 7 / 1 / 2 |
+
+Against `durable` and against `central` (ten seeds; the same layout):
+
+| Hypothesis | Against `durable` | Against `central` |
+|---|---|---|
+| H1 Preserved work (%) | tie* (82.0 / 60.0), 7 / 2 / 1 | win (82.0 / 0.0), 10 / 0 / 0 |
+| H2 Extra cost (%) | tie* (2.35 / 4.29), 5 / 1 / 4 | win (2.35 / 67.00), 10 / 0 / 0 |
+| H3 Time to recover (s) | tie* (6.11 / 5.01), 0 / 5 / 5 | tie* (6.11 / 5.02), 0 / 5 / 5 |
+| H4a Dependency time (s) | win (11.4 / 50.3), 10 / 0 / 0 | win (11.4 / 139.5), 10 / 0 / 0 |
+| H4b Blast radius (% of sessions) | win (9.0 / 37.3), 10 / 0 / 0 | win (9.0 / 91.7), 10 / 0 / 0 |
+| H4c Idle agent-seconds | tie* (13.9 / 53.9), 7 / 3 / 0 | tie* (13.9 / 0.2), 0 / 1 / 9 |
+| H5 Unnecessary reassignments | loss (1.9 / 0.0), 0 / 0 / 10 | tie* (1.9 / 0.3), 1 / 0 / 9 |
+| H6 Duplicated spend (points) | tie* (0.06 / 2.45), 3 / 7 / 0 | win (0.06 / 69.36), 10 / 0 / 0 |
+| Stall time (s; not a hypothesis) | tie* (11.2 / 21.9), 6 / 3 / 1 | win (11.2 / 42.8), 10 / 0 / 0 |
+
+*`bench/results/headline-10/results.json`, rows T2 at C3, columns `preserved_pct`, `extra_cost_pct`,
+`ttr_own_mean_s`, `cdt_s`, `blast_sessions_mean_pct`, `idle_agent_s`, `unnecessary_reassignments`,
+`dup_chaos_pct` and `stall_s`; seeds 1–3 as in §4.10.5. The per-seed outcomes are
+`fractalswarm.bench.verdicts.judge` on the seed's two values with the rule of `RULES`, and the verdict
+of the seeds together is its `combine`, which is what `bench verdicts bench/results/headline-10`
+prints (checked: the nine rows against each rival are the same). `*` marks seeds that disagree. The
+means are over the ten seeds.*
+
+- **Locality against `durable-max` is not on every seed: it ties.** The swarm's dependency time is
+  11.4 s against 20.2 s, its blast radius 9.0% of the sessions against 21.0% and its idle
+  agent-seconds 13.9 against 20.0. The ratios of the seed means are 0.57, 0.43 and 0.70, above one
+  half on two of the three, and per seed the swarm is at or below half of `durable-max` on 4, 7 and 6
+  seeds of ten, on all three measures on 4 (seeds 1, 2, 3 and 9):
+
+| Seed | `durable-max`: dependency time | blast radius | idle agent-seconds | `durable`: dependency time | blast radius | idle agent-seconds |
+|---|---|---|---|---|---|---|
+| 1 | **0.07** | **0.33** | **0.09** | **0.01** | **0.08** | **0.03** |
+| 2 | **0.31** | **0.25** | **0.31** | **0.11** | **0.13** | **0.09** |
+| 3 | **0.38** | **0.30** | **0.37** | **0.42** | **0.43** | **0.42** |
+| 4 | 0.80 | 0.83 | 1.51 | **0.46** | **0.45** | 0.67 |
+| 5 | 0.57 | **0.29** | 0.83 | **0.29** | **0.15** | **0.32** |
+| 6 | 0.65 | **0.33** | **0.00** | **0.15** | **0.17** | **0.00** |
+| 7 | 0.56 | 0.80 | **0.48** | **0.14** | **0.24** | **0.10** |
+| 8 | 0.62 | **0.40** | 0.99 | **0.41** | **0.33** | 0.72 |
+| 9 | **0.28** | **0.14** | **0.41** | **0.10** | **0.11** | **0.10** |
+| 10 | 2.41 | 1.00 | 2.06 | **0.41** | **0.44** | 0.63 |
+| Seeds at or below half | 4 | 7 | 6 | 10 | 10 | 7 |
+| Ratio of the seed means | 0.57 | 0.43 | 0.70 | 0.23 | 0.24 | 0.26 |
+
+  *The swarm's value over the rival's, per seed (`cdt_s`, `blast_sessions_mean_pct` and `idle_agent_s`
+  in `bench/results/headline-10/results.csv`); bold is at or below one half.* The three seeds of
+  §4.10.5 are the first three rows, and they are below half. The other seven are not: on their means the
+  ratios are 0.69, 0.50 and 0.93, against 0.31, 0.29 and 0.29 on seeds 1–3. It is the swarm's values
+  that rose (dependency time 13.3 s, blast radius 10.0% and idle agent-seconds 16.8 on seeds 4–10,
+  against 6.9 s, 6.7% and 7.2 on seeds 1–3), while `durable-max`'s stayed about where they were (19.3 s,
+  20.0% and 18.1, against 22.3 s, 23.3% and 24.4). On seed 10 the swarm is above `durable-max` on
+  dependency time (17.2 against 7.1 s) and on idle agent-seconds (17.2 against 8.4), and level on blast
+  radius (13.3% against 13.3%). By the rule of §4 locality *ties* against `durable-max`, as it does at
+  the $0 gate (§4.5, §4.9). §4.10.6 had warned that three seeds could not say how often locality falls
+  below half, since the other recording of seed 1 was not below half either; ten say: on 4 seeds of ten
+  for dependency time. It *holds* against `durable`: dependency time and blast radius are below half on
+  every seed (ratios of the seed means 0.23 and 0.24, at most 0.46 and 0.45 on one seed), and idle
+  agent-seconds on 7 seeds of ten (0.26; a tie, the seeds disagree). Against `central` it holds on
+  dependency time and blast radius (0.08 and 0.10, every seed); there H4c is a tie that says nothing
+  about recovery, because `central`'s workers stop with it and none is left idle (§4.5).
+- **Preserved work, extra cost, time to recover and stall time tie against `durable-max`, and the
+  seeds disagree.** Preserved work is 82.0% against 90.5%: below `durable-max` by more than the floor on
+  5 seeds, above it on 1 and level on 4. Few calls stand behind it: of the calls in flight at a crash that belonged to the dead coordinator
+  or its agents, 67 of 82 were preserved by the swarm (82%), 222 of 245 by `durable-max` (91%) and 148
+  of 248 by `durable` (60%). Extra cost is +2.4% against +8.1%: a win on 5 seeds and a loss on 5 (both
+  bases below). The swarm's measured takeover takes 5.4–7.0 s (6.1 s on average) against
+  the supervisors' configured 5 s (an input, §4.3), and five seeds exceed it by more than the floor of
+  1 s (seeds 4, 5, 7, 8 and 9), so time to recover is no longer the plain tie of three seeds. Stall time
+  is 11.2 s against 21.9 s, a win on 7 seeds, a tie on 1 and a loss on 2; each supervisor's mean is
+  carried by one long run (86.2 s, `durable-max` seed 3; 89.3 s, `durable` seed 8), and the other nine
+  runs of each average 14.8 and 14.4 s, against the swarm's 11.2 s, whose longest is 23.7 s.
+- **False deaths (H5) are a loss on every seed, against both supervisors.** The swarm re-assigned live
+  work 1.90 times a run (1 to 5; seed 5 has five), the supervisors, which have no detector, none. The
+  spend that this duplicates is $0.0002 a run (`dup_false_death_usd`), and duplicated spend (H6) is a
+  tie against `durable-max` on every seed (0.06 points of the run's C0 cost against 0.00). `central`
+  makes 0.30 a run (3, on seed 10 alone), so H5 against it is a tie, the seeds disagree.
+- **Against `central` the swarm wins on every seed** preserved work (82.0% against 0%, because its
+  workers die with it), extra cost, dependency time (11.4 against 139.5 s), blast radius (9.0% against
+  91.7% of the sessions), duplicated spend (0.06 against 69.4 points) and stall time (11.2 against
+  42.8 s). `central` cancels 27.8 calls a run (the swarm 2.7) and makes 120.9 calls where it made 77.1
+  at C0; its stall is above its own C0 on all ten seeds (+28.9 s) and above the swarm's on all ten
+  (25.0–62.6 s against 0.0–23.7 s). This is the comparison with an in-process design, not with a
+  durable one (§1, §5).
+- **Extra cost, on both bases.** The cells' cost is the pre-registered figure, which the rules and the
+  hero chart use and which counts an estimate for the calls that a crash cancels (§2); the completed
+  calls alone leave that estimate out. At C3 on T2, mean over the ten seeds:
+
+| Workflow | Cells' cost (%) | Completed calls only (%) | Estimate in the run ($) |
+|---|---|---|---|
+| swarm | 2.4 | -1.1 | 0.010 |
+| `durable-max` | 8.1 | 5.1 | 0.008 |
+| `durable` | 4.3 | -1.6 | 0.016 |
+| `central` (in-process supervisor) | 67.0 | 29.2 | 0.105 |
+
+  *Cells' cost: `bench/results/headline-10/results.csv`, column `extra_cost_pct`. Completed calls only,
+  and the estimate (the cell's `cost_usd` minus the cost of its completed calls; no call is cancelled
+  at C0): computed from the run logs as in §4.10.2.* So the swarm pays +2.4% against `central`'s +67.0%
+  on the cells' cost and −1.1% against +29.2% on completed calls alone: `central`'s estimate is $0.105
+  a run, more than half of its extra cost of $0.182 a run, and the swarm's, $0.010, is more than its
+  whole extra cost ($0.004 a run). Three `central` cells cost more than the $0.50 run cap on paper (seeds 3, 7
+  and 10: $0.512, $0.548 and $0.533), and their completed calls cost $0.414, $0.435 and $0.423.
+- **The swarm's extra cost on seed 5 is measured against a run that is not valid.** Its C0 run placed
+  40 of 48 talks (below), yet cost $0.278 over 84 calls, about what its other nine C0 runs cost
+  ($0.251–0.331, mean $0.283). Seed 5's extra cost is +10.7% on the cells' cost and +3.1% on completed
+  calls; against the mean of the nine other C0 runs it would be +9.0%. Without seed 5 the swarm's mean
+  extra cost over the other nine pairs is +1.4% and −1.6% (on the two bases; +2.4% and −1.1% with it),
+  and no verdict of H2 changes: a tie against `durable-max` (5 wins, 0 ties, 4 losses) and against
+  `durable` (5, 1, 3), a win against `central` on all nine.
+- **The swarm stalled more with no crash than with five.** Its mean stall is 16.0 s at C0 and 11.2 s
+  at C3 (17.8 s at C0 over the nine valid runs). No crash removes a stall, so this is what noise looks
+  like: stall is the time with no agent call in flight anywhere (§2), and at C0 it is the planner's and
+  judge's calls and the API's own latency. Paired by seed, C3 minus C0 is −4.9 s with a standard
+  deviation of 9.9 s (standard error 3.1 s), and C3 is the lower on 7 seeds of ten. The supervisors'
+  differences are as wide: `durable-max` +8.8 s (standard error 9.1 s), `durable` +3.2 s (8.8 s). Only
+  `central`'s is out of its noise: +28.9 s (standard error 5.4 s), above its C0 on every seed. A
+  difference of a few seconds in stall, between two settings or between two workflows, is not read as
+  one (§4.10.6).
+- **One of the 80 runs is not valid: the swarm at C0 on seed 5.** It completed, with no chaos and no
+  API error, but placed 40 of 48 talks, with 8 hard violations and 2 gaps (score 0.9565). Its log gives
+  the cause. The plan of the HCI track (`plan.refined`, seq 3647, from the track planner, role
+  `sub_planner`) lists T48 in its day-2 session, although its own note on the day-1 session reads
+  "Includes Day-1-only T48" and the speaker's email says "Unfortunately I'll only be around on Day 1".
+  No slot of that session could hold the talk: the verifier rejected the `place` contract on all six attempts
+  (`unavailable: S31 is not available on day 2`), the contract failed, and the session's 8 talks stayed
+  unplaced, which the checker counts as 8 hard violations. The other six recorded runs of that track on
+  seed 5 put T48 on day 1, the swarm at C3 among them (progress log). So this is one wrong reading by
+  the model, with no crash and no API error behind it, and not a failure of coordination. The runtime
+  cannot give a talk back to the track, so a session's retries cannot repair its track's split, and the
+  same task code runs in every workflow, so any of them can lose a session this way. The handlers are
+  frozen: it is reported, not fixed. `bench/PREREG.md` has no rule on invalid runs, so the run stays in
+  the data. It changes two readings, both stated above: the swarm's C0 means include it (validity 9 of
+  10; stall 16.0 s over ten runs), and seed 5's extra cost is measured against it.
+- **Completion, validity, tokens.** All 80 runs completed, and 79 are valid: all 40 at C3, and 39 of
+  the 40 at C0. Seed 3, invalid for every workflow at the $0 gate (§4.4), is valid in all eight of its
+  cells, as in §4.10.5. Quality (T2's soft score, §2; not a PREREG metric) runs 0.64–1.0 over the 80
+  runs, and seed 2 is the lowest for the swarm, `durable-max` and `central` at both profiles. Coordination
+  tokens are 0 in every run, the rivals' included. One call ended in an error in the 62 new cells: a
+  judge call of `central` C3 seed 3 failed after five attempts on an injected rate limit (HTTP 429,
+  "Rate limit exceeded (injected)", the chaos profile's API faults); the run completed and is valid.
+  All 50 coordinator crashes of the swarm's ten C3 cells hit a session coordinator (level 2), and each
+  run has one partition.
+
+The 80 cells, means over the ten seeds:
+
+| Workflow | Profile | Valid | Makespan (s) | Stall (s), min–max | Cost ($) | LLM calls | Cancelled | Quality |
+|---|---|---|---|---|---|---|---|---|
+| swarm | C0 | 9 of 10 | 179.5 | 16.0 (0.0–34.0) | 0.282 | 78.7 | 0.0 | 0.912 |
+| swarm | C3 | 10 of 10 | 221.1 | 11.2 (0.0–23.7) | 0.286 | 75.6 | 2.7 | 0.902 |
+| `durable-max` | C0 | 10 of 10 | 179.6 | 13.1 (1.0–35.8) | 0.279 | 76.2 | 0.0 | 0.918 |
+| `durable-max` | C3 | 10 of 10 | 265.0 | 21.9 (0.0–86.2) | 0.301 | 74.0 | 1.5 | 0.874 |
+| `durable` | C0 | 10 of 10 | 165.0 | 18.7 (11.9–26.2) | 0.285 | 78.0 | 0.0 | 0.912 |
+| `durable` | C3 | 10 of 10 | 236.9 | 21.9 (2.6–89.3) | 0.292 | 86.4 | 8.6 | 0.887 |
+| `central` | C0 | 10 of 10 | 158.6 | 13.9 (3.5–37.1) | 0.278 | 77.1 | 0.0 | 0.898 |
+| `central` | C3 | 10 of 10 | 265.2 | 42.8 (25.0–62.6) | 0.460 | 120.9 | 27.8 | 0.897 |
+
+*`bench/results/headline-10/results.csv`, columns `valid`, `makespan_s`, `stall_s`, `cost_usd`,
+`llm_calls`, `cancelled_llm_calls` and `score`; the per-seed rows are in the file.*
+
+**What ten seeds can and cannot show.** They show that locality against `durable-max` is not on every
+seed, which three could not, and that the swarm's false deaths are a loss on all ten. They cannot rank
+the swarm and `durable-max` on stall, extra cost or preserved work: the seeds disagree, and the same
+cell recorded twice differs by as much (§4.10.6). They do not go beyond their setting: T2 at C3, one
+crash plan per seed, failure detection of 5 s, supervisors that restart at once, every crash at a
+session coordinator, one model family on one API, on the day each run was recorded. The three-seed
+reading moved when seven seeds were added, and a larger set may move the ratios again. The per-seed
+verdicts, the ratios and the completed-call figures of this sub-section are computed from `results.json`
+with `fractalswarm.bench.verdicts` and from the run logs (not committed); the recipes are in
+`.plans/notes/arena-rival.md`, Part 11. `docs/claims.md` R2 and R4–R6 and the counts in S4 and S7 are
+written from this reading.
 
 ## 5. Reading the chart honestly
 
@@ -1361,16 +1610,18 @@ This reading covers the $0 runs of §4.1–§4.9; the real-model rows are read i
   routing), a property of that seed's fake outputs: the fake run with Contributor routing and the
   real model both validate it (§4.4, §4.10.5); three T1 runs carry the swarm's stall (§4.1). With
   four seeds one outlier moves a mean, which is why every verdict is taken per seed.
-- **On the real model** (§4.10: live API, two seeds in v1, three in the headline). Against `central`,
-  stall and extra cost grow with the crashes: at C3 on T2 the swarm stalls 14.6 s against 92.6 s and
-  pays +6.6% extra against +75.6% on the cells' cost (the figure that the rules and the hero chart
-  use), or +4.5% against +32.4% on completed calls alone, because the estimate for the calls that a
-  crash cancels is more than half of `central`'s extra cost. Against `durable-max`, on the headline
-  point (T2, C3, three seeds), locality holds on every seed; preserved work, extra cost and stall time
-  tie, with the swarm's preserved work below `durable-max`'s on two seeds of three on few calls (it
-  kept 7 of 9 and 5 of 8 of the calls in flight at a crash); and false deaths are a loss on every
-  seed. The other recording of seed 1 of that cell, in v1, is below half on none of the three locality
-  metrics (§4.10.6), so locality there is a result of three seeds on one day.
+- **On the real model** (§4.10: live API; two seeds in v1, three in the headline, ten in its
+  extension). Against `central`, stall and extra cost grow with the crashes: at C3 on T2, over ten
+  seeds, the swarm stalls 11.2 s against 42.8 s and pays +2.4% extra against +67.0% on the cells' cost
+  (the figure that the rules and the hero chart use), or −1.1% against +29.2% on completed calls
+  alone, because the estimate for the calls that a crash cancels is more than half of `central`'s
+  extra cost (v1, two seeds: 14.6 s against 92.6 s, and +6.6% against +75.6%). Against `durable-max`,
+  on the headline point (T2, C3, ten seeds), preserved work, extra cost, time to recover, stall time
+  and locality all tie, and the seeds disagree (the swarm's preserved work is below `durable-max`'s by
+  more than the floor on 5 seeds of 10, on few calls); false deaths are a loss on every seed. The three
+  seeds of the pre-registered headline had locality on every seed; the seven seeds added to them do
+  not, and the other recording of seed 1, in v1, did not either (§4.10.6, §4.10.7). Against `durable`
+  locality holds: dependency time and blast radius are below half on every seed.
 
 ## 6. Limitations
 
@@ -1410,10 +1661,18 @@ This reading covers the $0 runs of §4.1–§4.9; the real-model rows are read i
 - **T2 seed 3 is invalid at C0** for every workflow at the fake gate (default routing, §4.4), so every
   T2 validity figure of the gate carries it. It is not a fact about the task: the fake run with
   Contributor routing and the real model validate the same seed (§4.10.5).
-- **The real runs are few, and live.** v1 has two seeds per cell and the headline three, and the same
-  cell recorded twice differs by up to 20% in cost and 32 s in stall (§4.10.6), so a difference between
-  the swarm and `durable-max` that is smaller than that is not read as one. A new real run would not
-  repeat the numbers. All 51 coordinator crashes of the real swarm runs hit a session coordinator; a
+- **One real run is not valid.** The swarm at C0 on seed 5 (T2, ten-seed headline) completed with 8 of
+  48 talks unplaced, from one wrong reading by a track planner: it listed a Day-1-only speaker's talk
+  in a day-2 session (§4.10.7). The runtime cannot give a talk back to the track, so any workflow can
+  lose a session this way. The run stays in the data, the swarm's validity at C0 reads 9 of 10, and
+  its extra cost on seed 5 is measured against it. Nothing in this report says that every real run is
+  valid: all 40 at C3 are.
+- **The real runs are few, and live.** v1 has two seeds per cell, the headline three and its extension
+  ten, and the same cell recorded twice differs by up to 20% in cost and 32 s in stall (§4.10.6), so a
+  difference between the swarm and `durable-max` that is smaller than that is not read as one.
+  Locality against `durable-max` moved when seven seeds were added to the three (§4.10.7), and a
+  larger set may move it again. A new real run would not
+  repeat the numbers. All 86 coordinator crashes of the real swarm runs hit a session coordinator; a
   crash of the root or of a track lead was run at $0 only (§4.7). The 29 cells of Oct 28 ran before the
   handler freeze, 18 of them before the routing log existed (§3). The cost of a cancelled call is an
   estimate (above), and on the real model it is more than half of `central`'s extra cost (§4.10.2).
@@ -1425,16 +1684,23 @@ This reading covers the $0 runs of §4.1–§4.9; the real-model rows are read i
 uv run fractalswarm bench bench/matrix-rivals-real.yaml --dry-run   # v1, 96 cells: cells + worst-case cost
 uv run fractalswarm bench bench/matrix-headline.yaml --dry-run      # headline, 18 cells
 uv run fractalswarm bench bench/matrix-headline.yaml --confirm-real-spend
+uv run fractalswarm bench bench/matrix-headline-10.yaml --dry-run   # ten seeds, 80 cells (18 copied in first)
+uv run fractalswarm bench bench/matrix-headline-10.yaml --confirm-real-spend
+uv run fractalswarm bench verdicts bench/results/headline-10        # prints, writes nothing
 uv run fractalswarm replay bench/results/headline/runs/<cell> --verify   # v1's cells likewise (§3)
 ```
 
-The two matrices write to `bench/results/v1` and `bench/results/headline`, and the harness skips a cell
+The three matrices write to `bench/results/v1`, `bench/results/headline` and
+`bench/results/headline-10`, and the harness skips a cell
 that has a result file, so on the committed directories these commands pay nothing. On an empty
 directory the pre-flight of `matrix-rivals-real.yaml` prints a worst case of $48.00 (96 cells × the
 $0.50 run cap) against the matrix cap of $33.50 in the file, which was sized for the 67 cells still to
 run when it was used (§3), so a full re-run needs a copy of the file with the cap raised; the
-headline's is $9.00 against its cap of $9.00. A new real run does not repeat the numbers of §4.10, since
-the clock is live; the 114 cells cost $21.21 (§3). `replay` reads the run bundles (`runs/`), which are
+headline's is $9.00 against its cap of $9.00, and that of `matrix-headline-10.yaml` is $40.00 (80
+cells) against $31.00, a cap sized for the 62 cells that remain once the headline's 18 are copied in
+(`cells/` and `runs/` of `bench/results/headline` into `bench/results/headline-10`, as the file's
+header says). A new real run does not repeat the numbers of §4.10, since
+the clock is live; the 176 cells cost $39.30 (§3). `replay` reads the run bundles (`runs/`), which are
 not committed, and a log replays on the code that recorded it (§3).
 
 The $0 runs of §4 (fake LLM, simulated clock) need no key. Point `FRACTALSWARM_RUNS_DIR` and

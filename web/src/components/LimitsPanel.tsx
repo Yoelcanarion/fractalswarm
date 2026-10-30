@@ -27,7 +27,7 @@ function QuotaMeter({ quota }: { quota: Quota }) {
       share={quota.fraction}
       label={
         <>
-          <Term id="aimd">AIMD quota</Term> · epoch {quota.epoch} · {CHANGE[quota.change] ?? quota.change}
+          <Term id="aimd" focusable={false}>AIMD quota</Term> · epoch {quota.epoch} · {CHANGE[quota.change] ?? quota.change}
         </>
       }
       detail={`${rpm} of ${limit} rpm${quota.fraction === null ? "" : ` · ${Math.round(quota.fraction * 100)}%`}`}

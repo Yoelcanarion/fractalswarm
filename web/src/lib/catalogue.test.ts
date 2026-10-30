@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   BILLING,
   chaosWords,
+  featuredRows,
   filterRows,
   formatDuration,
   NO_FILTER,
@@ -228,9 +229,18 @@ describe("the replay check in words", () => {
     expect(verifyWords({ state: "done", report: report({ bundle_head_ok: false, detail: "head differs" }) })).toMatchObject({ tone: "bad", detail: "head differs" });
   });
 
+  it("says an intact log that this code does not reproduce is just that, in amber, and keeps red for a broken chain", () => {
+    const words = verifyWords({ state: "done", report: report({ ok: false, chain_ok: true, first_divergence: 9, detail: "effect.started differs in payload" }) });
+    expect(words).toEqual({ label: "Log intact. This code does not reproduce this recording: first difference at seq 9.", tone: "warn", detail: "effect.started differs in payload" });
+    expect(verifyWords({ state: "done", report: report({ ok: false, chain_ok: true, first_divergence: null }) }).label).toBe("Log intact. This code does not reproduce this recording.");
+    expect(verifyWords({ state: "done", report: report({ ok: false, chain_ok: false, first_divergence: 9 }) }).tone).toBe("bad");
+    // never a guess about where the recording came from
+    expect(words.label).not.toMatch(/older|version|outdated|stale/i);
+  });
+
   it("names the event where a replay diverged, and keeps a failed check apart from a failed run", () => {
-    expect(verifyWords({ state: "done", report: report({ ok: false, first_divergence: 812 }) }).label).toBe("Replay mismatch at seq 812");
-    expect(verifyWords({ state: "done", report: report({ ok: false, first_divergence: null }) }).label).toBe("Replay mismatch at seq ?");
+    expect(verifyWords({ state: "done", report: report({ ok: false, chain_ok: false, first_divergence: 812 }) }).label).toBe("Replay mismatch at seq 812");
+    expect(verifyWords({ state: "done", report: report({ ok: false, chain_ok: false, first_divergence: null }) }).label).toBe("Replay mismatch at seq ?");
     expect(verifyWords({ state: "error", error: "502 Bad Gateway" })).toEqual({ label: "Could not check", tone: "warn", detail: "502 Bad Gateway" });
   });
 });
@@ -250,5 +260,34 @@ describe("the words of the page", () => {
   it("makes no claim in the states or the billing", () => {
     const sentences = [...Object.values(STATES).map((state) => state.says), ...Object.values(BILLING).map((entry) => entry.says)];
     for (const sentence of sentences) expect(sentence).not.toMatch(CLAIM);
+  });
+});
+
+describe("the runs a short list opens with", () => {
+  const rows = [
+    rowOf(listing("new-run", SWARM, "completed")),
+    rowOf(listing("live-now", SWARM, "running")),
+    rowOf(listing("demo-final", SWARM, "completed")),
+    rowOf(listing("nothing-yet", SWARM, "empty")),
+    rowOf(listing("stopped", CENTRAL, "halted")),
+    rowOf(listing("cut", CENTRAL, "interrupted")),
+    rowOf(listing("one-more", CENTRAL, "completed")),
+  ];
+
+  it("lead with the final run, wherever it is listed, then the finished runs in the server's order", () => {
+    expect(featuredRows(rows).map((row) => row.listing.id)).toEqual(["demo-final", "new-run", "stopped", "cut"]);
+  });
+
+  it("leave out a live run (it has its own strip) and an empty one (there is nothing to open), and stop at the limit", () => {
+    const ids = featuredRows(rows, 10).map((row) => row.listing.id);
+    expect(ids).not.toContain("live-now");
+    expect(ids).not.toContain("nothing-yet");
+    expect(ids).toHaveLength(5);
+    expect(featuredRows(rows, 2)).toHaveLength(2);
+  });
+
+  it("are the finished runs in order when there is no final run, and none when nothing has finished", () => {
+    expect(featuredRows([rowOf(listing("a", SWARM, "completed")), rowOf(listing("b", SWARM, "completed"))]).map((row) => row.listing.id)).toEqual(["a", "b"]);
+    expect(featuredRows([rowOf(listing("a", SWARM, "running"))])).toEqual([]);
   });
 });

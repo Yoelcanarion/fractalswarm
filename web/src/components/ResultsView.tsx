@@ -6,6 +6,7 @@ import type { ViewState } from "../lib/reducer";
 import { outcomeOf, placementsOf, type Outcome } from "../lib/results";
 import { useRunStore } from "../store";
 import { Card, GenericRows, money, Nothing, Pill, PStat, Subhead, virtualSeconds } from "./PanelParts";
+import { Details } from "./ui";
 
 const OUTCOME: Record<Outcome, { label: string; tone: "good" | "warn" | "bad" | "muted" }> = {
   pending: { label: "no result yet", tone: "muted" },
@@ -236,10 +237,9 @@ export function ResultsView({ view }: { view: ViewState }) {
                   <pre className="results__doc">{document}</pre>
                 </>
               )}
-              <details className="results__raw">
-                <summary>The raw report</summary>
+              <Details inline id="raw" summary="The raw report" className="results__raw">
                 <pre className="mono">{JSON.stringify({ status: task.status, report }, null, 2)}</pre>
-              </details>
+              </Details>
             </>
           )}
         </Card>

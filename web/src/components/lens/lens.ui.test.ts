@@ -384,12 +384,14 @@ describe("the takeover chip", () => {
     expect(await chip(undefined)).toBe("");
   });
 
-  it("opens the detail from the keyboard: the chip is a tab stop with the server's words in its hint", async () => {
+  it("says the server's words in its hint, as a hover and as text for a screen reader, and is not a tab stop", async () => {
     const { run } = await opened(demo, {}, { takeover: async () => ({ ...counted, heirs: 6, adoptions: 5, kills: 5 }), loadAllEvents: async () => log() });
     await run.getState().runTakeover();
     const html = render(run, TakeoverChip);
-    expect(html).toMatch(/<span class="tip"[^>]* tabindex="0"[^>]*><span class="badge badge--good badge--big">Takeover OK/);
+    expect(html).toMatch(/<span class="tip"[^>]*><span class="badge badge--good badge--big">Takeover OK/);
+    expect(html).not.toContain("tabindex");
     expect(html).toContain('role="tooltip"');
+    expect(html).toContain('class="sr-only"');
     expect(html).not.toContain("title=");
   });
 

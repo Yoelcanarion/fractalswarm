@@ -1,5 +1,5 @@
 import { Background, Handle, Position, ReactFlow, ReactFlowProvider, type Edge, type Node, type NodeProps } from "@xyflow/react";
-import { memo, useMemo, type CSSProperties } from "react";
+import { memo, useMemo, useState, type CSSProperties, type FocusEvent, type KeyboardEvent } from "react";
 
 import { useLens, useLensStoreApi } from "../lensStore";
 import { useClock } from "../lib/clockHooks";
@@ -22,12 +22,14 @@ type ActorData = {
   rootDuty: boolean;
   glow: Glow | null;
   leaf: boolean;
+  /** The one card the Tab key lands on: the cards are a single stop, and the arrow keys move between them. */
+  tabbable: boolean;
 };
 
 type ActorProps = NodeProps<Node<ActorData>>;
 
 function ActorCardView({ data }: ActorProps) {
-  const { actor, color, rootDuty, glow, leaf } = data;
+  const { actor, color, rootDuty, glow, leaf, tabbable } = data;
   // A click (or Enter) opens the actor's calls in the Muse lens; a second one closes it.
   const lens = useLensStoreApi();
   const inLens = useLens((s) => s.open && s.scope.kind === "actor" && s.scope.actor === actor.id);
@@ -53,7 +55,7 @@ function ActorCardView({ data }: ActorProps) {
       className={classes}
       style={style}
       role="button"
-      tabIndex={0}
+      tabIndex={tabbable ? 0 : -1}
       aria-pressed={inLens}
       aria-label={`${actor.id}, ${actor.kind}${down ? `, ${actor.status === "dead" ? "detected dead" : "killed"}` : ""}, ${actor.llmCalls} ${actor.llmCalls === 1 ? "model call" : "model calls"}. Open in the Muse lens.`}
       onClick={toggleLens}
@@ -107,12 +109,14 @@ interface TreeFrame {
   shape: TreeShape;
 }
 
-function buildGraph(view: ViewState, now: number): TreeFrame {
+function buildGraph(view: ViewState, now: number, active: string | null): TreeFrame {
   const reduced = prefersReducedMotion();
   const messageLife = fadeLife(MESSAGE_LIFE_MS, reduced);
   const adoptionLife = fadeLife(ADOPTION_LIFE_MS, reduced);
   const holder = rootHolder(view);
   const placed = layoutTree(view);
+  // Tab lands on the card last focused, or on the first one
+  const stop = placed.some(({ id }) => id === active) ? active : (placed[0]?.id ?? null);
   const nodes: Node<ActorData>[] = placed.map(({ id, x, y }) => {
     const actor = view.actors[id];
     return {
@@ -127,6 +131,7 @@ function buildGraph(view: ViewState, now: number): TreeFrame {
         rootDuty: holder === id,
         glow: glowOf(actor, now, adoptionLife),
         leaf: isLeafKind(actor.kind),
+        tabbable: id === stop,
       },
     };
   });
@@ -185,11 +190,25 @@ function buildGraph(view: ViewState, now: number): TreeFrame {
   return { nodes, edges, shape };
 }
 
+/** The arrow keys, Home and End move between the cards of the tree; Tab leaves it. */
+function moveBetweenCards(event: KeyboardEvent<HTMLDivElement>): void {
+  const card = (event.target as HTMLElement).closest<HTMLElement>(".actor");
+  if (card === null) return;
+  const cards = [...event.currentTarget.querySelectorAll<HTMLElement>(".actor")];
+  const at = cards.indexOf(card);
+  const towards: Record<string, number> = { ArrowRight: at + 1, ArrowDown: at + 1, ArrowLeft: at - 1, ArrowUp: at - 1, Home: 0, End: cards.length - 1 };
+  const to = towards[event.key];
+  if (to === undefined || to < 0 || to >= cards.length) return;
+  event.preventDefault();
+  cards[to].focus();
+}
+
 function Graph({ view }: { view: ViewState }) {
   // The committed playhead (at most ~20 writes a second) decides which edges and glows exist;
   // how bright they are comes from --now, frame by frame, in CSS.
   const now = useClock((s) => s.playhead);
-  const frame = useMemo(() => buildGraph(view, now), [view, now]);
+  const [active, setActive] = useState<string | null>(null);
+  const frame = useMemo(() => buildGraph(view, now, active), [view, now, active]);
   const { nodes, onInit } = useTreeMotion(frame.nodes, frame.shape);
 
   return (
@@ -200,9 +219,15 @@ function Graph({ view }: { view: ViewState }) {
       nodesDraggable={false}
       nodesConnectable={false}
       elementsSelectable={false}
-      // each card is its own tab stop (a button that opens the lens): the library's wrappers and every edge would add two more per node
+      // the cards are one tab stop together (each a button that opens the lens, the arrow keys between them): the library's wrappers and
+      // every edge would add two more per node
       nodesFocusable={false}
       edgesFocusable={false}
+      onKeyDown={moveBetweenCards}
+      onFocus={(event: FocusEvent<HTMLDivElement>) => {
+        const id = (event.target as HTMLElement).closest(".actor")?.querySelector(".actor__id")?.textContent;
+        if (id) setActive(id);
+      }}
       proOptions={{ hideAttribution: true }}
       onInit={onInit}
       minZoom={0.2}

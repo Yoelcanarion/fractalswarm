@@ -197,15 +197,16 @@ describe("the notes", () => {
     expect(occurrences(view(sample, "neither"), 'id="note-')).toBe(1);
     expect(view(sample, "only_parser")).toContain("No note matches.");
     const text = plainText(view());
-    expect(text).toContain("All notes 6");
-    expect(text).toContain("Where they differ 4");
-    expect(text).toContain("Only Muse 2");
-    expect(text).toContain("Neither 1");
-    expect(view(sample, "differ")).toContain('aria-pressed="true"');
+    expect(text).toContain("All notes (6)");
+    expect(text).toContain("Where they differ (4)");
+    expect(text).toContain("Only Muse (2)");
+    expect(text).toContain("Neither (1)");
+    expect(occurrences(view(), "<select")).toBe(1);
+    expect(view(sample, "differ")).toMatch(/<option(?=[^>]*value="differ")(?=[^>]*selected="")/);
   });
 
   it("cannot filter on a difference before the server has said which notes differ", () => {
-    expect(view(running)).toMatch(/<button[^>]*aria-pressed="false"[^>]*disabled=""[^>]*>Where they differ/);
+    expect(view(running)).toMatch(/<option(?=[^>]*value="differ")(?=[^>]*disabled="")[^>]*>Where they differ/);
     expect(view({ ...sample, notes: [], result: null, status: "running" })).toContain("No note has been scored yet.");
   });
 });
@@ -221,6 +222,20 @@ describe("starting and picking an ablation", () => {
     expect(text).toContain("practice backend, which costs nothing");
     expect(text).toContain("0 to 200 of each kind");
     expect(/<button[^>]*>Run at no cost<\/button>/.exec(markup)?.[0]).not.toContain("disabled");
+  });
+
+  it("has one button in view, and the notes, the seed and the long list of runs under Details", () => {
+    const markup = launcher(ablationRuns(fixture("runs.json") as RunListing[]));
+    expect(markup).toContain('<details id="more" class="disclosure disclosure--inline">');
+    expect(markup.indexOf("Run at no cost")).toBeLessThan(markup.indexOf('<details id="more"'));
+    expect(markup.indexOf('<details id="more"')).toBeLessThan(markup.indexOf('value="8"'));
+    const many = Array.from({ length: 6 }, (_, i) => ({ id: `ablation-${i}`, status: "completed" }) as RunListing);
+    const long = launcher(many);
+    expect(long).toContain('<details id="all" class="disclosure disclosure--inline">');
+    expect(long).toContain("All 6 ablations on record");
+    expect(long.indexOf("ablation-3")).toBeLessThan(long.indexOf('<details id="all"'));
+    expect(long.indexOf("ablation-4")).toBeGreaterThan(long.indexOf('<details id="all"'));
+    expect(launcher(ablationRuns(fixture("runs.json") as RunListing[]))).not.toContain('<details id="all"');
   });
 
   it("lists the ablations on record, from the runs the server lists", () => {

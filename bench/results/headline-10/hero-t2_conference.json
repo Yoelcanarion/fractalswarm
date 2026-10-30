@@ -1,0 +1,396 @@
+{
+  "panels": [
+    {
+      "label": "Stall time (s)",
+      "metric": "stall_s",
+      "note": "no agent work in flight anywhere"
+    },
+    {
+      "label": "Extra cost vs C0 (%)",
+      "metric": "extra_cost_pct",
+      "note": "same workflow, task and seed"
+    },
+    {
+      "label": "Completion (%)",
+      "metric": "completion_rate",
+      "note": ""
+    },
+    {
+      "label": "Validity (%)",
+      "metric": "validity_rate",
+      "note": ""
+    },
+    {
+      "label": "Coordination tokens / run",
+      "metric": "coordination_tokens",
+      "note": "LLM tokens spent on coordination"
+    }
+  ],
+  "series": {
+    "central": {
+      "color": "#eb6834",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.2783118848,
+          "cost_usd_max": 0.3216151,
+          "cost_usd_min": 0.24909947,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/central__t2_conference__C0__s1",
+            "runs/central__t2_conference__C0__s10",
+            "runs/central__t2_conference__C0__s2",
+            "runs/central__t2_conference__C0__s3",
+            "runs/central__t2_conference__C0__s4",
+            "runs/central__t2_conference__C0__s5",
+            "runs/central__t2_conference__C0__s6",
+            "runs/central__t2_conference__C0__s7",
+            "runs/central__t2_conference__C0__s8",
+            "runs/central__t2_conference__C0__s9"
+          ],
+          "seeds": [
+            "1",
+            "10",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "stall_s": 13.8999,
+          "stall_s_max": 37.094,
+          "stall_s_min": 3.454,
+          "validity_rate": 100.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.4603625858,
+          "cost_usd_max": 0.548492478,
+          "cost_usd_min": 0.319500372,
+          "extra_cost_pct": 66.99850626260255,
+          "extra_cost_pct_max": 113.821794964076,
+          "extra_cost_pct_min": 8.622208007933983,
+          "profile": "C3",
+          "runs": [
+            "runs/central__t2_conference__C3__s1",
+            "runs/central__t2_conference__C3__s10",
+            "runs/central__t2_conference__C3__s2",
+            "runs/central__t2_conference__C3__s3",
+            "runs/central__t2_conference__C3__s4",
+            "runs/central__t2_conference__C3__s5",
+            "runs/central__t2_conference__C3__s6",
+            "runs/central__t2_conference__C3__s7",
+            "runs/central__t2_conference__C3__s8",
+            "runs/central__t2_conference__C3__s9"
+          ],
+          "seeds": [
+            "1",
+            "10",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "stall_s": 42.810500000000005,
+          "stall_s_max": 62.564,
+          "stall_s_min": 25.031,
+          "validity_rate": 100.0,
+          "x": 5
+        }
+      ]
+    },
+    "durable": {
+      "color": "#6250d6",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.284654314,
+          "cost_usd_max": 0.33752906,
+          "cost_usd_min": 0.249447336,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/durable__t2_conference__C0__s1",
+            "runs/durable__t2_conference__C0__s10",
+            "runs/durable__t2_conference__C0__s2",
+            "runs/durable__t2_conference__C0__s3",
+            "runs/durable__t2_conference__C0__s4",
+            "runs/durable__t2_conference__C0__s5",
+            "runs/durable__t2_conference__C0__s6",
+            "runs/durable__t2_conference__C0__s7",
+            "runs/durable__t2_conference__C0__s8",
+            "runs/durable__t2_conference__C0__s9"
+          ],
+          "seeds": [
+            "1",
+            "10",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "stall_s": 18.7297,
+          "stall_s_max": 26.22,
+          "stall_s_min": 11.875,
+          "validity_rate": 100.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.29151302479999996,
+          "cost_usd_max": 0.337550578,
+          "cost_usd_min": 0.258643672,
+          "extra_cost_pct": 4.29333775929689,
+          "extra_cost_pct_max": 30.568960883354706,
+          "extra_cost_pct_min": -20.64919952996604,
+          "profile": "C3",
+          "runs": [
+            "runs/durable__t2_conference__C3__s1",
+            "runs/durable__t2_conference__C3__s10",
+            "runs/durable__t2_conference__C3__s2",
+            "runs/durable__t2_conference__C3__s3",
+            "runs/durable__t2_conference__C3__s4",
+            "runs/durable__t2_conference__C3__s5",
+            "runs/durable__t2_conference__C3__s6",
+            "runs/durable__t2_conference__C3__s7",
+            "runs/durable__t2_conference__C3__s8",
+            "runs/durable__t2_conference__C3__s9"
+          ],
+          "seeds": [
+            "1",
+            "10",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "stall_s": 21.886400000000002,
+          "stall_s_max": 89.281,
+          "stall_s_min": 2.564,
+          "validity_rate": 100.0,
+          "x": 5
+        }
+      ]
+    },
+    "durable-max": {
+      "color": "#008300",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.2786248068,
+          "cost_usd_max": 0.307958196,
+          "cost_usd_min": 0.246161936,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/durable-max__t2_conference__C0__s1",
+            "runs/durable-max__t2_conference__C0__s10",
+            "runs/durable-max__t2_conference__C0__s2",
+            "runs/durable-max__t2_conference__C0__s3",
+            "runs/durable-max__t2_conference__C0__s4",
+            "runs/durable-max__t2_conference__C0__s5",
+            "runs/durable-max__t2_conference__C0__s6",
+            "runs/durable-max__t2_conference__C0__s7",
+            "runs/durable-max__t2_conference__C0__s8",
+            "runs/durable-max__t2_conference__C0__s9"
+          ],
+          "seeds": [
+            "1",
+            "10",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "stall_s": 13.0974,
+          "stall_s_max": 35.797,
+          "stall_s_min": 1.0,
+          "validity_rate": 100.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.300677766,
+          "cost_usd_max": 0.351888612,
+          "cost_usd_min": 0.269895392,
+          "extra_cost_pct": 8.138531855099295,
+          "extra_cost_pct_max": 25.917811675563225,
+          "extra_cost_pct_min": -5.510745042948237,
+          "profile": "C3",
+          "runs": [
+            "runs/durable-max__t2_conference__C3__s1",
+            "runs/durable-max__t2_conference__C3__s10",
+            "runs/durable-max__t2_conference__C3__s2",
+            "runs/durable-max__t2_conference__C3__s3",
+            "runs/durable-max__t2_conference__C3__s4",
+            "runs/durable-max__t2_conference__C3__s5",
+            "runs/durable-max__t2_conference__C3__s6",
+            "runs/durable-max__t2_conference__C3__s7",
+            "runs/durable-max__t2_conference__C3__s8",
+            "runs/durable-max__t2_conference__C3__s9"
+          ],
+          "seeds": [
+            "1",
+            "10",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "stall_s": 21.910899999999998,
+          "stall_s_max": 86.232,
+          "stall_s_min": 0.0,
+          "validity_rate": 100.0,
+          "x": 5
+        }
+      ]
+    },
+    "swarm": {
+      "color": "#2a78d6",
+      "points": [
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.2823086754,
+          "cost_usd_max": 0.331491986,
+          "cost_usd_min": 0.250530382,
+          "extra_cost_pct": 0.0,
+          "extra_cost_pct_max": 0.0,
+          "extra_cost_pct_min": 0.0,
+          "profile": "C0",
+          "runs": [
+            "runs/swarm__t2_conference__C0__s1",
+            "runs/swarm__t2_conference__C0__s10",
+            "runs/swarm__t2_conference__C0__s2",
+            "runs/swarm__t2_conference__C0__s3",
+            "runs/swarm__t2_conference__C0__s4",
+            "runs/swarm__t2_conference__C0__s5",
+            "runs/swarm__t2_conference__C0__s6",
+            "runs/swarm__t2_conference__C0__s7",
+            "runs/swarm__t2_conference__C0__s8",
+            "runs/swarm__t2_conference__C0__s9"
+          ],
+          "seeds": [
+            "1",
+            "10",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "stall_s": 16.045,
+          "stall_s_max": 33.984,
+          "stall_s_min": 0.0,
+          "validity_rate": 90.0,
+          "x": 0
+        },
+        {
+          "completion_rate": 100.0,
+          "coordination_tokens": 0.0,
+          "coordination_tokens_max": 0.0,
+          "coordination_tokens_min": 0.0,
+          "cost_usd": 0.286260782,
+          "cost_usd_max": 0.367089484,
+          "cost_usd_min": 0.239901684,
+          "extra_cost_pct": 2.3503039200366382,
+          "extra_cost_pct_max": 46.524936843787685,
+          "extra_cost_pct_min": -18.372633599655106,
+          "profile": "C3",
+          "runs": [
+            "runs/swarm__t2_conference__C3__s1",
+            "runs/swarm__t2_conference__C3__s10",
+            "runs/swarm__t2_conference__C3__s2",
+            "runs/swarm__t2_conference__C3__s3",
+            "runs/swarm__t2_conference__C3__s4",
+            "runs/swarm__t2_conference__C3__s5",
+            "runs/swarm__t2_conference__C3__s6",
+            "runs/swarm__t2_conference__C3__s7",
+            "runs/swarm__t2_conference__C3__s8",
+            "runs/swarm__t2_conference__C3__s9"
+          ],
+          "seeds": [
+            "1",
+            "10",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9"
+          ],
+          "stall_s": 11.1734,
+          "stall_s_max": 23.672,
+          "stall_s_min": 0.0,
+          "validity_rate": 100.0,
+          "x": 5
+        }
+      ]
+    }
+  },
+  "task": "t2_conference",
+  "title": "headline-10",
+  "x": [
+    0,
+    1,
+    3,
+    5
+  ],
+  "x_label": "Coordinators killed"
+}

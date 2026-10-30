@@ -346,7 +346,7 @@ export interface HeroSeries {
 
 export interface HeroSlice {
   source: string;
-  /** The result set the reading is from: "v1" (2 seeds) or "headline-10" (the 10-seed extension). */
+  /** The result set the reading is from: "headline-10", the ten seeds the claims quote. */
   set: string;
   digest: string;
   task: string;
@@ -549,7 +549,7 @@ export interface R5Numbers {
 }
 
 export interface NumbersSlice {
-  r5: { t1: R5Numbers; t2: R5Numbers };
+  r5: { t2: R5Numbers };
   r2: {
     task: string;
     seeds: number;
@@ -561,7 +561,7 @@ export interface NumbersSlice {
   s4: { runs: number; coordinationTokens: number };
   s7: { swarmC3Runs: number; swarmC3Completed: number; allRuns: number; allCompleted: number };
   /** Runs with a valid result, counted from each set's rows: never assumed, and the invalid runs are named. */
-  validity: { v1: ValiditySet; headline: ValiditySet; headline10: ValiditySet | null };
+  validity: { v1: ValiditySet; headline: ValiditySet; headline10: ValiditySet };
   structure: { orchestrators: number; agents: number; tracks: number; sessions: number };
   source: string[];
 }
@@ -609,12 +609,8 @@ export interface Story {
   hashes: HashesSlice;
   extraction?: ExtractionSlice | null;
   hero: HeroSlice;
-  /** The same chart for the ten-seed extension, when it exists. */
-  hero10: HeroSlice | null;
   headline: HeadlineSlice | null;
-  headline10: HeadlineSlice | null;
   verdicts: VerdictsSlice | null;
-  verdicts10: VerdictsSlice | null;
   gate: GateSlice;
   regime: RegimeSlice;
   perProcess: PerProcessSlice;

@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { FeaturedRuns } from "../components/catalogue/FeaturedRuns";
 import { LiveNow } from "../components/catalogue/LiveNow";
 import "../components/catalogue/catalogue.css";
 import { RunsKey } from "../components/catalogue/RunsKey";
 import { RunsTable, type Sort } from "../components/catalogue/RunsTable";
 import { RunsToolbar } from "../components/catalogue/RunsToolbar";
 import { NewTaskForm } from "../components/NewTaskForm";
-import { EmptyState, PageHeader, Skeleton, SkeletonGroup, Term } from "../components/ui";
+import { Details, EmptyState, PageHeader, Skeleton, SkeletonGroup, Term } from "../components/ui";
+import { defaultRunId, openedRunHash } from "../lib/address";
 import { fetchEventAt, verifyRun } from "../lib/api";
+import { withDetails } from "../lib/details";
 import {
+  featuredRows,
   filterRows,
   NO_FILTER,
   rowOf,
@@ -22,7 +26,6 @@ import {
   type VerifyView,
 } from "../lib/catalogue";
 import { createFactsLoader } from "../lib/factsLoader";
-import { prefersReducedMotion } from "../lib/motion";
 import { useDocumentTitle } from "../lib/title";
 import { useRunStore, useRunStoreShallow } from "../store";
 
@@ -59,8 +62,6 @@ export function RunsPage() {
   const [facts, setFacts] = useState<Record<string, RunFacts>>({});
   const [verify, setVerify] = useState<Record<string, VerifyView>>({});
   const [verifying, setVerifying] = useState(false);
-  const [startOpen, setStartOpen] = useState(false);
-  const startRef = useRef<HTMLDetailsElement>(null);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -127,14 +128,10 @@ export function RunsPage() {
     if (mounted.current) setVerifying(false);
   }, [unchecked, verifyOne]);
 
-  const openStart = () => {
-    setStartOpen(true);
-    startRef.current?.scrollIntoView({ block: "start", behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  };
-
   if (!runsLoaded) return <RunsSkeleton />;
   const failed = runsError !== null;
   const clear = () => setFilter(NO_FILTER);
+  const final = defaultRunId(runs);
 
   return (
     <div className="runs">
@@ -142,13 +139,15 @@ export function RunsPage() {
         title="Runs"
         lead={
           <>
-            Every run this server holds. A recorded run replays from its log and has a <Term id="replay">replay check</Term>; a live run streams while it is written.
+            Pick a recorded run and replay it. Each has a <Term id="replay">replay check</Term>; the final run is the one to start with.
           </>
         }
         actions={
-          <button type="button" className="btn btn--on" onClick={openStart}>
-            Start a run
-          </button>
+          final !== null && (
+            <a className="btn btn--on" href={openedRunHash(final)}>
+              Open the final run
+            </a>
+          )
         }
       />
 
@@ -168,9 +167,9 @@ export function RunsPage() {
         <EmptyState
           title="No runs yet"
           actions={
-            <button type="button" className="btn btn--on" onClick={openStart}>
+            <a className="btn btn--on" href={withDetails("#/runs", "start")}>
               Start a run
-            </button>
+            </a>
           }
         >
           Nothing has been recorded on this server. Start a run below, or record one from the command line with <code>fractalswarm run</code>.
@@ -185,27 +184,28 @@ export function RunsPage() {
               </button>
             </p>
           )}
-          <RunsToolbar
-            filter={filter}
-            onFilter={setFilter}
-            states={states}
-            workflows={workflowsIn(rows)}
-            summary={filtered ? `${shown.length} of ${rows.length} runs shown` : summarize(rows)}
-            onRefresh={refresh}
-            sorted={sort.key !== "listed"}
-            onResetSort={() => setSort({ key: "listed", dir: "asc" })}
-            onVerifyAll={() => void verifyAll()}
-            verifiable={unchecked.length}
-            verifying={verifying}
-          />
           <LiveNow rows={liveRows} />
-          {tableRows.length > 0 ? (
-            <>
-              <RunsTable rows={tableRows} sort={sort} onSort={onSort} verify={verify} onVerify={(id) => void verifyOne(id)} />
-              <RunsKey />
-            </>
-          ) : (
-            liveRows.length === 0 && (
+          <FeaturedRuns rows={featuredRows(rows)} />
+          <Details id="all" summary={`All ${rows.length} run${rows.length === 1 ? "" : "s"}`} hint="search, filter, sort and check them">
+            <RunsToolbar
+              filter={filter}
+              onFilter={setFilter}
+              states={states}
+              workflows={workflowsIn(rows)}
+              summary={filtered ? `${shown.length} of ${rows.length} runs shown` : summarize(rows)}
+              onRefresh={refresh}
+              sorted={sort.key !== "listed"}
+              onResetSort={() => setSort({ key: "listed", dir: "asc" })}
+              onVerifyAll={() => void verifyAll()}
+              verifiable={unchecked.length}
+              verifying={verifying}
+            />
+            {tableRows.length > 0 ? (
+              <>
+                <RunsTable rows={tableRows} sort={sort} onSort={onSort} verify={verify} onVerify={(id) => void verifyOne(id)} />
+                <RunsKey />
+              </>
+            ) : (
               <EmptyState
                 title="No run matches"
                 actions={
@@ -216,22 +216,14 @@ export function RunsPage() {
               >
                 Nothing listed has all of these words, in this state, from this workflow.
               </EmptyState>
-            )
-          )}
+            )}
+          </Details>
         </>
       )}
 
-      <details
-        ref={startRef}
-        className="panel runs__start"
-        open={startOpen}
-        onToggle={(event) => setStartOpen(event.currentTarget.open)}
-      >
-        <summary>
-          Start a run <span className="muted">on the fake model, so it costs nothing</span>
-        </summary>
+      <Details id="start" summary="Start a run of your own" hint="on the practice model, so it costs nothing">
         <NewTaskForm />
-      </details>
+      </Details>
     </div>
   );
 }

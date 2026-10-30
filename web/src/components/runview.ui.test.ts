@@ -18,7 +18,8 @@ import { SecurityPage } from "../pages/SecurityPage";
 import { createRunStore, RunStoreProvider, type RunApi, type RunStoreApi } from "../store";
 import { Meter, PStat, Pill } from "./PanelParts";
 import { RunFrame, RunGate } from "./RunFrame";
-import { GuideButton, GuideStrip, useGuide, type Guide } from "./RunGuide";
+import { Guide, GuideButton, useGuide, type GuideState } from "./shell/Guide";
+import { VerifyBadge } from "./VerifyBadge";
 
 const events = (): RunEvent[] =>
   readFileSync(REPO_ROOT + "demo/toy/events.jsonl", "utf-8")
@@ -161,14 +162,13 @@ describe("the five views of a run", () => {
 });
 
 describe("the run page", () => {
-  it("opens with the guide the first time, with the playhead in plain words", async () => {
+  it("opens with one line on what the page is for and one main action: play the run from its start", async () => {
     const out = render(await opened(), createElement(RunPage));
-    const t = text(out);
-    expect(t).toContain("The tree is the swarm");
-    expect(t).toContain("The playhead is the marker on the bar at the bottom");
-    expect(out).toContain('id="runguide"');
-    expect(out).toContain('aria-expanded="true"');
-    expect(out).toContain('aria-label="How to read this page"');
+    expect(text(out)).toContain("A recorded run, shown at its end");
+    expect(out).toContain('<button type="button" class="btn btn--on">Play from the start</button>');
+    // the guide is the app's, in the shell: the page has no second one, and no tab stop for every orchestrator to skip
+    expect(out).not.toContain('id="guide"');
+    expect(out).not.toContain("Skip the tree");
   });
 
   it("is not behind a gate that hides the page from a screen reader while it loads", async () => {
@@ -213,7 +213,7 @@ describe("the run page", () => {
     expect(t).toContain("This run created no orchestrator");
     expect(t).toContain("Its log ends without one");
     expect(t).not.toContain("Waiting for the first actor");
-    expect(t).not.toContain("Play from the start");
+    expect(t).not.toContain("The run is at its start");
   });
 
   it("names the schedule with a defined T2", async () => {
@@ -223,10 +223,10 @@ describe("the run page", () => {
 });
 
 describe("the guide", () => {
-  const guide = (open: boolean): Guide => ({ open, toggle: () => undefined, dismiss: () => undefined });
+  const guide = (open: boolean): GuideState => ({ open, toggle: () => undefined, dismiss: () => undefined });
 
   it("is nothing when closed, and the button that opens it says whether it is open", () => {
-    expect(renderToStaticMarkup(createElement(GuideStrip, { guide: guide(false) }))).toBe("");
+    expect(renderToStaticMarkup(createElement(Guide, { guide: guide(false) }))).toBe("");
     expect(renderToStaticMarkup(createElement(GuideButton, { guide: guide(false) }))).toContain('aria-expanded="false"');
     expect(renderToStaticMarkup(createElement(GuideButton, { guide: guide(true) }))).toContain('aria-expanded="true"');
   });
@@ -298,25 +298,83 @@ describe("the frame", () => {
 });
 
 describe("the keyboard on the run page", () => {
-  it("offers a way past the tree to the replay bar, and the bar's slider has the id it goes to", async () => {
+  it("has no tab stop to skip: the tree is one, and the replay bar's slider has the id the keyboard goes to", async () => {
     const store = await opened();
     store.getState().seek(store.getState().events.length); // at the start of the run there is no orchestrator yet
     const out = render(store, createElement(RunPage));
-    expect(out).toContain('<button type="button" class="skip"');
-    expect(text(out)).toContain("Skip the tree and go to the replay bar");
+    expect(out).not.toContain('class="skip"');
     expect(out).toContain('id="replay-position"');
   });
 
-  it("offers none while there is no tree to skip", async () => {
-    const store = renderCurrent(createRunStore({ api: apiOf({ loadAllEvents: async () => [] }) }));
-    await store.getState().openRun("toy");
-    expect(render(store, createElement(RunPage))).not.toContain('class="skip"');
-  });
-
-  it("makes each orchestrator one tab stop, the card's own: not the library's wrapper around it, and not every edge", () => {
+  it("makes the orchestrators one tab stop together, each the card's own: not the library's wrapper around it, and not every edge", () => {
     const source = readFileSync(REPO_ROOT + "web/src/components/TreeGraph.tsx", "utf-8");
     expect(source).toMatch(/nodesFocusable=\{false\}/);
     expect(source).toMatch(/edgesFocusable=\{false\}/);
-    expect(source).toMatch(/role="button"\s+tabIndex=\{0\}/);
+    // the card Tab lands on is one, and the arrow keys, Home and End move between the cards
+    expect(source).toMatch(/role="button"\s+tabIndex=\{tabbable \? 0 : -1\}/);
+    expect(source).toMatch(/onKeyDown=\{moveBetweenCards\}/);
+  });
+
+  it("has the marks of the bar as one tab stop, and the speeds as one select", async () => {
+    const out = render(await opened(), createElement(RunPage));
+    expect(out).toContain('<select aria-label="replay speed">');
+    expect(out).not.toContain("btn--seg");
+    const source = readFileSync(REPO_ROOT + "web/src/components/Timeline.tsx", "utf-8");
+    expect(source).toMatch(/\{\.\.\.roving\.stop\(index, marks\.length\)\}/);
+    expect(source).toMatch(/onKeyDown=\{roving\.onKeyDown\}/);
+  });
+});
+
+describe("what the views of a run keep out of their first view", () => {
+  it("has the approval of a recording as a fold, not a row of buttons that cannot be pressed", async () => {
+    const out = render(await opened(), createElement(PlanPage));
+    expect(out).toContain('<details id="approval" class="disclosure disclosure--inline plan__fold">');
+    expect(text(out)).toContain("Approve or reject the plan only while a run waits for a person");
+    expect(out.indexOf('<details id="approval"')).toBeLessThan(out.indexOf("Approve plan"));
+  });
+
+  it("has the events filter as one fold: the search, the noise switch and the groups", async () => {
+    const out = render(await opened(), createElement(EventsPage));
+    expect(out).toContain('<details id="filter" class="disclosure disclosure--inline">');
+    expect(out.indexOf('<details id="filter"')).toBeLessThan(out.indexOf('aria-label="search events"'));
+    expect(out.indexOf('<details id="filter"')).toBeLessThan(out.indexOf('aria-label="event groups"'));
+    expect(out.indexOf('aria-label="event groups"')).toBeLessThan(out.indexOf('<ol class="evlist__rows">'));
+  });
+
+  it("says the words of a view's line with their definitions on hover, not as tab stops", async () => {
+    const store = await opened();
+    for (const page of [ResultsPage, EventsPage, PanelsPage]) {
+      const out = render(store, createElement(page));
+      expect(out).toMatch(/<span class="tip"(?![^>]*tabindex)[^>]*><span class="term">playhead<\/span>/);
+    }
+  });
+
+  it("has the two proofs of the strip as text with their hint, and no tab stop", async () => {
+    const out = render(await opened(), createElement(RunPage));
+    expect(out).not.toMatch(/<span class="tip"[^>]*tabindex="0"[^>]*><span class="badge/);
+  });
+});
+
+describe("the replay check on the run strip", () => {
+  const verified = async (over: Record<string, unknown>) => {
+    const store = await opened();
+    const report = { ok: false, chain_ok: true, recorded_events: 14047, replayed_events: 42, recorded_head: "aa", replayed_head: "bb", first_divergence: 9, detail: "effect.started differs in payload", bundle_head: null, bundle_head_ok: false, ...over };
+    store.setState({ live: false, verify: { state: "done", report } } as never);
+    return render(store, createElement(VerifyBadge));
+  };
+
+  it("says an intact log that this code does not reproduce in amber, in exact words, with the server's detail as the hint", async () => {
+    const out = await verified({});
+    expect(out).toContain('<span class="badge badge--warn badge--big">Log intact. This code does not reproduce this recording: first difference at seq 9.</span>');
+    expect(out).toContain("effect.started differs in payload");
+    expect(out).not.toContain("badge--bad");
+    expect(out).not.toContain("MISMATCH");
+    expect(out).not.toMatch(/older|version/i);
+  });
+
+  it("keeps red for a broken chain", async () => {
+    const out = await verified({ chain_ok: false });
+    expect(out).toContain('<span class="badge badge--bad badge--big">✕ Replay MISMATCH at seq 9</span>');
+    expect(out).not.toContain("badge--warn");
   });
 });

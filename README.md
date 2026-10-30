@@ -72,12 +72,12 @@ We built the strongest rival we could implement fairly, and ran everything under
 
 **The headline, outcome B of the preregistration:** "Resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism."
 
-- **Against the ideal durable supervisor (`durable-max`):** a tie on preserved work, extra cost, time to recover, duplicated spend and stall time. All 18 headline runs completed and are valid (T2, C0 and C3, seeds 1–3, recorded after the handler freeze).
-- **Where it helps:** "On the real model, at the headline point (T2, C3: five coordinator crashes, half the agents killed), recovery stayed local: the swarm's coordinator-dependency time, blast radius and idle agent-seconds were below half of `durable-max`'s on every seed." At the $0 gate, on the fake model, locality tied at C2 and C3, so this is a result at one point, not a general claim.
+- **Against the ideal durable supervisor (`durable-max`):** a tie on preserved work, extra cost, time to recover, duplicated spend and stall time, and a loss on false deaths (1.90 per run against none), over ten seeds. All 80 runs completed and 79 are valid (T2, C0 and C3, seeds 1–10, recorded after the handler freeze); the exception is the swarm at C0 on seed 5, one wrong model reading with no crash.
+- **Locality:** "On the real model, at the headline point (T2, C3: five coordinator crashes, half the agents killed), locality against `durable-max` tied over ten seeds: the swarm's coordinator-dependency time, blast radius and idle agent-seconds were 0.57, 0.43 and 0.70 of its values, and at or below half on 4, 7 and 6 of the ten seeds." At the $0 gate, on the fake model, locality tied at C2 and C3 too.
 - **Where it does not:** against an external supervisor that detects and restarts within 0.5–1 s while the swarm keeps its 5 s detection, locality fails, at 13.2 and 5.7 times the supervisor's dependency time. Per process, with each coordinator process failing at the same rate, the two are comparable, and the supervisor recovers sooner. The swarm's failure detector also produces false deaths; the supervisors have none.
-- **Against an in-process supervisor (`central`), whose workers die with it,** the swarm at C3 stalled 8.2 s (T1) and 14.6 s (T2) against 62.6 and 92.6 s, with +2.6% and +6.6% extra cost against +37.7% and +75.6% (real model, 2 seeds). Most of that gap comes from the rival's design, so it is no evidence against a well-built supervisor.
+- **Against an in-process supervisor (`central`), whose workers die with it,** the swarm at C3 stalled 11.2 s against 42.8 s, with +2.4% extra cost against +67.0% on the pre-registered basis (which estimates the cost of cancelled calls), or −1.1% against +29.2% on completed calls only (real model, T2, 10 seeds). Most of that gap comes from the rival's design, so it is no evidence against a well-built supervisor.
 
-![Stall time and extra cost against coordinators killed, on the real model](bench/results/v1/hero-t2_conference.png)
+![Stall time and extra cost against coordinators killed, on the real model](bench/results/headline-10/hero-t2_conference.png)
 
 **What we do not claim:** "simpler", "cheaper" or "more reliable". Having no supervisor is not, by itself, evidence for any of them.
 
