@@ -1065,6 +1065,142 @@
   dominant-baseline: central;
 }
 
+/* ---- the door glyphs: what a door lets you do, in line and one accent ---------------------- */
+
+.hv.hv-dg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 110px;
+  max-height: 140px;
+  overflow: visible;
+}
+.hv-dg-edge {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hv-dg-soft {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.hv-dg-divider {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+.hv-dg-box {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.hv-dg-ink {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.hv-dg-ink--fine {
+  stroke-width: 1.5;
+}
+.hv-dg-node {
+  fill: var(--accent);
+}
+.hv-dg-node--rival {
+  fill: var(--text-muted);
+}
+.hv-dg-node--ring {
+  fill: var(--bg);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+.hv-dg-x {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+}
+.hv-dg-ok {
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hv-dg-ok--thin {
+  stroke-width: 1.5;
+}
+.hv-dg-dot {
+  fill: var(--accent);
+}
+.hv-dg-dot--parser {
+  fill: var(--text-secondary);
+}
+.hv-dg-dot--muse {
+  fill: var(--model-spark);
+}
+.hv-dg-stripe {
+  fill: var(--border-strong);
+}
+.hv-dg-hinge {
+  fill: var(--text-secondary);
+}
+.hv-dg-chart {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hv-dg-chart--a {
+  stroke: var(--text-secondary);
+}
+.hv-dg-chart--b {
+  stroke: var(--accent);
+}
+.hv-dg-pt {
+  stroke: var(--bg);
+  stroke-width: 1.5;
+}
+.hv-dg-pt--a {
+  fill: var(--text-secondary);
+}
+.hv-dg-pt--b {
+  fill: var(--accent);
+}
+.hv-dg-scrub {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+.hv-dg-spark {
+  fill: var(--model-spark);
+}
+.hv-dg-glow {
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+}
+
+/* ---- the count-up: a number that counts once, in the width of the number it ends as ---------- */
+
+.hv.hv-count {
+  display: inline-grid;
+  justify-items: start;
+  width: auto;
+  height: auto;
+  font-variant-numeric: tabular-nums;
+}
+.hv-count__end,
+.hv-count__live {
+  grid-area: 1 / 1;
+}
+.hv-count__end {
+  visibility: hidden;
+}
+
 .hv-hidden {
   position: absolute;
   width: 1px;
