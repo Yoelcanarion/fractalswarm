@@ -1392,3 +1392,17 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 **Spend:** `spend` at 22:37: remaining $92.06 of $150, with about $11.70 of it reserved by runs that were killed and never settled (stale). Tonight's paid work cost about $14.20 in `remaining`.
 
 **RELEASE at 22:38:** W6 has the machine for its frame times, then W7 and W4. Both W6 (f4c0dd0, with W7's six components in) and W4 (ee52fe1) have their first pass in code, 222 visible words on the home page against 3,280.
+
+**The redesign's first pass is on 8765 (22:52–23:03).**
+- **The home page:** W6 and W7 merged at f7bba6e, data and bundle in 07c7690. 5,650, 4,925 and 6,084 px at 1920, 1366 and 390 wide, against 30,020 px on the old page; 222 visible words; Firefox frames at 6.1 ms p50 and 18.2 ms at worst (W6's numbers).
+- **The app:** W4 merged at 5f4519e, bundle c754326. Tab stops in the first view at 1920x1080, old to new: run 71 to 25, runs 50 to 15, arena 49 to 19, helps 53 to 11. Every moved control is at most two clicks away (checklist in `.plans/notes/arena-ui-core.md`).
+- **Checks at c754326:** web suite 2,068 green, tsc clean. The whole pytest, the refs and `demo --verify` have not run on this head: they wait for a machine with room, after W1.
+- `Yoelcanarion/arena` is pushed (61 commits).
+
+**What I saw looking at each section, sent back as the next lists:** the Proof numbers are still the 2-seed and 3-seed ones until W1 merges; Proof is a narrow column, so W6 and W7 spread it across the page; the problem film means nothing to a stranger, so W7 adds three plain captions; the demo's buttons look unstyled and sit 240 px below the tree; the hero diagram is small for its column. **The run page goes before W4's five More views,** because it is where everyone lands and it is still dense: the tree becomes the page, one plain line states the outcome, the rest goes under Details, and "0 ACTORS ALIVE" and "1 calls lost" change.
+
+**Replay sweep of all 33 runs at c754326's server (`coord/verify_all.ps1`, new, for S5's check at the release commit), after W4 reported two mismatches:** 25 match, 7 differ, 1 never completed.
+- **`t2-real-seed1`, `t2-real-seed1b`, `t2-real-c3-swarm-seed1b`, `t2-real-c3-central-seed1`:** a firewall `effect.started` differs. These are the Phase 1 runs that S5 already excludes (8ac7536 changed the email scan).
+- **`t2-real-c3-swarm-seed1`:** status interrupted, so it cannot be verified.
+- **Three private intakes: my error, corrected here.** My entry at 20:45 says the two failed attempts were the only recordings on the old schema. They are three runs: `intake-20261029-174443-c2de`, `intake-20261029-175031-c023` and the failed `intake-20261030-194128-14a2`. `budget.reserved` differs at seq 12, because the longer schema reserves slightly more ($0.07777075 against $0.0777495). **Checked:** the first of them gives MATCH on the code before 180829f (the `arena` worktree at 10c2ff7) and MISMATCH at HEAD. All three hold private input, are not in git and back no claim. The fix stays, since the old schema could never work on the real model. But the failed one was recorded after the freeze, so S5's "runs recorded after the handler freeze" needs that exception when I lift it.
+- All the pairs and all three demo bundles match. Nothing a fresh clone ships is affected.
