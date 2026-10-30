@@ -256,3 +256,19 @@ Fake LLM only (never `--backend real`, never `--confirm-real-spend`); any run of
 `FRACTALSWARM_LEDGER_PATH` to scratch dirs; claims only from `docs/claims.md` (the visuals' own test bans "valid" outside a claim,
 "every run finished", "simpler/cheaper/more reliable" and "first"); every result names its setting (task, model, seeds, failure
 profile).
+
+## W7 home-viz, Oct 31: usage limit reached, handoff
+
+Done, on Yoelcanarion/arena-home-viz, each mailed to the coordinator as merge_ready:
+- 62d0e52: the ten seeds. DotPlot leaves central out by default (`systems` prop, `systems={null}` draws it); PairedBars says "tie · the seeds disagree" and prints the pre-registered rule; ProofBars names the extra cost's basis; on a phone the unit leaves a measure's title and the name is written smaller before a verdict touches it.
+- 66c88aa: the demo's result stays (touch() when the Kill half queue drains), `crashLine()` says "take over" for two heirs, a pending line is dropped when another coordinator crashes, the main button keeps its ink on hover; the step cards' drawn-on lines use `vector-effect: none` and a stroke of 1 (a non-scaling stroke counts a dash in screen pixels, so the curves peeked out at rest and stopped short).
+- d8fa8f4: "pre-registered basis" in the extra-cost headers of LineDraw and DotPlot (DotPlot has three forms; a phone gets "% extra").
+- 80cab4a: ProofBars in two columns from a box of 1000 px (48 gap, up to 1480; one column up to 840 below it); a setting both panels share is said once under them; `ProofDrawing` exported for the server tests.
+Checks at 80cab4a: tsc clean, `vitest run --maxWorkers=1 src/home` 41 files, 663 passed.
+
+Not done:
+1. The empty band under the demo's tree at rest (W6 saw 170-220 px at 820 and 1024 wide). Measured at 1024x768: agents row ends about 540 px, the faint KILLED rule is at 606, the dead row is reserved down to 722. It is the shelf's room (tree/layout.ts `memorialSlots`: row at (depth + 1) * ROW + 0.5; `boundsOf`: bottom margin 0.9 + 0.5). Ideas: bring the memorial row about half a unit closer and cut the bottom margin, for the demo only (in `demoModel`) or for both trees, since the hero shares these numbers; or draw five faint empty slots on the shelf so the room reads as meant. Tests that touch it: demo/stage.test.ts, tree/*.test.ts, redesign.test.ts (the shelf and KILLED label).
+2. (F) The hero tree: fill the column, caption under it.
+3. worker_done (not sent: the dispatch is not finished).
+
+Scratch tools, not in git, in the session scratchpad `shots/`: chart_shots.js, demo_fit_page.js, demo_text_probe.js, demo_rest.js, step_frames.js, proof_page.js, sheet.js. The lab dev server on 5175 is stopped.
