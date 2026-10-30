@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { easeOutCubic, formatNumber, tween } from "../../lib/motion";
-import { Card, ModelBadge, modelFamily, Skeleton, SkeletonGroup, SkeletonText, Stat, Tooltip } from "./index";
+import { Card, EmptyState, ModelBadge, modelFamily, PageHeader, Skeleton, SkeletonGroup, SkeletonText, Stat, Term, Tooltip } from "./index";
 
 const html = (element: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(element);
 
@@ -135,5 +135,52 @@ describe("Card and Skeleton", () => {
     expect(out).toContain("Loading run…");
     expect(out.match(/class="skeleton /g)).toHaveLength(4); // 3 lines and the circle
     expect(out).toContain("skeleton--circle");
+  });
+});
+
+
+describe("Term", () => {
+  it("shows the glossary word with its definition, as a tab stop", () => {
+    const out = html(createElement(Term, { id: "stall" }));
+    expect(out).toContain('class="term"');
+    expect(out).toContain(">Stall time<");
+    expect(out).toContain("no agent LLM call is in flight anywhere");
+    expect(out).toContain('role="tooltip"');
+    expect(out).toContain('tabindex="0"');
+  });
+
+  it("can wear the page's own words for the same definition", () => {
+    const out = html(createElement(Term, { id: "c3" }, "half the brains"));
+    expect(out).toContain(">half the brains<");
+    expect(out).toContain("Five coordinator crashes");
+  });
+});
+
+describe("PageHeader", () => {
+  it("is the page's one h1, with a lead and actions only when given", () => {
+    const bare = html(createElement(PageHeader, { title: "Runs" }));
+    expect(bare.match(/<h1/g)).toHaveLength(1);
+    expect(bare).not.toContain("pagehead__lead");
+    expect(bare).not.toContain("pagehead__actions");
+    const full = html(createElement(PageHeader, { title: "Runs", lead: "Every recorded run.", actions: createElement("button", null, "New") }));
+    expect(full).toContain("Every recorded run.");
+    expect(full).toContain("pagehead__actions");
+  });
+});
+
+describe("EmptyState", () => {
+  it("says what, why and the way out", () => {
+    const out = html(createElement(EmptyState, { title: "No runs yet", actions: createElement("a", { href: "#/new" }, "Start one") }, "Nothing has been recorded."));
+    expect(out).toContain("No runs yet");
+    expect(out).toContain("Nothing has been recorded.");
+    expect(out).toContain('href="#/new"');
+    expect(out).toContain('role="status"');
+  });
+
+  it("is announced at once when it is an error", () => {
+    const out = html(createElement(EmptyState, { title: "Could not load", tone: "bad" }));
+    expect(out).toContain('role="alert"');
+    expect(out).toContain("emptystate--bad");
+    expect(out).not.toContain("emptystate__body");
   });
 });

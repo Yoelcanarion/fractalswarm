@@ -253,18 +253,22 @@ textarea:focus-visible {
   pointer-events: none;
 }
 
+/* Fixed, and placed by Tooltip.tsx when it opens: a card with overflow hidden around the trigger
+   would clip an absolutely positioned bubble. */
 .tip__bubble {
-  position: absolute;
+  position: fixed;
+  left: 0;
+  top: 0;
   z-index: var(--z-tooltip);
   width: max-content;
-  max-width: 260px;
-  padding: 6px 10px;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 8px 12px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-2);
   background: var(--surface-3);
   box-shadow: var(--shadow-overlay);
   color: var(--text-primary);
-  font-size: var(--fs-label);
+  font-size: var(--fs-body);
   font-weight: 500;
   line-height: var(--lh-body);
   letter-spacing: 0;
@@ -295,36 +299,88 @@ textarea:focus-visible {
     visibility 0s linear 300ms;
 }
 
-.tip[data-placement="top"] .tip__bubble {
-  bottom: calc(100% + 8px);
-  left: 50%;
-  translate: -50% 0;
+/* ---- term: a word with a definition ---- */
+.term {
+  border-bottom: 1px dotted var(--text-muted);
+  cursor: help;
 }
 
-.tip[data-placement="bottom"] .tip__bubble {
-  top: calc(100% + 8px);
-  left: 50%;
-  translate: -50% 0;
+/* ---- page header: every page starts with the same head ---- */
+.pagehead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
-.tip[data-placement="top-end"] .tip__bubble {
-  bottom: calc(100% + 8px);
-  right: 0;
+.pagehead__title {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 700;
+  line-height: var(--lh-tight);
 }
 
-.tip[data-placement="bottom-end"] .tip__bubble {
-  top: calc(100% + 8px);
-  right: 0;
+.pagehead__lead {
+  max-width: 72ch;
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
 }
 
-.tip[data-placement="left"] .tip__bubble {
-  right: calc(100% + 8px);
-  top: 50%;
-  translate: 0 -50%;
+.pagehead__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.tip[data-placement="right"] .tip__bubble {
-  left: calc(100% + 8px);
-  top: 50%;
-  translate: 0 -50%;
+/* ---- empty and error states: what is missing, why, and the way out ---- */
+.emptystate {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  max-width: 640px;
+  margin: var(--space-6) auto;
+  padding: var(--space-5) var(--space-5);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+  text-align: center;
+}
+
+.emptystate--warn {
+  border-style: solid;
+  border-color: var(--warn-border);
+  background: var(--warn-bg);
+}
+
+.emptystate--bad {
+  border-style: solid;
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.emptystate__title {
+  font-size: var(--fs-lead);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+}
+
+.emptystate__body {
+  max-width: 56ch;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+}
+
+.emptystate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
