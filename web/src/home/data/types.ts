@@ -1,14 +1,16 @@
 // The shape of story.json, as scripts/build_home_data.py writes it. Keep the two in step: the
 // generator's docstring names every slice, and data/story.test.ts checks this shape against the file.
+// Each visual draws one slice and is handed only that slice (the page does `slice(story, "tree")`).
 
-export type ClaimStatus = "allowed" | "pending" | "not-claimed";
+export type ClaimState = "allowed" | "pending" | "not-claimed";
 
 export interface Claim {
   /** The row's wording, from docs/claims.md. */
   text: string;
-  status: ClaimStatus;
-  /** The status cell as written, for a tooltip or a caption. */
-  statusText: string;
+  /** The status cell as written. */
+  status: string;
+  /** What the page makes of it. */
+  state: ClaimState;
 }
 
 export interface SourceRecord {
@@ -42,11 +44,37 @@ export interface GoalData {
   parent: string | null;
 }
 
+export interface HeartbeatData {
+  /** The failure detector's beat (Detector.interval_ms) and its two thresholds. */
+  intervalMs: number;
+  suspectAfter: number;
+  deadAfter: number;
+  /** Heartbeat frames in the whole log. */
+  frames: number;
+  /** Per sender: its first and last tick, the number of ticks, the peers it ever watched. */
+  senders: Record<string, { firstMs: number; lastMs: number; ticks: number; peers: string[] }>;
+}
+
+/** Everything the swarm tree draws: who is in it, when each brain is killed and declared dead, who
+ * takes over, which messages cross it, when each actor has a call in flight. */
 export interface TreeSlice {
   root: string;
   nodes: TreeNodeData[];
   goals: GoalData[];
   counts: { orchestrators: number; agents: number; tracks: number; sessions: number };
+  durationMs: number;
+  talks: { placed: number | null; expected: number | null };
+  kills: KillData[];
+  adoptions: AdoptionData[];
+  /** The HRW rounds of the run: the real scores of the candidates (the same as `hrw.rounds`). */
+  rounds: HrwRound[];
+  heartbeat: HeartbeatData;
+  messageKinds: ["assign", "contract", "contract.result", "result"];
+  messageFields: ["tMs", "from", "to", "kind"];
+  /** [tMs, from, to, kind index] */
+  messages: [number, string, string, number][];
+  /** For each actor, the spans [startMs, endMs] with an LLM call in flight. */
+  busy: Record<string, [number, number][]>;
 }
 
 export interface VerdictData {
@@ -113,34 +141,37 @@ export interface OrphanData {
 export interface TakeoverSlice {
   runId: string;
   durationMs: number;
-  killCount: number;
-  kills: KillData[];
+  killed: number;
   successions: SuccessionData[];
-  adoptions: AdoptionData[];
   orphans: OrphanData[];
   chains: Record<string, string[]>;
+  /** Who held the root goal, in order. */
+  rootChain: string[];
+  /** From the kill to the verdict. */
   detection: { minS: number; maxS: number; meanS: number };
+  /** From the dead brain's last heartbeat to the verdict (mean, and the range). */
+  deathVerdictS: number;
+  deathVerdictRangeS: [number, number];
   falseVerdicts: number;
   ok: boolean;
   violations: number;
   okLine: string;
 }
 
-export interface TrafficSlice {
-  heartbeat: {
-    /** The failure detector's beat (Detector.interval_ms) and its two thresholds. */
-    intervalMs: number;
-    suspectAfter: number;
-    deadAfter: number;
-    /** Heartbeat frames in the whole log. */
-    frames: number;
-    /** Per sender: its first and last tick, the number of ticks, the peers it ever watched. */
-    senders: Record<string, { firstMs: number; lastMs: number; ticks: number; peers: string[] }>;
-  };
-  messageKinds: ["assign", "contract", "contract.result", "result"];
-  messageFields: ["tMs", "from", "to", "kind"];
-  /** [tMs, from, to, kind index] */
-  messages: [number, string, string, number][];
+export interface FactsSlice {
+  talks: number;
+  tracks: number;
+  days: number;
+  sessions: number;
+  orchestrators: number;
+  agents: number;
+}
+
+export interface ProofSlice {
+  command: string;
+  /** What the command prints when the replay matches. */
+  lines: string[];
+  takeover: { command: string; line: string };
 }
 
 export interface HrwScore {
@@ -174,6 +205,12 @@ export interface HrwSlice {
 }
 
 export interface FinishSlice {
+  /** The setting of the run. */
+  task: string;
+  real: boolean;
+  seeds: number;
+  talksPlaced: number | null;
+  talksTotal: number | null;
   status: string | null;
   placed: number | null;
   expected: number | null;
@@ -216,6 +253,10 @@ export type LaneMark =
   | { kind: "remap"; atMs: number; goal: string; from: string; to: string };
 
 export interface LanesSlice {
+  /** Seconds the work waited, in total (the central run's stall time). */
+  stallS?: number;
+  /** Where the beats sit in the lanes' progress; the lanes' time map is built from them. */
+  keyframes?: { filled: number; crash: number; restart: number; redone: number; end: number };
   runId: string;
   head: string;
   events: number;
@@ -264,22 +305,22 @@ export interface HashesSlice {
 
 // -- benchmark results -----------------------------------------------------------------------
 
+/** A point of hero-t2_conference.json, in the file's own names. */
 export interface HeroPoint {
   x: number;
   profile: string;
-  stallS: number;
-  stallMinS: number;
-  stallMaxS: number;
-  extraPct: number;
-  extraMinPct: number;
-  extraMaxPct: number;
-  costUsd: number;
-  completionPct: number;
+  stall_s: number;
+  stall_s_min: number;
+  stall_s_max: number;
+  extra_cost_pct: number;
+  extra_cost_pct_min: number;
+  extra_cost_pct_max: number;
+  cost_usd: number;
+  completion_rate: number;
   seeds: string[];
 }
 
 export interface HeroSeries {
-  id: string;
   label: string;
   points: HeroPoint[];
 }
@@ -288,11 +329,15 @@ export interface HeroSlice {
   source: string;
   digest: string;
   task: string;
+  /** The file's title: "rivals-real" is the real model against the rivals. */
+  title: string;
   model: "real" | "fake";
   xLabel: string;
   x: number[];
   seedCount: number;
-  series: HeroSeries[];
+  /** The workflows in the order to draw them. */
+  order: string[];
+  series: Record<string, HeroSeries>;
 }
 
 export interface HeadlineCell {
@@ -324,7 +369,9 @@ export interface HeadlineSlice {
   digest: string;
   task: string;
   model: "real" | "fake";
+  real: boolean;
   seeds: string[];
+  seedCount: number;
   cells: HeadlineCell[];
 }
 
@@ -444,9 +491,25 @@ export interface TokensSlice {
   scans: { count: number; backend: string | null; decisions: Record<string, number> };
 }
 
-export interface AssumptionsSlice {
-  source: string;
-  items: { assumption: string; value: string; why: string; checkedBy: string }[];
+export interface AssumptionRow {
+  id: string;
+  label: string;
+  value: string;
+  why: string;
+  checkedBy: string;
+}
+
+export interface FailureFigure {
+  value: number;
+  label: string;
+  decimals?: number;
+}
+
+/** R3's figures, each with the words that say what it is. */
+export interface FailuresSlice {
+  fastRestart: FailureFigure[];
+  falseDeaths: FailureFigure[];
+  perProcess: FailureFigure;
 }
 
 export interface R5Numbers {
@@ -501,14 +564,17 @@ export interface Story {
   workflows: Record<string, string>;
   profiles: ProfilesSlice;
   numbers: NumbersSlice;
+  facts: FactsSlice;
   tree: TreeSlice;
   takeover: TakeoverSlice;
-  traffic: TrafficSlice;
   hrw: HrwSlice;
   finish: FinishSlice;
+  proof: ProofSlice;
   lanes: { central: LanesSlice; swarm: LanesSlice };
   hashes: HashesSlice;
-  hero: { v1: HeroSlice | null; headline: HeroSlice | null; headline10: HeroSlice | null };
+  hero: HeroSlice;
+  /** The same chart for the ten-seed extension, when it exists. */
+  hero10: HeroSlice | null;
   headline: HeadlineSlice | null;
   headline10: HeadlineSlice | null;
   verdicts: VerdictsSlice | null;
@@ -517,6 +583,8 @@ export interface Story {
   regime: RegimeSlice;
   perProcess: PerProcessSlice;
   falseDeaths: FalseDeathsSlice;
+  failures: FailuresSlice;
+  tokens: { coordination: number; recovery: number };
   tokensByModel: TokensSlice;
-  assumptions: AssumptionsSlice;
+  assumptions: AssumptionRow[];
 }

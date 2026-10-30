@@ -4,9 +4,9 @@ import { burialTimes } from "./layout";
 import { curvePoint, treePlayer } from "./frame";
 import { treeModel } from "./model";
 
-const model = treeModel(story);
-const hero = treePlayer(story, "hero");
-const told = treePlayer(story, "story");
+const model = treeModel(story.tree);
+const hero = treePlayer(story.tree, "hero");
+const told = treePlayer(story.tree, "story");
 
 describe("the effective tree", () => {
   it("has one epoch for the start and one for each takeover time", () => {
@@ -39,7 +39,7 @@ describe("the effective tree", () => {
   });
 
   it("buries each dead brain when its last duty has been handed over", () => {
-    expect(burialTimes(story)).toEqual({ o0: 49640, "o2.1": 59781, o1: 61750, "o3.2": 70859, o2: 80952 });
+    expect(burialTimes(story.tree)).toEqual({ o0: 49640, "o2.1": 59781, o1: 61750, "o3.2": 70859, o2: 80952 });
   });
 
   it("gives every node in an epoch a place, with no two nodes on top of each other", () => {

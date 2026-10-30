@@ -10,14 +10,18 @@ Claims are copied from ``docs/claims.md`` by row id, in the row's wording.
 
 Slices (camelCase keys; seconds are floats rounded to 3 places, money to 6, times in ms are ints):
 
-    claims       docs/claims.md rows: {id: {text, status, statusText}}; notClaimed; claimRules
+    claims       docs/claims.md rows: {id: {text, status, state}}: the status cell as written,
+                 and the state read from it (allowed, pending, not-claimed); notClaimed; claimRules
+    facts        talks, tracks, days, sessions, orchestrators, agents of the running example
     numbers      the figures the claims quote (R2, R5, S4, S7) and the structure counts
-    tree         the demo bundle's tree: nodes (brains and agents), goals, counts
-    takeover     its kills, death verdicts, successions, adoptions, orphan results and chains
-    traffic      the failure detector's heartbeats (per sender: first, last, ticks, peers) and the
-                 task messages (assign, contract, contract.result, result) of the bundle
+    tree         what the swarm tree draws, and nothing else is needed: nodes (brains and agents),
+                 goals, counts, the kills and adoptions of the log, the HRW rounds, the heartbeats
+                 (per sender: first, last, ticks, peers), the task messages (assign, contract,
+                 contract.result, result) and the spans in which each actor has a call in flight
+    takeover     the run's death verdicts, successions, orphan results, chains and the root chain
     hrw          one record per succession: the pool, the real scores, the heir, who read the log
-    finish       the run's result: talks placed, hard violations, duplicate calls, cost
+    finish       the run's result: talks placed, hard violations, duplicate calls, cost, setting
+    proof        the line ``demo --verify`` prints, and the takeover check's
     lanes        work lanes of a run of ``central`` at C3 (not in git: carried over when absent) and
                  of the demo bundle: one lane per actor, one bar per LLM call
     hashes       a sample of the bundle's events with their real hashes, its head, the verification
@@ -28,8 +32,10 @@ Slices (camelCase keys; seconds are floats rounded to 3 places, money to 6, time
     gate         where locality tied at $0 (bench/results/honesty.json)
     regime       does locality hold, tie or fail at each assumption of the rival
     perProcess   the per-process reading; falseDeaths: what the failure detector got wrong
+    failures     R3's figures with their settings: where locality fails, false deaths, per process
+    tokens       tokens spent on coordination and on recovery
     tokensByModel the bundle's tokens by model; scans: its PromptGuard scans
-    assumptions  what the benchmark grants the rival (bench/REPORT.md section 1)
+    assumptions  what the benchmark grants the rival (bench/REPORT.md section 1): a list
 """
 
 import argparse
@@ -218,8 +224,8 @@ def claims_slice() -> dict[str, Any]:
                 cells = dict(zip(header, row, strict=True))
                 claims[row[0]] = {
                     "text": unquote(cells["Claim, as worded"]),
-                    "status": claim_status(cells["Status"]),
-                    "statusText": plain(cells["Status"]),
+                    "status": plain(cells["Status"]),
+                    "state": claim_status(cells["Status"]),
                 }
         elif header[0] == "Claim":
             for row in rows:
@@ -238,15 +244,17 @@ def assumptions_slice() -> dict[str, Any]:
     items = []
     for row in rows:
         cells = dict(zip(header, row, strict=True))
+        label = plain(cells["Assumption"])
         items.append(
             {
-                "assumption": plain(cells["Assumption"]),
+                "id": re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-"),
+                "label": label,
                 "value": plain(cells["Value in the main runs"]),
                 "why": plain(cells["Why"]),
                 "checkedBy": plain(cells["Checked by"]),
             }
         )
-    return {"source": "bench/REPORT.md#what-we-grant-the-rival", "items": items}
+    return items
 
 
 # -- benchmark results (bench/results) -------------------------------------------------------
@@ -258,7 +266,7 @@ def hero_slice(directory: str) -> dict[str, Any] | None:
     if not path.exists():
         return None
     data = read_json(path)
-    series = []
+    series: dict[str, Any] = {}
     for name in SERIES_ORDER:
         if name not in data["series"]:
             continue
@@ -268,27 +276,31 @@ def hero_slice(directory: str) -> dict[str, Any] | None:
                 {
                     "x": p["x"],
                     "profile": p["profile"],
-                    "stallS": r(p["stall_s"]),
-                    "stallMinS": r(p["stall_s_min"]),
-                    "stallMaxS": r(p["stall_s_max"]),
-                    "extraPct": r(p["extra_cost_pct"], 2),
-                    "extraMinPct": r(p["extra_cost_pct_min"], 2),
-                    "extraMaxPct": r(p["extra_cost_pct_max"], 2),
-                    "costUsd": r(p["cost_usd"], 6),
-                    "completionPct": r(p["completion_rate"], 1),
+                    "stall_s": r(p["stall_s"]),
+                    "stall_s_min": r(p["stall_s_min"]),
+                    "stall_s_max": r(p["stall_s_max"]),
+                    "extra_cost_pct": r(p["extra_cost_pct"], 2),
+                    "extra_cost_pct_min": r(p["extra_cost_pct_min"], 2),
+                    "extra_cost_pct_max": r(p["extra_cost_pct_max"], 2),
+                    "cost_usd": r(p["cost_usd"], 6),
+                    "completion_rate": r(p["completion_rate"], 1),
                     "seeds": sorted(p["seeds"], key=natural),
                 }
             )
-        series.append({"id": name, "label": WORKFLOWS[name], "points": points})
-    seeds = sorted({s for item in series for p in item["points"] for s in p["seeds"]}, key=natural)
+        series[name] = {"label": WORKFLOWS[name], "points": points}
+    seeds = sorted(
+        {s for item in series.values() for p in item["points"] for s in p["seeds"]}, key=natural
+    )
     return {
         "source": rel(path),
         "digest": file_digest(path),
         "task": data["task"],
+        "title": data["title"],
         "model": "real",
         "xLabel": data["x_label"],
         "x": data["x"],
         "seedCount": len(seeds),
+        "order": [name for name in SERIES_ORDER if name in series],
         "series": series,
     }
 
@@ -337,7 +349,9 @@ def headline_slice(directory: str) -> dict[str, Any] | None:
         "digest": file_digest(REPO / directory / "results.json"),
         "task": "t2_conference",
         "model": "real",
+        "real": True,
         "seeds": seeds,
+        "seedCount": len(seeds),
         "cells": cells,
     }
 
@@ -791,18 +805,38 @@ def takeover_slice(report: TakeoverReport, events: list[Event]) -> dict[str, Any
     return {
         "runId": report.run_id,
         "durationMs": events[-1].ts_virtual - start,
-        "killCount": len(kills),
+        "killed": len(kills),
         "kills": kills,
         "successions": successions,
         "adoptions": adoptions,
         "orphans": orphans,
         "chains": report.chains,
+        "rootChain": report.chains["root"],
         "detection": {"minS": min(delays), "maxS": max(delays), "meanS": r(mean(delays))},
         "falseVerdicts": sum(1 for v in report.verdicts if v.truth != "true"),
         "ok": report.ok,
         "violations": len(report.violations),
         "okLine": render_text(report).splitlines()[-1],
     }
+
+
+def death_verdict_s(kills: list[dict[str, Any]], traffic: dict[str, Any]) -> dict[str, Any]:
+    """Seconds from a killed brain's last heartbeat to the verdict that it is dead."""
+    senders = traffic["heartbeat"]["senders"]
+    gaps = [
+        sec(k["verdict"]["atMs"] - senders[k["target"]]["lastMs"])
+        for k in kills
+        if k["verdict"] and k["target"] in senders
+    ]
+    return {"meanS": r(mean(gaps)), "minS": min(gaps), "maxS": max(gaps)}
+
+
+def busy_spans(lanes: dict[str, Any]) -> dict[str, list[list[int]]]:
+    """For each actor, the spans during which it has an LLM call in flight."""
+    spans: dict[str, list[list[int]]] = defaultdict(list)
+    for lane, start, end, *_ in lanes["bars"]:
+        spans[lanes["lanes"][lane]["id"]].append([start, end])
+    return {actor: spans[actor] for actor in sorted(spans, key=natural)}
 
 
 def hrw_slice(report: TakeoverReport, events: list[Event]) -> dict[str, Any]:
@@ -853,7 +887,17 @@ def hrw_slice(report: TakeoverReport, events: list[Event]) -> dict[str, Any]:
     }
 
 
-def finish_slice(report: TakeoverReport, events: list[Event]) -> dict[str, Any]:
+def run_setting(bundle: Path) -> dict[str, Any]:
+    """Which task the bundle's run did, on which model, and for how many seeds (one run: one)."""
+    config = read_json(bundle / "evidence" / "config.json")
+    return {
+        "task": config["spec"]["task"],
+        "real": "--backend real" in config["command"],
+        "seeds": 1,
+    }
+
+
+def finish_slice(report: TakeoverReport, events: list[Event], bundle: Path) -> dict[str, Any]:
     task = report.lost_work.task
     contracts = report.lost_work.contracts
     goals = report.lost_work.goals
@@ -862,9 +906,12 @@ def finish_slice(report: TakeoverReport, events: list[Event]) -> dict[str, Any]:
     result = next(e for e in reversed(events) if e.type == "task.result")
     soft = result.payload["report"].get("soft_score", result.payload["report"].get("score"))
     return {
+        **run_setting(bundle),
         "status": task.status,
         "placed": task.placed,
         "expected": task.expected,
+        "talksPlaced": task.placed,
+        "talksTotal": task.expected,
         "hardViolations": task.hard_violations,
         "softScore": r(soft, 4),
         "llmCallsPaid": dup.llm_paid,
@@ -883,6 +930,12 @@ def finish_slice(report: TakeoverReport, events: list[Event]) -> dict[str, Any]:
         "coordinationTokens": 0,
         "recoveryTokens": 0,
     }
+
+
+def tokens_spent() -> dict[str, int]:
+    """Tokens spent on coordination and on recovery: none, by the claim S4's definition (the
+    bundle's roles hold no ``coordinator``, ``supervisor``, ``router`` or ``recovery`` call)."""
+    return {"coordination": 0, "recovery": 0}
 
 
 def tokens_slice(events: list[Event]) -> dict[str, Any]:
@@ -993,6 +1046,12 @@ def hashes_slice(events: list[Event], bundle: Path, report: TakeoverReport) -> d
 
 
 # -- work lanes ------------------------------------------------------------------------------
+
+# Where the beats of the central run sit in the lanes' progress. The lanes' time map is built
+# from these (visuals/lanes), and the page lines its text up with them: the team is working
+# (filled), the supervisor crashes (crash), the work has waited and the last stall is over
+# (restart), what was lost is paid again (redone), the run ends (end).
+LANES_KEYFRAMES = {"filled": 0.28, "crash": 0.33, "restart": 0.62, "redone": 0.78, "end": 1.0}
 
 KIND_CODES = {"counted": 0, "cutOff": 1, "again": 2, "other": 3}
 CAUSE_CODES = {"none": 0, "crash": 1, "kill": 2, "other": 3}
@@ -1231,6 +1290,87 @@ def central_lanes(
     return kept, previous["sources"]["lanesCentral"]
 
 
+def with_page_fields(central: dict[str, Any]) -> dict[str, Any]:
+    return {**central, "stallS": central["metrics"]["stallS"], "keyframes": LANES_KEYFRAMES}
+
+
+def facts_slice(tree: dict[str, Any], finish: dict[str, Any]) -> dict[str, Any]:
+    """The structure of the running example, counted in the bundle: talks, tracks, days (the
+    distinct day suffixes of the session goals), sessions, orchestrators, agents."""
+    days = {g["id"].rpartition("/")[2] for g in tree["goals"] if g["level"] == 2}
+    return {
+        "talks": finish["expected"],
+        "tracks": tree["counts"]["tracks"],
+        "days": len(days),
+        "sessions": tree["counts"]["sessions"],
+        "orchestrators": tree["counts"]["orchestrators"],
+        "agents": tree["counts"]["agents"],
+    }
+
+
+def proof_slice(hashes: dict[str, Any], bundle: Path) -> dict[str, Any]:
+    """What ``demo --verify`` prints when the replay matches (cli.py: ``MATCH  <bundle>: N events,
+    head H``), and the line of the takeover check, which is another command."""
+    line = f"MATCH  {bundle.name}: {hashes['count']} events, head {hashes['head']}"
+    return {
+        "command": "uv run fractalswarm demo --verify",
+        "lines": [line] if hashes["replay"]["matches"] else [],
+        "takeover": hashes["takeover"],
+    }
+
+
+def seconds_label(ms: float) -> str:
+    return f"{ms / 1000:g} s"
+
+
+def failures_slice(found: dict[str, Any], verdicts: dict[str, Any]) -> dict[str, Any]:
+    """The figures of R3 and R4's loss: where locality fails, the false deaths, the per-process
+    reading. Each is a number from the regime map or the honesty rows with its setting named."""
+    regime, false_deaths, per_process = found["regime"], found["falseDeaths"], found["perProcess"]
+    fast = [
+        {
+            "value": point["cdtRatio"],
+            "label": f"the supervisor detects and restarts in {seconds_label(point['valueMs'])}, "
+            f"the swarm keeps {seconds_label(regime['defaults']['recovery_ms'])}",
+        }
+        for row in regime["rows"]
+        if row["axis"] == "rival_recovery_ms"
+        for point in row["points"]
+        if point["locality"] == "fails"
+    ]
+    deaths = [
+        {
+            "value": row["remapsPerRun"],
+            "label": f"per run at {row['profile']}, {false_deaths['model']} model, "
+            f"{row['runs']} runs",
+        }
+        for row in false_deaths["rows"]
+        if row["workflow"] == "swarm" and row["source"] == "rivals-gate" and row["remapsPerRun"] > 0
+    ]
+    real = [
+        row
+        for row in verdicts["falseDeaths"]
+        if row["workflow"] == "swarm" and row["profile"] == "C3"
+    ]
+    deaths += [
+        {
+            "value": row["remapsPerRun"],
+            "label": f"per run at {row['profile']}, real model, {row['runs']} seeds",
+        }
+        for row in real
+    ]
+    return {
+        "fastRestart": fast,
+        "falseDeaths": deaths,
+        "perProcess": {
+            "value": per_process["ratio"]["cdt_s"],
+            "decimals": 2,
+            "label": f"each coordinator process failing at the same rate, {per_process['model']} "
+            f"model: the swarm's coordinator-dependency time over the supervisor's",
+        },
+    }
+
+
 # -- assembly --------------------------------------------------------------------------------
 
 
@@ -1240,18 +1380,44 @@ def build(
     bundle = (REPO / bundle_arg).resolve()
     events = load_bundle(bundle)
     report = check_run(bundle)
-    tree = tree_slice(events)
     claims = claims_slice()
     v1_rows = result_rows(V1)
     head_rows = result_rows(HEADLINE)
     assert v1_rows is not None and head_rows is not None, (
         "bench/results/v1 and headline are required"
     )
-    structure = dict(tree["counts"])
     swarm_lanes = lanes_slice(events, report.run_id)
     central, central_source = central_lanes(central_dir, previous)
     gate_regime = gate_regime_slices()
     head10 = headline_slice(HEADLINE_10)
+    verdicts = verdicts_slice(HEADLINE)
+    assert verdicts is not None, "bench/results/headline is required"
+
+    # Each visual draws one slice and nothing else: the tree's holds all it needs.
+    finish = finish_slice(report, events, bundle)
+    traffic = traffic_slice(events)
+    takeover = takeover_slice(report, events)
+    hrw = hrw_slice(report, events)
+    tree = tree_slice(events)
+    structure = dict(tree["counts"])
+    facts = facts_slice(tree, finish)
+    gaps = death_verdict_s(takeover["kills"], traffic)
+    tree = {
+        **tree,
+        "durationMs": takeover["durationMs"],
+        "talks": {"placed": finish["placed"], "expected": finish["expected"]},
+        "kills": takeover.pop("kills"),
+        "adoptions": takeover.pop("adoptions"),
+        "rounds": hrw["rounds"],
+        "heartbeat": traffic["heartbeat"],
+        "messageKinds": traffic["messageKinds"],
+        "messageFields": traffic["messageFields"],
+        "messages": traffic["messages"],
+        "busy": busy_spans(swarm_lanes),
+    }
+    takeover["deathVerdictS"] = gaps["meanS"]
+    takeover["deathVerdictRangeS"] = [gaps["minS"], gaps["maxS"]]
+    hashes = hashes_slice(events, bundle, report)
     sources: dict[str, Any] = {
         "bundle": {
             "path": rel(bundle),
@@ -1283,23 +1449,23 @@ def build(
         "workflows": WORKFLOWS,
         "profiles": profiles_slice(),
         "numbers": numbers_slice(v1_rows, head_rows, structure),
+        "facts": facts,
         "tree": tree,
-        "takeover": takeover_slice(report, events),
-        "traffic": traffic_slice(events),
-        "hrw": hrw_slice(report, events),
-        "finish": finish_slice(report, events),
-        "lanes": {"central": central, "swarm": swarm_lanes},
-        "hashes": hashes_slice(events, bundle, report),
-        "hero": {
-            "v1": hero_slice(V1),
-            "headline": hero_slice(HEADLINE),
-            "headline10": hero_slice(HEADLINE_10),
-        },
+        "takeover": takeover,
+        "hrw": hrw,
+        "finish": finish,
+        "lanes": {"central": with_page_fields(central), "swarm": swarm_lanes},
+        "hashes": hashes,
+        "proof": proof_slice(hashes, bundle),
+        "hero": hero_slice(V1),
+        "hero10": hero_slice(HEADLINE_10),
         "headline": headline_slice(HEADLINE),
         "headline10": head10,
-        "verdicts": verdicts_slice(HEADLINE),
+        "verdicts": verdicts,
         "verdicts10": verdicts_slice(HEADLINE_10),
         **gate_regime,
+        "failures": failures_slice(gate_regime, verdicts),
+        "tokens": tokens_spent(),
         "tokensByModel": tokens_slice(events),
         "assumptions": assumptions_slice(),
     }

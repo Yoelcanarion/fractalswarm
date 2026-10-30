@@ -1,4 +1,5 @@
 import { useCallback, useId, useLayoutEffect, useMemo, useRef } from "react";
+import type { TreeSlice } from "../../data/types";
 import { fx, useProgress, type VizProps } from "../shared";
 import "../viz.css";
 import { treePlayer } from "./frame";
@@ -6,8 +7,9 @@ import type { KillInfo, NodeInfo, TreeModel } from "./model";
 import { collectTree, MAX_DASHES, paintTree, SCORE_WIDTH, U, type TreeRig } from "./paint";
 import type { Pacing } from "./timeline";
 
-export interface SwarmTreeProps extends VizProps {
-  /** "hero": about nine seconds when driven by time. "story": slow enough to read, for a scroll. */
+export interface SwarmTreeProps extends VizProps<TreeSlice> {
+  /** "story" (the default, the one TREE_KEYFRAMES describe): slow enough to read, for a scroll.
+   * "hero": about nine seconds when driven by time. */
   pacing?: Pacing;
   /** Under each node: its id; its id and name; nothing. */
   labels?: "ids" | "names" | "none";
@@ -97,19 +99,17 @@ function AgentNode({ info, labels }: { info: NodeInfo; labels: SwarmTreeProps["l
 }
 
 function describe(model: TreeModel): string {
-  const { story } = model;
-  const { counts } = story.tree;
-  const { killCount } = story.takeover;
+  const { counts, talks } = model.tree;
   const first = model.kills[0];
   return (
     `A tree of ${counts.orchestrators} orchestrators and ${counts.agents} agents, drawn while the run replays. ` +
-    `${killCount} of the ${counts.orchestrators} orchestrators are killed in turn${first?.heldRoot ? ", the root first" : ""}. ` +
+    `${model.kills.length} of the ${counts.orchestrators} orchestrators are killed in turn${first?.heldRoot ? ", the root first" : ""}. ` +
     `After each death the survivors, reading the same log, pick the same heir and re-wire the tree, with no election. ` +
-    `${story.finish.placed} of ${story.finish.expected} talks end up placed.`
+    `${talks.placed} of ${talks.expected} talks end up placed.`
   );
 }
 
-export function SwarmTree({ progress, data, still, stillAt, className, pacing = "hero", labels = "ids", clock = true }: SwarmTreeProps) {
+export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", labels = "ids", clock = true }: SwarmTreeProps) {
   const player = useMemo(() => treePlayer(data, pacing), [data, pacing]);
   const { model } = player;
   const svg = useRef<SVGSVGElement>(null);

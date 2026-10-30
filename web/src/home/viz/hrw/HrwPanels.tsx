@@ -1,11 +1,11 @@
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
-import type { HrwRound } from "../../data/types";
+import type { HrwRound, HrwSlice } from "../../data/types";
 import { useProgress, type VizProps } from "../shared";
 import "../viz.css";
 import { Pen } from "../tree/paint";
 import { digitsShown, groupHex, hrwState, rowsOf } from "./state";
 
-export interface HrwPanelsProps extends VizProps {
+export interface HrwPanelsProps extends VizProps<HrwSlice> {
   /** Which takeover of the run to show: 0 is the first, the root's. */
   round?: number;
 }
@@ -43,7 +43,7 @@ function collect(root: HTMLElement, round: HrwRound): Rig {
 }
 
 export function HrwPanels({ progress, data, still, stillAt, className, round: index = 0 }: HrwPanelsProps) {
-  const round = data.hrw.rounds[index];
+  const round = data.rounds[index];
   const root = useRef<HTMLDivElement>(null);
   const rig = useRef<Rig | null>(null);
   const rows = useMemo(() => (round ? rowsOf(round) : []), [round]);
@@ -87,7 +87,7 @@ export function HrwPanels({ progress, data, still, stillAt, className, round: in
         <span className="hv-hrw-dead">
           <b>{round.previous}</b> is declared dead
         </span>
-        <span className="hv-hrw-rule">{data.hrw.rule}</span>
+        <span className="hv-hrw-rule">{data.rule}</span>
       </div>
       <div className="hv-hrw-grid" aria-hidden="true">
         {round.survivors.map((survivor) => (

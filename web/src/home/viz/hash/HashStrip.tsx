@@ -1,13 +1,13 @@
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import type { HashesSlice } from "../../data/types";
 import { useProgress, type VizProps } from "../shared";
 import "../viz.css";
 import { Pen } from "../tree/paint";
 import { offsetFor, shortHash, stripItems, stripState } from "./state";
 
-export type HashStripProps = VizProps;
+export type HashStripProps = VizProps<HashesSlice>;
 
-export function HashStrip({ progress, data, still, stillAt, className }: HashStripProps) {
-  const { hashes } = data;
+export function HashStrip({ progress, data: hashes, still, stillAt, className }: HashStripProps) {
   const items = useMemo(() => stripItems(hashes), [hashes]);
   const view = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);

@@ -92,10 +92,10 @@ function Section({ id, title, note, children }: { id: string; title: string; not
 }
 
 function TreeSection({ still }: { still: boolean }) {
-  const [pacing, setPacing] = useState<Pacing>("hero");
+  const [pacing, setPacing] = useState<Pacing>("story");
   const [labels, setLabels] = useState<"ids" | "names" | "none">("ids");
   const progress = useMotionValue(0);
-  const player = treePlayer(story, pacing);
+  const player = treePlayer(story.tree, pacing);
   const jumps = player.keyframes
     .filter((k) => k.kind === "kill" || k.kind === "verdict" || k.kind === "remap" || k.kind === "end")
     .map((k) => ({ label: `${k.kind} ${k.node ?? k.id.replace("remap:", "#")}`, p: k.kind === "remap" ? (k.p + k.pEnd) / 2 : k.p }));
@@ -109,8 +109,8 @@ function TreeSection({ still }: { still: boolean }) {
         <label>
           pacing
           <select value={pacing} onChange={(e) => setPacing(e.target.value as Pacing)}>
+            <option value="story">story (scroll-driven, the default)</option>
             <option value="hero">hero (time-driven)</option>
-            <option value="story">story (scroll-driven)</option>
           </select>
         </label>
         <label>
@@ -123,7 +123,7 @@ function TreeSection({ still }: { still: boolean }) {
         </label>
       </div>
       <div className="lab-stage">
-        <SwarmTree progress={progress} data={story} pacing={pacing} labels={labels} still={still} />
+        <SwarmTree progress={progress} data={story.tree} pacing={pacing} labels={labels} still={still} />
       </div>
       <Scrubber
         progress={progress}

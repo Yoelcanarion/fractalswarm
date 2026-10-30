@@ -5,7 +5,7 @@
 // brain that has died but has not been adopted from yet stays in the picture, an ember in its
 // place, until its last duty is handed over; then it leaves for the memorial row.
 
-import type { Story } from "../../data/types";
+import type { TreeSlice } from "../../data/types";
 import { naturalCompare } from "../shared";
 
 export interface Slot {
@@ -31,23 +31,23 @@ export const ROW = 2.1;
 export const LEAF = 1;
 
 /** The run time at which each dead brain's last duty is handed over (it leaves the tree then). */
-export function burialTimes(story: Story): Record<string, number> {
+export function burialTimes(tree: TreeSlice): Record<string, number> {
   const buried: Record<string, number> = {};
-  for (const a of story.takeover.adoptions) buried[a.dead] = Math.max(buried[a.dead] ?? 0, a.atMs);
+  for (const a of tree.adoptions) buried[a.dead] = Math.max(buried[a.dead] ?? 0, a.atMs);
   return buried;
 }
 
 /** The distinct times at which a takeover re-owns something, in order. */
-export function remapTimes(story: Story): number[] {
-  return [...new Set(story.takeover.adoptions.map((a) => a.atMs))].sort((a, b) => a - b);
+export function remapTimes(tree: TreeSlice): number[] {
+  return [...new Set(tree.adoptions.map((a) => a.atMs))].sort((a, b) => a - b);
 }
 
-export function buildEpochs(story: Story): Epoch[] {
-  const ids = story.tree.nodes.map((n) => n.id);
-  const buriedAt = burialTimes(story);
-  const adoptions = [...story.takeover.adoptions].sort((a, b) => a.seq - b.seq);
-  const parent: Record<string, string | null> = Object.fromEntries(story.tree.nodes.map((n) => [n.id, n.parent]));
-  let root = story.tree.root;
+export function buildEpochs(tree: TreeSlice): Epoch[] {
+  const ids = tree.nodes.map((n) => n.id);
+  const buriedAt = burialTimes(tree);
+  const adoptions = [...tree.adoptions].sort((a, b) => a.seq - b.seq);
+  const parent: Record<string, string | null> = Object.fromEntries(tree.nodes.map((n) => [n.id, n.parent]));
+  let root = tree.root;
   const epochs: Epoch[] = [];
 
   const snapshot = (startMs: number): Epoch => {
@@ -62,7 +62,7 @@ export function buildEpochs(story: Story): Epoch[] {
   };
 
   epochs.push(snapshot(0));
-  for (const at of remapTimes(story)) {
+  for (const at of remapTimes(tree)) {
     for (const a of adoptions.filter((x) => x.atMs === at)) {
       for (const child of a.children) parent[child] = a.adopter;
       if (a.goal === "root") {
@@ -141,8 +141,8 @@ export interface Bounds {
 }
 
 /** The memorial row: where the dead go, in the order they leave the tree, centred under it. */
-export function memorialSlots(story: Story, epochs: Epoch[]): Record<string, Slot> {
-  const buried = burialTimes(story);
+export function memorialSlots(tree: TreeSlice, epochs: Epoch[]): Record<string, Slot> {
+  const buried = burialTimes(tree);
   const order = Object.keys(buried).sort((a, b) => (buried[a] ?? 0) - (buried[b] ?? 0) || naturalCompare(a, b));
   const depth = Math.max(...epochs.flatMap((e) => e.present.map((id) => (e.pos[id]?.y ?? 0) / ROW)));
   const width = Math.max(...epochs.flatMap((e) => e.present.map((id) => e.pos[id]?.x ?? 0)));

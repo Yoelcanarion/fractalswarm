@@ -2,7 +2,7 @@
 // frame, so a scroll position can be scrubbed back and forth. The component only copies a frame
 // onto the SVG.
 
-import type { Story } from "../../data/types";
+import type { TreeSlice } from "../../data/types";
 import { clamp01, lerp, smoothstep, span } from "../shared";
 import type { Slot } from "./layout";
 import { isBusy, treeModel, type Msg, type TreeModel } from "./model";
@@ -91,12 +91,12 @@ export interface TreePlayer {
   frame(p: number): TreeFrame;
 }
 
-const players = new WeakMap<Story, Partial<Record<Pacing, TreePlayer>>>();
+const players = new WeakMap<TreeSlice, Partial<Record<Pacing, TreePlayer>>>();
 
-export function treePlayer(story: Story, pacing: Pacing): TreePlayer {
-  const cached = players.get(story) ?? {};
-  players.set(story, cached);
-  return (cached[pacing] ??= createPlayer(treeModel(story), pacing));
+export function treePlayer(tree: TreeSlice, pacing: Pacing): TreePlayer {
+  const cached = players.get(tree) ?? {};
+  players.set(tree, cached);
+  return (cached[pacing] ??= createPlayer(treeModel(tree), pacing));
 }
 
 /**

@@ -110,14 +110,28 @@ def test_the_swarm_lanes_and_hashes_come_from_the_bundle(committed: dict):
     assert sample[-1][4] == head
 
 
+def page_state(status: str) -> str:
+    """How the page (web/src/home/story.ts, claimState) reads a status cell."""
+    plain = re.sub(r"[*_`]", "", status).strip().lower()
+    if plain.startswith("not claimed"):
+        return "not-claimed"
+    if "pending" in plain:
+        return "pending"
+    return "allowed" if plain.startswith("allowed") else "pending"
+
+
 def test_claims_are_copied_by_row_id_in_the_rows_wording(committed: dict):
     text = (REPO / "docs" / "claims.md").read_text(encoding="utf-8")
     for claim_id, claim in committed["claims"].items():
         row = re.search(rf"^\| {claim_id} \|(.*)$", text, re.MULTILINE)
         assert row, claim_id
         assert claim["text"].replace("**", "") in row.group(1).replace("**", ""), claim_id
-        assert claim["status"] in {"allowed", "pending", "not-claimed"}
-    assert committed["claims"]["R1"]["status"] == "not-claimed"
+        assert claim["state"] in {"allowed", "pending", "not-claimed"}
+        assert claim["state"] == page_state(claim["status"]), (
+            f"{claim_id}: the page reads the status cell as {page_state(claim['status'])}"
+        )
+    assert committed["claims"]["R1"]["state"] == "not-claimed"
+    assert {"R5", "R6"} <= set(committed["claims"])
     assert committed["tagline"] == "Kill half the brains. It still finishes."
     assert {n["claim"] for n in committed["notClaimed"]} == {
         "Simpler",
@@ -153,11 +167,14 @@ def test_the_numbers_the_claims_quote_are_the_claims_numbers(committed: dict):
 
 def test_the_takeover_sequence_is_the_bundles(committed: dict):
     takeover = committed["takeover"]
+    kills = committed["tree"]["kills"]
     assert takeover["ok"] and takeover["violations"] == 0 and takeover["falseVerdicts"] == 0
-    assert takeover["killCount"] == len(takeover["kills"]) == committed["finish"]["killed"]
-    assert [k["atMs"] for k in takeover["kills"]] == sorted(k["atMs"] for k in takeover["kills"])
-    assert all(k["eventsAfterStop"] == 0 for k in takeover["kills"])
-    for kill in takeover["kills"]:
+    assert takeover["killed"] == len(kills) == committed["finish"]["killed"]
+    assert [k["atMs"] for k in kills] == sorted(k["atMs"] for k in kills)
+    assert all(k["eventsAfterStop"] == 0 for k in kills)
+    assert takeover["rootChain"] == takeover["chains"]["root"]
+    assert 5 <= takeover["deathVerdictS"] < 5.5, "five missed heartbeats after the last one sent"
+    for kill in kills:
         assert 4 < kill["verdict"]["delayS"] < 6, "the verdict comes after five missed heartbeats"
     for round_ in committed["hrw"]["rounds"]:
         assert (
@@ -169,7 +186,7 @@ def test_the_takeover_sequence_is_the_bundles(committed: dict):
         assert round_["heir"] in round_["survivors"]
     chain = takeover["chains"]["root"]
     assert chain[0] == committed["tree"]["root"], "the root goal starts with the first brain"
-    killed_root_holders = [k["target"] for k in takeover["kills"] if k["heldRoot"]]
+    killed_root_holders = [k["target"] for k in kills if k["heldRoot"]]
     assert chain[:-1] == killed_root_holders, (
         "every holder of the root goal but the last was killed"
     )
@@ -179,7 +196,7 @@ def test_the_traffic_is_the_bundles(committed: dict):
     from fractalswarm.coord.membership import Detector
 
     detector = Detector(member="")
-    traffic = committed["traffic"]
+    traffic = committed["tree"]
     beat = traffic["heartbeat"]
     assert (beat["intervalMs"], beat["suspectAfter"], beat["deadAfter"]) == (
         detector.interval_ms,
@@ -189,17 +206,17 @@ def test_the_traffic_is_the_bundles(committed: dict):
     nodes = {n["id"] for n in committed["tree"]["nodes"]}
     brains = {n["id"] for n in committed["tree"]["nodes"] if n["kind"] == "brain"}
     assert set(beat["senders"]) == brains
-    killed = {k["target"]: k for k in committed["takeover"]["kills"]}
+    killed = {k["target"]: k for k in committed["tree"]["kills"]}
     for sender, ticks in beat["senders"].items():
         if sender in killed:
             assert ticks["lastMs"] <= killed[sender]["atMs"], "a killed brain sends nothing after"
         else:
-            assert ticks["lastMs"] > committed["takeover"]["durationMs"] - 2000
+            assert ticks["lastMs"] > committed["tree"]["durationMs"] - 2000
     messages = traffic["messages"]
     assert messages == sorted(messages, key=lambda m: (m[0], m[1], m[2], m[3]))
     assert all(m[1] in nodes and m[2] in nodes and m[1] != m[2] for m in messages)
     assert all(0 <= m[3] < len(traffic["messageKinds"]) for m in messages)
-    assert all(m[0] <= committed["takeover"]["durationMs"] for m in messages)
+    assert all(m[0] <= committed["tree"]["durationMs"] for m in messages)
 
 
 def test_the_finish_numbers_are_the_runs(committed: dict):
@@ -229,3 +246,68 @@ def test_the_optional_ten_seed_reading_is_shown_next_to_the_three_seed_one(commi
     assert committed["sources"]["headline10"]["present"] is path.exists()
     assert (committed["headline10"] is not None) is path.exists()
     assert committed["headline"] is not None, "the 3-seed reading is never replaced"
+
+
+def test_the_tree_slice_holds_everything_the_tree_draws(committed: dict):
+    tree = committed["tree"]
+    for key in ("nodes", "goals", "root", "counts", "kills", "adoptions", "rounds", "heartbeat"):
+        assert key in tree, key
+    assert tree["rounds"] == committed["hrw"]["rounds"]
+    assert tree["durationMs"] == committed["takeover"]["durationMs"]
+    swarm = committed["lanes"]["swarm"]
+    busy = {swarm["lanes"][lane]["id"]: [] for lane, *_ in swarm["bars"]}
+    for lane, start, end, *_ in swarm["bars"]:
+        busy[swarm["lanes"][lane]["id"]].append([start, end])
+    assert tree["busy"] == {actor: busy[actor] for actor in tree["busy"]} and len(busy) == len(
+        tree["busy"]
+    )
+    assert tree["talks"] == {
+        "placed": committed["finish"]["talksPlaced"],
+        "expected": committed["finish"]["talksTotal"],
+    }
+
+
+def test_the_page_finds_what_it_reads(committed: dict):
+    """The fields web/src/home/storyTypes.ts reads, with the types it reads them as."""
+    assert committed["facts"] == {
+        "talks": 48,
+        "tracks": 3,
+        "days": 2,
+        "sessions": 6,
+        "orchestrators": 10,
+        "agents": 12,
+    }
+    hero = committed["hero"]
+    assert hero["task"] == "t2_conference" and "real" in hero["title"]
+    for workflow, series in hero["series"].items():
+        assert workflow in hero["order"]
+        for point in series["points"]:
+            assert {"profile", "x", "stall_s", "extra_cost_pct", "seeds"} <= set(point)
+    swarm, central = (hero["series"][w]["points"][-1] for w in ("swarm", "central"))
+    assert (swarm["profile"], swarm["x"], central["x"]) == ("C3", 5, 5)
+    assert committed["headline"]["real"] is True and committed["headline"]["seedCount"] == 3
+    finish = committed["finish"]
+    assert finish["talksPlaced"] == finish["talksTotal"] == 48
+    assert (finish["task"], finish["real"], finish["seeds"]) == ("t2_conference", True, 1)
+    assert (
+        committed["lanes"]["central"]["stallS"]
+        == committed["lanes"]["central"]["metrics"]["stallS"]
+    )
+    frames = committed["lanes"]["central"]["keyframes"]
+    order = ("filled", "crash", "restart", "redone", "end")
+    assert set(frames) == set(order)
+    assert [frames[k] for k in order] == sorted(frames.values()), "the beats come in this order"
+    assert frames["end"] == 1.0
+    failures = committed["failures"]
+    assert [round(f["value"], 1) for f in failures["fastRestart"]] == [13.2, 5.7]
+    assert [f["value"] for f in failures["falseDeaths"][:2]] == [1.25, 2.25]
+    assert round(failures["perProcess"]["value"], 2) == 0.9
+    assert all(f["label"] for f in failures["fastRestart"] + failures["falseDeaths"])
+    for row in committed["assumptions"]:
+        assert {"id", "label", "value"} <= set(row) and row["label"] and row["value"]
+    assert committed["tokens"] == {"coordination": 0, "recovery": 0}
+    proof = committed["proof"]
+    assert proof["lines"] == [
+        f"MATCH  backup: {committed['hashes']['count']} events, head {committed['hashes']['head']}"
+    ]
+    assert proof["takeover"]["line"] == committed["takeover"]["okLine"]
