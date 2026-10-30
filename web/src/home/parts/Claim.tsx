@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { resolveClaim, useStory } from "../story";
+import { Inline } from "./Inline";
 
 /** The ids of the claims the page quotes. R1 is not among them: it is not claimed. The guard test holds this list to docs/claims.md. */
 export const CLAIM_IDS = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "R2", "R3", "R4", "R5", "R6"] as const;
@@ -25,11 +26,11 @@ export function Claim({ id, className = "", lines = false }: { id: ClaimId; clas
         lines ? (
           sentences(claim.text).map((sentence, i) => (
             <span key={i} className="home-claim__line">
-              {sentence}{" "}
+              <Inline text={sentence} />{" "}
             </span>
           ))
         ) : (
-          claim.text
+          <Inline text={claim.text} />
         )
       ) : (
         <span className="home-claim__missing">Claim {id}</span>

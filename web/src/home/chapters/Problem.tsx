@@ -3,31 +3,25 @@ import { useMemo } from "react";
 
 import { COPY } from "../copy";
 import { percent, seconds } from "../format";
-import { facts, heroReading, heroSetting, keyframes, settingText } from "../numbers";
+import { captionFor, facts, heroReading, lanesBeats, waitedSeconds } from "../numbers";
 import { ChapterHead, Closer, Setting, StepText } from "../parts/Chapter";
 import { Claim } from "../parts/Claim";
 import { Figure } from "../parts/Figure";
 import { PartsDiagram } from "../parts/PartsDiagram";
 import { Readout } from "../parts/Readout";
 import { Stage, type StageStep } from "../scroll/Stage";
-import { clamp01 } from "../scroll/timeline";
-import { slice, useStory } from "../story";
+import type { LanesSlice } from "../data/types";
+import { useStory } from "../story";
 import { Viz } from "../visuals";
-
-// Where the real run's events sit in the lanes' progress, if the data does not say (lanes.central.keyframes).
-const LANES_DEFAULTS = { filled: 0.3, crash: 0.34, restart: 0.55, redone: 0.82, end: 1 };
-
-/** 0 until `from`, 1 from `to`, and linear in between. */
-const useRamp = (value: MotionValue<number>, from: number, to: number) => useTransform(value, (v) => clamp01((v - from) / (to - from)));
 
 export function Problem() {
   const story = useStory();
   const f = facts(story);
-  const kf = keyframes(story, "lanes.central", LANES_DEFAULTS);
+  const lanes = story?.lanes?.central ?? null;
+  const kf = lanesBeats(lanes);
   const rival = heroReading(story, "central");
   const swarm = heroReading(story, "swarm");
-  const setting = settingText({ task: heroSetting(story).task, crashes: rival.crashes, profile: rival.profile, real: heroSetting(story).real, seeds: rival.seeds });
-  const stallS = slice<number>(story, "lanes.central.stallS") ?? null;
+  const setting = captionFor(story, "v1");
 
   const steps: StageStep[] = useMemo(() => {
     const s = COPY.problem.steps;
@@ -43,7 +37,7 @@ export function Problem() {
         ),
       },
       { id: "team", at: kf.filled, weight: 0.9, content: <StepText lead={s.team.lead} more={s.team.more} /> },
-      { id: "crash", at: kf.restart, weight: 0.9, content: <StepText lead={s.crash.lead} more={s.crash.more} /> },
+      { id: "crash", at: kf.crash, weight: 0.9, content: <StepText lead={s.crash.lead} more={s.crash.more} /> },
       { id: "twice", at: kf.redone, weight: 0.9, content: <StepText lead={s.twice.lead} more={s.twice.more} /> },
       {
         id: "numbers",
@@ -83,7 +77,7 @@ export function Problem() {
         label={COPY.problem.visual}
         steps={steps}
         visual={({ progress, position, still }) => (
-          <ProblemVisual progress={progress} position={position} still={still} data={slice(story, "lanes.central")} stallS={stallS} kf={kf} workers={f.agents} />
+          <ProblemVisual progress={progress} position={position} still={still} lanes={lanes} workers={f.agents} />
         )}
       />
       <Closer>{COPY.problem.question}</Closer>
@@ -95,34 +89,32 @@ function ProblemVisual({
   progress,
   position,
   still,
-  data,
-  stallS,
-  kf,
+  lanes,
   workers,
 }: {
   progress: MotionValue<number>;
   position: MotionValue<number>;
   still: boolean;
-  data: unknown;
-  stallS: number | null;
-  kf: Record<string, number>;
+  lanes: LanesSlice | null;
   workers: number | null;
 }) {
   // The lanes give way to the diagram of parts on the last step.
   const lanesOpacity = useTransform(position, [3.6, 4.6], [1, 0.1]);
   const partsOpacity = useTransform(position, [3.9, 4.8], [0, 1]);
-  // The seconds the work has waited: from the crash to the restart of the real run.
-  const waited = useTransform(useRamp(progress, kf.crash, kf.restart), (r) => (stallS === null ? Number.NaN : stallS * r));
+  // The seconds the work has stood still, counted from the run's own stalls up to this point of its clock.
+  const waited = useTransform(progress, (p) => waitedSeconds(lanes, p) ?? Number.NaN);
   const countOpacity = useTransform(position, [0.7, 1, 2.7, 3.2], [0, 1, 1, 0]);
   return (
     <div className="home-problem">
       <m.div className="home-problem__lanes" style={{ opacity: still ? 1 : lanesOpacity }}>
-        <Viz name="WorkLanes" data={data} progress={progress} still={still} />
+        <Viz name="WorkLanes" progress={progress} still={still} />
       </m.div>
-      <m.div className="home-problem__counter" style={{ opacity: still ? 0 : countOpacity }} aria-hidden>
-        <Readout value={waited} format={(n) => seconds(n)} className="home-counter__number" />
-        <span className="home-counter__label">{COPY.problem.waiting}</span>
-      </m.div>
+      {!still && (
+        <m.div className="home-problem__counter" style={{ opacity: countOpacity }} aria-hidden>
+          <Readout value={waited} format={(n) => seconds(n)} className="home-counter__number" />
+          <span className="home-counter__label">{COPY.problem.waiting}</span>
+        </m.div>
+      )}
       <m.div className="home-problem__parts" style={{ opacity: still ? 1 : partsOpacity }}>
         <PartsDiagram workers={workers} />
       </m.div>

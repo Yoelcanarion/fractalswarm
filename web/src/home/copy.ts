@@ -10,7 +10,6 @@ export const TAGLINE = "Kill half the brains. It still finishes.";
 export interface Facts {
   talks: number | null;
   tracks: number | null;
-  days: number | null;
   sessions: number | null;
   orchestrators: number | null;
   agents: number | null;
@@ -21,8 +20,6 @@ const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "e
 /** `3` is "three"; anything the list does not cover stays a digit, and a missing number is a dash. */
 export const word = (n: number | null | undefined): string =>
   typeof n !== "number" || !Number.isFinite(n) ? "—" : Number.isInteger(n) && n >= 0 && n < WORDS.length ? WORDS[n] : String(n);
-
-const plural = (n: number | null | undefined, one: string, many: string = `${one}s`): string => (n === 1 ? one : many);
 
 export const COPY = {
   title: "FractalSwarm: kill half the brains, it still finishes",
@@ -48,7 +45,7 @@ export const COPY = {
     eyebrow: "The problem",
     title: "A team that depends on one coordinator.",
     example: (f: Facts) =>
-      `Take a real job: plan a conference from messy emails. ${f.talks ?? "—"} talks, ${word(f.tracks)} tracks, ${word(f.days)} ${plural(f.days, "day")}. A team of AI agents reads the emails and places the talks.`,
+      `Take a real job: plan a conference from messy emails. ${f.talks ?? "—"} talks, ${word(f.tracks)} tracks. A team of AI agents reads the emails and places the talks.`,
     visual: "Work lanes of a real run of an in-process supervisor: one lane per agent, one bar per model call, on a shared clock.",
     steps: {
       team: { lead: "A team of AI agents usually has one coordinator.", more: "It plans, assigns and checks the work." },
@@ -119,7 +116,7 @@ export const COPY = {
     fair: {
       lead: "We built the strongest rival we could, and gave it every advantage.",
       why: "The rival is an ideal durable supervisor. These are the terms we granted it.",
-      columns: { what: "What we grant it", value: "Value" },
+      columns: { what: "What we grant it", value: "Value", why: "Why" },
     },
     hero: { lead: "Waiting and extra cost, as coordinators die." },
     tie: { word: "Tie.", note: "Stall time and extra cost, one dot per seed, against an ideal durable supervisor." },
@@ -135,7 +132,6 @@ export const COPY = {
     },
     proof: {
       lead: "You do not have to trust us.",
-      command: "uv run fractalswarm demo --verify",
       terminal: "The output of the command, from the recorded demo run.",
       proves: "Replay proves that this code produces the recorded run from the recorded model outputs. It does not prove where those outputs came from.",
     },
@@ -158,7 +154,7 @@ export function allCopy(): string[] {
     if (typeof value === "string") out.push(value);
     else if (typeof value === "function") {
       // with no data: a sentence that needs a number takes it from the story, and shows a dash without one
-      out.push((value as (facts: Facts) => string)({ talks: null, tracks: null, days: null, sessions: null, orchestrators: null, agents: null }));
+      out.push((value as (facts: Facts) => string)({ talks: null, tracks: null, sessions: null, orchestrators: null, agents: null }));
     } else if (Array.isArray(value)) value.forEach(visit);
     else if (value && typeof value === "object") Object.values(value).forEach(visit);
   };

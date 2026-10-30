@@ -1,12 +1,13 @@
 // The page quotes claims; it never writes them. These tests hold it to docs/claims.md: the ids it uses exist there and
-// are not "not claimed", the status wording is read the way the table writes it, and no claim is typed into the code.
+// are not "not claimed", the story it ships with holds each row in the row's own words and status, and no claim is
+// typed into the code.
 
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { CLAIM_IDS, sentences } from "./parts/Claim";
-import { claimState } from "./story";
-import { claimRows, claimWords, HOME, sources } from "./testing";
+import { bundledStory, claimState } from "./story";
+import { bare, claimRows, claimWords, HOME, sources, statusOfCell } from "./testing";
 
 const rows = claimRows();
 const rowOf = (id: string) => rows.find((row) => row.id === id);
@@ -17,23 +18,17 @@ describe("the claims the page quotes", () => {
     for (const id of CLAIM_IDS) {
       const row = rowOf(id);
       expect(row, `${id} is not in docs/claims.md`).toBeDefined();
-      expect(claimState(row!.status), `${id} is not claimed`).not.toBe("refused");
+      expect(statusOfCell(row!.status), `${id} is not claimed`).not.toBe("not-claimed");
     }
   });
 
   it("leave out R1, which is not claimed", () => {
     expect(CLAIM_IDS).not.toContain("R1");
-    expect(claimState(rowOf("R1")!.status)).toBe("refused");
+    expect(statusOfCell(rowOf("R1")!.status)).toBe("not-claimed");
   });
 
-  it("are read from the status cell the way the table writes it", () => {
-    for (const row of rows) {
-      const plain = row.status.replace(/[*_`]/g, "").toLowerCase();
-      const state = claimState(row.status);
-      if (plain.startsWith("not claimed")) expect(state, row.id).toBe("refused");
-      else if (plain.includes("pending")) expect(state, `${row.id} says pending`).toBe("pending");
-      else if (plain.startsWith("allowed")) expect(state, row.id).toBe("allowed");
-    }
+  it("are written in a status the page knows how to read", () => {
+    for (const row of rows) expect(statusOfCell(row.status), `${row.id}: "${row.status}"`).not.toBeNull();
   });
 
   it("are only ever drawn through <Claim id=...>, with an id from that list", () => {
@@ -55,7 +50,7 @@ describe("the claims the page quotes", () => {
   });
 
   it("split R6, the hero's subtitle, into its two sentences without changing a word", () => {
-    const words = claimWords(rowOf("R6")!.text);
+    const words = bundledStory.claims.R6?.text ?? claimWords(rowOf("R6")!.text);
     const lines = sentences(words);
     expect(lines).toHaveLength(2);
     expect(lines.join(" ")).toBe(words);
@@ -65,5 +60,24 @@ describe("the claims the page quotes", () => {
 
   it("let the tagline be exactly the sentence of S7", () => {
     expect(claimWords(rowOf("S7")!.text)).toContain("Kill half the brains. It still finishes.");
+  });
+});
+
+describe("the story the page ships with (data/story.json)", () => {
+  it("carries every claim the page quotes, in the words of its row of docs/claims.md", () => {
+    for (const id of CLAIM_IDS) {
+      const claim = bundledStory.claims[id];
+      expect(claim, `${id} is in docs/claims.md but not in data/story.json: the generator has to run again`).toBeDefined();
+      expect(bare(claim.text), id).toBe(bare(claimWords(rowOf(id)!.text)));
+    }
+  });
+
+  it("gives each claim the status its row has, and no status the page would read as allowed by mistake", () => {
+    for (const [id, claim] of Object.entries(bundledStory.claims)) {
+      const row = rowOf(id);
+      expect(row, `${id} is in data/story.json but not in docs/claims.md`).toBeDefined();
+      expect(claim.status, id).toBe(statusOfCell(row!.status));
+      expect(claimState(claim.status) === "allowed", id).toBe(claim.status === "allowed");
+    }
   });
 });

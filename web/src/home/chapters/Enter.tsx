@@ -36,7 +36,7 @@ function DoorCard({ door, open, note, index }: { door: Door; open: boolean; note
   const body = (
     <>
       <span className="home-door__glyph" aria-hidden>
-        <Viz name="DoorGlyph" data={door.id} progress={hover} still={still} />
+        <Viz name="DoorGlyph" door={door.id} progress={hover} still={still} />
       </span>
       <span className="home-door__title">{door.title}</span>
       <span className="home-door__purpose">{door.purpose}</span>

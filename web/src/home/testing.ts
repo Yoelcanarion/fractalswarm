@@ -4,7 +4,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { REPO_ROOT } from "../lib/testing";
-import type { Story, StoryClaim } from "./story";
+import type { ClaimStatus, FalseDeathRow, Story } from "./data/types";
+import { bundledStory } from "./story";
 
 /** The folder of the home page. */
 export const HOME = fileURLToPath(new URL(".", import.meta.url)).replace(/[\\/]$/, "");
@@ -26,7 +27,7 @@ export interface ClaimRow {
   status: string;
 }
 
-/** The rows of the claims tables in docs/claims.md (S1 to S7, R1 to R5), read as the generator reads them. */
+/** The rows of the claims tables in docs/claims.md (S1 to S7, R1 to R6), read as the generator reads them. */
 export function claimRows(): ClaimRow[] {
   const doc = readFileSync(`${REPO_ROOT}docs/claims.md`, "utf-8");
   const rows: ClaimRow[] = [];
@@ -44,73 +45,91 @@ export function claimRows(): ClaimRow[] {
 /** A claim's words as the page shows them: the row's text without the quotation marks around it. */
 export const claimWords = (text: string): string => text.replace(/^"|"$/g, "");
 
-// Statuses as docs/claims.md words them on Oct 30: three rows still pending, one not claimed.
-const claim = (id: string, status: string): [string, StoryClaim] => [id, { text: `Test claim ${id}.`, status }];
+/** What a Status cell says, read the way the table writes it; null for wording nobody has classified. */
+export function statusOfCell(cell: string): ClaimStatus | null {
+  const plain = cell.replace(/[*_`]/g, "").trim().toLowerCase();
+  if (plain.startsWith("not claimed")) return "not-claimed";
+  if (plain.includes("pending")) return "pending";
+  if (plain.startsWith("allowed")) return "allowed";
+  return null;
+}
 
-/** A story with made-up numbers, each chosen to differ from every real one, so a test can tell that the page printed the
- * data it was given and not a number of its own. */
-export const FIXTURE_STORY: Story = {
-  claims: Object.fromEntries([
-    claim("S1", "allowed by construction; pending the recorded check on the final bundle"),
-    claim("S2", "pending"),
-    claim("S3", "allowed by construction"),
-    claim("S4", "**allowed** as a property of the design, never as an advantage over the rivals"),
-    claim("S5", "pending"),
-    claim("S6", "allowed, always with the limitation"),
-    claim("S7", "**allowed**. The measured numbers go under it as a subtitle"),
-    claim("R1", "**not claimed** (outcome B)"),
-    claim("R2", "**allowed** (gate, Oct 29; real rows, Oct 30)"),
-    claim("R3", "**allowed**, always with R2"),
-    claim("R4", "**allowed with its setting** (Oct 30)"),
-    claim("R5", "**allowed with its setting** (Oct 30)"),
-    ["R6", { text: "Test claim R6, first line. Test claim R6, second line.", status: "**allowed with its link** (Oct 30)" }],
-  ]),
-  facts: { talks: 31, tracks: 3, days: 2, sessions: 6, orchestrators: 10, agents: 12 },
-  hero: {
-    task: "t2_conference",
-    title: "rivals-real",
-    series: {
-      swarm: {
-        points: [
-          { profile: "C0", x: 0, stall_s: 0.4, extra_cost_pct: 0.2, seeds: ["1", "2"] },
-          { profile: "C3", x: 5, stall_s: 7.7, extra_cost_pct: 3.3, seeds: ["1", "2"] },
-        ],
-      },
-      central: {
-        points: [
-          { profile: "C0", x: 0, stall_s: 0.5, extra_cost_pct: 0.3, seeds: ["1", "2"] },
-          { profile: "C3", x: 5, stall_s: 91.1, extra_cost_pct: 77.7, seeds: ["1", "2"] },
-        ],
-      },
-    },
-  },
-  headline: { real: true, cells: [{ seed: 1 }, { seed: 2 }, { seed: 3 }, { seed: 1 }, { seed: 2 }, { seed: 3 }] },
-  finish: { talksPlaced: 31, talksTotal: 31, hardViolations: 0, duplicateCalls: 0, costUsd: 4.56, task: "t2_conference", real: false, seeds: 1 },
-  takeover: { killed: 4, rootChain: ["o0", "o1", "o2", "o3"], deathVerdictS: 5.5 },
-  failures: {
-    fastRestart: [
-      { value: 13.4, label: "at 0.5 s" },
-      { value: 5.9, label: "at 1 s" },
-    ],
-    falseDeaths: [
-      { value: 1.3, label: "at C2" },
-      { value: 2.3, label: "at C3" },
-    ],
-    perProcess: { value: 0.91, label: "swarm over supervisor", decimals: 2 },
-  },
-  assumptions: [
-    { id: "detect", label: "Failure detection", value: "5 s" },
-    { id: "restart", label: "Extra restart time", value: "none" },
-  ],
-  tokens: { coordination: 0, recovery: 0 },
-  extraction: {
-    email: "Hi, I can only do Thursday afternoon, and please not against Priya's talk.",
-    constraints: [
-      { text: "Available Thursday afternoon only", source: "only do Thursday afternoon" },
-      { text: "Not against Priya's talk", source: [49, 73] },
-    ],
-    model: "Muse Spark, one call",
-  },
-  ablation: { parser: 11, muse: 17, total: 20 },
-  proof: { lines: ["MATCH  1234 events, head abc123", "TAKEOVER OK: no violation"] },
+/** Markdown marks and the spacing around them taken out, to compare the words of two renderings of one cell. */
+export const bare = (text: string): string => text.replace(/[*_`"]/g, "").replace(/\s+/g, " ").trim();
+
+const must = <T>(value: T | null | undefined, what: string): T => {
+  if (value === null || value === undefined) throw new Error(`the bundled story has no ${what}`);
+  return value;
 };
+
+// Statuses as docs/claims.md words them on Oct 30: three rows still pending, one not claimed.
+const FIXTURE_STATUS: Record<string, ClaimStatus> = {
+  S1: "pending",
+  S2: "pending",
+  S3: "allowed",
+  S4: "allowed",
+  S5: "pending",
+  S6: "allowed",
+  S7: "allowed",
+  R1: "not-claimed",
+  R2: "allowed",
+  R3: "allowed",
+  R4: "allowed",
+  R5: "allowed",
+  R6: "allowed",
+};
+
+/** The text a test claim has: a plain sentence, with a code span in one and two sentences in R6. */
+export const fixtureClaimText = (id: string): string =>
+  id === "R6" ? "Test claim R6, first line. Test claim R6, second line." : id === "R3" ? "Test claim R3, against `durable-max` on T2." : `Test claim ${id}.`;
+
+/** The real story with its numbers changed, each to a value that differs from every real one, so a test can tell that
+ * the page printed the data it was given and not a number of its own. The claims are made up as well: the page must
+ * draw the words of the row, whatever they are. Only the numbers the page prints itself are changed; the rest is real. */
+function madeUp(): Story {
+  const story = structuredClone(bundledStory);
+
+  story.claims = Object.fromEntries(
+    Object.entries(FIXTURE_STATUS).map(([id, status]) => [id, { text: fixtureClaimText(id), status, statusText: status }]),
+  );
+
+  // the two workflows of the problem chapter, at the heaviest failure profile of the first real matrix
+  const v1 = must(story.hero.v1, "hero.v1");
+  const last = (workflow: string) => must(v1.series.find((series) => series.id === workflow)?.points.at(-1), `a last point for ${workflow}`);
+  const seeds = ["1", "2", "3", "4", "5", "6", "7"];
+  Object.assign(last("swarm"), { stallS: 7.7, extraPct: 3.3, seeds });
+  Object.assign(last("central"), { stallS: 91.1, extraPct: 77.7, seeds });
+  v1.seedCount = seeds.length;
+  must(story.headline, "headline").seeds = ["1", "2", "3", "4", "5"];
+  must(story.hero.headline, "hero.headline").seedCount = 5;
+
+  Object.assign(story.finish, { placed: 31, expected: 31, costUsd: 4.56 });
+  Object.assign(story.tree.counts, { orchestrators: 9, agents: 11, tracks: 4, sessions: 5 });
+  story.takeover.killCount = 4;
+  story.takeover.chains["root"] = ["o0", "o7", "o8"];
+  story.takeover.detection.meanS = 5.5;
+  story.sources.bundle.runId = "t1-fake-killhalf-seed3";
+
+  const fast = must(
+    story.regime.rows.find((row) => row.axis === "rival_recovery_ms"),
+    "the fast external restart row of the regime",
+  );
+  [13.4, 5.9].forEach((ratio, i) => (fast.points[i].cdtRatio = ratio));
+  const swarm = (rows: FalseDeathRow[], profile: string, value: number) =>
+    (must(rows.find((row) => row.workflow === "swarm" && row.profile === profile), `swarm ${profile} false deaths`).remapsPerRun = value);
+  swarm(story.falseDeaths.rows, "C2", 1.3);
+  swarm(story.falseDeaths.rows, "C3", 2.3);
+  swarm(must(story.verdicts, "verdicts").falseDeaths, "C3", 2.5);
+  story.perProcess.ratio["cdt_s"] = 0.91;
+
+  story.tokensByModel.coordinationTokens = 7;
+  story.tokensByModel.recoveryTokens = 9;
+  story.hashes.replay.line = "MATCH  1234 events, head abc123";
+  story.assumptions.items = [
+    { assumption: "Failure detection", value: "5 s", why: "Same detector for both", checkedBy: "A sweep" },
+    { assumption: "The rival's own calls", value: "`durable-max`: survive", why: "Two variants bound the range", checkedBy: "Both rows" },
+  ];
+  return story;
+}
+
+export const FIXTURE_STORY: Story = madeUp();

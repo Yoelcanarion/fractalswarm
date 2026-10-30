@@ -1,25 +1,20 @@
-// The way in to W7's visuals (web/src/home/viz/index.ts). This file is not called viz.tsx so that no import of "./viz"
-// can be read as that folder. Each visual is a pure component with the same three props; the page owns the beats
-// and a visual knows only `progress`.
+// The way in to W7's visuals (web/src/home/viz). This file is not called viz.tsx so that no import of "./viz" can be
+// read as that folder. Every visual is a pure component of `{ progress, data, still }`, and `data` is the whole story:
+// each picks its own slice. The page owns the beats and decides what drives `progress`; a visual knows only that.
 //
-// The index is picked up with a glob, so that this page builds and runs before the visuals are merged
-// (every visual then draws as a labelled placeholder that shows its progress) and uses them the moment
-// `viz/index.ts` exists, with no change here.
+// A visual that W7 has not written yet draws as a labelled placeholder that shows its progress, so the page scrolls
+// end to end before they all exist. To add one: import it here and put it in REGISTRY.
 
 import { useMotionValueEvent, type MotionValue } from "motion/react";
 import { useEffect, useRef, type ComponentType } from "react";
 
-export interface VizProps<D = unknown> {
-  /** 0 to 1: how far through its beat the visual is. A motion value, so a scroll updates it without a React render. */
-  progress: MotionValue<number>;
-  /** The slice of the generated data this visual draws. */
-  data: D;
-  /** Final state, no motion: reduced motion, or a static capture. */
-  still?: boolean;
-}
-
-// Each visual types its own slice, so the page holds them with `any` data.
-type VizComponent = ComponentType<VizProps<any>>;
+import type { Story } from "./data/types";
+import { useStory } from "./story";
+// From the files, not from viz/index.ts: the index also exports the lab (a page of its own, with its own styles), which
+// the bundle of the home page should not carry.
+import { HashStrip } from "./viz/hash/HashStrip";
+import { HrwPanels } from "./viz/hrw/HrwPanels";
+import { SwarmTree } from "./viz/tree/SwarmTree";
 
 export const VIZ_NAMES = [
   "SwarmTree",
@@ -36,17 +31,24 @@ export const VIZ_NAMES = [
 
 export type VizName = (typeof VIZ_NAMES)[number];
 
-type VizModule = Partial<Record<VizName, VizComponent>>;
+interface DrawnProps {
+  progress: MotionValue<number>;
+  data: Story;
+  still?: boolean;
+  [extra: string]: unknown;
+}
 
-const found = import.meta.glob("./viz/index.ts", { eager: true });
-const real = (Object.values(found)[0] ?? {}) as VizModule;
+// Each visual types its own extra props (pacing, round, door ...); the page hands them through.
+type VizComponent = ComponentType<DrawnProps>;
 
-/** Whether W7's visuals are merged. */
-export const hasRealViz = Object.keys(real).length > 0;
+const REGISTRY: Partial<Record<VizName, VizComponent>> = {
+  SwarmTree: SwarmTree as unknown as VizComponent,
+  HrwPanels: HrwPanels as unknown as VizComponent,
+  HashStrip: HashStrip as unknown as VizComponent,
+};
 
-/** The tree's own keyframes (`TREE_KEYFRAMES`, exported by W7 where its events sit in its progress), if it exports them. */
-export const exportedTreeKeyframes: Readonly<Record<string, number>> =
-  (Object.values(found)[0] as { TREE_KEYFRAMES?: Record<string, number> } | undefined)?.TREE_KEYFRAMES ?? {};
+/** Whether W7 has written this visual yet. */
+export const isDrawn = (name: VizName): boolean => name in REGISTRY;
 
 function Placeholder({ name, note, progress }: { name: string; note: string; progress: MotionValue<number> }) {
   const readout = useRef<HTMLSpanElement>(null);
@@ -71,10 +73,13 @@ function Placeholder({ name, note, progress }: { name: string; note: string; pro
   );
 }
 
-/** A visual of W7's, or a placeholder while it is not merged or while the slice it draws is missing. */
-export function Viz({ name, data, progress, still = false }: VizProps & { name: VizName }) {
-  const Drawn = real[name];
-  if (data === undefined || data === null) return <Placeholder name={name} note="no data yet" progress={progress} />;
+export type VizUse = { name: VizName; progress: MotionValue<number>; still?: boolean } & Record<string, unknown>;
+
+/** A visual of W7's, or a placeholder while it is not written yet or while there is no story to draw. */
+export function Viz({ name, progress, still = false, ...extra }: VizUse) {
+  const story = useStory();
+  const Drawn = REGISTRY[name];
+  if (!story) return <Placeholder name={name} note="no data yet" progress={progress} />;
   if (!Drawn) return <Placeholder name={name} note="waiting for the visual" progress={progress} />;
-  return <Drawn progress={progress} data={data} still={still} />;
+  return <Drawn {...extra} progress={progress} data={story} still={still} />;
 }

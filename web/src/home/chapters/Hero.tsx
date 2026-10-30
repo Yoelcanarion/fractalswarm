@@ -9,11 +9,12 @@ import { Claim } from "../parts/Claim";
 import { Reveal } from "../parts/Reveal";
 import { targetHash } from "../route";
 import { scrollToTarget } from "../scrollTo";
-import { slice, useStory } from "../story";
+import { useStory } from "../story";
 import { Viz } from "../visuals";
+import { TREE_HERO_SECONDS } from "../viz/keyframes";
 
-// The tree plays its recorded sequence once, on load, in about eight seconds, then breathes (W7's visual).
-const PLAY_SECONDS = 8;
+// The tree plays the recorded kill sequence once, on load, at the pace W7 gives its hero (about nine seconds).
+const PLAY_SECONDS = TREE_HERO_SECONDS;
 
 export function Hero() {
   const story = useStory();
@@ -37,7 +38,7 @@ export function Hero() {
     return () => running.stop();
   }, [still, play]);
 
-  const setting = captionFor(story, "hero");
+  const setting = captionFor(story, "v1");
 
   return (
     <section ref={section} className="home-hero" aria-labelledby="home-title">
@@ -73,7 +74,7 @@ export function Hero() {
         </Reveal>
       </m.div>
       <m.figure className="home-hero__object" aria-label={COPY.hero.object} style={still ? undefined : { scale: objectScale, opacity: objectOpacity }}>
-        <Viz name="SwarmTree" data={slice(story, "tree")} progress={play} still={still} />
+        <Viz name="SwarmTree" progress={play} still={still} pacing="hero" />
       </m.figure>
     </section>
   );
