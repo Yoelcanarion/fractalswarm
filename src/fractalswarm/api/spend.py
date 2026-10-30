@@ -50,11 +50,11 @@ RUN_CAP_USD = 0.75  # every billed run started from the UI is capped here
 INTAKE_CAP_USD = 0.25  # one reading of pasted text: ``cli.INTAKE_RUN_CAP_USD`` (a test ties them)
 CONFIRM_WORD = "SPEND"
 TOKEN_TTL_S = 600.0
-# The phase cap counts from what was settled when the phase began (Oct 28), and the
-# coordinator's hard stop sits just under it.
+# The phase cap counts from what was settled when the phase began (Oct 28). Arena spec §M: keep
+# about $30 of the $150, so settled plus reserved stops at $120.
 PHASE_START_USD = 11.82
-PHASE_CAP_USD = 50.0
-HARD_STOP_USD = 61.8
+PHASE_CAP_USD = 108.18
+HARD_STOP_USD = 120.0
 NOT_IN_DIGEST = ("backend", "run_id", "pair_id", "preflight_token", "confirm")
 PREFLIGHT = {
     "task": "/api/tasks/preflight",
