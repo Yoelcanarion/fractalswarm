@@ -257,6 +257,8 @@ export interface LanesSlice {
   stallS?: number;
   /** Where the beats sit in the lanes' progress; the lanes' time map is built from them. */
   keyframes?: { filled: number; crash: number; restart: number; redone: number; end: number };
+  /** What the run was: the workflow, the task, the failure profile, the seed, whether the model was real, and how many crashes. */
+  setting?: { label: string; task: string; profile: string; seed: string; real: boolean; crashes: number };
   runId: string;
   head: string;
   events: number;
@@ -533,8 +535,16 @@ export interface NumbersSlice {
   };
   s4: { runs: number; coordinationTokens: number };
   s7: { swarmC3Runs: number; swarmC3Completed: number; allRuns: number; allCompleted: number };
+  /** Runs with a valid result, counted from each set's rows: never assumed, and the invalid runs are named. */
+  validity: { v1: ValiditySet; headline: ValiditySet; headline10: ValiditySet | null };
   structure: { orchestrators: number; agents: number; tracks: number; sessions: number };
   source: string[];
+}
+
+export interface ValiditySet {
+  runs: number;
+  valid: number;
+  invalid: string[];
 }
 
 export interface ProfilesSlice {

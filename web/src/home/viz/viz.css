@@ -521,6 +521,154 @@
   font-size: var(--fs-label);
 }
 
+/* ---- the work lanes -------------------------------------------------------------------- */
+
+.hv.hv-lanes {
+  position: relative;
+  height: 100%;
+  min-height: 240px;
+}
+.hv.hv-lanes text {
+  font-size: var(--fs-label);
+}
+.hv-ln-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+/* As tall as the page's counter, which covers the top left of the box. It is measured, never seen. */
+.hv-ln-probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: calc(var(--fs-figure, 56px) + 52px);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.hv-ln-zebra {
+  fill: var(--surface-2);
+  fill-opacity: 0.55;
+}
+.hv-ln-grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ln-rule {
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ln-label {
+  fill: var(--text-muted);
+  text-anchor: end;
+  dominant-baseline: central;
+}
+.hv-ln-label[data-brain="true"] {
+  fill: var(--text-secondary);
+}
+
+/* the time nobody worked: grey, a wash and not a texture */
+.hv-ln-stall {
+  fill: var(--text-muted);
+  fill-opacity: 0.13;
+}
+.hv-ln-track {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* a call is a bar: neutral while it is in flight and once it counted, red when a crash cut it off, amber when it is paid again */
+.hv-ln-bar {
+  fill: var(--text-muted);
+  fill-opacity: 0.82;
+}
+.hv-ln-bar[data-state="run"] {
+  fill: var(--text-secondary);
+  fill-opacity: 1;
+}
+.hv-ln-bar[data-kind="again"] {
+  fill: var(--warn);
+  fill-opacity: 1;
+}
+.hv-ln-bar[data-kind="cut"][data-state="done"] {
+  fill: var(--danger);
+  fill-opacity: 1;
+}
+
+.hv-ln-crash {
+  stroke: var(--danger);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ln-cross {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ln-crash-n {
+  fill: var(--text-secondary);
+}
+.hv-ln-cursor {
+  stroke: var(--text-secondary);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.hv-ln-bracket {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ln-stall-label {
+  fill: var(--text-secondary);
+  text-anchor: middle;
+}
+.hv-ln-axis,
+.hv-ln-tick {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.hv-ln-tick-label {
+  fill: var(--text-muted);
+}
+.hv-ln-clock {
+  fill: var(--text-primary);
+}
+
+.hv-ln-swatch {
+  fill: var(--text-muted);
+  fill-opacity: 0.82;
+}
+.hv-ln-swatch[data-swatch="cut"] {
+  fill: var(--danger);
+  fill-opacity: 1;
+}
+.hv-ln-swatch[data-swatch="again"] {
+  fill: var(--warn);
+  fill-opacity: 1;
+}
+.hv-ln-swatch[data-swatch="idle"] {
+  fill-opacity: 0.2;
+}
+.hv-ln-ledger-label {
+  fill: var(--text-secondary);
+}
+.hv-ln-ledger-value {
+  fill: var(--text-primary);
+}
+.hv-ln-caption {
+  fill: var(--text-muted);
+}
+
 .hv-hidden {
   position: absolute;
   width: 1px;

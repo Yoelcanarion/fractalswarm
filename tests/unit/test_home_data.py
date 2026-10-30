@@ -311,3 +311,40 @@ def test_the_page_finds_what_it_reads(committed: dict):
         f"MATCH  backup: {committed['hashes']['count']} events, head {committed['hashes']['head']}"
     ]
     assert proof["takeover"]["line"] == committed["takeover"]["okLine"]
+
+
+def test_validity_is_counted_from_the_rows_and_never_assumed(
+    generator: ModuleType, committed: dict
+):
+    rows = [{"cell": "a__C0__s1", "valid": True}, {"cell": "a__C0__s10", "valid": False}]
+    assert generator.validity(rows) == {"runs": 2, "valid": 1, "invalid": ["a__C0__s10"]}
+    for name, directory in (("v1", generator.V1), ("headline", generator.HEADLINE)):
+        on_disk = json.loads((REPO / directory / "results.json").read_text(encoding="utf-8"))
+        assert committed["numbers"]["validity"][name] == generator.validity(on_disk)
+    assert (committed["numbers"]["validity"]["headline10"] is not None) is (
+        REPO / generator.HEADLINE_10 / "results.json"
+    ).exists()
+
+
+def test_no_key_of_the_data_says_that_every_run_was_valid(committed: dict):
+    keys: set[str] = set()
+
+    def walk(node: object) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                keys.add(key)
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(committed)
+    assert not [k for k in keys if re.search(r"(all|every).*valid|valid.*(all|every)", k, re.I)]
+
+
+def test_the_lanes_name_their_setting(committed: dict):
+    central = committed["lanes"]["central"]
+    setting = central["setting"]
+    assert (setting["task"], setting["profile"], setting["seed"]) == ("t2_conference", "C3", "1")
+    assert setting["crashes"] == sum(1 for m in central["marks"] if m["kind"] == "crash") == 5
+    assert setting["real"] is True and setting["label"] == "In-process supervisor"
