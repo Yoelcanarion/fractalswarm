@@ -19,7 +19,8 @@ import {
   type LineSeries,
   type PanelLayout,
 } from "./line";
-import { ChartTable, useBox } from "./parts";
+import { DRAW_ORDER } from "./names";
+import { ChartTable, SystemMark, useBox } from "./parts";
 
 export type LineDrawProps = VizProps<HeroSlice> & {
   /** Print the setting (task, model, seeds) under the chart. A page that prints it itself turns it off. */
@@ -29,15 +30,7 @@ export type LineDrawProps = VizProps<HeroSlice> & {
 /** What the box is before it is measured (and on the server): the page's hero frame at 1920 wide. */
 const DEFAULT_BOX = { width: 1100, height: 520 };
 
-const GROUPS: readonly Emphasis[] = ["quiet", "rival", "swarm"];
-
-/** A mark for each system that is not the swarm, so that two lines are never told apart by shade alone. */
-function Marker({ series }: { series: LineSeries }) {
-  if (series.emphasis === "swarm") return <circle className="hv-ld-dot" r="4.5" />;
-  if (series.id === "central") return <rect className="hv-ld-dot" x="-4" y="-4" width="8" height="8" rx="1" />;
-  if (series.id === "durable-max") return <path className="hv-ld-dot" d="M0 -5.5L5.5 0L0 5.5L-5.5 0Z" />;
-  return <circle className="hv-ld-dot" r="2.5" />;
-}
+const GROUPS = DRAW_ORDER;
 
 const tip = (model: LineModel, s: LineSeries, panel: PanelLayout, i: number): string => {
   const p = s[panel.metric.key][i]!;
@@ -136,7 +129,7 @@ export function LineDraw({ progress, data, still, stillAt, className, setting = 
                         <path className="hv-ld-hit" d={shape.line} />
                         {shape.dots.map((d, i) => (
                           <g key={d.point.x} className="hv-ld-mark" transform={`translate(${fx(d.x)} ${fx(d.y)})`}>
-                            <Marker series={s} />
+                            <SystemMark id={s.id} emphasis={s.emphasis} />
                             <title>{tip(model, s, panel, i)}</title>
                           </g>
                         ))}

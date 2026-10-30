@@ -3,6 +3,7 @@
 
 import type { HeroPoint, HeroSlice } from "../../data/types";
 import { Pen } from "../tree/paint";
+import { emphasisOf, shortName, systemName, type Emphasis, type Names } from "./names";
 import { easeInOutCubic, fx, smoothstep, span } from "../shared";
 import {
   dodge,
@@ -20,7 +21,6 @@ import {
 } from "./chart";
 
 export type MetricKey = "stall" | "extra";
-export type Emphasis = "swarm" | "rival" | "quiet";
 
 export interface Metric {
   key: MetricKey;
@@ -37,18 +37,6 @@ export const METRICS: readonly Metric[] = [
   { key: "extra", title: "Extra cost", sub: "against its own run with no failures", subShort: "against no failures", unit: "%" },
 ];
 
-/** The swarm is the accent; the two rivals the claims name are strong neutrals; the others are quiet. */
-const EMPHASIS: Record<string, Emphasis> = { swarm: "swarm", central: "rival", "durable-max": "rival" };
-const SHORT: Record<string, string> = {
-  swarm: "FractalSwarm",
-  central: "In-process",
-  "durable-max": "Ideal durable",
-  durable: "Durable",
-  pipeline: "Pipeline",
-  single: "Single agent",
-};
-const MID: Record<string, string> = { durable: "Realistic durable" };
-
 export interface LinePoint {
   x: number;
   profile: string;
@@ -56,6 +44,8 @@ export interface LinePoint {
   min: number;
   max: number;
 }
+
+export type { Emphasis, Names };
 
 export interface LineSeries {
   id: string;
@@ -91,8 +81,8 @@ export function lineModel(data: HeroSlice): LineModel {
     return {
       id,
       label: s.label,
-      short: SHORT[id] ?? s.label,
-      emphasis: EMPHASIS[id] ?? "quiet",
+      short: shortName(id, s.label),
+      emphasis: emphasisOf(id),
       stall: points.map((p) => point(p, "stall")),
       extra: points.map((p) => point(p, "extra")),
     };
@@ -102,13 +92,8 @@ export function lineModel(data: HeroSlice): LineModel {
   return { series, xs, profiles, seedCount: data.seedCount, task: data.task, real: data.model === "real", set: data.set, xLabel: data.xLabel };
 }
 
-export type Names = "full" | "short";
-
-/** A series' name at the width there is: the claims' own names for the three that matter, short ones for the rest. */
-export function nameOf(s: LineSeries, names: Names): string {
-  if (names === "short") return s.short;
-  return s.emphasis === "quiet" ? (MID[s.id] ?? s.short) : s.label;
-}
+/** A series' name at the width there is. */
+export const nameOf = (s: LineSeries, names: Names): string => systemName(s.id, s.label, names);
 
 export function valueText(key: MetricKey, v: number): string {
   return key === "stall" ? `${v.toFixed(1)} s` : `${withSign(v, 1)}%`;

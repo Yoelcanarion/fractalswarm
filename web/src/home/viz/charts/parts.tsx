@@ -62,3 +62,15 @@ export function ChartTable({ caption, head, rows }: { caption: string; head: str
     </table>
   );
 }
+
+/**
+ * The mark of a system, centred on the origin: a circle for the swarm, a square for the in-process
+ * supervisor, a diamond for the ideal durable one and a small dot for the rest, so that two systems
+ * are never told apart by shade alone. Its colours come from the group around it (`data-emph`, `data-id`).
+ */
+export function SystemMark({ id, emphasis, r = 4.5 }: { id: string; emphasis: string; r?: number }) {
+  if (emphasis === "swarm") return <circle className="hv-mk" r={r} />;
+  if (id === "central") return <rect className="hv-mk" x={-r * 0.9} y={-r * 0.9} width={r * 1.8} height={r * 1.8} rx="1" />;
+  if (id === "durable-max") return <path className="hv-mk" d={`M0 ${-r * 1.2}L${r * 1.2} 0L0 ${r * 1.2}L${-r * 1.2} 0Z`} />;
+  return <circle className="hv-mk" r={r * 0.55} />;
+}
