@@ -21,6 +21,14 @@ export function namedRunId(hash: string): string | null {
  * without it opens a recorded run at its start, to be replayed; a live run opens at its head either way. */
 export const AT_END = "?at=end";
 
+/** The recorded final run: the one the app opens when no run is named, and the one the guide sends a newcomer to. */
+export const FINAL_RUN = "demo-final";
+
+/** The run a bare `#/run` opens: the final run, or the first listed one on a server that has none. */
+export function defaultRunId(runs: readonly { id: string }[]): string | null {
+  return runs.find((run) => run.id === FINAL_RUN)?.id ?? runs[0]?.id ?? null;
+}
+
 /** The address of a run opened from a list of runs. */
 export const openedRunHash = (id: string): string => `#/run/${encodeURIComponent(id)}${AT_END}`;
 
@@ -37,13 +45,13 @@ export interface OpeningState {
 }
 
 /** What the page is about to show when it is not showing a run yet: a run the address names and the store has not opened, or, for a
- * bare address with nothing open, the first run once the list arrives. Null when there is nothing to wait for. The bare address leaves a
- * run that is already open alone. */
+ * bare address, the final run once the list arrives (a run already open stays on screen until then). Null when there is nothing to
+ * wait for. */
 export function openingRun({ runId, named, runs, runsLoaded }: OpeningState): Opening | null {
   if (named !== null) return named === runId ? null : { kind: "run", id: named };
-  if (runId !== null) return null;
-  if (!runsLoaded) return { kind: "list" };
-  return runs.length > 0 ? { kind: "run", id: runs[0].id } : null;
+  if (!runsLoaded) return runId === null ? { kind: "list" } : null;
+  const wanted = defaultRunId(runs);
+  return wanted === null || wanted === runId ? null : { kind: "run", id: wanted };
 }
 
 const subscribe = (notify: () => void): (() => void) => {

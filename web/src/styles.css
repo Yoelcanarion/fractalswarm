@@ -314,29 +314,6 @@ textarea {
   height: auto;
 }
 
-.runguide {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-5);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-3);
-  background: var(--accent-bg);
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
-}
-
-.runguide p {
-  flex: 1 1 320px;
-  max-width: 70ch;
-  margin: 0;
-}
-
-.runguide__done {
-  flex: none;
-}
-
 .run__main {
   flex: 1;
   min-height: 0;
@@ -748,6 +725,13 @@ textarea {
   gap: 8px;
 }
 
+.chaos__note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
 .chaos__row {
   display: flex;
   gap: 8px;
@@ -975,9 +959,12 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
-.speeds {
+.speedpick {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
 }
 
 /* ---- charts ---- */
@@ -1965,11 +1952,6 @@ textarea {
   overflow: auto;
   font-size: var(--fs-body);
   margin: 6px 0 0;
-}
-
-.results__raw summary {
-  cursor: pointer;
-  color: var(--text-secondary);
 }
 
 /* a payload as a table (the feasibility report) */

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useStore } from "zustand";
 
 import { ClockScope } from "../components/ClockScope";
-import { Skeleton, SkeletonGroup } from "../components/ui";
+import { EmptyState, PageHeader, Skeleton, SkeletonGroup } from "../components/ui";
 import { listRuns } from "../lib/api";
 import type { RunListing } from "../lib/types";
 import { RunStoreProvider } from "../store";
@@ -125,8 +125,32 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   };
 
   const chosen = Boolean(left && right);
+  // `#/arena` alone opens the newest public pair: until it has, it is not an empty page
+  const opening = !chosen && (pairs === null || pairs.some((pair) => !pair.private));
+  const watching = chosen && !loading && !loadError;
   return (
     <div className="arena" tabIndex={-1} onKeyDown={onKeyDown}>
+      {!bare && (
+        <PageHeader
+          compact
+          title="Arena"
+          lead="The swarm and a rival run the same job under the same failures. Play both and watch what each does when coordinators are killed."
+          actions={
+            watching && (
+              <button
+                type="button"
+                className="btn btn--on"
+                onClick={() => {
+                  clock.seekTime(0);
+                  clock.setPlaying(true);
+                }}
+              >
+                Play both from the start
+              </button>
+            )
+          }
+        />
+      )}
       <header className="arena__bar">
         {!bare && <PairPicker left={left} right={right} pairs={pairs} runs={runs} />}
         {chosen && !loading && !loadError && (
@@ -135,11 +159,23 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
           </p>
         )}
       </header>
-      {!chosen && (
-        <div className="empty">
-          Choose a swarm run and a rival run above, or open <code>#/arena/&lt;swarm run&gt;/&lt;rival run&gt;</code>. A pair is made with{" "}
-          <code>POST /api/arena</code> (the intake page) or by recording two runs with the same input, seed and failure plan.
-        </div>
+      {opening && <ArenaSkeleton />}
+      {!chosen && !opening && (
+        <EmptyState
+          title="No pair to watch yet"
+          actions={
+            <>
+              <a className="btn btn--on" href="#/new">
+                Start a pair
+              </a>
+              <a className="btn" href="#/runs">
+                Open the runs
+              </a>
+            </>
+          }
+        >
+          A pair is the swarm and a rival running the same job under the same failures. Pick one above, or start one of your own: on the practice model it is free.
+        </EmptyState>
       )}
       {chosen && loading && <ArenaSkeleton />}
       {chosen && !loading && loadError && <div className="empty empty--bad">Could not load the pair: {loadError}</div>}

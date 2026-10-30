@@ -70,3 +70,85 @@
     min-height: 40px;
   }
 }
+
+/* The guide: three steps under the bars, in the flow, so nothing is covered. */
+.guide {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
+  padding: var(--space-3) 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--accent-bg);
+  color: var(--text-primary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.guide__steps {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide__step {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.guide__n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  background: var(--text-primary);
+  color: var(--surface-1);
+  font-weight: 700;
+}
+
+.guide__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.guide__go {
+  align-self: flex-start;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.guide__done {
+  flex: none;
+}
+
+.guide__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+@media (max-width: 1100px) {
+  .guide {
+    flex-direction: column;
+  }
+
+  .guide__steps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+}
+
+@media (max-height: 820px) {
+  .guide {
+    padding-block: var(--space-2);
+  }
+}

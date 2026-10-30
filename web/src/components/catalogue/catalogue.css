@@ -114,6 +114,36 @@
   text-decoration: none;
 }
 
+/* ---- the few runs to start from ---- */
+.featured {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.featured__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+}
+
+.featured__id {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.featured__what {
+  color: var(--text-primary);
+}
+
 /* ---- the table ---- */
 .runstable {
   border: 1px solid var(--border);
@@ -236,19 +266,6 @@ th[aria-sort="descending"] .sorthead svg {
 }
 
 /* ---- the key under the table ---- */
-.runskey {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-3);
-  background: var(--surface-1);
-  padding: var(--space-3) var(--space-4);
-}
-
-.runskey > summary {
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
 .runskey__list {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
@@ -286,14 +303,4 @@ th[aria-sort="descending"] .sorthead svg {
   .runskey__list dd {
     margin-bottom: var(--space-3);
   }
-}
-
-/* ---- starting a run ---- */
-.runs__start > summary {
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.runs__start[open] > summary {
-  margin-bottom: var(--space-3);
 }

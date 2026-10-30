@@ -1,3 +1,4 @@
+import { Details } from "../components/ui";
 import type { RunListing } from "../lib/types";
 import type { PairListing } from "./api";
 import { arenaHash } from "./route";
@@ -40,28 +41,30 @@ export function PairPicker({ left, right, pairs, runs }: PairPickerProps) {
           ))}
         </select>
       </label>
-      <label className="picker__field">
-        <span className="picker__label">Swarm</span>
-        <select value={left ?? ""} onChange={(e) => go(e.target.value, right ?? "")} aria-label="swarm run">
-          <option value="">Choose a run…</option>
-          {runs.map((run) => (
-            <option key={run.id} value={run.id}>
-              {run.id}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="picker__field">
-        <span className="picker__label">Rival</span>
-        <select value={right ?? ""} onChange={(e) => go(left ?? "", e.target.value)} aria-label="rival run">
-          <option value="">Choose a run…</option>
-          {runs.map((run) => (
-            <option key={run.id} value={run.id}>
-              {run.id}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Details menu id="runs" summary="Choose the two runs yourself">
+        <label className="picker__field">
+          <span className="picker__label">Swarm</span>
+          <select value={left ?? ""} onChange={(e) => go(e.target.value, right ?? "")} aria-label="swarm run">
+            <option value="">Choose a run…</option>
+            {runs.map((run) => (
+              <option key={run.id} value={run.id}>
+                {run.id}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="picker__field">
+          <span className="picker__label">Rival</span>
+          <select value={right ?? ""} onChange={(e) => go(left ?? "", e.target.value)} aria-label="rival run">
+            <option value="">Choose a run…</option>
+            {runs.map((run) => (
+              <option key={run.id} value={run.id}>
+                {run.id}
+              </option>
+            ))}
+          </select>
+        </label>
+      </Details>
     </div>
   );
 }

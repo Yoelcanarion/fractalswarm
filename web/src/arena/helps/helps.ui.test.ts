@@ -192,6 +192,28 @@ describe("what the panel does not say", () => {
   });
 });
 
+describe("the full count", () => {
+  it("is under Details, closed, with the outcome and the map in view above it", () => {
+    const html = render();
+    expect(html).toContain('<details id="table" class="disclosure">');
+    expect(html.indexOf('data-helps="map"')).toBeLessThan(html.indexOf('<details id="table"'));
+    expect(html.indexOf('<details id="table"')).toBeLessThan(html.indexOf('data-helps="table"'));
+  });
+
+  it("is open when a list of it is asked for, or when the frame asks for it (a director's scene has no address to ask with)", () => {
+    expect(render({ open: { hypothesis: "H5", rival: "durable-max", which: "loss" } })).toContain('<details id="table" class="disclosure" open="">');
+    expect(render({ unfold: true })).toContain('<details id="table" class="disclosure" open="">');
+    const page = renderToStaticMarkup(createElement(HelpsView, { state: { status: "ready", honesty: parsedSample() }, unfold: true }));
+    expect(page).toContain('<details id="table" class="disclosure" open="">');
+  });
+
+  it("keeps the rules of the decision as inline folds, not boxes of their own", () => {
+    const html = render();
+    expect(html).toContain('<details id="rules" class="disclosure disclosure--inline">');
+    expect(plainText(html)).toContain("How a result is decided");
+  });
+});
+
 describe("the page", () => {
   const view = (state: HelpsViewProps["state"], onRetry?: () => void): string => renderToStaticMarkup(createElement(HelpsView, { state, onRetry }));
   const retry = () => undefined;
