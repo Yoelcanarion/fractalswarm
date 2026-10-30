@@ -192,9 +192,9 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
       {glow && (
         <defs>
           <radialGradient id={glow}>
-            <stop offset="0.5" style={{ stopColor: "var(--accent)", stopOpacity: 0 }} />
-            <stop offset="0.66" style={{ stopColor: "var(--accent)", stopOpacity: 0.5 }} />
-            <stop offset="1" style={{ stopColor: "var(--accent)", stopOpacity: 0 }} />
+            <stop className="hv-amb-stop" offset="0.5" />
+            <stop className="hv-amb-stop hv-amb-stop--peak" offset="0.66" />
+            <stop className="hv-amb-stop" offset="1" />
           </radialGradient>
         </defs>
       )}

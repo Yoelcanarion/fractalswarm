@@ -246,6 +246,18 @@
 .hv-amb-halo {
   pointer-events: none;
 }
+/* the halo's gradient: clear at the edge of the brain, soft accent in a ring just outside it, clear again further out; the
+   ring is lighter on paper, where the accent is the strongest thing on the page */
+.hv-amb-stop {
+  stop-color: var(--accent);
+  stop-opacity: 0;
+}
+.hv-amb-stop--peak {
+  stop-opacity: 0.5;
+}
+:root[data-theme="light"] .hv-amb-stop--peak {
+  stop-opacity: 0.3;
+}
 
 /* ---- the survivors computing the heir ------------------------------------------------------ */
 
