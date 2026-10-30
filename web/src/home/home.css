@@ -150,7 +150,9 @@ body:has(.home) {
 /* every link names its own colour: the app shell's `a { color }` stays in the page once that chunk has loaded */
 .home-bar__brand {
   display: inline-flex;
+  flex: none;
   align-items: center;
+  white-space: nowrap;
   gap: var(--space-2);
   color: var(--text-primary);
   font-weight: 650;
@@ -184,6 +186,22 @@ body:has(.home) {
 
   .home-bar__short {
     display: inline;
+  }
+}
+
+/* the brand keeps its width (above), so on the smallest phones the way in gives up its arrow and some padding instead:
+   the pill must never reach the brand */
+@media (max-width: 359px) {
+  .home-bar__right {
+    gap: var(--space-2);
+  }
+
+  .home-bar .home-button {
+    padding-inline: var(--space-3);
+  }
+
+  .home-bar .home-button svg {
+    display: none;
   }
 }
 
@@ -1051,8 +1069,10 @@ body:has(.home) {
   transition: background-color var(--dur-base) var(--ease-out);
 }
 
+/* the lit word is the strong accent fill with the inverse text: --accent under it reads 4.3:1 in the light theme, --accent-text
+   6.5:1 there and 7.5:1 in the dark one */
 .home-extract__mark[data-lit] {
-  background: var(--accent);
+  background: var(--accent-text);
   color: var(--text-inverse);
 }
 
@@ -1501,10 +1521,12 @@ body:has(.home) {
   grid-column: span 6;
 }
 
+/* A column from the top: the glyph box has one height, so the title of every door starts at the same distance from the top of its
+   card and the titles of a row line up, whatever the cards are stretched to and however many lines each purpose takes. */
 .home-door {
   position: relative;
-  display: grid;
-  grid-template-rows: 1fr auto auto;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
   color: var(--text-primary);
   width: 100%;
@@ -1534,9 +1556,13 @@ a.home-door:active {
   cursor: not-allowed;
 }
 
+/* The glyph is drawn to fit this box, left-aligned and never cropped (viz/doors); --door-glyph-h is the number its svg reads too. */
 .home-door__glyph {
+  --door-glyph-h: 140px;
   position: relative;
-  min-height: 110px;
+  flex: none;
+  height: var(--door-glyph-h);
+  margin-bottom: var(--space-2);
 }
 
 .home-door__title {
@@ -1567,7 +1593,10 @@ a.home-door:hover .home-door__go {
   color: var(--text-primary);
 }
 
+/* what a closed door says sits on the bottom edge of its card, so that it lines up along the row too */
 .home-door__note {
+  margin-top: auto;
+  padding-top: var(--space-2);
   font-family: var(--font-mono);
   font-size: var(--fs-label);
   letter-spacing: var(--track-label);
