@@ -55,12 +55,30 @@ describe("before there is a run to show", () => {
     return render(store, createElement(RunGate, null, createElement("p", null, "the run")));
   };
 
-  it("says no run is selected and where to get one", () => {
-    const out = gate({ runId: null });
+  it("says no run is selected and where to get one, once the list has answered with none", () => {
+    const out = gate({ runId: null, runs: [], runsLoaded: true });
     expect(text(out)).toContain("No run selected");
     expect(out).toContain('href="#/runs"');
     expect(text(out)).toContain("fractalswarm run");
     expect(out).not.toContain("the run<");
+  });
+
+  it("does not say no run is selected while the list of runs is on its way: it holds the page's place", () => {
+    const out = gate({ runId: null, runs: [], runsLoaded: false });
+    expect(text(out)).toContain("Loading the runs");
+    expect(out).toContain("skeleton");
+    expect(text(out)).not.toContain("No run selected");
+  });
+
+  it("holds the place of the first listed run, which a bare address is about to open", () => {
+    const out = gate({ runId: null, runs: [{ id: "demo-backup" }, { id: "other" }], runsLoaded: true });
+    expect(text(out)).toContain("Loading demo-backup");
+    expect(text(out)).not.toContain("No run selected");
+    expect(out).not.toContain("the run<");
+  });
+
+  it("is not in the way of a failed list: the run pages say what failed where they can", () => {
+    expect(text(gate({ runId: null, runs: [], runsLoaded: true, runsError: "502 Bad Gateway" }))).toContain("No run selected");
   });
 
   it("holds the page's place with a skeleton while the log loads, and says what it waits for", () => {
@@ -157,6 +175,14 @@ describe("the run page", () => {
     const out = render(store, createElement(RunPage));
     expect(out).toContain("Loading toy");
     expect(out).toContain('role="status"');
+  });
+
+  it("holds its own shape, the counters and the tree, from the first paint, before the list of runs has answered", () => {
+    const out = render(renderCurrent(createRunStore({ api: apiOf() })), createElement(RunPage));
+    expect(out).toContain("Loading the runs");
+    expect(out).toContain('class="counters"');
+    expect(out).toContain("run__tree");
+    expect(text(out)).not.toContain("No run selected");
   });
 
   it("names the schedule with a defined T2", async () => {

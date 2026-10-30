@@ -11,9 +11,9 @@ import { Card, Skeleton, SkeletonGroup, SkeletonText, Term } from "../components
 import { useRunStore, useRunStoreShallow } from "../store";
 
 /** The shape of the run page while its log loads: counters, tree, grid, side column, timeline. */
-function RunSkeleton({ runId }: { runId: string }) {
+function RunSkeleton({ label }: { label: string }) {
   return (
-    <SkeletonGroup label={`Loading ${runId}`}>
+    <SkeletonGroup label={label}>
       <div className="run">
         <div className="counters">
           {Array.from({ length: 8 }, (_, i) => (
@@ -44,7 +44,7 @@ function RunSkeleton({ runId }: { runId: string }) {
 
 export function RunPage() {
   return (
-    <RunGate skeleton={(runId) => <RunSkeleton runId={runId} />}>
+    <RunGate skeleton={(label) => <RunSkeleton label={label} />}>
       <RunOverview />
     </RunGate>
   );

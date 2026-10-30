@@ -1,14 +1,15 @@
 import type { ReactNode } from "react";
 
+import { openingRun, useAddressedRun } from "../lib/address";
 import { useRunStore, useRunStoreShallow } from "../store";
 import { LensDock } from "./lens/LensDock";
 import { Timeline } from "./Timeline";
 import { EmptyState, PageHeader, Skeleton, SkeletonGroup } from "./ui";
 
 /** The shape of a run view while its log loads: a title, the body, the timeline. The page keeps its size when the run arrives. */
-function FrameSkeleton({ runId }: { runId: string }) {
+function FrameSkeleton({ label }: { label: string }) {
   return (
-    <SkeletonGroup label={`Loading ${runId}`}>
+    <SkeletonGroup label={label}>
       <div className="run">
         <Skeleton width={260} height={28} />
         <Skeleton className="run__sk-body" />
@@ -19,16 +20,27 @@ function FrameSkeleton({ runId }: { runId: string }) {
 }
 
 export interface RunGateProps {
-  /** What to show while the log loads, if not the plain frame. */
-  skeleton?: (runId: string) => ReactNode;
+  /** What to show while the log loads, if not the plain frame. It is given what the wait is for: "Loading <run>". */
+  skeleton?: (label: string) => ReactNode;
   children: ReactNode;
 }
 
 /** What every view of a run shows before it has a run to show: none chosen, still loading, or failed. None of them is a dead
  * end: each says what happened and offers the next step. */
 export function RunGate({ skeleton, children }: RunGateProps) {
-  const { runId, loading, loadError } = useRunStoreShallow((s) => ({ runId: s.runId, loading: s.loading, loadError: s.loadError }));
+  const { runId, loading, loadError, runs, runsLoaded } = useRunStoreShallow((s) => ({
+    runId: s.runId,
+    loading: s.loading,
+    loadError: s.loadError,
+    runs: s.runs,
+    runsLoaded: s.runsLoaded,
+  }));
+  const named = useAddressedRun();
   const openRun = useRunStore((s) => s.openRun);
+  const opening = openingRun({ runId, named, runs, runsLoaded });
+  const waiting = (label: string) => <>{skeleton ? skeleton(label) : <FrameSkeleton label={label} />}</>;
+  // The store opens the run after the first paint: until then this is not "no run", and not the run that was open before.
+  if (opening) return waiting(opening.kind === "run" ? `Loading ${opening.id}` : "Loading the runs");
   if (!runId) {
     return (
       <EmptyState
@@ -43,7 +55,7 @@ export function RunGate({ skeleton, children }: RunGateProps) {
       </EmptyState>
     );
   }
-  if (loading) return <>{skeleton ? skeleton(runId) : <FrameSkeleton runId={runId} />}</>;
+  if (loading) return waiting(`Loading ${runId}`);
   if (loadError) {
     return (
       <EmptyState
