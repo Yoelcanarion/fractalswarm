@@ -1,9 +1,10 @@
-# Video script — v0 (3:00, English voice-over)
+# Video script — v0.2 (3:00, English voice-over)
 
-**Status:** draft v0.1. The decision gate (Oct 29, with Yoel) chose **outcome B**, so Act 3 has only version B; version A is removed.
+**Status:** draft v0.2. The decision gate (Oct 29, with Yoel) chose **outcome B**, so Act 3 has only version B; version A is removed.
 - Every `{{placeholder}}` left is filled from `docs/claims.md` once the final runs exist.
 - Every number and claim must have a row in `docs/claims.md` before recording.
-- The tagline is settled from the real runs (claims, "Decided at the gate"); nothing here quotes it.
+- The tagline is settled (Yoel, Oct 30; `docs/claims.md` S7): "Kill half the brains. It still finishes." Only that sentence. Numbers go under it, each with its rival named, never as part of it.
+- Yoel picks the rival of `s1` and `s6` in the edit: `central` for the contrast, `durable-max` for the honest tie (arena spec §M.5). This draft is written for `durable-max`.
 
 **The story:** three questions, in this order.
 1. What problem does FractalSwarm solve?
@@ -33,7 +34,7 @@ Anything that doesn't answer one of them stays out of the video.
 - **At about 0:20:** the first crash. The root dies on both sides. The right side's whole board pauses; on the left, the tree re-wires.
 
 **Voice-over (≈ 74 words):**
-> Teams of AI agents usually depend on one coordinator. It plans, assigns and checks the work. When it crashes, the team waits, or does the work again.
+> Teams of AI agents often depend on one coordinator. It plans, assigns and checks the work. When it crashes, the team waits, or does the work again.
 > Even an ideal supervisor has to stop to recover. Can a team recover without one?
 > On the right: the strongest supervisor we could build. On the left: FractalSwarm, ten small coordinators in a tree. Same task, same models, same failures.
 > Now we kill half the brains.
@@ -109,10 +110,10 @@ Anything that doesn't answer one of them stays out of the video.
 - **Caption, always visible:** "Rival: ideal durable supervisor — 5 s detection · 0 s restart · workers survive · same log".
 
 **Voice-over (outcome B; ≈ 68 words):**
-> Is that better than a good supervisor? We gave the rival every advantage we could: its workers survive, it loses nothing, and it restarts the moment it detects the crash.
-> Under the same failures, it matched us: the same work, the same cost. So our claim is narrower, and still useful: FractalSwarm reaches the resilience of an ideal durable supervisor, without a supervisor, a standby or an election service.
+> Is that better than a good supervisor? We built the strongest rival we could implement fairly: its workers survive, it loses nothing, and it restarts the moment it detects the crash.
+> Under the same failures, it matched us: the same work, the same cost. So our claim is narrower, and still useful: resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism.
 
-**Key points:** every advantage given to the rival · it matched us on work and cost · the claim: comparable resilience with no supervisor, standby or election service (`docs/claims.md` R2, S3).
+**Key points:** the strongest rival we could implement fairly · it matched us on work and cost · the claim, in R2's words (`docs/claims.md`).
 **Not said here:** that recovery stays local, or that the swarm waits less (R1 is not claimed under B). The on-screen run may show one subtree pausing, which is what that run did; the voice-over does not generalize it.
 
 ### s7-where-it-helps (2:14–2:26)
@@ -141,13 +142,13 @@ Anything that doesn't answer one of them stays out of the video.
 ### s9-close (2:36–3:00) — a real terminal capture, then a title card
 **On screen:**
 - A terminal: `uv run fractalswarm demo --verify` → MATCH.
-- **Title card:** "FractalSwarm — built on Muse Spark, Muse Wonder and Llama PromptGuard 2 · github.com/Yoelcanarion/fractalswarm".
+- **Title card:** "Kill half the brains. It still finishes." Under it: "FractalSwarm — built on Muse Spark, Muse Wonder and Llama PromptGuard 2 · github.com/Yoelcanarion/fractalswarm".
 
 **Voice-over (≈ 44 words):**
 > Clone the repo and run one command. No API key needed: it replays a real recorded run and checks every hash.
-> FractalSwarm: teams of Muse agents that finish the job, even when their coordinators die. Built on Muse Spark, Muse Wonder and Llama PromptGuard 2.
+> Kill half the brains. It still finishes. FractalSwarm, built on Muse Spark, Muse Wonder and Llama PromptGuard 2.
 
-**Key points:** one command, no key · replays and checks every hash · agent teams that finish even when coordinators die · built on Spark, Wonder and PromptGuard 2.
+**Key points:** one command, no key · replays and checks every hash · the tagline · built on Spark, Wonder and PromptGuard 2.
 
 ---
 
@@ -166,5 +167,6 @@ Anything that doesn't answer one of them stays out of the video.
 - [ ] Every placeholder is filled and matches a row of `docs/claims.md`.
 - [ ] No "simpler", "cheaper" or "more reliable" appears without its own row in `docs/claims.md`.
 - [ ] The rival's assumptions are on screen in `s6`.
+- [ ] Nothing says that every run was valid: one real run was not (`swarm__t2_conference__C0__s5`, `.plans/progress.md`). The tagline's evidence (S7) speaks of C3.
 - [ ] Each scene's voice-over fits its time when read slowly.
 - [ ] **The three-question check:** someone who has not seen the project watches the cut and can say what problem it solves, why Meta's models matter and what the evidence is.
