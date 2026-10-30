@@ -234,20 +234,25 @@ if (left !== "-") {
   }
 }
 
-// ---- the Runs page (W4): "Verify all" gives the verdict of the build, and never says a replay ran in the browser
+// ---- the Runs page (W4): "Verify N listed runs" gives the verdict of the build, and never says a replay ran in the browser
 {
   const name = "runs-verify";
   const page = await visit(name, "#/runs", { needles: RUNS, shoot: false });
-  const verifyAll = page.getByRole("button", { name: /verify all/i });
-  if ((await verifyAll.count()) === 0) warn(name, "no 'Verify all' button on the Runs page: is W4's page merged?");
+  const verifyAll = page.getByRole("button", { name: /^Verify \d+ listed runs?$/ });
+  if ((await verifyAll.count()) === 0) warn(name, "no 'Verify N listed runs' button on the Runs page: is W4's page merged?");
   else {
     await verifyAll.first().click();
-    await page.waitForFunction(() => /Replay verified/.test(document.body.innerText), null, { timeout: 120000 });
+    await page.waitForFunction(() => !/Replaying…/.test(document.body.innerText) && /Replay verified/.test(document.body.innerText), null, { timeout: 120000 });
     await page.waitForTimeout(800);
     const body = await text(page);
     const html = await page.content();
-    if (!/Replay verified at build/.test(body)) problem(name, "the Runs page does not say the replays were verified at build");
-    if (/re-run from run\.started|Replaying/.test(`${body}\n${html}`)) problem(name, "the Runs page says a replay ran in the browser");
+    const verified = (body.match(/Replay verified at build/g) ?? []).length;
+    console.log(`  ${verified} cell(s) say "Replay verified at build"`);
+    if (verified < RUNS.length) problem(name, `${verified} verify cells say "Replay verified at build", at least ${RUNS.length} expected`);
+    const plain = (body.match(/Replay verified(?! at build)/g) ?? []).length;
+    if (plain) problem(name, `${plain} cell(s) say "Replay verified" without "at build"`);
+    if (/re-run from run\.started/.test(html)) problem(name, "the page says events were re-run from run.started: a replay ran in the browser");
+    if (/Could not check|Replay mismatch/.test(body)) problem(name, "a verify cell says it could not check, or a mismatch");
     await shot(page, name);
   }
   await page.close();

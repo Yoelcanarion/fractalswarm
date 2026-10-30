@@ -4,6 +4,20 @@ Branch `Yoelcanarion/w8-static-showcase`. Brief: `.plans/arena/w8-static.md`. Ar
 
 ## Where this stands (stopped by Yoel at 12:00 CET, resumed at 15:45 after the reboot of 15:31)
 
+**Oct 30, after W4 (arena a1ca0e4) merged: the pass is partly done; the worker stopped at its usage limit.**
+
+Done, commit 2793e71 on this branch (arena a1ca0e4 merged as 1152597):
+- The two approved lines in `verifyWords` (web/src/lib/catalogue.ts): in a static build the Runs page's verify cell says "Replay verified at build" (the badge's words), never that a replay ran in the browser. Test: web/src/static/verifywords.test.ts, both modes.
+- `public_bench` in scripts/build_static_site.py now rewrites only an absolute path. W4's `GET api/bench/results` names the recorded sets bench/results/<set>/hero-t2_conference.json, and the old rewrite would have turned those into paths that do not exist. Tests added; the fixture is regenerated (it gains `"sets": []`).
+- Local-build proof, base = arena a1ca0e4 without my patch: IDENTICAL (22 files, 2,033,120 bytes, sha-256 of each equal; no static-only words; the packaged bundle untouched).
+- Pair site rebuilt (backup, toy, swarm:central, swarm:pipeline): 20.53 MB, app 2.05 MB. Charts draws the three recorded sets (fixture false). Playwright pass at the root and at /fractalswarm/ on port 5178: CLEAN at both. Port 5177 was held by someone else's `node preview.mjs` (pid 18804, started 18:40), so I did not use it and did not touch it. All my servers are stopped.
+- Runs page: all 5 verify cells say "Replay verified at build", and the page downloads only the 5 edges.json files (0.24 MB), no event page. No page-level scrollbar at 1366x768 or 1440x900 with the banner on. The built site opened from a file:// URL still shows its explanatory sentence.
+- Checks run: vitest src/static + catalogue + runsCatalogue 188 passed (9 files); tsc clean; tests/unit/test_static_site.py 92 passed; ruff clean on the two Python files I touched.
+
+Not done (usage limit): the whole vitest suite after the merge; tests/unit and the integration chunks after W4's change to api/app.py (the last full chunks were at 41798f8: unit 1181, integration 899 plus the strict-mode pair); the final merge_ready and worker_done.
+
+Findings for their owners (nothing changed by me): the Runs page says "Every run this server holds", and the disabled "Start the run" tooltip says "this server does not start runs from here" (W4's wording; the banner above says it is a static showcase). The ablation scene's error card runs my sentence into the page's own "Asking again every 2 seconds." with no full stop (a stop after a command-line flag would break copy and paste, so I left it). demo-toy still shows the red takeover check. web/src/director/sources.json is all null. App pages overflow at 390 px.
+
 **Oct 30, 18:40, the RELEASE pass is done** (RELEASE came at 18:07; port 5177; one browser at a time; everything at BelowNormal; nothing written under `~/.fractalswarm`; scratch in `C:\Users\yogar\w8p`, a short path on purpose: arena's sweep cell files have such long names that `git worktree add` fails against Windows' 260-character limit from the session's scratchpad). The branch tip at the pass was `41798f8`, which is arena `86f2951` (the looping hero, `4c81b41`, and a progress commit) merged in with no conflict, plus my commits. The pass changed no code of the branch, only the browser-check script (below). What is left is W4's part: its two lines in `verifyWords`, the Runs-page scenario and the local-build proof again, after W4 is in arena.
 
 | Step | Result |
