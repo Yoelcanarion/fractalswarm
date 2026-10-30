@@ -604,7 +604,8 @@ body:has(.home) {
   scroll-margin-top: calc(var(--home-bar) + var(--space-4));
 }
 
-.home-demo > :last-child {
+/* The label and the demo share one box, as wide as the demo's own line and buttons are laid out for, so the label starts where its line does. */
+.home-demo > * {
   width: 100%;
   max-width: 1080px;
   justify-self: center;
