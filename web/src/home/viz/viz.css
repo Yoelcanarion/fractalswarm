@@ -1036,6 +1036,35 @@
   dominant-baseline: central;
 }
 
+/* ---- the token bar: the run's tokens cut by model, and the guard that spends none ----------- */
+
+.hv.hv-tk {
+  position: relative;
+  height: 100%;
+}
+.hv.hv-tk text {
+  font-size: var(--fs-label);
+}
+.hv-tk-seg--spark {
+  fill: var(--model-spark);
+}
+.hv-tk-seg--wonder {
+  fill: var(--model-wonder);
+}
+.hv-tk-seg--contributor {
+  fill: var(--model-contributor);
+}
+.hv-tk-seg--other {
+  fill: var(--text-muted);
+}
+.hv-tk-dot--guard {
+  fill: var(--model-guard);
+}
+.hv-tk-text {
+  fill: var(--text-secondary);
+  dominant-baseline: central;
+}
+
 .hv-hidden {
   position: absolute;
   width: 1px;

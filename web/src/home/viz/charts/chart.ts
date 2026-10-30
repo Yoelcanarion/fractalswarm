@@ -2,6 +2,8 @@
 // that would otherwise sit on top of each other. Everything here is pure, so a chart's geometry can
 // be tested without a browser.
 
+import { fx } from "../shared";
+
 /** The width of one character of the 12 px monospace the charts' numbers and labels are set in. */
 export const CHAR_W = 7.2;
 
@@ -143,3 +145,7 @@ export function wrapText(text: string, maxWidth: number, size = 12): string[] {
   if (line) lines.push(line);
   return lines;
 }
+
+/** A transform that scales about (x, y), written so that a scale of nothing is still a transform a browser draws. */
+export const scaleAbout = (x: number, y: number, sx: number, sy: number): string =>
+  `translate(${fx(x)} ${fx(y)}) scale(${Math.max(sx, 0.001).toFixed(3)} ${Math.max(sy, 0.001).toFixed(3)}) translate(${fx(-x)} ${fx(-y)})`;

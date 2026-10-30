@@ -7,7 +7,7 @@
 import type { Locality, RegimeSlice } from "../../data/types";
 import { Pen } from "../tree/paint";
 import { easeOutCubic, fx, smoothstep, span } from "../shared";
-import { seedsText, taskShort, taskText, textWidth, wrapText } from "./chart";
+import { scaleAbout, seedsText, taskShort, taskText, textWidth, wrapText } from "./chart";
 import { labelOf } from "./names";
 
 /** What the rule says, in the words of the pre-registration (§4). */
@@ -397,10 +397,6 @@ export function collectRegime(svg: SVGSVGElement): RegimeRig {
     key: all<SVGGElement>('[data-part="key"]').map((el) => new Pen(el)),
   };
 }
-
-/** A transform that scales about (x, y), written so that a scale of nothing is still a transform a browser draws. */
-export const scaleAbout = (x: number, y: number, sx: number, sy: number): string =>
-  `translate(${fx(x)} ${fx(y)}) scale(${Math.max(sx, 0.001).toFixed(3)} ${Math.max(sy, 0.001).toFixed(3)}) translate(${fx(-x)} ${fx(-y)})`;
 
 export function paintRegime(rig: RegimeRig, layout: RegimeLayout, p: number): void {
   const f = regimeFrame(p);
