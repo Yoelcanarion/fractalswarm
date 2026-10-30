@@ -3,7 +3,7 @@ import { useRef } from "react";
 
 import { COPY } from "../copy";
 import { DOORS, doorState, isStaticShowcase, type Door } from "../doors";
-import { useOnScreenAttribute, useStill } from "../hooks";
+import { useOnScreenAttribute } from "../hooks";
 import { SectionHead } from "../parts/Chapter";
 import { DoorThumb } from "../viz/doors/DoorThumb";
 
@@ -30,11 +30,10 @@ export function Enter() {
 }
 
 function DoorCard({ door, open, note }: { door: Door; open: boolean; note: string | null }) {
-  const still = useStill();
   const body = (
     <>
       <span className="home-door__thumb" aria-hidden>
-        <DoorThumb door={door.id} still={still} />
+        <DoorThumb door={door.id} />
       </span>
       <span className="home-door__title">{door.title}</span>
       <span className="home-door__purpose">{door.purpose}</span>

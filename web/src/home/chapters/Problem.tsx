@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 
 import { COPY } from "../copy";
 import { percent, seconds } from "../format";
-import { useArrival, useStill } from "../hooks";
+import { useArrival } from "../hooks";
 import { captionFor, facts, heroReading } from "../numbers";
 import { SectionHead, Setting } from "../parts/Chapter";
 import { Claim } from "../parts/Claim";
@@ -20,7 +20,6 @@ import { ProblemFilm } from "../viz/film/ProblemFilm";
  */
 export function Problem() {
   const story = useStory();
-  const still = useStill();
   const f = facts(story);
   const rival = heroReading(story, "central");
   const swarm = heroReading(story, "swarm");
@@ -38,7 +37,7 @@ export function Problem() {
           <p className="home-section__line">{COPY.problem.line}</p>
         </SectionHead>
         <figure ref={film} className="home-film" aria-label={COPY.problem.film}>
-          <ProblemFilm play={play} still={still} data={story?.lanes.central} />
+          <ProblemFilm play={play} />
         </figure>
         <div className="home-section__tools">
           <Repeat onClick={() => setAgain((n) => n + 1)} />

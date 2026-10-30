@@ -5,8 +5,6 @@ import { useArrival, useCanHover, useStill } from "../hooks";
 import { SectionHead } from "../parts/Chapter";
 import { Claim } from "../parts/Claim";
 import { SeeMore } from "../parts/SeeMore";
-import type { TreeSlice } from "../data/types";
-import { slice, useStory } from "../story";
 import { KillDemo } from "../viz/demo/KillDemo";
 import { StepDrawing, type StepId } from "../viz/steps/StepDrawing";
 
@@ -18,8 +16,6 @@ const STEPS: readonly StepId[] = ["log", "heir", "adopt"];
  * Under them, the click demo. The terms of the design are folded.
  */
 export function Solution() {
-  const still = useStill();
-  const tree = slice<TreeSlice>(useStory(), "tree");
   return (
     <section id="solution" className="home-section home-solution" aria-labelledby="solution-title">
       <div className="home-wrap">
@@ -34,7 +30,7 @@ export function Solution() {
         <div id="demo" className="home-demo">
           <h3 className="home-sr">{COPY.solution.demo.title}</h3>
           <p className="home-demo__label">{COPY.solution.demo.label}</p>
-          <KillDemo still={still} data={tree} />
+          <KillDemo />
         </div>
         <SeeMore>
           <p className="home-fold__text">{COPY.solution.more.terms}</p>
@@ -73,7 +69,7 @@ function StepCard({ step }: { step: StepId }) {
       onClick={() => !canHover && setTapped((was) => !was)}
     >
       <div className="home-step__drawing" aria-hidden>
-        <StepDrawing step={step} active={active} still={still} />
+        <StepDrawing step={step} active={active} />
       </div>
       <h3 className="home-step__title">{text.title}</h3>
       <p className="home-sr">{text.drawing}</p>
