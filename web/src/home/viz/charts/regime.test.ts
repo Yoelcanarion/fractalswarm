@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { story } from "../../data/story";
 import type { Locality, RegimeSlice } from "../../data/types";
-import { textWidth } from "./chart";
+import { scaleAbout, textWidth } from "./chart";
 import { fakePen, lcg, seen, type Log } from "./fakes";
 import {
   REGIME_KEYFRAMES,
@@ -16,7 +16,6 @@ import {
   regimeLayout,
   regimeModel,
   regimeSummary,
-  scaleAbout,
   secondsText,
   type RegimeLayout,
   type RegimeModel,

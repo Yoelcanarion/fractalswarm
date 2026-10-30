@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import type { RegimeSlice } from "../../data/types";
 import { fx, useProgress, type VizProps } from "../shared";
 import "../viz.css";
+import { scaleAbout } from "./chart";
 import { ChartTable, useBox } from "./parts";
 import {
   cellText,
@@ -12,7 +13,6 @@ import {
   regimeLayout,
   regimeModel,
   regimeSummary,
-  scaleAbout,
   WORD,
   type GlyphKind,
   type RegimeRig,
