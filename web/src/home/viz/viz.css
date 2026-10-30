@@ -1557,6 +1557,7 @@
   .hv-demo .hv-demo-btn.hv-demo-btn--main:not(:disabled):hover {
     background: var(--text-secondary);
     border-color: var(--text-secondary);
+    color: var(--bg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1697,15 +1698,17 @@
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
+/* Drawn on by a dash as long as the path (pathLength is 1). A non-scaling stroke measures its dashes in screen pixels, not in the path's
+   length, so the line would peek out at rest and stop short once played: these two scale with the drawing, and 1 unit is about 1.5 px on a card. */
 .hv-step .hv-st-draw,
 .hv-step .hv-st-new {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 1.5;
+  stroke-width: 1;
   stroke-linecap: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  vector-effect: non-scaling-stroke;
+  vector-effect: none;
 }
 .hv-step .hv-st-old {
   fill: none;

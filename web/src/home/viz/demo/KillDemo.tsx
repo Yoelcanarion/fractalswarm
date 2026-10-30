@@ -51,6 +51,11 @@ function joined(names: string[]): string {
   return names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
+/** What the demo says once a coordinator has crashed and its work has gone to its heirs: one heir takes over, two or more take over. */
+export function crashLine(lost: string, heirs: string[]): string {
+  return `${lost} crashed. ${joined(heirs)} ${heirs.length === 1 ? "takes" : "take"} over, picked by the same rule on every survivor, so there is no election.`;
+}
+
 export function KillDemo({ data, still, note = false, className }: KillDemoProps) {
   const page = useStory();
   const tree = data ?? page?.tree ?? bundledStory.tree;
@@ -142,12 +147,13 @@ export function KillDemo({ data, still, note = false, className }: KillDemoProps
           ? NOBODY
           : heirs.length === 0
             ? `${lost} crashed. Nobody is left to take its work.`
-            : `${lost} crashed. ${joined(heirs.map((h) => nameOf(model, h)))} takes over, picked by the same rule on every survivor, so there is no election.`;
+            : crashLine(lost, heirs.map((h) => nameOf(model, h)));
       downAt = stage.alive().length === 0 ? clock + seconds * 1000 + DOWN_MS : null;
       if (seconds === 0) text(after);
       else {
         text(`${lost} crashed.`);
-        later = [...later, { at: clock + seconds * 600, text: after }];
+        // a line still waiting to be said is about an earlier crash, which this one may have undone (its heir may be this coordinator)
+        later = [{ at: clock + seconds * 600, text: after }];
       }
       moved = true;
       controls();
@@ -240,6 +246,8 @@ export function KillDemo({ data, still, note = false, className }: KillDemoProps
               const id = queue.shift();
               if (id) crash(id);
               queueAt = clock + seconds * 1000;
+              // Kill half is the visitor's one action, and its result stays for the whole of the wait after the last crash
+              if (queue.length === 0) touch();
               controls();
             }
             while (later.length > 0 && (later[0] as { at: number }).at <= clock) text((later.shift() as { text: string }).text);

@@ -2,12 +2,15 @@
 // the page, and the words that must not be there. Their motion is tested where it is made (ease.test.ts, demo/stage.test.ts);
 // here, the markup, the geometry of the chart and the data.
 
+import { readFileSync } from "node:fs";
+
 import { motionValue } from "motion/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { story } from "../data/story";
+import { HOME } from "../testing";
 import { barShare, proofPanels, proofReading, proofText, type BarsPanel, type SeedsPanel } from "./charts/proof";
 import {
   barLength,
@@ -26,7 +29,7 @@ import {
   type ProofRig,
 } from "./charts/proofLayout";
 import { ProofBars } from "./charts/ProofBars";
-import { KillDemo } from "./demo/KillDemo";
+import { KillDemo, crashLine } from "./demo/KillDemo";
 import { createStage } from "./demo/stage";
 import { DOOR_IDS } from "./doors/doors";
 import { DoorThumb } from "./doors/DoorThumb";
@@ -100,6 +103,13 @@ describe("the click demo's markup", () => {
     expect(html).toMatch(/class="hv-demo-btn"[^>]*disabled=""[^>]*>Reset</);
     expect(html).not.toContain('class="btn');
     expect(html).toMatch(/--demo-aspect:\d\.\d{3}/);
+  });
+
+  it("says that one heir takes over and two or more take over, with the names of the heirs", () => {
+    expect(crashLine("Data (o1)", ["AI (o2)"])).toBe("Data (o1) crashed. AI (o2) takes over, picked by the same rule on every survivor, so there is no election.");
+    expect(crashLine("Root (o0)", ["AI (o2)", "HCI (o3)"])).toContain("AI (o2) and HCI (o3) take over,");
+    expect(crashLine("Root (o0)", ["a", "b", "c"])).toContain("a, b and c take over,");
+    expect(crashLine("Root (o0)", ["a", "b"])).not.toContain("takes");
   });
 
   it("draws the shelf of the dead from the start, faintly, and the hero's tree does not", () => {
@@ -451,6 +461,17 @@ describe("the Solution's drawings", () => {
       expect(render(StepDrawing, { step, active: true })).toContain('data-on="true"');
       expect(render(StepDrawing, { step, active: false, still: true })).toContain('data-on="true"');
     }
+  });
+
+  it("draw their lines on with a dash as long as the path, which a stroke that does not scale would measure in pixels instead", () => {
+    const css = readFileSync(`${HOME}/viz/viz.css`, "utf-8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const rule = /\.hv-step \.hv-st-draw,\s*\.hv-step \.hv-st-new\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(rule).toMatch(/stroke-dasharray:\s*1;/);
+    expect(rule).toMatch(/stroke-dashoffset:\s*1;/);
+    expect(rule).not.toContain("non-scaling-stroke");
+    // and each of those paths counts its length as 1, which is what the dash is
+    const markup = [render(StepDrawing, { step: "log", active: false }), render(StepDrawing, { step: "adopt", active: false })].join("");
+    for (const name of ["hv-st-draw", "hv-st-new"]) expect(markup).toMatch(new RegExp(`class="${name}"[^>]*pathLength="1"`));
   });
 
   it("draw the heir's bars from the recorded round, best first, with no number", () => {
