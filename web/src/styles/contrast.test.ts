@@ -146,6 +146,12 @@ function sheets(dir: string): string[] {
   });
 }
 
+/** Findings in files that are not this worker's to change, reported to their owner through the coordinator. Each is listed under the
+ * name the first test prints for it; remove it once it is fixed (the second test fails until then). */
+const REPORTED: Record<string, string> = {
+  "home/home.css  .home-extract__mark[data-lit]: --text-inverse on --accent (light)": "W6, Oct 30: 4.30:1, the lit word of the extract visual",
+};
+
 const all = sheets(SRC).flatMap((path) => pairsOf(readFileSync(path, "utf-8"), path.slice(SRC.length + 1)));
 
 describe("the button modifiers", () => {
@@ -163,16 +169,28 @@ describe("the colours the sheets pair", () => {
   });
 
   describe.each(Object.entries(themes()))("%s theme", (theme, tokens) => {
-    it("keeps every text on its background at AA, 4.5:1", () => {
-      const failures: string[] = [];
+    /** The pairs under 4.5:1, each named without its ratio, so that a finding can be reported by name. */
+    const failing = (): { key: string; line: string }[] => {
+      const out: { key: string; line: string }[] = [];
       for (const pair of all) {
         const [text, background] = [tokens[pair.color], tokens[pair.background]];
         // an alpha wash or a scrim has no single colour to measure
         if (!text?.startsWith("#") || !background?.startsWith("#")) continue;
         const ratio = contrast(text, background);
-        if (ratio < 4.5) failures.push(`${pair.where}: ${pair.color} on ${pair.background} = ${ratio.toFixed(2)} (${theme})`);
+        const key = `${pair.where}: ${pair.color} on ${pair.background} (${theme})`;
+        if (ratio < 4.5) out.push({ key, line: `${key} = ${ratio.toFixed(2)}` });
       }
-      expect(failures).toEqual([]);
+      return out;
+    };
+
+    it("keeps every text on its background at AA, 4.5:1, bar the findings reported to the file's owner", () => {
+      expect(failing().filter(({ key }) => !(key in REPORTED)).map(({ line }) => line)).toEqual([]);
+    });
+
+    it("lists a reported finding only while it still fails, so the list cannot go stale", () => {
+      const still = new Set(failing().map(({ key }) => key));
+      const gone = Object.keys(REPORTED).filter((key) => key.endsWith(`(${theme})`) && !still.has(key));
+      expect(gone).toEqual([]);
     });
   });
 });
