@@ -7,7 +7,9 @@ import { ADOPTION_LIFE_MS, fadeLife, glowVars, litMessages, MESSAGE_LIFE_MS, rin
 import { boundsOf, colorOf, isInfraKind, isLeafKind, layoutTree, structureKey } from "../lib/layout";
 import { prefersReducedMotion } from "../lib/motion";
 import { rootHolder, type ActorNode, type ViewState } from "../lib/reducer";
+import { useRunStoreApi, useRunStoreShallow } from "../store";
 import { ClockScope } from "./ClockScope";
+import { EmptyState } from "./ui";
 import { useTreeMotion, type TreeShape } from "./useTreeMotion";
 
 // What a node is glowing from, if anything: an adoption or a restart within `life` ms of virtual
@@ -210,10 +212,41 @@ function Graph({ view }: { view: ViewState }) {
   );
 }
 
-export function TreeGraph({ view }: { view: ViewState }) {
-  if (view.order.length === 0) {
-    return <div className="empty">Waiting for the first actor to spawn…</div>;
+/** The tree before its first orchestrator. A live run is waiting for one. A recorded run is at its start, which is where it opens, and
+ * says how to go on; or its log ends without one. */
+function NoTreeYet() {
+  const { live, cursor, total } = useRunStoreShallow((s) => ({ live: s.live, cursor: s.cursor, total: s.events.length }));
+  const store = useRunStoreApi();
+  if (live) return <div className="empty">Waiting for the first actor to spawn…</div>;
+  if (total > 0 && cursor >= total) {
+    return (
+      <EmptyState title="This run created no orchestrator">
+        Its log ends without one, so there is no tree to draw. The counters and the events show what did happen.
+      </EmptyState>
+    );
   }
+  const { seek, setPlaying } = store.getState();
+  return (
+    <EmptyState
+      title={cursor === 0 ? "The run is at its start" : "No orchestrator exists yet at this point"}
+      actions={
+        <>
+          <button type="button" className="btn btn--on" onClick={() => setPlaying(true)}>
+            {cursor === 0 ? "Play from the start" : "Play"}
+          </button>
+          <button type="button" className="btn" onClick={() => seek(total)}>
+            Jump to the end
+          </button>
+        </>
+      }
+    >
+      Press play, or drag the playhead along the bar below: each orchestrator appears when it was spawned.
+    </EmptyState>
+  );
+}
+
+export function TreeGraph({ view }: { view: ViewState }) {
+  if (view.order.length === 0) return <NoTreeYet />;
   return (
     <ClockScope>
       <ReactFlowProvider>

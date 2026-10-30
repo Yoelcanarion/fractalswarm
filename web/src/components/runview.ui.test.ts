@@ -187,6 +187,35 @@ describe("the run page", () => {
     expect(text(out)).not.toContain("No run selected");
   });
 
+  it("says a recorded run is at its start, where it opens, and offers to play it or to jump to its end", async () => {
+    const out = render(await opened(), createElement(RunPage));
+    const t = text(out);
+    expect(t).toContain("The run is at its start");
+    expect(t).toContain("Press play, or drag the playhead along the bar below");
+    expect(t).toContain("Play from the start");
+    expect(t).toContain("Jump to the end");
+    expect(t).not.toContain("Waiting for the first actor");
+  });
+
+  it("keeps waiting for the first orchestrator only where the run is live", async () => {
+    const store = await opened();
+    store.setState({ live: true });
+    const t = text(render(store, createElement(RunPage)));
+    expect(t).toContain("Waiting for the first actor to spawn");
+    expect(t).not.toContain("Play from the start");
+  });
+
+  it("says so, instead of waiting, when a recorded run's log ends with no orchestrator", async () => {
+    const store = await opened();
+    // the view stays as it opened, with nothing in it, and the playhead is at the end of the log: what a run that never spawned one looks like
+    store.setState({ cursor: store.getState().events.length });
+    const t = text(render(store, createElement(RunPage)));
+    expect(t).toContain("This run created no orchestrator");
+    expect(t).toContain("Its log ends without one");
+    expect(t).not.toContain("Waiting for the first actor");
+    expect(t).not.toContain("Play from the start");
+  });
+
   it("names the schedule with a defined T2", async () => {
     const out = render(await opened(), createElement(RunPage));
     expect(out).toContain('<span class="term">T2</span>');
