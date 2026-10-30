@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { isHomeHash } from "../home/route";
 import { COMMAND } from "./answers";
 import { buildDetail, buildNote, isHome } from "./Banner";
 import { readStamp, verifiedAtBuild, whereChecked } from "./BuildVerified";
@@ -20,6 +21,15 @@ describe("where the banner shows", () => {
       expect(isHome(hash)).toBe(false);
     },
   );
+
+  // The banner keeps its own copy of the rule, so that the static folder imports none of the home page. This keeps the
+  // two from drifting: if W6's rule changes, this fails and Banner.tsx follows.
+  it("agrees with the home route, whatever the hash", () => {
+    const hashes = ["", "#", "#/", "#//", "#?x=1", "#/?at=solution", "#/?still", "#/home", "#/home/", "#/home?at=tie", "#/home-lab", "#/home-lab/", "#/Home"];
+    for (const hash of [...hashes, "#/run/home", "#/home/x", "#/homework", "#/arena", "#/runs", "#/charts", "#/new", "#/director", "#/director/s1-arena-open?hold"]) {
+      expect(isHome(hash), hash).toBe(isHomeHash(hash));
+    }
+  });
 });
 
 describe("what the banner says about the build", () => {
