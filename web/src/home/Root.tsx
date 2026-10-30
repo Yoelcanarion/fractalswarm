@@ -1,6 +1,7 @@
 // The first thing the page loads. `#/` is the home page and loads alone; every other hash belongs to the app shell
 // (App.tsx: the run pages, the arena, the charts, with recharts and React Flow), which is a lazy chunk fetched
-// on the first visit to one of them, and `#/home-lab` to W7's lab of the visuals, a lazy chunk of its own.
+// on the first visit to one of them, `#/evidence` to the plain evidence page (the charts and tables the home page leaves
+// out, a lazy chunk of its own), and `#/home-lab` to W7's lab of the visuals, another.
 // The home page makes no API call and never touches the run store.
 
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
@@ -9,6 +10,7 @@ import { HomePage } from "./HomePage";
 import { currentHash, pageOf, type PageName } from "./route";
 
 const AppShell = lazy(() => import("../App").then((module) => ({ default: module.App })));
+const EvidencePage = lazy(() => import("./evidence/EvidencePage").then((module) => ({ default: module.EvidencePage })));
 const Lab = lazy(() => import("./viz/lab/HomeLab").then((module) => ({ default: module.HomeLab })));
 
 export function Root() {
@@ -27,5 +29,9 @@ export function Root() {
   }, []);
 
   if (page === "home") return <HomePage />;
-  return <Suspense fallback={<div className="home-loading" role="status" />}>{page === "lab" ? <Lab /> : <AppShell />}</Suspense>;
+  return (
+    <Suspense fallback={<div className="home-loading" role="status" />}>
+      {page === "lab" ? <Lab /> : page === "evidence" ? <EvidencePage /> : <AppShell />}
+    </Suspense>
+  );
 }

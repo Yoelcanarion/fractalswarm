@@ -9,7 +9,6 @@ import { slice } from "./story";
 export type { FailureFigure };
 
 const num = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null);
-const clamp01 = (value: number): number => (value < 0 ? 0 : value > 1 ? 1 : value);
 
 export function facts(story: Story | null): Facts {
   const f = story?.facts;
@@ -201,59 +200,3 @@ export interface Ablation {
   total: number;
 }
 export const ablation = (story: Story | null): Ablation | null => slice<Ablation>(story, "ablation") ?? null;
-
-// ---- where the text sits in the visuals' progress ----
-
-/** The moments of the in-process run (the lanes' progress): the team at work, the crash, the restart, the first call made again. */
-export interface LanesBeats {
-  filled: number;
-  crash: number;
-  restart: number;
-  redone: number;
-  end: number;
-}
-
-const LANES_DEFAULTS: LanesBeats = { filled: 0.28, crash: 0.33, restart: 0.62, redone: 0.78, end: 1 };
-
-/** The beats of `lanes.central.keyframes`, over defaults for what the data does not name. */
-export function lanesBeats(story: Story | null): LanesBeats {
-  const given = slice<Partial<Record<keyof LanesBeats, unknown>>>(story, "lanes.central.keyframes") ?? {};
-  const beats = { ...LANES_DEFAULTS };
-  for (const key of Object.keys(beats) as (keyof LanesBeats)[]) beats[key] = num(given[key]) ?? beats[key];
-  return beats;
-}
-
-/** The seconds the work has stood still at progress `p` of the lanes: the run's whole stall time, counted up from the crash to the restart
- * (the lanes' time map makes the cumulative stall linear in progress there). NaN where the data has no stall time. */
-export function waitedSeconds(stallS: number | null | undefined, beats: LanesBeats, p: number): number {
-  const total = num(stallS);
-  if (total === null) return Number.NaN;
-  const span = beats.restart - beats.crash;
-  return total * (span > 0 ? clamp01((p - beats.crash) / span) : p >= beats.restart ? 1 : 0);
-}
-
-/** The moments of the tree's story that the text of the solution refers to, in the tree's progress. */
-export interface TreeBeats {
-  /** The root has handed work to every track. */
-  grown: number;
-  /** Every session that works before the first kill has its contract. */
-  log: number;
-  kill1: number;
-  /** The verdict on the first kill: the survivors start to compute the heir. */
-  verdict1: number;
-  heir1: number;
-  /** The tree is re-wired. */
-  adopt1: number;
-  kill5: number;
-  settled: number;
-}
-
-const TREE_DEFAULTS: TreeBeats = { grown: 0.04, log: 0.09, kill1: 0.12, verdict1: 0.2, heir1: 0.22, adopt1: 0.23, kill5: 0.78, settled: 1 };
-
-/** W7's `TREE_KEYFRAMES` (the moments of the log under the page's names), over defaults for any it does not name. */
-export function treeBeats(given: Readonly<Record<string, number>>): TreeBeats {
-  const beats = { ...TREE_DEFAULTS };
-  for (const key of Object.keys(beats) as (keyof TreeBeats)[]) beats[key] = num(given[key]) ?? beats[key];
-  return beats;
-}
-

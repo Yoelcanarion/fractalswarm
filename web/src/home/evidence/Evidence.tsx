@@ -1,10 +1,10 @@
 import { useRef, useState, type ReactNode } from "react";
 
 import { COPY, word } from "../copy";
-import { figure, MISSING } from "../format";
+import { count, figure, MISSING, usd } from "../format";
 import { useEnterProgress, useStill } from "../hooks";
-import { assumptions, captionFor, failures, gateCrashes, proofSteps, realFalseDeaths, type FailureFigure } from "../numbers";
-import { ChapterHead, Setting } from "../parts/Chapter";
+import { assumptions, captionFor, failures, finish, gateCrashes, proofSteps, realFalseDeaths, runSetting, settingText, type FailureFigure } from "../numbers";
+import { SectionHead, Setting } from "../parts/Chapter";
 import { Claim, PendingTag } from "../parts/Claim";
 import { Figure } from "../parts/Figure";
 import { Inline } from "../parts/Inline";
@@ -17,7 +17,8 @@ export function Evidence() {
   return (
     <section id="evidence" className="home-chapter" aria-labelledby="evidence-title">
       <div className="home-wrap">
-        <ChapterHead id="evidence" number="04" eyebrow={COPY.evidence.eyebrow} title={COPY.evidence.title} />
+        <SectionHead id="evidence" title={COPY.evidence.title} />
+        <Finished />
         <FairFight />
         <HeroChart />
         <Tie />
@@ -90,6 +91,24 @@ function Chart({
     <div ref={ref} className={`home-chart ${className}`.trim()}>
       <Viz name={name} data={slice(story, path)} progress={progress} still={still} {...extra} />
     </div>
+  );
+}
+
+/** The recorded run that the home page replays: what it placed, what it cost, and S2 beside it. */
+function Finished() {
+  const story = useStory();
+  const result = finish(story);
+  return (
+    <Beat id="run" lead={COPY.evidence.proof.finished} layout="wide">
+      <div className="home-figures">
+        <Figure value={result?.talksPlaced} format={count} label={COPY.evidence.finish.placed} tone="swarm" size="stat" />
+        <Figure value={result?.hardViolations} format={count} label={COPY.evidence.finish.violations} tone="ok" size="stat" />
+        <Figure value={result?.duplicateCalls} format={count} label={COPY.evidence.finish.duplicates} tone="plain" size="stat" />
+        <Figure value={result?.costUsd} format={(n) => usd(n)} label={COPY.evidence.finish.cost} tone="plain" size="stat" />
+      </div>
+      <Setting>{settingText(story, runSetting(story))}</Setting>
+      <Claim id="S2" className="home-claim--small" />
+    </Beat>
   );
 }
 
@@ -262,7 +281,7 @@ function Fails() {
         <div className="home-fail">
           <h4 className="home-fail__title">{COPY.evidence.fails.log}</h4>
           <Claim id="S6" className="home-claim--small" />
-          <p className="home-limit">{COPY.solution.steps.log.limit}</p>
+          <p className="home-limit">{COPY.solution.more.limit}</p>
         </div>
       </Reveal>
       <Chart name="RegimeStrip" path="regime" duration={1.6} className="home-chart--regime" />
@@ -282,14 +301,14 @@ function Proof() {
             <Claim id="S5" className="home-claim--lead" />
           </Reveal>
           <Reveal delay={100}>
-            <p className="home-limit home-limit--wide">{COPY.evidence.proof.proves}</p>
+            <p className="home-limit home-limit--wide">{COPY.proof.more.proves}</p>
           </Reveal>
         </>
       }
     >
       <Chart name="HashStrip" path="hashes" duration={2.4} className="home-chart--strip" />
       <Reveal delay={60}>
-        <Terminal steps={steps} label={COPY.evidence.proof.terminal} />
+        <Terminal steps={steps} label={COPY.proof.more.terminal} />
       </Reveal>
     </Beat>
   );

@@ -14,7 +14,6 @@ const source = (path: string): string => readFileSync(`${HOME}/${path}`, "utf-8"
 /** The calls of animate() that move a progress or a hover (not the count-up of a number, which has no visual in it). */
 const drivers = [
   { name: "the progress of a chart or a terminal when it comes into view", path: "hooks.ts", call: /animate\(progress, 1, \{[^}]*\}\)/ },
-  { name: "the hover of a door", path: "chapters/Enter.tsx", call: /animate\(hover, to, \{[^}]*\}\)/ },
 ];
 
 describe("the drivers of the visuals' progress", () => {

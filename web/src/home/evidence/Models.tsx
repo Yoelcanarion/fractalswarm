@@ -4,7 +4,7 @@ import { COPY } from "../copy";
 import { count } from "../format";
 import { useEnterProgress, useStill } from "../hooks";
 import { ablation, extraction, tokens } from "../numbers";
-import { ChapterHead } from "../parts/Chapter";
+import { SectionHead } from "../parts/Chapter";
 import { Claim, PendingTag } from "../parts/Claim";
 import { segmentEmail, spanOf } from "../parts/emailSegments";
 import { Figure } from "../parts/Figure";
@@ -32,7 +32,7 @@ export function Models() {
   return (
     <section id="models" className="home-chapter home-chapter--calm" aria-labelledby="models-title">
       <div className="home-wrap">
-        <ChapterHead id="models" number="03" eyebrow={COPY.models.eyebrow} title={COPY.models.title} />
+        <SectionHead id="models" title={COPY.models.title} />
 
         <Reveal className="home-extract">
           {example?.email ? (

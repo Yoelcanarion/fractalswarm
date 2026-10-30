@@ -1,43 +1,41 @@
-// The whole page, rendered to a string with a made-up story: what the first load shows before any script runs, and
-// the rules about claims that hold wherever they are drawn.
+// The whole home page, rendered to a string with a made-up story: what the first load shows before any script runs, and
+// the rules about claims that hold wherever they are drawn. The evidence page has its own file (evidence/EvidenceView.test.ts).
 
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { CHAPTERS } from "./chapters";
+import type { Story } from "./data/types";
 import { COPY, TAGLINE } from "./copy";
 import { DOORS } from "./doors";
-import { figure } from "./format";
 import { HomeView } from "./HomePage";
-import { assumptions, realFalseDeaths } from "./numbers";
-import type { Story } from "./data/types";
+import { sentences } from "./parts/Claim";
 import { bundledStory } from "./story";
-import { fixtureClaimText, FIXTURE_STORY, UNIVERSAL } from "./testing";
+import { countOf, drawnClaims, fixtureClaimText, FIXTURE_STORY, plain, UNIVERSAL } from "./testing";
 
-const render = (story: Story | null, still = false): string => renderToStaticMarkup(createElement(HomeView, { story, still, active: -1 }));
-const plain = (html: string): string =>
-  html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&#x27;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ");
-const countOf = (html: string, needle: string): number => html.split(needle).length - 1;
-const claims = (html: string): { id: string; state: string; body: string }[] =>
-  [...html.matchAll(/<p class="home-claim[^"]*" data-claim="(\w+)" data-state="(\w+)">([\s\S]*?)<\/p>/g)].map((m) => ({ id: m[1], state: m[2], body: m[3] }));
+const render = (story: Story | null, still = false): string => renderToStaticMarkup(createElement(HomeView, { story, still }));
+const sectionOf = (html: string, id: string): string => new RegExp(`<section id="${id}"[\\s\\S]*?</section>`).exec(html)?.[0] ?? "";
+const foldOf = (html: string): string => /<details[\s\S]*?<\/details>/.exec(html)?.[0] ?? "";
+const outsideFolds = (html: string): string => html.replace(/<details[\s\S]*?<\/details>/g, "");
 
 describe("the home page, rendered with a story", () => {
   const html = render(FIXTURE_STORY);
 
-  it("has the five chapters, in the order the rail lists them", () => {
+  it("has the five sections, in order, and the click demo inside the solution", () => {
     let from = 0;
-    for (const chapter of CHAPTERS) {
-      const at = html.indexOf(`<section id="${chapter.id}"`, from);
-      expect(at, `${chapter.id} is missing or out of order`).toBeGreaterThan(from === 0 ? 0 : from - 1);
+    for (const id of ["hero", "problem", "solution", "proof", "enter"]) {
+      const at = html.indexOf(`<section id="${id}"`, from);
+      expect(at, `${id} is missing or out of order`).toBeGreaterThanOrEqual(from);
+      expect(at, `${id} is missing`).toBeGreaterThan(-1);
       from = at;
     }
-    expect(countOf(html, 'class="home-rail__item"')).toBe(CHAPTERS.length);
+    expect(sectionOf(html, "solution")).toContain('<div id="demo"');
+  });
+
+  it("has no rail, no pinned stage and no chapter number: the page is five short sections", () => {
+    expect(html).not.toContain("home-rail");
+    expect(html).not.toContain("home-stage");
+    expect(html).not.toContain("home-eyebrow");
   });
 
   it("has one h1, and it is the tagline", () => {
@@ -53,45 +51,33 @@ describe("the home page, rendered with a story", () => {
       "+3.3%",
       "+77.7%",
       "T2 conference planning · 5 coordinators crashed (C3) · real model · 7 seeds",
-      "T2 conference planning · 5 coordinators crashed (C3) · real model · 5 seeds",
-      "T1 extraction · 4 coordinators crashed · fake model · 1 seed",
       "31 talks, four tracks, three days",
-      "nine coordinators",
-      "o0 → o7 → o8",
-      "$4.56",
-      "13.4×",
-      "5.9×",
-      "0.91",
-      "1.3",
-      "2.3",
-      "2.5",
-      "coordination tokens 7",
-      "recovery tokens 9",
     ];
-    for (const printed of printedByThePage) {
-      expect(text, printed).toContain(printed);
-    }
+    for (const printed of printedByThePage) expect(text, printed).toContain(printed);
     expect(text).not.toMatch(/undefined|NaN|\bnull\b/);
   });
 
-  it("opens the pre-registered gate's sentence with the crash counts of its profiles, from the data", () => {
-    expect(plain(render(FIXTURE_STORY))).toContain("this measure tied at three and five crashes");
-    expect(plain(render(null))).toContain("this measure tied at — crashes");
-  });
-
-  it("draws every claim in the words of its row, with a tag only on the pending ones", () => {
-    const drawn = claims(html);
+  it("draws every claim in the words of its row, whole or by sentence, with a tag only on the pending ones", () => {
+    const drawn = drawnClaims(html);
     expect(drawn.length).toBeGreaterThan(0);
     for (const claim of drawn) {
-      expect(plain(claim.body), claim.id).toContain(fixtureClaimText(claim.id).replace(/`/g, ""));
+      const words = fixtureClaimText(claim.id).replace(/`/g, "");
+      const body = plain(claim.body).trim();
+      if (claim.part === null) expect(body, claim.id).toContain(words);
+      else {
+        const [index, of] = claim.part.split("/").map(Number);
+        const all = sentences(words);
+        expect(of, `${claim.id} parts`).toBe(all.length);
+        expect(body, `${claim.id} part ${claim.part}`).toContain(all[index - 1]);
+      }
       const pending = FIXTURE_STORY.claims[claim.id].state === "pending";
       expect(claim.state, claim.id).toBe(pending ? "pending" : "allowed");
       expect(claim.body.includes("home-tag"), `${claim.id} tag`).toBe(pending);
     }
   });
 
-  it("draws the claims the story is about and no other", () => {
-    expect(new Set(claims(html).map((claim) => claim.id))).toEqual(new Set(["S1", "S2", "S3", "S4", "S5", "S6", "R2", "R3", "R4", "R5", "R6"]));
+  it("draws the claims the home page is about and no other: the rest are on the evidence page", () => {
+    expect(new Set(drawnClaims(html).map((claim) => claim.id))).toEqual(new Set(["S1", "S3", "S5", "S6", "R5", "R6"]));
   });
 
   it("never draws a claim that is not claimed", () => {
@@ -99,90 +85,77 @@ describe("the home page, rendered with a story", () => {
     expect(html).not.toContain("Test claim R1.");
   });
 
-  it("draws the code in a claim as code", () => {
-    expect(html).toContain('<code class="home-code">durable-max</code>');
-    expect(html).not.toContain("`");
-  });
-
-  it("puts R3 right under R2, and only there", () => {
-    const tie = /<article id="tie"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
-    const r2 = tie.indexOf('data-claim="R2"');
-    const r3 = tie.indexOf('data-claim="R3"');
-    expect(r2).toBeGreaterThan(-1);
-    expect(r3).toBeGreaterThan(r2);
-    expect(r3 - r2, "something sits between R2 and R3").toBeLessThan(400);
-    expect(countOf(html, 'data-claim="R2"')).toBe(1);
-    expect(countOf(html, 'data-claim="R3"')).toBe(1);
-  });
-
-  it("sets R6 under the tagline, one sentence to a line, with a visible link to the beat where R2 and R3 are", () => {
-    const hero = /<section[^>]*class="home-hero"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
-    expect(hero).toContain('data-claim="R6"');
-    expect(countOf(hero, 'class="home-claim__line"')).toBe(2);
-    expect(plain(hero)).toContain(fixtureClaimText("R6"));
-    expect(hero).not.toContain('data-claim="R2"');
-    const proof = /<div class="[^"]*home-hero__proof[^"]*"[^>]*>[\s\S]*?<\/div>/.exec(hero)?.[0] ?? "";
-    const claimAt = proof.indexOf('data-claim="R6"');
-    const linkAt = proof.indexOf('href="#/?at=tie"');
+  it("sets R6 in the proof: its first sentence open, its second folded, and a visible link to the beat where R2 and R3 are", () => {
+    const proof = sectionOf(html, "proof");
+    const open = outsideFolds(proof);
+    const folded = foldOf(proof);
+    const [first, second] = sentences(fixtureClaimText("R6"));
+    expect(open).toContain('data-claim="R6" data-state="allowed" data-part="1/2"');
+    expect(plain(open)).toContain(first);
+    expect(plain(open)).not.toContain(second);
+    expect(folded).toContain('data-claim="R6" data-state="allowed" data-part="2/2"');
+    expect(plain(folded)).toContain(second);
+    expect(countOf(html, 'data-claim="R6"')).toBe(2);
+    // the way to R2 and R3 is on the section, outside any fold, and follows the claim
+    const claimAt = open.indexOf('data-claim="R6"');
+    const linkAt = open.indexOf('href="#/evidence?at=tie"');
     expect(claimAt).toBeGreaterThan(-1);
     expect(linkAt, "the link follows the claim").toBeGreaterThan(claimAt);
-    expect(plain(proof)).toContain(COPY.hero.conditions);
-    expect(countOf(html, 'data-claim="R6"')).toBe(1);
+    expect(plain(open)).toContain(COPY.proof.conditions);
+    expect(html).not.toContain('data-claim="R2"');
+    expect(html).not.toContain('data-claim="R3"');
   });
 
-  it("shows R4 once, with its setting and the $0 gate beside it", () => {
-    expect(countOf(html, 'data-claim="R4"')).toBe(1);
-    const helps = /<article[^>]*aria-labelledby="helps-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
-    expect(helps).toContain('data-claim="R4"');
-    const text = plain(helps);
-    expect(text).toContain(COPY.evidence.helps.gate("three and five"));
-    expect(text).toContain("T2 conference");
-    expect(text).toContain("real model");
-    expect(text).toContain("5 seeds");
-    expect(text).toContain(COPY.evidence.helps.cost);
-    expect(text).toContain("2.5");
-  });
-
-  it("keeps the false deaths of the real runs out of R3's figures", () => {
-    // The figures are the page's own, before the regime strip: the strip names settings of its own ("both detect in 2.5 s").
-    const article = /<article[^>]*aria-labelledby="fails-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
-    const figures = article.split('class="home-chart')[0] ?? "";
-    expect(figures, "the strip follows the figures").not.toBe(article);
-    expect(plain(figures)).toContain("1.3");
-    expect(plain(figures)).toContain("2.3");
-    expect(plain(figures)).not.toContain("2.5");
-  });
-
-  it("shows R5 once, with the rival named, the setting and the reason beside it", () => {
+  it("keeps the in-process supervisor's reason beside the numbers it explains, in the fold and beside the bars", () => {
+    expect(plain(outsideFolds(sectionOf(html, "proof")))).toContain(COPY.rivalReason);
     expect(countOf(html, 'data-claim="R5"')).toBe(1);
     const card = html.slice(Math.max(0, html.indexOf('data-claim="R5"') - 2500), html.indexOf('data-claim="R5"'));
     const text = plain(card);
-    expect(text).toContain(COPY.problem.steps.numbers.rival);
+    expect(text).toContain(COPY.problem.more.rival);
     expect(text).toContain("real model");
     expect(text).toContain(COPY.rivalReason);
   });
 
-  it("says where the swarm does not help, and what replay does not prove", () => {
-    const text = plain(html);
-    expect(text).toContain(COPY.evidence.fails.wins);
-    expect(text).toContain(COPY.solution.steps.log.limit);
-    expect(text).toContain(COPY.evidence.proof.proves);
+  it("folds the numbers of the problem and the better supervisor, and keeps the film and the repeat button open", () => {
+    const problem = sectionOf(html, "problem");
+    expect(outsideFolds(problem)).toContain("home-film");
+    expect(outsideFolds(problem)).toContain('class="home-repeat"');
+    expect(plain(outsideFolds(problem))).not.toContain(COPY.problem.more.better);
+    expect(plain(foldOf(problem))).toContain(COPY.problem.more.better);
+    expect(foldOf(problem)).toContain('class="home-pair"');
   });
 
-  it("types the demo's real output into the terminal", () => {
+  it("says what the log is not, and what replay does not prove", () => {
     const text = plain(html);
+    expect(text).toContain(COPY.solution.more.limit);
+    expect(text).toContain(COPY.proof.more.proves);
+  });
+
+  it("types the demo's real output into the terminal, folded under the proof", () => {
+    const text = plain(foldOf(sectionOf(html, "proof")));
     const { command, lines, takeover } = FIXTURE_STORY.proof;
     for (const printed of [command, ...lines, takeover.command, takeover.line]) {
       expect(printed).toBeTruthy();
       expect(text).toContain(String(printed).replace(/\s+/g, " "));
     }
+    // the open line is the command that checks a run, without the repository's `uv run`
+    expect(plain(outsideFolds(sectionOf(html, "proof")))).toContain(`${COPY.proof.check} fractalswarm demo --verify`);
   });
 
-  it("opens every door that is not behind the server, with a link", () => {
+  it("glides from the hero to the click demo, which says it is an illustration", () => {
+    const hero = sectionOf(html, "hero");
+    expect(hero).toContain('href="#/?at=demo"');
+    expect(plain(hero)).toContain(COPY.hero.kill);
+    const demo = /<div id="demo"[\s\S]*?<\/div>/.exec(html)?.[0] ?? "";
+    expect(plain(demo)).toContain(COPY.solution.demo.label);
+    expect(COPY.solution.demo.label).toBe("An illustration in your browser, not a real run.");
+  });
+
+  it("opens every door that is not behind the server, with a link, and sends the numbers to the evidence page", () => {
     expect(countOf(html, 'class="home-door"')).toBe(DOORS.length);
     expect(countOf(html, 'class="home-door"')).toBe(6);
     expect(html).toContain('href="#/arena"');
-    expect(html).toContain('href="#/charts"');
+    expect(html).toContain('href="#/evidence"');
   });
 
   it("reaches no outside address", () => {
@@ -203,42 +176,22 @@ describe("the home page, rendered with the real story", () => {
     for (const [pattern, name] of UNIVERSAL) expect(pattern.test(outsideClaims), `"${name}" outside a claim`).toBe(false);
   });
 
-  it("writes the real false deaths beside R4 at one decimal, the way its row writes them", () => {
-    const cost = realFalseDeaths(bundledStory);
-    expect(cost, "the real story has the false deaths of the headline rows").not.toBeNull();
-    const helps = /<article[^>]*aria-labelledby="helps-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
-    expect(plain(helps)).toContain(`${figure(cost!.perRun, 1)} ${COPY.evidence.helps.perRun}`);
-  });
-
-  it("shows the first four terms granted to the rival and keeps every other one in the page, behind a control", () => {
-    const terms = assumptions(bundledStory);
-    expect(terms.length, "the real story has terms to fold").toBeGreaterThan(4);
-    const fair = /<article id="fair"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
-    const rows = [...fair.matchAll(/<tr( hidden="")?><th scope="row">/g)];
-    expect(rows.map((row) => row[1] !== undefined)).toEqual(terms.map((_, index) => index >= 4));
-    // the control names the table it opens and says how many terms there are
-    expect(fair).toContain('<table id="fair-terms"');
-    expect(fair).toMatch(/<button type="button" class="home-more" aria-expanded="false" aria-controls="fair-terms">/);
-    expect(plain(fair)).toContain(COPY.evidence.fair.showAll(terms.length));
-    // every term is in the page to be read, in view or not
-    for (const term of terms) expect(plain(fair), term.id).toContain(term.label.replace(/`/g, ""));
-  });
-
-  it("lets only R6 say it, in the row's words, with the setting and the link to R2 and R3 beside it", () => {
-    for (const claim of claims(html)) {
+  it("lets only R6 say it, in the row's words, and the setting stands in the claim", () => {
+    for (const claim of drawnClaims(html)) {
       if (UNIVERSAL.some(([pattern]) => pattern.test(plain(claim.body)))) expect(claim.id, "a claim that says every run").toBe("R6");
     }
-    const hero = /<section[^>]*class="home-hero"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
-    expect(plain(hero)).toContain("(C3) · real model");
-    expect(hero).toContain('href="#/?at=tie"');
+    const first = drawnClaims(outsideFolds(sectionOf(html, "proof"))).find((claim) => claim.id === "R6");
+    expect(first, "R6 is open in the proof").toBeDefined();
+    expect(plain(first!.body)).toMatch(/real model/);
+    expect(plain(first!.body)).toMatch(/five of its ten coordinators crashed/);
   });
 });
 
 describe("the home page, with no data at all", () => {
   const html = render(null);
 
-  it("still renders every chapter and the tagline", () => {
-    for (const chapter of CHAPTERS) expect(html).toContain(`<section id="${chapter.id}"`);
+  it("still renders every section and the tagline", () => {
+    for (const id of ["hero", "problem", "solution", "proof", "enter"]) expect(html).toContain(`<section id="${id}"`);
     expect(plain(html)).toContain(TAGLINE);
   });
 
@@ -247,22 +200,28 @@ describe("the home page, with no data at all", () => {
     expect(text).toContain("—");
     expect(text).toContain("NO DATA YET");
     expect(text).not.toMatch(/undefined|NaN|\bnull\b/);
-    for (const claim of claims(html)) expect(claim.state).toBe("missing");
+    for (const claim of drawnClaims(html)) expect(claim.state).toBe("missing");
   });
 });
 
 describe("the home page, standing still", () => {
   const html = render(FIXTURE_STORY, true);
 
-  it("marks the page and lays both stages out as ordinary flow", () => {
+  it("marks the page, and has no button to play anything again", () => {
     expect(html).toContain('class="home" data-still=""');
-    expect(countOf(html, "home-stage--still")).toBe(2);
+    expect(html).not.toContain("home-repeat");
+    expect(render(FIXTURE_STORY, false)).toContain("home-repeat");
   });
 
-  it("shows the same words as the scrolling page", () => {
+  it("shows the same words as the animated page", () => {
     const words = (page: string) => new Set(plain(page).split(" ").filter((word) => word.length > 3));
-    const scrolling = words(render(FIXTURE_STORY, false));
-    const missing = [...words(html)].filter((word) => !scrolling.has(word));
+    const moving = words(render(FIXTURE_STORY, false));
+    const missing = [...words(html)].filter((word) => !moving.has(word));
     expect(missing).toEqual([]);
+  });
+
+  it("draws the three cards at their end", () => {
+    expect(countOf(html, '<li class="home-step" data-active=""')).toBe(3);
+    expect(countOf(render(FIXTURE_STORY, false), 'class="home-step" data-active=""')).toBe(0);
   });
 });

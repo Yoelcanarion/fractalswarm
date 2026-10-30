@@ -2,7 +2,8 @@ import { useMotionValueEvent } from "motion/react";
 import { useRef } from "react";
 
 import { useEnterProgress, useIsoLayoutEffect, useStill } from "../hooks";
-import { clamp01 } from "../scroll/timeline";
+
+const clamp01 = (x: number): number => (x < 0 ? 0 : x > 1 ? 1 : x);
 
 export type LineTone = "ok" | "bad" | "plain";
 
