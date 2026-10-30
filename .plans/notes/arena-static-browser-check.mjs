@@ -61,7 +61,9 @@ const overflowOf = (page) =>
     x: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     y: document.documentElement.scrollHeight - document.documentElement.clientHeight,
   }));
+// The run page has other good badges (the takeover chip, the coordination tokens): the verify badge is the one that says so.
 const badgeSelector = ".badge--good";
+const verifyBadge = (page) => page.locator(badgeSelector, { hasText: "Replay verified" }).first();
 
 /** Open one hash route of the site and run the checks every page has to pass. */
 async function visit(name, hash, { banner = true, needles = [], badge = false, wait, viewport, shoot = true, scroll = true, dataOnly } = {}) {
@@ -73,7 +75,7 @@ async function visit(name, hash, { banner = true, needles = [], badge = false, w
   page.on("request", (r) => asked.add(new URL(r.url()).pathname));
   const started = Date.now();
   await page.goto(baseUrl + hash, { waitUntil: "load" });
-  if (badge) await page.waitForSelector(badgeSelector, { timeout: 120000 });
+  if (badge) await verifyBadge(page).waitFor({ timeout: 120000 });
   if (wait) await wait(page);
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(600);
@@ -89,17 +91,21 @@ async function visit(name, hash, { banner = true, needles = [], badge = false, w
   if (banner && !shown?.startsWith(BANNER)) problem(name, `banner is ${JSON.stringify(shown)}`);
   if (!banner && shown !== null) problem(name, `the banner is on this page: ${JSON.stringify(shown)}`);
   if (badge) {
-    const label = await page.locator(badgeSelector).first().innerText();
-    const title = (await page.locator(badgeSelector).first().getAttribute("title")) ?? "";
+    const label = (await verifyBadge(page).innerText()).replace(/\s+/g, " ");
+    const title = (await verifyBadge(page).getAttribute("title")) ?? "";
     console.log(`  badge: ${label}`);
     if (!/Replay verified at build, commit [0-9a-f]{7}\+? ✓ hash match [0-9a-f]{12}/.test(label)) problem(name, `badge text: ${label}`);
     if (!title.includes("not in your browser")) problem(name, "badge tooltip does not say it was not checked in the browser");
   }
   const body = await text(page);
-  for (const needle of needles) if (!body.includes(needle)) problem(name, `the page does not contain ${JSON.stringify(needle)}`);
+  // innerText applies text-transform: a heading written "Run the ablation" reads RUN THE ABLATION
+  for (const needle of needles) if (!body.toLowerCase().includes(needle.toLowerCase())) problem(name, `the page does not contain ${JSON.stringify(needle)}`);
   if (/\bundefined\b|\bNaN\b|\[object Object\]/.test(body)) problem(name, "the page shows undefined, NaN or [object Object]");
   if (body.includes("Loading the static showcase")) problem(name, "the placeholder of index.html is still on the page: the app did not start");
-  for (const line of body.split("\n")) if (/could not|failed|error|unavailable|not offered/i.test(line)) warn(name, `wording to read: ${line.trim().slice(0, 160)}`);
+  for (const line of body.split("\n")) {
+    if (/^(failed|errors?)$/i.test(line.trim())) continue; // a stat label ("FAILED 0"), not a state
+    if (/could not|failed|error|unavailable|not offered/i.test(line)) warn(name, `wording to read: ${line.trim().slice(0, 160)}`);
+  }
   if (body.trim().length < 40) problem(name, "the page is (nearly) blank");
   const overflow = await overflowOf(page);
   if (scroll && overflow.y > 1) problem(name, `the page scrolls as a whole: ${overflow.y}px (the banner should leave the app exactly the window)`);
@@ -155,7 +161,7 @@ for (const run of RUNS) {
   const name = `run-${run}`;
   const page = await visit(name, `#/run/${run}?at=end`, { badge: true });
   await page.reload({ waitUntil: "load" });
-  await page.waitForSelector(badgeSelector, { timeout: 120000 });
+  await verifyBadge(page).waitFor({ timeout: 120000 });
   await page.waitForLoadState("networkidle");
   if (!(await bannerOf(page))?.startsWith(BANNER)) problem(name, "banner missing after a reload");
   await shot(page, `${name}-reloaded`);
@@ -178,7 +184,7 @@ for (const run of RUNS) {
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(800);
     const body = await text(page);
-    if (!body.includes("Muse lens")) problem(name, "the lens did not open");
+    if (!/muse lens/i.test(body)) problem(name, "the lens did not open");
     if (/undefined|NaN|\[object Object\]/.test(body)) problem(name, "the lens shows undefined, NaN or [object Object]");
     await shot(page, name);
   }
@@ -298,7 +304,7 @@ for (const [name, hash] of [["phone-run", `#/run/${RUNS[0]}?at=end`], ["phone-he
   } catch {
     problem(name, "no progress bar appeared while the big log loaded over a slow line");
   }
-  await page.waitForSelector(badgeSelector, { timeout: 120000 });
+  await verifyBadge(page).waitFor({ timeout: 120000 });
   timings[name] = Date.now() - started;
   console.log(`  verify badge after ${timings[name]} ms`);
   await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
