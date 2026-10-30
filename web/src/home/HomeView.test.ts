@@ -144,10 +144,13 @@ describe("the home page, rendered with a story", () => {
   });
 
   it("keeps the false deaths of the real runs out of R3's figures", () => {
-    const fails = /<article[^>]*aria-labelledby="fails-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
-    expect(plain(fails)).toContain("1.3");
-    expect(plain(fails)).toContain("2.3");
-    expect(plain(fails)).not.toContain("2.5");
+    // The figures are the page's own, before the regime strip: the strip names settings of its own ("both detect in 2.5 s").
+    const article = /<article[^>]*aria-labelledby="fails-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
+    const figures = article.split('class="home-chart')[0] ?? "";
+    expect(figures, "the strip follows the figures").not.toBe(article);
+    expect(plain(figures)).toContain("1.3");
+    expect(plain(figures)).toContain("2.3");
+    expect(plain(figures)).not.toContain("2.5");
   });
 
   it("shows R5 once, with the rival named, the setting and the reason beside it", () => {
