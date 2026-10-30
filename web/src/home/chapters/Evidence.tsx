@@ -44,14 +44,27 @@ function Beat({ id, lead, children }: { id: string; lead: ReactNode; children: R
 }
 
 /** A chart of W7's that draws itself once, when it comes into view. `path` names the slice of the story it draws. */
-function Chart({ name, path, duration, className = "" }: { name: VizName; path: string; duration: number; className?: string }) {
+function Chart({
+  name,
+  path,
+  duration,
+  className = "",
+  extra,
+}: {
+  name: VizName;
+  path: string;
+  duration: number;
+  className?: string;
+  /** Props of the visual itself, beyond its slice and progress. */
+  extra?: Record<string, unknown>;
+}) {
   const story = useStory();
   const still = useStill();
   const ref = useRef<HTMLDivElement>(null);
   const progress = useEnterProgress(ref, still, { duration });
   return (
     <div ref={ref} className={`home-chart ${className}`.trim()}>
-      <Viz name={name} data={slice(story, path)} progress={progress} still={still} />
+      <Viz name={name} data={slice(story, path)} progress={progress} still={still} {...extra} />
     </div>
   );
 }
@@ -107,7 +120,8 @@ function HeroChart() {
   const story = useStory();
   return (
     <Beat id="hero-chart" lead={COPY.evidence.hero.lead}>
-      <Chart name="LineDraw" path="hero" duration={2.2} className="home-chart--hero" />
+      {/* the chart prints its own setting by default; the page prints it once, in the same words as everywhere else */}
+      <Chart name="LineDraw" path="hero" duration={2.2} className="home-chart--hero" extra={{ setting: false }} />
       <Setting>{captionFor(story, "hero")}</Setting>
     </Beat>
   );
