@@ -59,6 +59,21 @@ const centre = (page, selector) =>
 const toTop = (page, selector) =>
   page.evaluate((sel) => document.querySelector(sel)?.scrollIntoView({ block: "start", behavior: "instant" }), selector);
 
+/**
+ * Walk down the page a screen at a time, so that every chart that draws itself on arrival has begun (a whole-page screenshot does
+ * not scroll, and shows the charts below the first screen at their start), wait for the longest of them, and go back to the top.
+ */
+const walkDown = async (page) => {
+  const { height, step } = await page.evaluate(() => ({ height: document.documentElement.scrollHeight, step: Math.round(window.innerHeight * 0.8) }));
+  for (let top = 0; top < height; top += step) {
+    await page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), top);
+    await page.waitForTimeout(250);
+  }
+  await page.waitForTimeout(2400);
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.waitForTimeout(300);
+};
+
 const ready = async (page, base, hash = "#/") => {
   await page.goto(`${base}/${hash}`, { waitUntil: "networkidle" });
   await page.evaluate(() => document.fonts.ready);
@@ -130,6 +145,7 @@ async function shots(base, out, configs = "1920:dark:motion") {
     await page.goto(`${base}/#/evidence`, { waitUntil: "networkidle" });
     await theming();
     await page.waitForTimeout(1200);
+    await walkDown(page);
     await shot("05-evidence", { fullPage: true });
 
     const unique = [...new Set(errors)];

@@ -631,16 +631,35 @@ body:has(.home) {
 .home-proof__chart {
   position: relative;
   width: 100%;
-  max-width: 840px;
+}
+
+/* Under the chart: why the in-process supervisor's numbers are so far apart, and the way on. On a wide screen they sit in the
+   chart's two columns (its gap is 48 px), the reason under the in-process block and the links under the other. */
+.home-proof__under {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.home-proof__after {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+}
+
+@media (min-width: 1000px) {
+  .home-proof__under {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 48px;
+  }
 }
 
 .home-proof__reason {
   max-width: 640px;
-  margin-top: var(--space-3);
 }
 
-.home-proof__links {
-  margin-top: var(--space-4);
+.home-proof__after > p {
+  margin-top: 0;
 }
 
 .home-check {

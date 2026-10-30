@@ -36,18 +36,22 @@ export function Proof() {
         <div ref={chart} className="home-proof__chart" role="group" aria-label={COPY.proof.bars}>
           <ProofBars play={play} />
         </div>
-        <p className="home-setting home-proof__reason">{COPY.rivalReason}</p>
-        <p className="home-proof__links">
-          <a className="home-link" href={evidenceHash("tie")}>
-            {COPY.proof.conditions}
-            <ArrowRight size={14} aria-hidden />
-          </a>
-        </p>
-        {command && (
-          <p className="home-check">
-            <span>{COPY.proof.check}</span> <code className="home-code">{bare(command)}</code>
-          </p>
-        )}
+        <div className="home-proof__under">
+          <p className="home-setting home-proof__reason">{COPY.rivalReason}</p>
+          <div className="home-proof__after">
+            <p className="home-proof__links">
+              <a className="home-link" href={evidenceHash("tie")}>
+                {COPY.proof.conditions}
+                <ArrowRight size={14} aria-hidden />
+              </a>
+            </p>
+            {command && (
+              <p className="home-check">
+                <span>{COPY.proof.check}</span> <code className="home-code">{bare(command)}</code>
+              </p>
+            )}
+          </div>
+        </div>
         <SeeMore>
           <Claim id="R6" part={1} />
           <Setting>{captionFor(story, "hero")}</Setting>
