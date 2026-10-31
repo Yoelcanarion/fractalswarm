@@ -112,7 +112,7 @@ export const GOAL = "Program the live conference";
 export const scenarioLabel = (scenario: string): string => (scenario === "swarm" ? "FractalSwarm" : rivalLabel(scenario));
 
 export function chaosLabel(chaos: string): string {
-  if (chaos === "half-the-brains") return "Half the brains: the root and the track leads crash, and the supervisor at the same points";
+  if (chaos === "half-the-brains") return "Half the brains: five coordinators crash, the root first, then whichever has the most work left, and the supervisor at the same points";
   if (chaos === "kill-half") return "Kill half the brains";
   if (chaos === "C0") return "No failures (C0)";
   const crashes = crashesText(chaos);

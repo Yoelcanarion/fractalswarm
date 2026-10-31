@@ -179,7 +179,7 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
         title="New task"
         lead={
           <>
-            Paste the talks and the emails or notes. <Term id="muse">Muse</Term>, or the free practice reader, fits them to the program’s shape. You check each row against the text it came from, and only then does anything run. By default the run kills half the brains, and you get the finished program: each talk with its time and room.
+            Paste the talks and the emails or notes. <Term id="muse">Muse</Term>, or the free practice reader, fits them to the program’s shape. You check each row against the text it came from, and only then does anything run. By default the run kills half the brains, and you get its program: each talk with its time and room, with any gap named.
           </>
         }
         actions={<Steps current={stepOf(phase)} />}

@@ -23,13 +23,13 @@ const SHOWN = new Set(["expected", "placed", "gaps", "hard_violations", "soft_sc
 const NO_REPORT: Record<string, unknown> = {};
 
 // The checker's hard rules (bench/tasks/t2_conference/checker.py), in a person's words.
-const HARD_RULES = "Rules the program breaks: a talk left out or placed twice, a room or a speaker booked twice at once, a talk outside its speaker's hours, more people than seats, or two talks of one track at once.";
+const HARD_RULES = "Rules the program breaks: a talk left out or placed twice, a room or a speaker booked twice at once, a talk outside its speaker's hours, more people than seats, two talks of one track at once, or a talk, day, slot or room that does not exist.";
 
 const clip = (text: string, max = 160): string => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
 function ProgramCell({ talk, room }: { talk: ProgramTalk | null; room: string }) {
   if (talk === null) return <td className="program__free" />;
-  const who = [talk.speaker, talk.attendance === null ? null : `about ${talk.attendance} people`].filter(Boolean).join(" · ");
+  const who = [talk.speaker, talk.attendance === null ? null : `about ${talk.attendance} expected`].filter(Boolean).join(" · ");
   return (
     <td className="program__talk" data-room={room} title={[talk.id, talk.track].filter(Boolean).join(" · ")}>
       <span className="program__title">{talk.title}</span>

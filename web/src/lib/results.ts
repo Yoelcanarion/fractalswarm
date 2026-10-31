@@ -63,6 +63,9 @@ export const emptyResults = (): ResultsState => ({
   other: [],
 });
 
+/** Whether the root reported. `run.completed` does not say so: the kernel writes it even with every coordinator dead and no goal done. */
+export const hasReport = (events: readonly RunEvent[]): boolean => events.some((event) => event.type === "task.result");
+
 const RESULT_TYPES: ReadonlySet<string> = new Set([
   "task.result",
   "goal.completed",

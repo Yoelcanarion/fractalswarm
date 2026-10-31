@@ -1620,3 +1620,28 @@ From the second read, three small changes (0e0ed22): "fake model" is the one nam
 - **Public pointers to private files removed:** S5, S8, the REPORT, `docs/api-notes.md`, `lens.ts`.
 - **For Yoel at publish:** `.plans/` and the path in `CLAUDE.md`; the placeholders in the drafts.
 - **Checks:** unit 1,217, web 2,664, tsc, ruff, build. Spend unchanged.
+
+**Yoel's decisions, Oct 31, about 16:00, word for word (through the first coordinator's mail of 15:58, read only at 16:55: see below).**
+
+> 1. Parameter repair: APPROVED. Keep all previously recorded rows immutable. Reopen handler-freeze only for this narrowly scoped repair. Document the parameter change and its effect on the affected C3 seeds. Do not silently mix old and corrected results.
+> 2. Web-only button patch: APPROVED. Implement it today, and offer the button only for runs with no failures. Keep the change isolated and verify the UI behavior.
+> 3. Split-brain false-positive fix: APPROVED. Fix the five false alarms observed across the three real C3 rows. Do not weaken actual split-brain protection. Re-run the relevant checks, including the 113 remap cases, and preserve the before/after evidence.
+> 4. Intermediate-level real runs: APPROVED, with a strict $5 additional cap. Run only the necessary cases, preserve the existing benchmark conditions, report the cost before and after.
+>
+> For all four: scoped and auditable changes, no rewriting of historical evidence, no change of benchmark assumptions to improve results, no merge to master, push or publication without his explicit approval. Report exact tests, outcomes, changed files and remaining risks.
+
+- **Money:** on top of that he allows up to $85 of free credit in all, leaving him about $7 of margin on Meta's billing page. The first coordinator reads the $5 as still strict for item 4, and the $85 as the ceiling for everything together. No run spends without a preflight.
+- **Who does what:** the first coordinator takes all four on its own branches, plus Yoel's web list (the gaps on the Evidence page and an animation at its head, New task saying what it has to do with the agents, the arena's pair list, Trade-offs with less text, the purpose of Ablation, the README and repo face), then the demo script. I merge when it mails me. Held for it: `src/fractalswarm/actors`, `coord`, `verify`, `ChaosPanel.tsx`. No real run from this side, and no heavy command during its real runs.
+- **Where they stand (its mail of 16:46):** item 3 is b82209a and item 2 is 8c523f6, on `Yoelcanarion/arena-decisions`. Item 1 is written, not committed, and changed from what it proposed: the goal ring's watch was one-sided and could declare a live member dead every 5 s (seven times in one cell), so it is now a mutual ring, and rule 4 counts the time since the last peer was heard. A sweep of 421 cells runs at $0. Item 4 waits for a PREREG amendment: 10 paid cells, worst case $5.00, about 45 minutes.
+
+**A correction to this log:** "nobody reaches the hole with a click", which I wrote on the first coordinator's word, was false. Its mail of 15:43: on a run whose plan already crashes coordinators, Kill half the brains hangs it, 18 of 30 on C2 and C3, 5 of 15 on the half-the-brains plan, 1 of 15 on C1, none of 27 on C0. No budget cap trips, and `jobs.py` has no time limit, so on the simulated clock such a run writes about 100 MB a minute until someone stops it. Decision 2 closes that door in the UI. Every word on the public pages still holds: none says any half.
+
+**Its reading of the six wordings of 15:07, done now:**
+- New task's lead said "you get the finished program", which goes past S7: validity is claimed for the runs at C3, and on the fake model the default plan ended partial on 1 of 10 seeds. Now "you get its program: each talk with its time and room, with any gap named".
+- The hard rules' tooltip left out `invalid`, which counts in the same number: "or a talk, day, slot or room that does not exist".
+- "About 33 people" read as people who came: "about 33 expected".
+- **See the program** stays the main action, but it hung on `view.completed`, which says only that `run.completed` is in the log. The kernel writes that with all ten coordinators dead and no goal done. It now needs the root's report.
+- **A seventh, live and false:** the default plan's description said the root and the track leads crash. No track lead crashes on that plan. It now says five coordinators crash, the root first, then whichever has the most work left. The comment in `bench/profiles.py` said the same.
+- "The fake model (the practice model in the app)" goes on the Evidence page in the first coordinator's own pass, since that page is in its hands.
+
+**Why three mails waited an hour or more:** `wait_real.ps1 -Seconds 2` returns at once without looking (it stops when under 5 s are left), and I had been calling it with 2. Nothing was lost: they were all in the queue. From now on `orca orchestration check --run ... --json` for a look.

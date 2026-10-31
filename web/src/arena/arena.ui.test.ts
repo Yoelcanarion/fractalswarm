@@ -53,13 +53,14 @@ function api(logs: Record<string, RunEvent[]>): RunApi {
 
 /** A pair opened on a clock, at ``atMs``. The swarm lost o1 (adopted by o2); the rival lost its supervisor. Each had a
  * contract ready at 9 s that only went out at 15 s. */
-async function opened(atMs: number, play = false) {
+async function opened(atMs: number, play = false, reported = true) {
   const swarm = swarmStream();
   call(swarm, "o2.a1", "e1");
   ready(swarm, "g1", "o1", 9_000);
   kill(swarm, "o1", 10_000);
   takeOver(swarm, "o1", "o2", 14_000, 15_000);
   sent(swarm, "g1", "o2", 15_000, "o2.a1");
+  if (reported) swarm.at(60_000).emit("task.result", "o2", { task: "t2_conference", status: "ok", report: {} });
   swarm.at(60_000).emit("run.completed", "@kernel");
   const rival = rivalStream(undefined, 4, { recovery_ms: 5000 });
   call(rival, "o0.a1", "e1");
@@ -442,6 +443,10 @@ describe("the page", () => {
     expect(over).toMatch(/<a class="btn btn--on" href="#\/run\/s\/results\?at=end">See the (program|result)<\/a>/);
     expect(over).toContain('<button type="button" class="btn">Play both from the start</button>');
     expect(text(over)).not.toContain("Watch the first crash");
+    // the kernel ends a run even with no coordinator left: with no report there is nothing to open
+    const unreported = await view({ session: await opened(75_000, false, false), left: "s", right: "r" });
+    expect(unreported).not.toMatch(/See the (program|result)/);
+    expect(unreported).toContain('<button type="button" class="btn btn--on">Play both from the start</button>');
   });
 
   it("makes playing the pair the main action where no coordinator is killed, and offers no first crash", async () => {
