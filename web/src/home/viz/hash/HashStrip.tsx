@@ -7,9 +7,12 @@ import { Pen } from "../tree/paint";
 import { HASH_DEFAULT_BOX, fitHash } from "./fit";
 import { offsetFor, shortHash, stripItems, stripState } from "./state";
 
-export type HashStripProps = VizProps<HashesSlice>;
+export interface HashStripProps extends VizProps<HashesSlice> {
+  /** How many pixels of the strip it crosses, up to its end: all of it when absent. */
+  travel?: number;
+}
 
-export function HashStrip({ progress, data: hashes, still, stillAt, className }: HashStripProps) {
+export function HashStrip({ progress, data: hashes, still, stillAt, className, travel }: HashStripProps) {
   const items = useMemo(() => stripItems(hashes), [hashes]);
   const [root, box] = useBox(HASH_DEFAULT_BOX, 100);
   const tier = fitHash(box.height);
@@ -25,9 +28,9 @@ export function HashStrip({ progress, data: hashes, still, stillAt, className }:
     const r = pens.current;
     if (!r) return;
     const s = stripState(p);
-    r.track.set("style", `transform:translateX(${offsetFor(s.shift, size.current.track, size.current.view).toFixed(1)}px)`);
+    r.track.set("style", `transform:translateX(${offsetFor(s.shift, size.current.track, size.current.view, travel).toFixed(1)}px)`);
     r.stamp.set("style", `opacity:${s.stamp.toFixed(3)};transform:scale(${(1.12 - 0.12 * s.stamp).toFixed(4)}) rotate(-3deg)`);
-  }, []);
+  }, [travel]);
 
   // The widths are measured when the layout changes (a new tier makes the cards narrower), never while the strip moves.
   useLayoutEffect(() => {

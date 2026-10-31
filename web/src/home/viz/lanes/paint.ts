@@ -9,8 +9,8 @@ import { barState, drawnMs, lifeTracks, momentOpacity, spentMicro, stallElapsedM
 
 /** No call is drawn thinner than this, so that a call of a few milliseconds is still there. */
 export const MIN_BAR = 1.5;
-/** How long a crash or a kill takes to strike, in ms of the run. */
-const STRIKE_MS = 350;
+/** How long a crash or a kill takes to strike, in ms of the run: about a seventh of a second of the film, which plays the run at some fifty times its speed. */
+const STRIKE_MS = 7000;
 /** How far the calls that counted fade back once the damage is shown (the share of their opacity lost). */
 export const DIM = 0.72;
 

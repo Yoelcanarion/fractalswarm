@@ -43,6 +43,14 @@ describe("the hash strip", () => {
     expect(offsetFor(1, 800, 1000)).toBeCloseTo(0);
     expect(shortHash("58ab5fbfa3459277554acc7d3b280293")).toBe("58ab5fbfa3…");
   });
+
+  it("goes at one pace, the playhead's, and can cross only the last of the track, with the end in the same place", () => {
+    expect(stripState(0.415).shift).toBeCloseTo(0.5, 6);
+    expect(offsetFor(0, 3000, 1000, 500)).toBe(-1500);
+    expect(offsetFor(1, 3000, 1000, 500)).toBe(offsetFor(1, 3000, 1000));
+    expect(offsetFor(0, 1200, 1000, 500)).toBeCloseTo(0);
+    expect(offsetFor(1, 1200, 1000, 500)).toBe(-200);
+  });
 });
 
 describe("HashStrip markup", () => {

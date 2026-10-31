@@ -3,10 +3,11 @@
 
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ARRIVAL_SHARE, arrivalReached } from "./hooks";
-import { SeeMore } from "./parts/SeeMore";
+import { FoldDrawing } from "./parts/FoldDrawing";
+import { FoldRow, SeeMore } from "./parts/SeeMore";
 
 describe("the arrival of a section", () => {
   it("is 40% of it", () => {
@@ -52,5 +53,21 @@ describe("See more", () => {
 
   it("names its label when it is given one", () => {
     expect(renderToStaticMarkup(createElement(SeeMore, { label: "More", children: "x" }))).toContain("<span>More</span>");
+  });
+
+  it("makes no drawing until it has been opened, so that a closed fold costs nothing", () => {
+    const drawn = vi.fn(() => createElement("i", null, "drawing"));
+    const closed = renderToStaticMarkup(createElement(SeeMore, null, createElement(FoldDrawing, { seconds: 1, className: "held", children: drawn })));
+    expect(closed).toContain('<div class="held"></div>');
+    expect(drawn).not.toHaveBeenCalled();
+  });
+
+  it("reads in the order of the markup, the words, then what they are about, then the words that follow it", () => {
+    const words = (text: string) => createElement("p", null, text);
+    const row = renderToStaticMarkup(createElement(FoldRow, { side: words("side"), after: words("after"), children: words("words") }));
+    expect(row.indexOf("words")).toBeLessThan(row.indexOf("side"));
+    expect(row.indexOf(">side<")).toBeLessThan(row.indexOf(">after<"));
+    expect(row).toMatch(/^<div class="home-fold__row">/);
+    expect(renderToStaticMarkup(createElement(FoldRow, { side: "s", middle: true, children: "w" }))).toMatch(/^<div class="home-fold__row home-fold__row--middle">/);
   });
 });

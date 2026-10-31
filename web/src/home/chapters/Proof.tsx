@@ -6,11 +6,17 @@ import { StillContext, useArrival } from "../hooks";
 import { captionFor, proofSteps } from "../numbers";
 import { SectionHead, Setting } from "../parts/Chapter";
 import { Claim } from "../parts/Claim";
-import { SeeMore } from "../parts/SeeMore";
+import { FoldDrawing } from "../parts/FoldDrawing";
+import { FoldRow, SeeMore } from "../parts/SeeMore";
 import { Terminal } from "../parts/Terminal";
 import { evidenceHash } from "../route";
 import { useStory } from "../story";
 import { ProofBars } from "../viz/charts/ProofBars";
+import { SECONDS } from "../viz/ease";
+import { HashStrip } from "../viz/hash/HashStrip";
+
+/** How much of the hash chain goes by as it runs to its head: about eight cards, at a pace the eye can follow. */
+const CHAIN_TRAVEL = 2000;
 
 /** The command that checks a recorded run, without the `uv run` of the repository's own setup. */
 const bare = (command: string): string => command.replace(/^uv run\s+/, "");
@@ -18,7 +24,8 @@ const bare = (command: string): string => command.replace(/^uv run\s+/, "");
 /**
  * The proof, in the words of R6: the setting and that every run finished, then bars and numbers that grow by themselves
  * when they come into view. The way to R2 and R3 stays on the section, outside the fold, because R6 is only ever shown
- * with it. The second sentence of R6, the setting, replay's limit and the way to the evidence page are folded.
+ * with it. The second sentence of R6, the setting, replay's limit and the way to the evidence page are folded, beside the log's
+ * hash chain, which runs to its head and the replay's verdict.
  */
 export function Proof() {
   const story = useStory();
@@ -55,24 +62,40 @@ export function Proof() {
           </div>
         </div>
         <SeeMore>
-          <Claim id="R6" part={1} />
-          <Setting>
-            {captionFor(story, "hero")} {"·"} {COPY.rivalReason}
-          </Setting>
-          <Claim id="R5" className="home-claim--small" />
-          <Claim id="R7" className="home-claim--small" />
-          <Claim id="S5" className="home-claim--lead" />
-          <p className="home-limit home-limit--wide">{COPY.proof.more.proves}</p>
-          {/* folded, it shows the finished output: it has been asked for, so it does not type itself out */}
-          <StillContext.Provider value>
-            <Terminal steps={steps} label={COPY.proof.more.terminal} />
-          </StillContext.Provider>
-          <p className="home-fold__text">{COPY.proof.more.lead}</p>
-          <a className="home-button" href={evidenceHash()}>
-            {COPY.proof.more.link}
-            <ArrowRight size={18} aria-hidden />
-          </a>
-          <p className="home-limit home-limit--wide">{COPY.proof.more.provenance}</p>
+          <FoldRow
+            side={
+              <>
+                <Claim id="S5" className="home-claim--lead" />
+                <p className="home-limit home-limit--wide">{COPY.proof.more.proves}</p>
+                {story && (
+                  <FoldDrawing seconds={SECONDS.foldChain} className="home-fold__hash">
+                    {(progress, still) => <HashStrip progress={progress} data={story.hashes} still={still} travel={CHAIN_TRAVEL} />}
+                  </FoldDrawing>
+                )}
+                {/* folded, it shows the finished output: it has been asked for, so it does not type itself out */}
+                <StillContext.Provider value>
+                  <Terminal steps={steps} label={COPY.proof.more.terminal} />
+                </StillContext.Provider>
+              </>
+            }
+            after={
+              <>
+                <p className="home-fold__text">{COPY.proof.more.lead}</p>
+                <a className="home-button" href={evidenceHash()}>
+                  {COPY.proof.more.link}
+                  <ArrowRight size={18} aria-hidden />
+                </a>
+                <p className="home-limit home-limit--wide">{COPY.proof.more.provenance}</p>
+              </>
+            }
+          >
+            <Claim id="R6" part={1} />
+            <Setting>
+              {captionFor(story, "hero")} {"·"} {COPY.rivalReason}
+            </Setting>
+            <Claim id="R5" className="home-claim--small" />
+            <Claim id="R7" className="home-claim--small" />
+          </FoldRow>
         </SeeMore>
       </div>
     </section>

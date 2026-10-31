@@ -3,9 +3,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { story } from "../../data/story";
+import { playhead, SECONDS } from "../ease";
 import { Pen } from "../tree/paint";
 import { BOTTOM_PLAIN, MOMENT_EM, MOMENT_GAP, READOUT_W, layoutFor, keepApart, ledgerColumns, ledgerNeed, momentsLayout, textWidth, type LanesLayout } from "./layout";
-import { MOMENT_FADE, barState, drawnMs, lanesModel, lifeTracks, linearStallMs, momentOpacity, momentStarts, spentMicro, stallElapsedMs, timeMap } from "./model";
+import { MOMENT_FADE, barState, drawnMs, lanesModel, lifeTracks, momentOpacity, momentStarts, spentMicro, stallElapsedMs, timeMap } from "./model";
 import { paintLanes, usd, type LanesRig } from "./paint";
 import { WorkLanes, captionsFor, summaryFor } from "./WorkLanes";
 
@@ -69,59 +70,44 @@ describe("the lanes' model", () => {
 });
 
 describe("the time map", () => {
-  it("is a straight, never backwards road from the start of the run to its end", () => {
+  it("crosses the run at one speed, from its start to its end", () => {
     expect(map.tAt(0)).toBe(0);
     expect(map.tAt(1)).toBe(model.durationMs);
-    let before = -1;
-    for (let i = 0; i <= 4000; i++) {
-      const t = map.tAt(i / 4000);
-      expect(t).toBeGreaterThanOrEqual(before);
-      before = t;
-    }
-    expect(map.knots.every((k, i, all) => i === 0 || (k.p >= all[i - 1]!.p && k.t >= all[i - 1]!.t))).toBe(true);
+    const step = model.durationMs / 4000;
+    for (let i = 1; i <= 4000; i++) expect(map.tAt(i / 4000) - map.tAt((i - 1) / 4000)).toBeCloseTo(step, 6);
   });
 
-  it("puts the first crash at the crash mark, the end of the last stall at the restart mark, and stands still until the redone mark", () => {
-    expect(map.tAt(kf.crash)).toBe(model.crashes[0]!.atMs);
-    const settled = model.stalls[model.stalls.length - 1]!.endMs;
-    expect(map.tAt(kf.restart)).toBeCloseTo(settled, 6);
-    expect(map.tAt(kf.redone)).toBeCloseTo(settled, 6);
-    expect(map.tAt((kf.restart + kf.redone) / 2)).toBeCloseTo(settled, 6);
-    expect(map.tAt(kf.filled)).toBe(model.filledMs);
-    expect(map.tAt(kf.filled)).toBeLessThan(model.crashes[0]!.atMs);
+  it("gives the film no crawl, no burst and no stop, frame by frame through the page's one ease", () => {
+    const frames = SECONDS.film * 60;
+    const shownAt = (frame: number): number => map.tAt(playhead(frame / 60, SECONDS.film));
+    const steps = Array.from({ length: frames }, (_, i) => shownAt(i + 1) - shownAt(i));
+    const mean = model.durationMs / frames;
+    expect(Math.max(...steps)).toBeLessThanOrEqual(1.6 * mean);
+    expect(Math.min(...steps.slice(frames * 0.1, frames * 0.9))).toBeGreaterThan(0.5 * mean);
   });
 
-  it("starts the damage after the restart and shows all of it by the redone mark", () => {
+  it("marks the first crash, the start of the longest wait and the end of the last one, where the run has them", () => {
+    const long = model.stalls[7]!;
+    expect(Math.max(...model.stalls.map((s) => s.endMs - s.startMs))).toBe(long.endMs - long.startMs);
+    expect(map.tAt(kf.crash)).toBeCloseTo(model.crashes[0]!.atMs, 6);
+    expect(map.tAt(kf.wait)).toBeCloseTo(long.startMs, 6);
+    expect(map.tAt(kf.restart)).toBeCloseTo(long.endMs, 6);
+  });
+
+  it("marks a run with no crash by its waits", () => {
+    const calm = lanesModel(story.lanes.swarm);
+    const [start, end] = story.lanes.swarm.stall.spansMs[0]!;
+    expect(calm.crashes).toHaveLength(0);
+    expect(calm.keyframes.crash).toBeCloseTo(start / calm.durationMs, 12);
+    expect(calm.keyframes.wait).toBeCloseTo(start / calm.durationMs, 12);
+    expect(calm.keyframes.restart).toBeCloseTo(end / calm.durationMs, 12);
+  });
+
+  it("starts the damage as the last wait ends and shows all of it at the end of the run", () => {
     expect(map.emphasisAt(0)).toBe(0);
     expect(map.emphasisAt(kf.restart)).toBe(0);
-    expect(map.emphasisAt(kf.redone)).toBe(1);
+    expect(map.emphasisAt((kf.restart + 1) / 2)).toBeCloseTo(0.5, 6);
     expect(map.emphasisAt(1)).toBe(1);
-    expect(map.emphasisAt((kf.restart + kf.redone) / 2)).toBeGreaterThan(0.5);
-  });
-
-  it("counts the time nobody worked as a straight line of the progress from the crash to the restart, as the page counts it", () => {
-    expect(stallElapsedMs(model, map.tAt(kf.crash))).toBe(0);
-    expect(stallElapsedMs(model, map.tAt(kf.restart))).toBe(model.stallMs);
-    expect(linearStallMs(model, kf.crash)).toBe(0);
-    expect(linearStallMs(model, kf.restart)).toBe(model.stallMs);
-    let worst = 0;
-    for (let i = 0; i <= 2000; i++) {
-      const p = kf.crash + ((kf.restart - kf.crash) * i) / 2000;
-      worst = Math.max(worst, Math.abs(stallElapsedMs(model, map.tAt(p)) - linearStallMs(model, p)));
-    }
-    // the lanes hurry through the work between two crashes, so the page's straight line runs a little ahead there: never by more than this
-    expect(worst).toBeLessThan(model.stallMs * 0.04);
-  });
-
-  it("gives the long wait the most of the stretch and each crash a stretch of its own", () => {
-    const shares = model.stalls.map((s) => {
-      const from = map.knots.find((k) => k.t === s.startMs)!;
-      const to = map.knots.find((k) => k.t === s.endMs)!;
-      return (to.p - from.p) / (kf.restart - kf.crash);
-    });
-    expect(Math.max(...shares)).toBe(shares[7]);
-    expect(shares.slice(0, 5).every((x) => x > 0.03)).toBe(true);
-    expect(shares.reduce((a, b) => a + b, 0)).toBeGreaterThan(0.9);
   });
 });
 
@@ -246,7 +232,7 @@ describe("paintLanes", () => {
   it("strikes the first crash and the six kills when the run reaches it, and cuts off the calls in flight", () => {
     paintLanes(rig, model, layout, map, kf.crash - 0.003);
     expect(Number(at(rig.crashes[0])["opacity"])).toBe(0);
-    paintLanes(rig, model, layout, map, kf.crash + 0.004);
+    paintLanes(rig, model, layout, map, kf.crash + 0.015);
     expect(Number(at(rig.crashes[0])["opacity"])).toBeGreaterThan(0.5);
     expect(rig.kills.every((k) => Number(at(k.cross)["opacity"]) > 0.5)).toBe(true);
     const cut = model.bars.filter((b) => b.kind === "cut" && b.endMs === model.crashes[0]!.atMs);
@@ -255,8 +241,8 @@ describe("paintLanes", () => {
     expect(Number(at(rig.stalls[0])["width"])).toBeGreaterThan(0);
   });
 
-  it("shows the waiting and the damage by the restart mark, and the whole bill at the end", () => {
-    paintLanes(rig, model, layout, map, kf.restart);
+  it("shows the waiting by the restart mark, and the damage and the whole bill at the end", () => {
+    paintLanes(rig, model, layout, map, kf.restart + 1e-9);
     expect(at(rig.value.idle)["#text"]).toBe("101.8 s");
     expect(Number(at(rig.notes)["opacity"])).toBe(0);
     paintLanes(rig, model, layout, map, 1);
@@ -369,13 +355,13 @@ describe("the film's captions", () => {
   const TEXTS = ["It crashes.", "The work waits.", "The work is paid for again."];
   const kf = model.keyframes;
 
-  it("begin one after the other: the first as the crash is about to strike, the second while the work waits, the third as the damage is shown", () => {
+  it("begin one after the other: the first to be there as the crash strikes, the second as the longest wait begins, the third as the damage is shown", () => {
     const [a, b, c] = momentStarts(kf) as [number, number, number];
     expect(a).toBeLessThan(b);
     expect(b).toBeLessThan(c);
-    expect(a + MOMENT_FADE).toBeLessThanOrEqual(kf.crash);
+    expect(a + MOMENT_FADE).toBeCloseTo(kf.crash, 12);
+    expect(b).toBe(kf.wait);
     expect(b).toBeGreaterThan(kf.crash);
-    expect(b).toBeLessThan(kf.restart);
     expect(c).toBe(kf.restart);
   });
 

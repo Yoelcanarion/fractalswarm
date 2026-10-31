@@ -9,7 +9,7 @@ import { Claim } from "../parts/Claim";
 import { Figure } from "../parts/Figure";
 import { PartsDiagram } from "../parts/PartsDiagram";
 import { Repeat } from "../parts/Repeat";
-import { SeeMore } from "../parts/SeeMore";
+import { FoldRow, SeeMore } from "../parts/SeeMore";
 import { useStory } from "../story";
 import { ProblemFilm } from "../viz/film/ProblemFilm";
 import { captionsFor } from "../viz/lanes/WorkLanes";
@@ -47,34 +47,51 @@ export function Problem() {
           <p className="home-film__key">{COPY.problem.key}</p>
         </div>
         <SeeMore>
-          {filmSetting && (
-            <Setting>
-              {s.film} {filmSetting}
-            </Setting>
-          )}
-          <p className="home-fold__text">{s.example(f)}</p>
-          <p className="home-fold__text">{s.numbers}</p>
-          <div className="home-pair">
-            <div className="home-pair__side">
-              <p className="home-pair__who">{s.rival}</p>
-              <Figure value={rival.stallS} format={(n) => seconds(n)} label={COPY.labels.stalled} tone="rival" />
-              <Figure value={rival.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCostBasis} tone="paid-twice" />
-            </div>
-            <div className="home-pair__side">
-              <p className="home-pair__who">{s.swarm}</p>
-              <Figure value={swarm.stallS} format={(n) => seconds(n)} label={COPY.labels.stalled} tone="swarm" />
-              <Figure value={swarm.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCostBasis} tone="swarm" />
-            </div>
-          </div>
-          <Setting>
-            {captionFor(story, "hero")} {"·"} {COPY.rivalReason}
-          </Setting>
-          <Claim id="R5" className="home-claim--small" />
-          <p className="home-fold__text">{s.better}</p>
-          <figure className="home-fold__figure">
-            <PartsDiagram workers={f.agents} />
-          </figure>
-          <Claim id="S3" />
+          <FoldRow
+            side={
+              <div className="home-pair">
+                <div className="home-pair__side">
+                  <p className="home-pair__who">{s.rival}</p>
+                  <Figure value={rival.stallS} format={(n) => seconds(n)} label={COPY.labels.stalled} tone="rival" />
+                  <Figure value={rival.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCostBasis} tone="paid-twice" />
+                </div>
+                <div className="home-pair__side">
+                  <p className="home-pair__who">{s.swarm}</p>
+                  <Figure value={swarm.stallS} format={(n) => seconds(n)} label={COPY.labels.stalled} tone="swarm" />
+                  <Figure value={swarm.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCostBasis} tone="swarm" />
+                </div>
+              </div>
+            }
+            after={
+              <>
+                <Setting>
+                  {captionFor(story, "hero")} {"·"} {COPY.rivalReason}
+                </Setting>
+                <Claim id="R5" className="home-claim--small" />
+              </>
+            }
+          >
+            {filmSetting && (
+              <Setting>
+                {s.film} {filmSetting}
+              </Setting>
+            )}
+            <p className="home-fold__text">{s.example(f)}</p>
+            <p className="home-fold__text">{s.numbers}</p>
+          </FoldRow>
+          <FoldRow
+            middle
+            side={
+              <>
+                <figure className="home-fold__figure">
+                  <PartsDiagram workers={f.agents} />
+                </figure>
+                <Claim id="S3" className="home-fold__under" />
+              </>
+            }
+          >
+            <p className="home-fold__text home-fold__text--lead">{s.better}</p>
+          </FoldRow>
         </SeeMore>
       </div>
     </section>
