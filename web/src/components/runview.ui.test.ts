@@ -7,6 +7,7 @@ import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { GUIDE_STEPS } from "../lib/guide";
 import type { RunEvent } from "../lib/types";
 import { loadJsonl, REPO_ROOT, renderCurrent } from "../lib/testing";
 import { EventsPage } from "../pages/EventsPage";
@@ -309,12 +310,33 @@ describe("the run page", () => {
 });
 
 describe("the guide", () => {
-  const guide = (open: boolean): GuideState => ({ open, toggle: () => undefined, dismiss: () => undefined });
+  const guide = (open: boolean, full = false): GuideState => ({ open, full, toggle: () => undefined, dismiss: () => undefined });
 
   it("is nothing when closed, and the button that opens it says whether it is open", () => {
     expect(renderToStaticMarkup(createElement(Guide, { guide: guide(false) }))).toBe("");
     expect(renderToStaticMarkup(createElement(GuideButton, { guide: guide(false) }))).toContain('aria-expanded="false"');
     expect(renderToStaticMarkup(createElement(GuideButton, { guide: guide(true) }))).toContain('aria-expanded="true"');
+  });
+
+  it("is short as a first visit has it: a heading and where it is done for each step, and none of what they say", () => {
+    const out = renderToStaticMarkup(createElement(Guide, { guide: guide(true) }));
+    expect(out).toContain('class="guide"');
+    expect(out).not.toContain("guide--full");
+    for (const step of GUIDE_STEPS) {
+      expect(out).toContain(`<strong>${step.title}</strong>`);
+      expect(out).not.toContain(step.says.slice(0, 30));
+      if (step.action) expect(out).toContain(`href="${step.action.href}"`);
+    }
+    expect(out).toContain("Got it");
+  });
+
+  it("has what each step says when the Guide button asked for it", () => {
+    const out = renderToStaticMarkup(createElement(Guide, { guide: guide(true, true) }));
+    expect(out).toContain('class="guide guide--full"');
+    for (const step of GUIDE_STEPS) {
+      expect(out).toContain(`<strong>${step.title}</strong>`);
+      expect(out).toContain(step.says.slice(0, 30));
+    }
   });
 
   it("opens for a browser that has not seen it, and stays closed for one that has", () => {

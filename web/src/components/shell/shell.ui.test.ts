@@ -83,7 +83,7 @@ describe("a run's own views", () => {
   });
 
   it("have the guide's button at the end of the bar when the page has a guide, and not otherwise", () => {
-    const guide = { open: true, toggle: () => undefined, dismiss: () => undefined };
+    const guide = { open: true, full: false, toggle: () => undefined, dismiss: () => undefined };
     expect(bar({ page: "arena" }, { guide })).toContain('aria-controls="guide"');
     expect(bar({ page: "arena" }, { guide })).toContain('aria-expanded="true"');
     expect(bar({ page: "arena" }, { guide: { ...guide, open: false } })).toContain('aria-expanded="false"');

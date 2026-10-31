@@ -1,25 +1,27 @@
 import { CircleHelp } from "lucide-react";
 import { useCallback, useState } from "react";
 
-import { GUIDE_STEPS, guideSeen, rememberGuide } from "../../lib/guide";
+import { afterGuideButton, GUIDE_STEPS, guideSeen, rememberGuide, type GuideMode } from "../../lib/guide";
 
 export interface GuideState {
   open: boolean;
-  /** Show or hide it by hand. */
+  /** What each step says is showing too: the Guide button asked for it, where a first visit gets the short band. */
+  full: boolean;
+  /** The Guide button: the sentences, or closed again. */
   toggle: () => void;
   /** "Got it": hide it and do not open it by itself again. */
   dismiss: () => void;
 }
 
-/** Open the first time this browser meets the app, closed once it is dismissed, and the button in the top bar brings it back. */
+/** Short the first time this browser meets the app, closed once it is dismissed, and the button in the top bar brings it back, in full. */
 export function useGuide(): GuideState {
-  const [open, setOpen] = useState(() => !guideSeen());
-  const toggle = useCallback(() => setOpen((now) => !now), []);
+  const [mode, setMode] = useState<GuideMode>(() => (guideSeen() ? "closed" : "short"));
+  const toggle = useCallback(() => setMode(afterGuideButton), []);
   const dismiss = useCallback(() => {
     rememberGuide();
-    setOpen(false);
+    setMode("closed");
   }, []);
-  return { open, toggle, dismiss };
+  return { open: mode !== "closed", full: mode === "full", toggle, dismiss };
 }
 
 /** The button that opens and closes the guide: it sits in the top bar, so it is on every page. */
@@ -32,12 +34,12 @@ export function GuideButton({ guide }: { guide: GuideState }) {
   );
 }
 
-/** Three steps for someone who has never seen the app. It sits in the flow under the bars, so it blocks nothing: the page is there
- * under it, and it can be closed at any time. */
+/** Three steps for someone who has never seen the app: a heading and where it is done, a row for each, and the Guide button adds what each one
+ * says. It sits in the flow under the bars, so it blocks nothing: the page is there under it, and it can be closed at any time. */
 export function Guide({ guide }: { guide: GuideState }) {
   if (!guide.open) return null;
   return (
-    <section id="guide" className="guide" aria-label="How to use the app, in three steps">
+    <section id="guide" className={guide.full ? "guide guide--full" : "guide"} aria-label="How to use the app, in three steps">
       <ol className="guide__steps">
         {GUIDE_STEPS.map((step, index) => (
           <li key={step.id} className="guide__step">
@@ -46,7 +48,7 @@ export function Guide({ guide }: { guide: GuideState }) {
             </span>
             <div className="guide__text">
               <strong>{step.title}</strong>
-              <span>{step.says}</span>
+              {guide.full && <span>{step.says}</span>}
               {step.action && (
                 <a className="guide__go" href={step.action.href}>
                   {step.action.label}
