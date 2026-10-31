@@ -1765,3 +1765,36 @@ No real call, no spend. Nothing pushed. Handlers untouched, and no public claim 
 - **The hero chart (788c704).** At 1536x730 it was cut by the fold, and its four translucent bands read as mud. A dot on each mean and a bar from the lowest seed to the highest, the workflows side by side, with the means in figures at C3. The page's sentence on the ten seeds is R6 with its figures read from the file and its link to R2 and R3; why a tie and both bases of the cost stand under the charts. Palette checked by the validator, dark and light.
 - **The seventh cold test (a408b13):** `.plans/notes/arena-cold-test.md`. Seven real stumbles fixed; one read as a fault was the run's clock.
 - **Next:** the README, on Yoel's request.
+
+### Then: the README, on Yoel's request
+
+**The request:** "haz la pagina del github mucho mas vistosa para que sea mas eye-catchy para el jurado y cualquiera que vea el repositorio".
+
+**9614236.** `scripts/build_readme_art.py` draws the page's pictures, and holds no fact of its own: they come from the log of `demo/final`, `story.json`, `docs/claims.md`, `bench/REPORT.md`, `heroText.ts` and what the commands print.
+- The hero: the run's five crashes, the root moving three times, 48 of 48 talks. Its last frame is `social-preview.png`.
+- Four tiles, the first takeover with its real hash scores and log rows, the replay and the one-letter tamper, a board of every measure against the three rivals, and the two hero charts.
+- The arena's film is `s6-fair-fight`, recorded again from today's app and cut to the two boards, with the boards stacked for a phone.
+- Gone: both banners, the GIF, the Mermaid tree, `build_readme_banner.py`.
+
+**The cold reader, screens only (`.plans/notes/arena-cold-test.md`).** It found what I could not see any more. The opening now says what a coordinator does, what the demo does, that the crashes are injected in one Python process, and links "not every set of deaths recovers". "The setting" comes before the pictures. The rivals are a list, because on a phone the table's Setting column was off the screen. Each measure is defined on the board.
+
+**Deviations to read:**
+- The third tile says "LLM tokens on takeover, routing and recovery, in every real swarm run": S4's "coordination", spelled out with the README's own sentence, because the reader took "coordination" for a definition that makes zero trivial.
+- M3 reads "every recorded demo run and arena pair": the same scope, in words that page has introduced.
+- R6, the HRW sentence, R4 and R7 lost their quotation marks, not a word: the reader asked who was being quoted.
+- The film's caption is gone from the frame. The sentence under the film says the same, with "One pair is one run on one seed", because the film's tiles showed 7.4 s against 52.7 s where the ten seeds tie.
+- The Limitations say that every crash in the bench's real runs at C3 hit a session coordinator, and where the root's and a track lead's deaths were run (`bench/REPORT.md` §6, §4.10.9). "Every run finished" read as a contradiction of the 40 of 48 run.
+- A note under the chart: "The swarm stalled more with no crash than with five: no crash removes a stall, so this is what noise looks like" (§4.10.7), because a reader asks.
+- Not taken: "ideal" stays the rival's name, and the in-process reason stays three times, because R5 wants it next to its figures.
+
+**Found on the way:** Chromium does not tell an SVG inside an `<img>` about `prefers-reduced-motion`, so the rule inside it did nothing. Each film has a `-still` file that the `<picture>` picks first. `sed -i` fails on a Mac: the recipe is `sed -i.bak`.
+
+**Checks at 9614236:**
+- `tests/unit/test_readme_art.py` 35 of 35, ruff clean. The full Python and web suites were not run: no runtime or web file changed.
+- The tamper recipe run verbatim: MISMATCH at seq 6593.
+- Offline render (marked, github-markdown-css) with the headers of raw.githubusercontent.com: fonts and motion hold in Chromium, Firefox and WebKit, no sideways scroll at 390, 1280 and 1920, and reduced motion gets the stills in all three.
+- **Not checked:** the real github.com page, since nothing is pushed. The Replay badge waits for its first run on master, as before. WebKit on Windows draws the variable font at one weight; the layout holds.
+
+**Yoel needed:** the social preview is a setting, so `docs/assets/social-preview.png` has to be uploaded by hand when the repo goes public.
+
+**Ledger:** unchanged, spent $60.03, reserved $13.73. Nothing pushed.

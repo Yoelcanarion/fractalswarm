@@ -174,3 +174,29 @@ A fresh agent with no repo, eight jury tasks and a mouse, in a window of 1536x73
 **Checked by:** `triage_check.mjs` 12 of 12 by clicks on a first visit, `phone_checks` 16 of 16, `menus_over.mjs`, `wheel_views.mjs`, web 2,732, Firefox.
 
 **What this test teaches:** read a tester's clock. "35 s" was true of the label on the screen and false of the visitor's wait, and the check took a minute. And the band that was measured at every size with the guide open was still a cost nobody had counted, because every earlier test measured a page, not a visit.
+
+## The eighth cold test: the README (Nov 1)
+
+A fresh agent as a juror with ninety seconds, reading only screens of the page on a laptop and a phone, and frames of the three films. Commit 9614236 holds the fixes.
+
+| What it said | True? | What changed |
+|---|---|---|
+| "Talks placed" with no task, "coordinator" defined a screen late | True | The opening says what a coordinator does and what the demo does |
+| "Can a team recover without one?" One what? | True | "without a supervisor" |
+| Quotation marks with no speaker | True: left over from the claims table | Gone, the words kept |
+| "outcome B" of what? | True | "The outcomes were written down before any run against that rival. We got outcome B:" |
+| Blast radius, dependency time, seeds, C0 and C3 | True | Each measure defined on the board, "The setting" before the pictures, "None (C0)" and "Five (C3)" on the charts |
+| Stall falls under crashes: why? | True, and the report answers it | The report's sentence on noise under the chart |
+| "14 of 14" against "10 seeds" | True | "The ten of the headline and four earlier ones" |
+| "Every run finished" against 40 of 48 | Not a contradiction, but it read as one | The Limitations say what the bench's real crashes hit |
+| "Any of them can die" against "not every set" | Allowed by S2, and it read as one | The limit is linked in the opening |
+| "Coordination" zero by definition | Partly: planning does call the model | The tile names takeover, routing and recovery |
+| The film's tiles against the ten-seed ties | True: one seed, in type too small to read | Cut to the boards, and "One pair is one run on one seed" under it |
+| Film text unreadable, dead controls | True | The same cut, and a stacked cut for a phone |
+| Setting off the screen on a phone | True, and the worst of them: a claim with no setting | The table became a list |
+| Code comments past the edge | True | Comments above the commands |
+| The ideal rival loses to a faster one | The result, honestly reported | Nothing |
+| A green win on extra cost against "not cheaper" | The win is against one rival, for the reason given | Nothing |
+| The in-process reason, three times | True | Nothing: R5 wants it next to its figures |
+
+**What this test teaches:** a table is a layout for one width. The Setting column carried the conditions of each claim, and on a phone it was the first thing to go.
