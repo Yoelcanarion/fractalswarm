@@ -363,7 +363,11 @@ textarea:focus-visible {
   font-size: var(--fs-lead);
 }
 
+/* It takes the row beside the title rather than fall under it, and on a wide screen a sentence stays one line. */
 .pagehead--compact .pagehead__lead {
+  flex: 1 1 0;
+  min-width: min(44ch, 100%);
+  max-width: 110ch;
   margin: 0;
   font-size: var(--fs-body);
 }

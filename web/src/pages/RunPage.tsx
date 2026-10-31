@@ -1,3 +1,5 @@
+import { useRef } from "react";
+
 import { ChaosPanel } from "../components/ChaosPanel";
 import { Counters } from "../components/Counters";
 import { EventFeed } from "../components/EventFeed";
@@ -8,6 +10,7 @@ import { RunGate } from "../components/RunFrame";
 import { Timeline } from "../components/Timeline";
 import { TreeGraph } from "../components/TreeGraph";
 import { Card, Details, Skeleton, SkeletonGroup, Term } from "../components/ui";
+import { useRoom } from "../lib/room";
 import { useRunStore, useRunStoreShallow } from "../store";
 
 /** The shape of the run page while its log loads: the line that says what state the run is in, the tree, the fold, the replay bar. */
@@ -50,10 +53,12 @@ export function RunPage({ unfold = false }: RunPageProps) {
 function RunOverview({ unfold }: { unfold: boolean }) {
   const { runId, events, cursor } = useRunStoreShallow((s) => ({ runId: s.runId, events: s.events, cursor: s.cursor }));
   const view = useRunStore((s) => s.view);
+  const root = useRef<HTMLDivElement>(null);
+  useRoom(root, "--run-room");
 
   const hasSchedule = view.schedule.rooms.length > 0;
   return (
-    <div className="run run--overview">
+    <div ref={root} className="run run--overview">
       {/* the sub-nav says which view this is and the line under it says what state the run is in: no title or lead of its own to repeat them */}
       <h1 className="sr-only">Run</h1>
       <RunState view={view} />

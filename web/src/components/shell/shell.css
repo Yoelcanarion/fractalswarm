@@ -65,6 +65,55 @@
   width: 240px;
 }
 
+/* A run's evidence shares the row of its views, so the page under it keeps a row of height. Where the row has no room it wraps under the views,
+   and the first paint holds that second row, so that the page does not jump down when the strip fills. */
+.subnav:has(> .runstrip) {
+  flex-wrap: wrap;
+  row-gap: var(--space-1);
+}
+
+.subnav > .runstrip {
+  flex: 1 1 0;
+  min-width: max-content;
+  min-height: 0;
+  padding: 0;
+  border-bottom: 0;
+  background: none;
+}
+
+.subnav > .runstrip:empty {
+  min-width: 880px;
+  min-height: 36px;
+}
+
+/* the fold floats from the middle of the row: what it shows wraps before it leaves the window */
+.subnav > .runstrip .meter-fold > .disclosure__body {
+  max-width: calc(100vw - 700px);
+}
+
+@media (max-width: 1800px) {
+  .subnav > .runstrip .disclosure__hint {
+    display: none;
+  }
+  .subnav > .runstrip:empty {
+    min-width: 640px;
+  }
+}
+
+/* A laptop: no room for both on a row, so the views and their status keep theirs and the strip has the one under it. */
+@media (max-width: 1520px) {
+  .subnav > .runstrip {
+    order: 1;
+    flex-basis: 100%;
+  }
+  .subnav > .runstrip:empty {
+    min-width: 0;
+  }
+  .subnav > .runstrip .meter-fold > .disclosure__body {
+    max-width: min(980px, calc(100vw - 40px));
+  }
+}
+
 @media (max-height: 820px) {
   .subnav {
     min-height: 40px;
@@ -100,6 +149,11 @@
   .shell .subnav select {
     flex: 1 1 100%;
     width: 100%;
+  }
+
+  /* the strip can be as narrow as the phone: its chips wrap (lens.css) */
+  .shell .subnav > .runstrip {
+    min-width: 0;
   }
 }
 

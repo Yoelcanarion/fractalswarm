@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 
 import { openingRun, useAddressedRun } from "../lib/address";
+import { useRoom } from "../lib/room";
 import { useRunStore, useRunStoreShallow } from "../store";
 import { LensDock } from "./lens/LensDock";
 import { Timeline } from "./Timeline";
@@ -92,12 +93,22 @@ export interface RunFrameProps {
 export function RunFrame({ title, lead, children }: RunFrameProps) {
   return (
     <RunGate>
-      <div className="run">
-        <PageHeader compact title={title} lead={lead} />
+      <RunBody title={title} lead={lead}>
         {children}
-        <LensDock />
-        <Timeline />
-      </div>
+      </RunBody>
     </RunGate>
+  );
+}
+
+function RunBody({ title, lead, children }: RunFrameProps) {
+  const root = useRef<HTMLDivElement>(null);
+  useRoom(root, "--run-room");
+  return (
+    <div ref={root} className="run">
+      <PageHeader compact title={title} lead={lead} />
+      {children}
+      <LensDock />
+      <Timeline />
+    </div>
   );
 }

@@ -411,6 +411,11 @@ describe("the guide", () => {
 
   it("keeps the button of the short band clear of the row above it, whose link can run as far right as the button does", () => {
     const css = readFileSync(REPO_ROOT + "web/src/components/shell/shell.css", "utf-8").replace(/\r\n/g, "\n");
+    // the run's evidence shares the row of its views, so the page under it keeps a row of height, and it is the last thing in that row on a phone
+    expect(readFileSync(REPO_ROOT + "web/src/App.tsx", "utf-8").replace(/\r\n/g, "\n")).toMatch(/strip=\{loadError === null && \(runId \? <RunStrip \/> : opening && <div className="runstrip" aria-hidden \/>\)\}/);
+    expect(css).toMatch(/\.subnav:has\(> \.runstrip\) \{\n {2}flex-wrap: wrap;/);
+    expect(css).toMatch(/@media \(max-width: 1520px\) \{\n {2}\.subnav > \.runstrip \{\n {4}order: 1;\n {4}flex-basis: 100%;/);
+    expect(css).toMatch(/\.shell \.subnav > \.runstrip \{\n {4}min-width: 0;/);
     expect(css).toMatch(/\.guide:not\(\.guide--full\) \.guide__done \{\s*position: absolute;\s*right: var\(--space-3\);\s*bottom: var\(--space-2\);\s*padding-block: 5px;/);
   });
 
@@ -559,6 +564,12 @@ describe("the keyboard on the run page", () => {
     const page = readFileSync(REPO_ROOT + "web/src/pages/RunPage.tsx", "utf-8");
     expect(page).toContain('<Skeleton width="min(420px, 100%)" height={30} />');
     expect(page).not.toMatch(/<Skeleton width=\{420\}/);
+  });
+
+  it("gives the Muse lens the room the page has, with the guide band open or closed, and no more", () => {
+    const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8");
+    expect(css).toContain("--lens-max-h: max(320px, calc(var(--run-room, 100vh - 163px) - var(--timeline-h) - 36px));");
+    for (const file of ["web/src/components/RunFrame.tsx", "web/src/pages/RunPage.tsx"]) expect(readFileSync(REPO_ROOT + file, "utf-8"), file).toContain('useRoom(root, "--run-room")');
   });
 
   it("keeps the replay bar the same distance above the foot of the window where the page ends and where it goes on under it", () => {

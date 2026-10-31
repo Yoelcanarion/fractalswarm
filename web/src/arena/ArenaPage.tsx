@@ -5,6 +5,7 @@ import { ClockScope } from "../components/ClockScope";
 import { EmptyState, PageHeader, Skeleton, SkeletonGroup } from "../components/ui";
 import { listRuns } from "../lib/api";
 import { readFacts } from "../lib/catalogue";
+import { useRoom } from "../lib/room";
 import type { RunListing } from "../lib/types";
 import { RunStoreProvider, type RunStoreApi } from "../store";
 import "./arena.css";
@@ -21,7 +22,6 @@ import { PairPicker } from "./PairPicker";
 import { playedOut } from "./playedOut";
 import { arenaHash, type ArenaRoute } from "./route";
 import { Scoreboard } from "./Scoreboard";
-import { useRoom } from "./room";
 import { createPairSession, whenSettled, type PairSession } from "./session";
 
 const NO_OFFICIAL: { left: Official | null; right: Official | null } = { left: null, right: null };
@@ -133,7 +133,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   const rightPlayedOut = useStore(session.right, playedOut);
   const finished = leftPlayedOut && rightPlayedOut;
   const root = useRef<HTMLDivElement>(null);
-  useRoom(root);
+  useRoom(root, "--arena-room");
 
   const frames = useMemo(() => sharedFrames(frameOf(leftEvents), frameOf(rightEvents)), [leftEvents, rightEvents]);
   const assumptions = useMemo(() => assumptionsOf(startedOf(rightEvents), startedOf(leftEvents)), [leftEvents, rightEvents]);

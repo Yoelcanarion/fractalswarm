@@ -159,13 +159,13 @@ export function App() {
         blocked={blocked}
         opening={opening}
         guide={guide}
+        // the strip's place is held from the first paint: it is there before the run is open, and the page below does not jump down when it fills
+        strip={loadError === null && (runId ? <RunStrip /> : opening && <div className="runstrip" aria-hidden />)}
         onPickRun={(id) => {
           window.location.hash = pickedRunHash(id, route.page === "run" ? route.view : "overview");
         }}
       />
       <Guide guide={guide} site={site} />
-      {/* the strip's place is held from the first paint: it is there before the run is open, and the page below does not jump down when it fills */}
-      {route.page === "run" && loadError === null && (runId ? <RunStrip /> : opening && <div className="runstrip" aria-hidden />)}
       <main className="content" id="main" tabIndex={-1}>
         {route.page === "run" && route.view === "overview" && <RunPage />}
         {route.page === "run" && route.view === "plan" && <PlanPage />}

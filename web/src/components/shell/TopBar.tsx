@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { isAblationRun } from "../../ablation/view";
 import type { RunStatus } from "../../lib/controls";
 import { useDocumentTitle } from "../../lib/documentTitle";
@@ -36,6 +38,8 @@ export interface TopBarProps {
   /** A run is about to open: the status badge holds its place until the status is known. With no run to open, and for a run that failed
    * to load, there is no status to wait for and no badge. */
   opening?: boolean;
+  /** The evidence of the run that is open: it shares the run's row, so that the page under it keeps a row of height. */
+  strip?: ReactNode;
   onPickRun: (id: string) => void;
   /** The guide, when the page has one: its button is at the end of the bar, on every page. */
   guide?: GuideState;
@@ -54,7 +58,7 @@ function RunTab({ name, view, runId, blocked }: { name: RunView; view: RunView; 
   );
 }
 
-function RunBar({ view, runId, runs, runStatus, scenario, blocked, opening = false, onPickRun }: Omit<TopBarProps, "where"> & { view: RunView }) {
+function RunBar({ view, runId, runs, runStatus, scenario, blocked, opening = false, strip, onPickRun }: Omit<TopBarProps, "where"> & { view: RunView }) {
   // the run that is open is an option from the first paint, before the list of runs has arrived
   const options = runId === null || runs.some((run) => run.id === runId) ? runs : [{ id: runId }, ...runs];
   const { shown, more } = runViewsShown(view);
@@ -81,6 +85,7 @@ function RunBar({ view, runId, runs, runStatus, scenario, blocked, opening = fal
           </Details>
         )}
       </nav>
+      {strip}
       <div className="subnav__context">
         {scenario && <span className="mono muted">{scenario.split(":").at(-1)}</span>}
         {(runStatus !== null || opening) && <StatusBadge status={runStatus} />}

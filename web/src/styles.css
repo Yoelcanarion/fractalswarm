@@ -273,6 +273,9 @@ textarea {
   --foot: var(--space-3);
   padding: 12px 16px var(--foot);
   height: 100%;
+  /* the Muse lens is as tall as the window leaves it, under the bars above the page and the guide band while that is open (--run-room, lib/room.ts) and
+     over the replay bar, not as tall as the page */
+  --lens-max-h: max(320px, calc(var(--run-room, 100vh - 163px) - var(--timeline-h) - 36px));
 }
 
 /* A way past a long run of tab stops: out of sight until the keyboard reaches it. */
@@ -339,8 +342,6 @@ textarea {
 .run--overview {
   height: auto;
   min-height: 100%;
-  /* the Muse lens is as tall as the window leaves it, under the bars above the page and over the replay bar, not as tall as the page */
-  --lens-max-h: max(320px, calc(100vh - 163px - var(--timeline-h) - 36px));
 }
 
 /* A short window: the rows sit closer, so that the Details bar under the tree is not behind the replay bar pinned over the foot of the page. */
@@ -1348,6 +1349,10 @@ textarea {
   }
   .app .lens {
     position: fixed;
+  }
+  /* the window is what scrolls here, and the page's area is as tall as the page */
+  .app .run {
+    --lens-max-h: max(320px, calc(100vh - 163px - var(--timeline-h) - 36px));
   }
   .timeline {
     flex-wrap: wrap;
