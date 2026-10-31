@@ -1496,4 +1496,18 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 
 **My own catch on those sheets (09c6427):** the frame said "real cost $0.7846" for the in-process rival. That is the scored cost, with $0.18 estimated for cancelled calls; the run spent $0.6047, and R5 says the two bases must be named. The frame now reads `spent_usd` from the end of the log. **The rehearsal takes still show the old figure:** the final takes are recorded after the UI is settled, so they will change. Web suite 2,499 green.
 
-**Now:** every worker idle at 09c6427, the first coordinator is on a pass over the takes and the final bundle. **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, which rival the video's s1 and s6 use, master, the public repo, where the static site goes.
+**The review of the takes (06:00):** the first coordinator watched the six takes against the script, frame by frame. The pictures are good; what was left is the fit between numbers, picture and voice.
+
+**A real bug, in the crown jewel (98a8a08):** a real log has no owner of the root key before the first takeover, so `forestOf` let the dead root fall at the kill: o1, o2 and o3 stood as three roots for 5 s, and every card changed colour and most changed back. The dead root now stays where it fell, with the tree under it, until its heir holds the key, as `forestOf`'s own comment always said. On `demo/final` no colour changes at the kill, and at the takeover only the heir's does (it takes the root's). Sessions moved up keep the colour of their subtree. W4's camera test had recorded the three-brain row as a fact, so W4 checks whether the key's reserve still earns its pixels.
+
+**Decided, not asked (the script, d55bcd3):**
+- `s1`: same words, new order, same 32 s: "Now we kill half the brains" lands on the crash (about 0:22, from 0:20), and "A better supervisor helps… Can a team recover without one?" comes after it, over the two sides reacting. The first coordinator offered this or 5 s more; the video has no 5 s to spare.
+- `s4`: the lens opens Wonder's plan, then the first call that publishes facts (`o3.1.a1`, extract step 2, 52.5–59.0 s), because the voice promises "the sentence behind the decision" and the take stopped on a call that only searched the board. The run is past the first kill at that point; `s1` has shown it and `s5` opens on the same tree. The script said "effort high"; all 57 Spark agent calls are low. The voice lost "the tokens go to the problem" to fit 18 s.
+- `s6`: no ring on the idle card (a one-seed win the script forbids), a lower third with the voice's own tie, the band in the UI's words.
+- Rival of `s1` and `s6`: still Yoel's in the edit (§M.5), and the script now says a `central` take cannot go with this voice.
+
+**The recovery checks read as sentences (79b071a):** no "crash(es)" in the proof tooltip. `verify/` is not a handler.
+
+**In progress:** W5 on the live idle card, which falls back on the last frame because it counts another measure than the scored one (206.2 to 62.5), `s6`, `s4`, `s1`, the tooltip and the new takes. W4 on five items of the static site and the key's reserve.
+
+**Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, which rival the video's `s1` and `s6` use, master, the public repo, where the static site goes.
