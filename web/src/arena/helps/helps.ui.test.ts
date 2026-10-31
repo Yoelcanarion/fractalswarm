@@ -154,7 +154,7 @@ describe("the note about H5", () => {
 describe("the per-process section", () => {
   it("counts the swarm's coordinators by level and does not sum them", () => {
     const text = plainText(render());
-    expect(text).toContain("the swarm, with 1 + 3 + 6 coordinators by level of its tree, sees 1 + 3 + 6 times the crashes of one ideal durable supervisor");
+    expect(text).toContain("the swarm sees 1 + 3 + 6 times the crashes of one ideal durable supervisor");
     expect(text).not.toMatch(/= ?10\b/);
   });
 });
@@ -203,7 +203,6 @@ describe("the setting of the counts", () => {
     expect(text).toContain("Fake model, simulated clock");
     expect(text).toContain("$0 runs");
     expect(text).toContain("do not measure the real model");
-    expect(text).toContain("is not a real-run result");
   });
 
   it("is in view, not in a fold", () => {
@@ -261,7 +260,7 @@ describe("the page", () => {
       const markup = view(state, retry);
       expect(markup.match(/<h1/g), state.status).toHaveLength(1);
       expect(markup, state.status).toContain('<h1 class="pagehead__title">Trade-offs</h1>');
-      expect(plainText(markup), state.status).toContain("The swarm against each rival, at every setting the bench ran.");
+      expect(plainText(markup), state.status).toContain("Where the swarm wins, ties and loses against each rival, as the bench counted it.");
     }
   });
 

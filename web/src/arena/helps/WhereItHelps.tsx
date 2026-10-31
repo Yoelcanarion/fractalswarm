@@ -27,8 +27,9 @@ function ClaimLine({ claim, quoted = false }: { claim: Claim; quoted?: boolean }
   );
 }
 
-/** The pre-registered outcome: what the decision rule read at the gate, and the headline it allows. */
-function OutcomeStrip({ honesty, claims }: { honesty: Honesty; claims: Claims }) {
+/** The pre-registered outcome: what the decision rule read at the gate, and under a fold the headline it allows, always with its conditions
+ * (docs/claims.md keeps them together: they are one fold, so neither shows without the other). */
+function OutcomeStrip({ honesty, claims, unfold = false }: { honesty: Honesty; claims: Claims; unfold?: boolean }) {
   const { outcome } = honesty;
   const { headline, conditions } = claimsToShow(outcome.label, claims);
   const task = outcome.gate[0] ? ` on ${taskName(outcome.gate[0].task)}` : "";
@@ -53,18 +54,20 @@ function OutcomeStrip({ honesty, claims }: { honesty: Honesty; claims: Claims })
           ))}
           {outcome.gate.length > 0 && <Model kind="crash" />}
         </p>
-        {headline ? (
-          <p className="outcome__claim">
-            <ClaimLine claim={headline} quoted />
-          </p>
-        ) : (
-          <p className="outcome__claim outcome__claim--none">No headline claim is allowed for outcome {outcome.label} (docs/claims.md).</p>
-        )}
-        {conditions && (
-          <p className="outcome__claim outcome__claim--next">
-            <ClaimLine claim={conditions} />
-          </p>
-        )}
+        <Details inline id="claim" summary="The claim and its conditions" open={unfold}>
+          {headline ? (
+            <p className="outcome__claim">
+              <ClaimLine claim={headline} quoted />
+            </p>
+          ) : (
+            <p className="outcome__claim outcome__claim--none">No headline claim is allowed for outcome {outcome.label} (docs/claims.md).</p>
+          )}
+          {conditions && (
+            <p className="outcome__claim outcome__claim--next">
+              <ClaimLine claim={conditions} />
+            </p>
+          )}
+        </Details>
       </div>
     </section>
   );
@@ -100,7 +103,7 @@ export function HelpsHead({ actions }: { actions?: ReactNode }) {
     <PageHeader
       className="helps__head"
       title="Trade-offs"
-      lead="The swarm against each rival, at every setting the bench ran. Wins, ties and losses, as the bench counted them."
+      lead="Where the swarm wins, ties and loses against each rival, as the bench counted it."
       actions={actions}
     />
   );
@@ -113,8 +116,7 @@ function SettingLine() {
   return (
     <p className="helps__setting" data-helps="setting">
       <span className="helps__setting-tag">Fake model, simulated clock</span>
-      The $0 runs: they check the design and do not measure the real model, so a win or a tie here is not a real-run result. The real-model results are on{" "}
-      <a href="#/evidence">their own page</a>.
+      The $0 runs check the design and do not measure the real model. The real-model results are on <a href="#/evidence">their own page</a>.
     </p>
   );
 }
@@ -154,7 +156,7 @@ export function WhereItHelps({ honesty, rival: start, open: startOpen = null, un
         }
       />
       <SettingLine />
-      <OutcomeStrip honesty={honesty} claims={claims} />
+      <OutcomeStrip honesty={honesty} claims={claims} unfold={unfold} />
       <div className="helps__body">
         <RegimeMap honesty={honesty} rival={rival} />
         <Details id="table" summary="The full count" hint="every setting against every rival, and each list of results" open={unfold || open !== null}>

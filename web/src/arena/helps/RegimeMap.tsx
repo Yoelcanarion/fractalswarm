@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { Tooltip } from "../../components/ui";
+import { Details, Tooltip } from "../../components/ui";
 import { systemName } from "../assumptions";
 import type { Honesty, Locality } from "./honesty";
 import { fmt, LOCALITY_WORD } from "./labels";
@@ -48,10 +48,10 @@ function Cell({ cell, rival }: { cell: MapCell; rival: string }) {
   );
 }
 
-const LEGEND: { locality: Locality; text: string }[] = [
-  { locality: "holds", text: "Holds: dependency time and blast radius are wins, idle agent-seconds is not a loss" },
-  { locality: "ties", text: "Ties: anything else" },
-  { locality: "fails", text: "Fails: a loss on dependency time or blast radius" },
+const LEGEND: { locality: Locality; word: string; text: string }[] = [
+  { locality: "holds", word: "Holds", text: "Holds: dependency time and blast radius are wins, idle agent-seconds is not a loss" },
+  { locality: "ties", word: "Ties", text: "Ties: anything else" },
+  { locality: "fails", word: "Fails", text: "Fails: a loss on dependency time or blast radius" },
 ];
 
 export interface RegimeMapProps {
@@ -84,7 +84,6 @@ export function RegimeMap({ honesty, rival }: RegimeMapProps) {
             <div className="map__row" key={row.id} data-helps={`row:${row.id}`}>
               <div className="map__head">
                 <span className="map__title">{row.title}</span>
-                <span className="map__detail">{row.detail}</span>
                 <span className="map__model">
                   <Model kind="crash" text={row.model} />
                 </span>
@@ -98,27 +97,45 @@ export function RegimeMap({ honesty, rival }: RegimeMapProps) {
           ))}
         </div>
       )}
-      <ul className="map__legend" aria-label="How to read the map">
-        {LEGEND.map(({ locality, text }) => (
+      <ul className="map__legend" aria-label="Key">
+        {LEGEND.map(({ locality, word }) => (
           <li key={locality}>
             <Mark locality={locality} />
-            <span>{text}</span>
+            <span>{word}</span>
           </li>
         ))}
-        <li>
-          <span className="map__swatch map__swatch--decides" aria-hidden />
-          <span>Heavy outline: decides the outcome (the default settings and the plausible region, fixed before any result). The rest are conditions.</span>
-        </li>
-        <li>
-          <span className="map__num" aria-hidden>
-            N×
-          </span>
-          <span>
-            Coordinator-dependency time, swarm over supervisor, mean of the seeds.
-            {cut !== undefined && ` A win needs every seed to reach ${fmt(cut)}× or lower, so a mean under ${fmt(cut)}× can still tie.`}
-          </span>
-        </li>
       </ul>
+      <Details inline summary="How to read the map">
+        <ul className="map__legend" aria-label="How to read the map">
+          {LEGEND.map(({ locality, text }) => (
+            <li key={locality}>
+              <Mark locality={locality} />
+              <span>{text}</span>
+            </li>
+          ))}
+          <li>
+            <span className="map__swatch map__swatch--decides" aria-hidden />
+            <span>Heavy outline: decides the outcome (the default settings and the plausible region, fixed before any result). The rest are conditions.</span>
+          </li>
+          <li>
+            <span className="map__num" aria-hidden>
+              N×
+            </span>
+            <span>
+              Coordinator-dependency time, swarm over supervisor, mean of the seeds.
+              {cut !== undefined && ` A win needs every seed to reach ${fmt(cut)}× or lower, so a mean under ${fmt(cut)}× can still tie.`}
+            </span>
+          </li>
+        </ul>
+        <dl className="map__terms">
+          {rows.map((row) => (
+            <div key={row.id}>
+              <dt>{row.title}</dt>
+              <dd>{row.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      </Details>
     </section>
   );
 }

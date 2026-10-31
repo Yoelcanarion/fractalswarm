@@ -288,8 +288,20 @@
   font-weight: 700;
 }
 
-.map__detail {
+.map__terms {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
   font-size: var(--fs-body);
+}
+
+.map__terms dt {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.map__terms dd {
+  margin: 0;
   color: var(--text-muted);
 }
 
