@@ -1725,3 +1725,18 @@ No real call, no spend. Nothing pushed. Handlers untouched, and no public claim 
 **Checks at 45508f4, or at 9be6a58 where marked:** web 2,710 of 2,710 at 9be6a58, tsc clean, build committed with each change, sideways scroll clean at 360, 390 and 430, `phone_checks` 16 of 16 once its scroll steps moved to the window, the static check CLEAN. Python untouched since 93464b3.
 
 **Ledger:** unchanged, spent $60.03, reserved $13.73.
+
+### Later that night, to 22:30: a juror at a desk, full HD
+
+**The sixth cold test** (60 actions, 1920x950, the static site served with gzip): top three if the repository opens, otherwise top five. The whole triage is in `.plans/notes/arena-cold-test.md`. **My correction:** I told Yoel the menus and the lens were checked; `menus_over` had printed FAIL on the lens and I read past it. It was a real fault in the committed build, and it is fixed below.
+
+- **The home's demo (5ca76cb):** the first click moved the tree 19 px; it no longer moves the page. A coordinator reads "o2.1 (AI track, day 1)".
+- **The arena (f500d9c):** the pair's whole name shows. The end of a pair is two sentences a side and the scope; the hand-overs and "no agent was killed here" moved under More on this pair, not out. **Deviation worth a look:** that second sentence was on the page by a decision of mine today, and it is now one click away. The scope above it still says one run, one seed, not what usually happens. In the app, Evidence is the tab: the arena's two links go to Charts.
+- **Runs and Trade-offs (4abdf8d):** each run is listed once. "Regime map" is "Where it holds", locality has a definition, and the key says what N× is. "Gate" stays: it is PREREG's word.
+- **A run's page (7ceab52):** the evidence strip shares the row of the run's views from 1521 wide up, each head is a line, so at 1920x950 a page starts at 195 px and not 248. The Muse lens reads the room the page has instead of a fixed 163 px, so it no longer covers the replay bar with the guide open. One case left: 1280x720 with the full guide, where the drawer's floor of 320 px does not fit in 277.
+
+**Takes:** "Where it holds" is on screen in s7, and the strip's move changes no take (the stage draws its own). `takes\grabar_escenas.ps1` is due once at the end, already on the list.
+
+**Checks at 7ceab52:** web 2,713 of 2,713, tsc clean, build committed, `phone_checks` 16 of 16, the wheel to the foot of six pages at 1920x950, the bars at eight window sizes, the lens at five. Python untouched since 93464b3. Nothing pushed.
+
+**Ledger:** unchanged, spent $60.03, reserved $13.73.

@@ -119,3 +119,32 @@ One agent, Sonnet, with the site's address at 390 x 844 and nothing else. The do
 **Every fix checked by taps and clicks** on a scratch build, at 390 with touch and at 1366 with a mouse, and for sideways scroll at 360, 390 and 430.
 
 **What this test teaches:** a model's slowness hides a real fault as often as it invents one. "Evidence opened at the bottom" read like a slip of the driver until its action log showed the two steps before it.
+
+## The sixth test: a juror at a desk, full HD, on the static site (Oct 31, at 58167d6, 60 actions)
+
+A fresh agent with no repo, eight jury tasks and a mouse, in a browser window of 1920x950 on a copy of the site served with gzip. Its verdict: top three if the repository opens, otherwise top five. Best: the candour, and the hashes a person can check. Weakest: nothing on the site can be run.
+
+| What it found | Was it true | What changed |
+|---|---|---|
+| The code link is a 404 | Yes, and expected: the repo is private until the release | Nothing. Repo before site, as the release list says |
+| "PENDING" beside `demo --verify` with MATCH under it | True: S5 is pending until the release commit | Nothing. It is lifted by `verify_all.ps1` at the release. The tag must be gone on the page that ships |
+| The tree jumps about 20 px under the first click | True: the line said "I am under the bar" at any place above its own scroll margin, and the landing of Kill one yourself stands 19 px above that | The page moves only if the line really is under the bar. Measured at seven sizes: 0 px |
+| "AI · Day 1" unexplained | True | "o2.1 (AI track, day 1)", the id the tree shows first |
+| The pair's name is cut ("one ru") | True, at every width: the select stopped at 520 px and the name needs 565 | 720 px at most. It shows whole from 800 wide up; a phone already wrapped it |
+| The end of the pair is a wall of three paragraphs | True | Two sentences a side and the scope. What was added for a careful reader (why 6 hand-overs for 5 coordinators, no agent killed here) is under More on this pair |
+| Evidence and "The evidence" are two pages | True | Inside the app, Evidence is the tab: the arena's two links go to Charts. The home's page keeps its name |
+| The same five runs listed twice | True | With the table open the short list gives way. The guide's link lands on the table alone |
+| Run views leave half the window | True: at 1920x950 the page started at 248 px | The evidence strip shares the row of the run's views from 1521 wide up, so a page starts at 195 px, and each head's sentence is one line. At a laptop's width the strip keeps a row of its own |
+| Trade-offs is dense jargon, with a bare × | True | "Where it holds" for "Regime map", locality has a definition on hover, and the key under the map says what N× is. "Gate" stays: it is PREREG's name. The losses are on the fake model and the page says so |
+| Plan text cut at the panel's edge | No: it is the fold of a scroller with a scrollbar | Nothing |
+| The popover covers the rival's title | True while open, as a menu does. Escape and a click away close it | Nothing |
+| Security is nearly empty, Events opens on actor.stopped | No fault: all zeros is the result, and newest first at the end of a run is that | Nothing |
+| "Run" hit an event row, the counters mid-count | The driver, and a model's pace | Nothing |
+
+**Found while checking it, not by the tester:**
+- With the guide open on a laptop, the Muse lens covered the replay bar's right half, and with the full guide it ran off the window. The committed build did it too: `menus_over` had printed FAIL there and I had read past it. Its height came from a fixed 163 px of bars. It now reads the room the page has (`lib/room.ts`, shared with the arena), and it follows the guide band as that comes and goes: clear of the bar in 14 of 15 cases at five sizes. The one left is 1280x720 with the full guide open, where 277 px of page cannot hold the drawer's floor of 320; it stays inside the window.
+- The fold "What the models cost" would have left the window at 1536 once the strip moved to the middle of the row. Its width follows the window there.
+
+**Checked by:** `desk_check.mjs` at eight window sizes, `lens_room.mjs`, `wheel_views.mjs`, `menus_over.mjs`, `phone_checks` 16 of 16, by eye at 1920x950, 1920x1080 and 1366x768.
+
+**What this test teaches:** a tool that prints FAIL is read like any other line. The lens FAIL had been on my screen and I reported the check as passed; run the old build beside the new one before calling a FAIL new or old, and fix it either way.
