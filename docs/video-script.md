@@ -120,9 +120,9 @@ Anything that doesn't answer one of them stays out of the video.
 **On screen:** the Trade-offs panel, with no camera move: its first screen holds it all. A ring on each row of the regime map as the voice reaches it (restart or failover time, the gate on the conference task, fast external restart), then on the outcome box, which has the per-process line and the false deaths in R3's words. **Lower third, as the voice reaches the in-flight calls:** "Realistic durable supervisor · 5 crashes · 10 seeds" over "Real model: a crash held up 9.0% of sessions, against 37.3%" (R7). The wins/ties/losses table and the per-process panel stay in the app.
 
 **Voice-over (outcome B; ≈ 30 words):**
-> It helps when a supervisor restarts slowly or loses its in-flight calls. It ties the ideal one. It loses to a fast external restart, and its detector raises false alarms.
+> It helps when a supervisor restarts slowly or loses its in-flight calls. It ties the ideal one. It loses to a faster external restart, and its detector raises false alarms.
 
-**Key points:** helps when the supervisor restarts slowly or loses its in-flight calls · ties the ideal one · loses against a fast external restart · false deaths · both failure models shown (`docs/claims.md` R3, R7).
+**Key points:** helps when the supervisor restarts slowly or loses its in-flight calls · ties the ideal one · loses to a faster external restart · false deaths · both failure models shown (`docs/claims.md` R3, R7).
 
 ### s8-proof (2:30–2:42)
 **On screen:**

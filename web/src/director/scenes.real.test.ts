@@ -433,7 +433,7 @@ describe("the final run, as s4 and s5 meet it", () => {
 
 describe("s7, which meets no log", () => {
   it("rings the three rows of the regime map and then the outcome as the voice reaches each, with no camera, and ends before its scene does", () => {
-    // voice at 140 wpm: "It helps when a supervisor restarts slowly" to 3.0 s, "or loses its in-flight calls" to 5.1 s, "It ties the ideal one" to 7.3 s, "It loses to a fast external restart" to 10.3 s, "and its detector raises false alarms" to 12.9 s
+    // voice at 140 wpm: "It helps when a supervisor restarts slowly" to 3.0 s, "or loses its in-flight calls" to 5.1 s, "It ties the ideal one" to 7.3 s, "It loses to a faster external restart" to 10.3 s, "and its detector raises false alarms" to 12.9 s
     const scene = byId("s7-where-it-helps");
     const trace = play(scene, { end: 0, crashes: [], calls: new Map() });
     expect(trace.state.warnings).toEqual([]);
