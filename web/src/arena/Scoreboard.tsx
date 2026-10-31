@@ -99,7 +99,8 @@ export function Scoreboard({ left, right, official, playing, fixedStep, caveat =
     <section className="score" aria-label="Face to face">
       <div className="score__grid">
         {rows.map((row) => (
-          <Metric key={row.id} row={row} animate={animate} />
+          /* the label in the key: a Stat must not count from one quantity into another */
+          <Metric key={`${row.id}:${row.label}`} row={row} animate={animate} />
         ))}
       </div>
       <p className="score__note">
