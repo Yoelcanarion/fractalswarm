@@ -1532,6 +1532,14 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 
 **Checks at 0ccaffb, all green:** unit 1,211; integration 325, 170, 120, 107, 186 (908); the 13 strict-mode tests; `ruff check` and `format --check`. Web suite 2,548 at 82e28eb.
 
-**In progress:** I took back the dash on the first card: it is empty for a whole play, on a card a juror reads early, and there are four days left. W5 ports the scored idle rule to `lib/recovery.ts`, with parity on prefixes from a $0 run of `analyze`, and re-records `s1` and `s6`. If parity fails on any shipped log, the dash stays.
+**The first card counts live (96b1bd8, 9550f6b):** I took back the dash: it was empty for a whole play, on a card a juror reads early. `lib/recovery.ts` now runs the scored idle rule: live equals `analyze()` at the end of nine logs, to the millisecond, and at 11,728 prefixes with no step back. No frame cost: 58 to 59 fps, p95 16.8 ms, two boards at 20x. The number moves in steps when a wait ends, as the dependency card does. The older display fold is gone from `lib/arena.ts`; every other counter measured byte for byte the same over 3,351 readings. `s1` and `s6` were recorded again. `s1` reads 0.0 / 0.0 to its last frame, because the first wait ends 1.5 s after the scene: left.
+
+**The short pass (11:22):** nothing holds the final takes. In `s6` the two sides cross on "it tied with us": the best picture of a tie the scene has had. One old bug in no take: at the end of the in-process pair the sixth card counted from 23 down to 0 when its label turned, from one quantity into another. Fixed (091d8ea): seen on 8765, it goes 25 to 0 at once.
+
+**The takes:** `candidate-1031` stands as the final set for `s1`, `s4` to `s8` and the title card of `s9`, on the durable pair, unless Yoel picks another rival. What changed since the takes reaches none of their frames. `rough-cut-no-voice.mp4` in that folder joins the seven, 2:20 with no voice, without `s2`, `s3` and the terminal of `s9`.
+
+**Checks at 091d8ea:** web suite 2,609 green; `tsc` clean. Python is green at 0ccaffb, and nothing under `src/fractalswarm` has changed since but the static bundle. Spent $55.35, reserved $12.86, remaining $81.79; no real call today.
+
+**Now:** a rehearsal of the release (fresh clone, the one command with no key, secret scan), so that nothing is found on the last day.
 
 **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, which rival the video's `s1` and `s6` use, master, the public repo, where the static site goes.
