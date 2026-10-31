@@ -1490,4 +1490,10 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 
 **Closed, no work needed:** the PromptGuard tokenizer warning: `docs/api-notes.md` already records that the warned copy's scores equal the hub copy's on all four texts.
 
-**Now:** W5 has the recorder and frame-time slot; W4 has W8's three wording findings and a measure at 390 px. **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, master, the public repo, where the static site goes.
+**W4's last list (424ca88):** W8's "170 px over at 390" was real, on the static site and on recordings this code does not reproduce: the proof chip is a sentence that could not wrap. 0 px over now on 52 pages at 390 px, 18 at 360 and 15 of the site. The app reads `static: true` from the capabilities and says what is true of each place.
+
+**The rehearsal (W5, c04c74f):** six takes in `~/.fractalswarm/takes/rehearsal-1031` (durable: s1, s6, s4, s8; central: s1, s6), 1080p at 60 fps, every sidecar clean, contact sheets in `sheets/`. Found on the way: W4's Hint had taken the native title from the chips, so s8's tooltips drew nothing; fixed in `surface.ts`, and s8 retimed so that the paragraphs can be read. Frame times with two boards at 20x: 59 fps, p95 16.8 ms, no long task.
+
+**My own catch on those sheets (09c6427):** the frame said "real cost $0.7846" for the in-process rival. That is the scored cost, with $0.18 estimated for cancelled calls; the run spent $0.6047, and R5 says the two bases must be named. The frame now reads `spent_usd` from the end of the log. **The rehearsal takes still show the old figure:** the final takes are recorded after the UI is settled, so they will change. Web suite 2,499 green.
+
+**Now:** every worker idle at 09c6427, the first coordinator is on a pass over the takes and the final bundle. **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, which rival the video's s1 and s6 use, master, the public repo, where the static site goes.
