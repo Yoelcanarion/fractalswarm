@@ -1547,6 +1547,18 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 - **Secret scan, every blob of every ref (4,364):** `MODEL_API_KEY` and `HF_TOKEN` in none. Its alarm was `FRACTALSWARM_RUNS_DIR`, a path in the same `.env`; the script now compares the two real names. 426 home paths in 14 files, all but one under `.plans/` or in `CLAUDE.md`: still Yoel's call at publish, as is the address in the commits.
 - **A clone on a path over 148 characters fails on Windows:** the repo's longest paths are 112. The clone warns and checks out a part, and a partial checkout still prints MATCH. No juror's path is that long; noted, not changed.
 
-**Now:** a cold reader (a fresh agent with only the screenshots) tries the redesign's own test: can someone who has never heard of an orchestrator follow the page?
+**The redesign's own test, tried cold (eff8604, c95eab0).** A fresh agent, given only ten screenshots and told to stay a person who has never heard of an orchestrator, could not say what the agents do until the eighth screen. Seven informed passes had not seen that. What changed:
+- **The home names the job:** "AI agents plan a conference, led by a tree of small coordinators."
+- **The problem:** "agents" for "workers", and a key under the film (rows: agents, bars: model calls).
+- **The solution:** "When one dies, each survivor reads the log and works out the same heir, so nobody votes."
+- **The proof:** what the extra cost is extra to, "left is less", the setting in words (real model, conference, 5 crashes, 10 seeds; T2 and C3 stay in the fold), each rival explained in a line, and what the tie is worth: "The tie comes with no central coordinator."
+- **The doors** have the tabs' names: Arena, New task, Runs, Evidence.
+- **The app:** "coordinator" for "orchestrator" on the main path; the arena names the conference; Trade-offs no longer sends a reader from Evidence to "the evidence page"; New task says that the run kills half the brains by default; the README says uv is all a clone needs.
+
+A second fresh reader, with the same prompt, had the job from the first screen, and now gets lost on the third. Two readers separately took "o0 down 5.9 s" for slower than the rival's "o0 down for 0.5 s": a finished outage beside a running one. It is now in the past tense. The second caught the privacy box saying "stays on this machine" beside "sent to Meta's model API": it now says "kept on this machine", which is true with Muse too. Left on purpose: the Trade-offs page stays technical, and "practice model" and "fake model" stay two words for now.
+
+**My misses:** cutting to the page's word limit reversed two sentences, with every test green. "Finished work is paid for twice" says the opposite of the bench's rule that finished work is preserved; it is interrupted work. "Restarts at once" described the rival that beats the swarm (R3), beside a tie chip; the one we tie restarts on detection. The first coordinator caught both by reading the diff against `docs/claims.md`. Both are fixed; neither reached a take.
+
+**Now:** W5 records `s1`, `s4`, `s5`, `s6`, `s7` again for the new words on screen, into `candidate-1031`, and rebuilds the rough cut. The first coordinator checks the two new sentences against R2 and S1.
 
 **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, which rival the video's `s1` and `s6` use, master, the public repo, where the static site goes.
