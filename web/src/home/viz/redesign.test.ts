@@ -523,6 +523,14 @@ describe("the Proof's drawing in two columns", () => {
     expect(html).toContain(">tie</text>");
   });
 
+  it("names a dot a run, in its row and in its hover text: the word seed is for the setting line", () => {
+    const html = draw(panels, 1200);
+    expect(html.match(/<title>Run \d+: /g)).toHaveLength(2 * 2 * story.numbers.r2.seeds);
+    expect(html).toContain("a dot for each run");
+    expect(html).not.toMatch(/<title>Seed |a dot for each seed/);
+    expect(html).toMatch(new RegExp(`>[^<]*${story.numbers.r2.seeds} seeds</text>`));
+  });
+
   it("writes a shared setting once, and each panel's own where they differ", () => {
     const [a, b] = panels as [BarsPanel, SeedsPanel];
     const once = draw([{ ...a, setting: "One setting" }, { ...b, setting: "One setting" }], 1200);
