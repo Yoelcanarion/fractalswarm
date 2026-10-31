@@ -207,3 +207,32 @@ contradicts the design's expectation is printed as plainly as one that confirms 
 2026-10-29, before the first gate run, so in place: the plausible region of §5 gained
 `rival_recovery_ms` 0.5 s, and §5 now states the fault profile of the sweeps and the asymmetry in
 the failure detector. Both came from the coordinator's review.
+
+2026-10-31, appended before any of these runs (Yoel's decision 4 of that day, with a strict limit
+of $5 on top of what had been spent): **the real rows of a track lead's death.** None of the 86 real
+crashes of the bench hit a track lead, so what §6 says of level 1 rests on the fake model alone. The
+rules above stay as they were, and no verdict of §7 reads these rows.
+
+- *Cells.* `bench/matrix-midlevel-swarm.yaml`: the probes `K-o1@0.04`, `K-o2@0.04` and `K-o3` (at
+  0.5) on seeds 1 and 2, 6 cells. `bench/matrix-midlevel-rival.yaml`: `durable-max` at `K-o0@0.04`
+  and `K-o0` on the same seeds, 4 cells. 10 paid cells, each capped at $0.50, so the worst case is
+  $5.00. The C0 twins are the cell files of `results/headline`, copied in and not run again. A
+  probe that finds nothing to crash is counted as skipped and is not replaced. A failed cell is
+  reported as failed and is not run again.
+- *Conditions.* Those of `matrix-headline.yaml`: T2, Contributor routing, detection 5 s, the run
+  cap, the same fixtures. `any_survivor` stays off. The code is the frozen handlers plus changes
+  that are off in these runs.
+- *Why these points.* `at` 0.04 is the first contract dispatched. In the real C0 logs o2 on seed 1
+  and o1 on seed 2 still have their plan call in flight at that point, which is the swarm's worst
+  moment on the fake model. `K-o1@0.04` on seed 1 and `K-o2@0.04` on seed 2 are the same point
+  with no plan in flight. `K-o3` is the point of §6. The points were read from C0 logs only.
+- *The reading.* For each crash, from the log: the time to recover, the cdt by branch of the task
+  (a branch is the first part of a goal's id), the contracts verified in each branch while the
+  outage lasts, the goals remapped, `fractalswarm takeover`, and `replay --verify`; and for the
+  whole run, the span and the cost against its C0 twin, whose real latencies differ, so those two
+  are reported and not judged.
+- *What would refute the isolation.* In any swarm cell with a crash: cdt above 0 in a branch the
+  dead lead did not own; a goal remapped outside the branch it owned; the takeover check or the
+  replay failing. One such cell is enough, and it is reported as a refutation.
+- *What the rows cannot say.* Two seeds and six crashes support no hypothesis of §4 and no ratio
+  of §6. Whether the swarm's worst case beats the rival's on one seed is reported and not judged.

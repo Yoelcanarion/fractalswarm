@@ -1,0 +1,23 @@
+# The real rows of a track lead's death (Yoel's decision 4 of Oct 31, PREREG §9), rival side:
+# durable-max loses its one coordinator at the two points of matrix-midlevel-swarm.yaml, on the same
+# seeds, under the same conditions. It has no track leads, so one probe per point stands for all of
+# them, and it is the same process whichever branch the swarm lost.
+# 2 profiles x 2 seeds = 4 paid cells. The C0 twins are headline's: copy their cell files in first.
+#   mkdir bench/results/midlevel/durable-max/cells
+#   copy bench/results/headline/cells/durable-max__t2_conference__C0__s{1,2}.json there
+#   fractalswarm bench run bench/matrix-midlevel-rival.yaml --dry-run
+#   fractalswarm bench run bench/matrix-midlevel-rival.yaml --confirm-real-spend
+name: midlevel-rival
+workflows: [durable-max]
+tasks: [t2_conference]
+profiles: [C0, K-o0@0.04, K-o0@0.5]
+seeds: [1, 2]
+contributor: true
+out_dir: results/midlevel/durable-max
+chart_task: t2_conference
+budget:
+  run_cap_usd: 0.50
+  matrix_cap_usd: 2.00  # the 4 cells to run x the run cap
+notes: >
+  The supervisor's one process dies at the same points. Fair failure semantics as in
+  matrix-headline.yaml: restart 5 s after the crash, workers and its own calls survive.
