@@ -32,10 +32,10 @@ export function systemKind(scenario: string | null | undefined): SystemKind {
 
 export const DEFAULT_DETECTION_MS = 5000;
 
-/** "5 s", "0.5 s", "2.5 s", "0 s". */
+/** "5 s", "0.5 s", "2.5 s", "0 s", with a no-break space: on a narrow screen a line never ends on the number and starts on the unit. */
 export function secondsText(ms: number): string {
   const seconds = ms / 1000;
-  return `${Number.isInteger(seconds) ? seconds : Number(seconds.toFixed(2))} s`;
+  return `${Number.isInteger(seconds) ? seconds : Number(seconds.toFixed(2))}\u00a0s`;
 }
 
 export const startedOf = (events: readonly RunEvent[]): RunEvent | undefined => events.find((e) => e.type === "run.started");

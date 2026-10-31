@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { systemName, type Assumptions, type SystemKind } from "./assumptions";
 import { pairEndText, sideText, type EndSide } from "./pairEndText";
 
+/** The words as a person reads them: the no-break space between a number and its unit is a plain space here. */
+const plain = (text: string) => text.replace(/\u00a0/g, " ");
+
 const assumptions = (system: SystemKind, detectionMs = 5000, restartMs = 0): Assumptions => ({
   system,
   name: systemName(system),
@@ -38,10 +41,10 @@ describe("what a side did, by the kind of system it is", () => {
   });
 
   it("an ideal durable supervisor: its workers go on, and the board pauses for what it takes to notice and restart", () => {
-    expect(sideText(side({ system: "durable-max" }), assumptions("durable-max"))).toBe(
+    expect(plain(sideText(side({ system: "durable-max" }), assumptions("durable-max")))).toBe(
       "Its supervisor crashed 5 times; its workers kept going and the board paused 5 s each time. It finished with all 48 talks placed. No call was paid for twice.",
     );
-    expect(sideText(side({ system: "durable-max" }), assumptions("durable-max", 2500, 1000))).toContain("the board paused 3.5 s each time");
+    expect(plain(sideText(side({ system: "durable-max" }), assumptions("durable-max", 2500, 1000)))).toContain("the board paused 3.5 s each time");
   });
 
   it("a durable supervisor: its workers go on, but the plan in progress is lost", () => {
@@ -74,10 +77,16 @@ describe("the end of a pair", () => {
   });
 
   it("states the scope: one run of each, on one seed, under one failure plan, with the rival's setting", () => {
-    expect(pair().scope).toBe(
+    expect(plain(pair().scope)).toBe(
       "This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after 5 s and restarting after 0 s: it shows what happened here, not what usually happens.",
     );
-    expect(pairEndText(side(), side({ system: "durable-max" }), assumptions("durable-max", 1000, 500)).scope).toContain("after 1 s and restarting after 0.5 s");
+    expect(plain(pairEndText(side(), side({ system: "durable-max" }), assumptions("durable-max", 1000, 500)).scope)).toContain("after 1 s and restarting after 0.5 s");
+  });
+
+  it("keeps each number with its unit, so a narrow screen never breaks a line between them", () => {
+    expect(pair().scope).toContain("after 5\u00a0s and restarting after 0\u00a0s");
+    expect(sideText(side({ system: "durable-max" }), assumptions("durable-max"))).toContain("paused 5\u00a0s each time");
+    expect(pair().scope).not.toMatch(/\d s\b/);
   });
 
   it("never says who is ahead, or anything docs/claims.md does not allow", () => {

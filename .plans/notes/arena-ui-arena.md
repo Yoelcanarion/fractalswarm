@@ -92,13 +92,45 @@ here has been looked at yet** (the list for the slot is at the end).
 
 ### For the slot (the recorder, and a look)
 
-1. One scratch build and a scratch server, then shots of `#/arena` on the first pair at 1920x1080, 1366x768 and 390 px in dark and
-   light, at the start and at the end (the end card).
+1. Done on Oct 31 (the next section): one scratch build and a scratch server, then shots of `#/arena` on the first pair at
+   1920x1080, 1366x768 and 390 px in dark and light, at the start and at the end (the end card).
 2. `s1`, `s6`, `s4`, `s8` with the recorder on the durable pair, then `s1` and `s6` on the in-process pair
    (`--swarm demo-pair-central-swarm --rival demo-pair-central-rival`): look at where the rings land, at the idle seconds at the
    end of a take (s1 on the in-process pair has 6.5 s, s6 on the durable pair 7 s; both keep playing, nothing freezes), and at
    s4's open meter fold (it is open for the whole scene) and the pause frame.
 3. The frame-time reading with two boards at 20x, which the polish brief asks for, has not been taken.
+
+
+### The look at the arena (Oct 31, the first slot: a scratch build, a scratch server, no model called)
+
+Two passes at below-normal priority, because a paid sweep was live: `vite build --outDir` into the scratchpad (never `api/static`),
+`fractalswarm serve` on 8791 with scratch runs and ledger directories and a dummy key, a static server on 5191 that passes `/api`
+on, and headless Chromium. 15 pages in the first pass and 18 in the second, each a viewport shot plus the whole content area:
+`#/arena` (the first pair, `demo-pair-durable-max`), its end (`?at=end`), a frame in the middle (`?t=48`) and the in-process pair's
+end, at 1920x1080, 1366x768 and 390x844, dark and light, with the guide shown (first visit) and dismissed. The page was measured as
+well (sideways scroll, where each board starts, what sticks out of a side, the controls in the first view). Everything closed after
+each pass: ports 8791 and 5191, the browsers, `git status` and `api/static` untouched.
+
+Seen and fixed:
+- The two boards started at different heights while one side still said "Checking takeover...": a settled chip is 36 px tall and
+  the pending one 29 px, so the proof row (`.side__proof`) was 3-4 px shorter on that side. The row is now as tall as a settled
+  chip (`min-height: 36px`); the board tops are equal at 1920 and 1366, both themes, before and after the verdicts arrive.
+- At 390 px a line broke between a number and its unit ("restarting after 5 / s", "0 / s restart" in the rival chip).
+  `secondsText` (the arena's own) now joins them with a no-break space. The tests read the text with it as a plain space, and one
+  more pins the character.
+
+Seen and fine: no sideways scroll in any shot; the end card on both pairs at all three sizes (its two columns at 1920 and 1366, one
+column at 390); the scoreboard (7 cards in a row at 1920, 4 and 3 at 1366, 2 columns at 390); the replay bar and its lanes; the
+order at 390 (lead, Play, pair, rival chip, swarm board, rival board, card, scoreboard, replay bar); the first screen of a returning
+visitor at 1366x768 (both trees and the top of the scoreboard) and at 390 (the lead, Play, the picker, the chip and the swarm's
+board); the light theme at all three sizes.
+
+Not mine, for the coordinator:
+1. The first-visit guide band (W4's) is 540 of 844 px at 390, so a first visit on a phone opens on the guide and "Got it", and at
+   1366x768 it pushes the boards to y=517. It is the explanation, so I left it.
+2. The verify chips ("Checking takeover...", "Replaying from the log...") stay pending for several seconds when the machine is busy
+   (below-normal priority beside a paid sweep). That is timing, not a layout fault.
+3. The hidden bubbles of the tooltips on those chips are wider than the viewport in the measurement, but they cause no scroll.
 
 ## Design
 
