@@ -188,6 +188,8 @@ describe("the surface of a page", () => {
       [30_000, 35_500],
     ]);
     expect(context.calls.get("spark")).toEqual({ start: 4000, end: 6500 });
+    // the rival's own outages, whichever side `crash:N` was taken from
+    expect(context.rivalCrashes).toBeDefined();
 
     const s = rivalStream(CENTRAL_SCENARIO, 2);
     crash(s, "o0", 20_000, 5000);
@@ -195,7 +197,9 @@ describe("the surface of a page", () => {
     s.at(40_000).emit("run.completed", "@kernel", {});
     const fallback = surfaceOf(fakePage({}), { left: side(swarmWithoutKills()), right: side(s.events) });
     expect(fallback.context().crashes.map((c) => [c.at, c.until])).toEqual([[20_000, 25_000]]);
-    expect(surfaceOf(fakePage({})).context()).toEqual({ end: 60_000, crashes: [], calls: new Map() });
+    expect(fallback.context().rivalCrashes?.map((c) => [c.at, c.until])).toEqual([[20_000, 25_000]]);
+    expect(own.context().rivalCrashes?.map((c) => [c.at, c.until])).toEqual([]);
+    expect(surfaceOf(fakePage({})).context()).toEqual({ end: 60_000, crashes: [], rivalCrashes: [], calls: new Map() });
   });
 
   it("opens the lens through the page's lens, or says the stage has none", () => {

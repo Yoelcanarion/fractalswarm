@@ -12,7 +12,7 @@ import { createDriver, PREROLL_FRAMES, type DriverState } from "./driver";
 import { OverlayLayer } from "./OverlayLayer";
 import { directorHash, type DirectorRoute } from "./route";
 import { SCENE_FILES, sceneFile, SOURCES } from "./scenes";
-import type { Scene, Stage } from "./script";
+import { pointsAtRegion, type Scene, type Stage } from "./script";
 import { missingSources, resolveSources, type Sources } from "./sources";
 import { createArenaStage, createRunStage, noteProblems, replayNote, type StageController } from "./stages";
 import { AblationStageView, ArenaStageView, HelpsStageView, RunStageView, TitleStageView } from "./StageViews";
@@ -84,7 +84,7 @@ function build(scene: Scene, sources: Sources): Built {
     }
     case "run": {
       const stage = createRunStage(need(sources.run, "run"), scene.calls);
-      return { controller: stage, view: <RunStageView stage={stage} /> };
+      return { controller: stage, view: <RunStageView stage={stage} meterOpen={pointsAtRegion(scene, "meter")} /> };
     }
     case "helps":
       return { controller: null, view: <HelpsStageView /> };

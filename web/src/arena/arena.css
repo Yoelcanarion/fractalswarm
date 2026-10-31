@@ -109,10 +109,21 @@
   flex: none;
 }
 
+/* The chip and the badge side by side; when they do not fit (a narrow window, a long rival name) the badge goes under
+   the chip on both sides alike, so nothing is clipped and the two boards still start at the same height. */
 .side__proof {
   display: flex;
   align-items: center;
-  min-height: 32px;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  /* as tall as the settled chip and badge (36 px), so a verdict that arrives after the page does not move the boards, and the two sides
+     start them at the same height while one chip is still "Checking…" */
+  min-height: 36px;
+}
+
+.side__chip {
+  display: inline-flex;
+  min-width: 0;
 }
 
 .side__name {
@@ -136,6 +147,7 @@
 
 .side__run {
   min-width: 0;
+  flex: 1 1 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -739,5 +751,90 @@
 
   .picker__control:focus-within .picker__shown {
     outline: 2px solid var(--accent-text);
+  }
+}
+
+/* ---- the end of a pair: what each run did, and what one pair is worth ---- */
+.pairend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+}
+
+.pairend__title {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 700;
+}
+
+.pairend__sides {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.pairend__side dt {
+  font-size: var(--fs-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.pairend__side dd {
+  margin: 2px 0 0;
+  font-size: var(--fs-body);
+  line-height: 1.45;
+}
+
+.pairend__scope {
+  margin: 0;
+  font-size: var(--fs-body);
+  color: var(--text-muted);
+}
+
+/* A phone, the rest of it: less padding, the rival's assumptions as a block, the badge allowed to wrap, one column of text and the numbers
+   two across and then one. The picker and the head's wrap are the block above. */
+@media (max-width: 700px) {
+  .arena {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .arena__assumptions {
+    margin: 0;
+    border-radius: var(--radius-3);
+  }
+
+  .side {
+    min-height: 0;
+    padding: var(--space-3);
+  }
+
+  .side__verify {
+    max-width: 100%;
+  }
+
+  .side__verify .badge {
+    white-space: normal;
+  }
+
+  .pairend__sides {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .score__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .score__grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

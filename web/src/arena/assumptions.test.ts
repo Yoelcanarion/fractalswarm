@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { Stream } from "../lib/testing";
-import { assumptionsOf, secondsText, startedOf, systemKind } from "./assumptions";
+import { assumptionsOf, rivalSentence, secondsText, startedOf, systemKind, type SystemKind } from "./assumptions";
 
 const started = (scenario: string, params: Record<string, unknown> = {}) =>
   startedOf(new Stream().emit("run.started", "@kernel", { seed: "1", scenario, params, clock: "sim" }).events);
 
+/** The words as a person reads them: the no-break space between a number and its unit is a plain space here. */
+const plain = (text: string) => text.replace(/\u00a0/g, " ");
+
 describe("the assumptions caption", () => {
   it("is the brief's line for the ideal durable supervisor at its defaults", () => {
     const rival = started("fractalswarm.actors.swarm:DURABLE_MAX");
-    expect(assumptionsOf(rival, started("fractalswarm.actors.swarm:SWARM")).caption).toBe(
+    expect(plain(assumptionsOf(rival, started("fractalswarm.actors.swarm:SWARM")).caption)).toBe(
       "Rival: ideal durable supervisor — 5 s detection · 0 s restart · workers survive · same log",
     );
   });
@@ -19,7 +22,7 @@ describe("the assumptions caption", () => {
     const a = assumptionsOf(rival, started("fractalswarm.actors.swarm:SWARM", { recovery_ms: 2500 }));
     expect(a.detectionMs).toBe(2500);
     expect(a.restartMs).toBe(3000);
-    expect(a.caption).toBe("Rival: ideal durable supervisor — 2.5 s detection · 3 s restart · workers survive · same log");
+    expect(plain(a.caption)).toBe("Rival: ideal durable supervisor — 2.5 s detection · 3 s restart · workers survive · same log");
   });
 
   it("says so when the rival is notified faster than the swarm detects (a fast external restart)", () => {
@@ -27,8 +30,8 @@ describe("the assumptions caption", () => {
     const a = assumptionsOf(rival, started("fractalswarm.actors.swarm:SWARM"));
     expect(a.detectionMs).toBe(500);
     expect(a.swarmDetectionMs).toBe(5000);
-    expect(a.caption).toContain("0.5 s detection");
-    expect(a.caption).toContain("swarm: 5 s detection");
+    expect(plain(a.caption)).toContain("0.5 s detection");
+    expect(plain(a.caption)).toContain("swarm: 5 s detection");
   });
 
   it("names what a rival that is not the ideal one loses", () => {
@@ -39,8 +42,8 @@ describe("the assumptions caption", () => {
   it("falls back to the defaults for a log without params, and to a plain name for a scenario it does not know", () => {
     const a = assumptionsOf(started("my.module:THING"));
     expect(a.system).toBe("other");
-    expect(a.caption).toBe("Rival: supervisor — 5 s detection · 0 s restart · same log");
-    expect(assumptionsOf(undefined).caption).toBe("Rival: supervisor — 5 s detection · 0 s restart · same log");
+    expect(plain(a.caption)).toBe("Rival: supervisor — 5 s detection · 0 s restart · same log");
+    expect(plain(assumptionsOf(undefined).caption)).toBe("Rival: supervisor — 5 s detection · 0 s restart · same log");
   });
 });
 
@@ -54,10 +57,37 @@ describe("the system of a scenario", () => {
   });
 
   it("writes seconds without trailing zeros", () => {
-    expect(secondsText(5000)).toBe("5 s");
-    expect(secondsText(500)).toBe("0.5 s");
-    expect(secondsText(2500)).toBe("2.5 s");
-    expect(secondsText(0)).toBe("0 s");
-    expect(secondsText(1234)).toBe("1.23 s");
+    expect(plain(secondsText(5000))).toBe("5 s");
+    expect(plain(secondsText(500))).toBe("0.5 s");
+    expect(plain(secondsText(2500))).toBe("2.5 s");
+    expect(plain(secondsText(0))).toBe("0 s");
+    expect(plain(secondsText(1234))).toBe("1.23 s");
+  });
+
+  it("joins the number and its unit with a no-break space, so a phone never breaks a line between them", () => {
+    expect(secondsText(5000)).toBe("5\u00a0s");
+    expect(secondsText(500)).toBe("0.5\u00a0s");
+    const caption = assumptionsOf(started("fractalswarm.actors.swarm:DURABLE_MAX"), started("fractalswarm.actors.swarm:SWARM")).caption;
+    expect(caption).toContain("5\u00a0s detection · 0\u00a0s restart");
+    expect(caption).not.toMatch(/\d s\b/);
+    expect(rivalSentence({ system: "durable-max", detectionMs: 5000, restartMs: 0 })).toContain("back after 5\u00a0s.");
+  });
+});
+
+describe("what the rival is, in a sentence", () => {
+  it("names each rival as docs/claims.md does, and says what a crash does to its workers", () => {
+    const at = (system: SystemKind, detectionMs = 5000, restartMs = 0) => plain(rivalSentence({ system, detectionMs, restartMs }));
+    expect(at("central")).toBe("The rival is an in-process supervisor: one program runs the workers, so when it crashes they stop with it.");
+    expect(at("durable-max")).toBe("The rival is an ideal durable supervisor: its workers survive a crash, and it is back after 5 s.");
+    expect(at("durable-max", 2500, 1000)).toContain("back after 3.5 s");
+    expect(at("durable")).toBe("The rival is a durable supervisor: its workers survive a crash, but the plan it was making is lost.");
+    for (const system of ["swarm", "single", "pipeline", "other"] as const) expect(at(system)).toMatch(/^The rival is /);
+  });
+
+  it("claims nothing about being simpler, cheaper, more reliable or better", () => {
+    for (const system of ["central", "durable-max", "durable", "swarm", "single", "pipeline", "other"] as const) {
+      const sentence = rivalSentence({ system, detectionMs: 5000, restartMs: 0 }).toLowerCase();
+      for (const word of ["simpler", "cheaper", "more reliable", "better", "worse"]) expect(sentence, `${system}: ${word}`).not.toContain(word);
+    }
   });
 });

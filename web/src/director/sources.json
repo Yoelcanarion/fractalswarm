@@ -1,7 +1,7 @@
 {
-  "swarm": null,
-  "rival": null,
-  "run": null,
+  "swarm": "demo-pair-durable-max-swarm",
+  "rival": "demo-pair-durable-max-rival",
+  "run": "demo-final",
   "ablation": null,
-  "real": false
+  "real": true
 }
