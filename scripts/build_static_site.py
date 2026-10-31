@@ -33,6 +33,7 @@ from typing import Any, Literal
 from starlette.testclient import TestClient
 
 from fractalswarm.api.app import BENCH_RESULTS_DIR, DEMO_DIR, MAX_PAGE, create_app
+from fractalswarm.api.arena import bundled_pairs
 from fractalswarm.api.catalog import DEMO_PREFIX
 from fractalswarm.config import Settings
 from fractalswarm.intake.guard import first_event, inside, private_reason
@@ -41,6 +42,7 @@ from fractalswarm.runs import SCENARIOS
 REPO = Path(__file__).resolve().parents[1]
 WEB = REPO / "web"
 DIRECTOR_SOURCES = WEB / "src" / "director" / "sources.json"  # the runs the director's scenes play
+ADDRESS_FILE = WEB / "src" / "lib" / "address.ts"  # holds FINAL_RUN, the run a bare #/run opens
 DEFAULT_RUNS = ("demo/backup", "demo/toy")
 DEFAULT_OUT = REPO / "dist" / "static-site"  # under dist/, which .gitignore already covers
 DATA = "data"
@@ -405,6 +407,35 @@ def pair_listing(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def listed_pairs(
+    pairs: Sequence[tuple[str, str]], started: dict[str, Any], shipped: Sequence[Any]
+) -> list[dict[str, Any]]:
+    """``GET api/pairs`` for the pairs the site holds, in the order they were named. A pair the
+    repository ships (``demo/pairs.json``) is listed as the live app lists it, with its label and
+    only if it is marked public; any other pair is described from its two logs."""
+    by_runs: dict[tuple[Any, Any], dict[str, Any]] = {}
+    for entry in shipped:
+        sides = (entry.get("left"), entry.get("right")) if isinstance(entry, dict) else ()
+        if len(sides) == 2 and all(isinstance(side, dict) for side in sides):
+            by_runs.setdefault((sides[0].get("run_id"), sides[1].get("run_id")), entry)
+    listing: list[dict[str, Any]] = []
+    for left, right in pairs:
+        entry = by_runs.get((left, right))
+        if entry is None:
+            both = (
+                {"id": left, "started": started[left]},
+                {"id": right, "started": started[right]},
+            )
+            entry = pair_listing(*both)
+        elif entry.get("private") is not False:
+            raise Refused(
+                f"the pair {entry.get('pair_id')!r} is not marked public in demo/pairs.json; "
+                "a published site holds nothing private"
+            )
+        listing.append(entry)
+    return listing
+
+
 def public_bench(content: bytes) -> bytes:
     """``GET api/bench/results`` names a ``hero_chart.json`` it read by its path on this machine;
     the site says where it lives in the repo. The one thing that differs from the live answer. A
@@ -421,7 +452,11 @@ def public_bench(content: bytes) -> bytes:
 
 
 def export_globals(
-    client: TestClient, data: Data, pairs: Sequence[tuple[str, str]], started: dict[str, Any]
+    client: TestClient,
+    data: Data,
+    pairs: Sequence[tuple[str, str]],
+    started: dict[str, Any],
+    shipped: Sequence[Any] = (),
 ) -> dict[str, Any]:
     found: dict[str, Any] = {}
     runs = client.get("/api/runs")
@@ -431,13 +466,7 @@ def export_globals(
     off = {key: False for key in live} | {"static": True}
     found["capabilities"] = data.entry("capabilities.json", 200, _dump(off))
 
-    listing = [
-        pair_listing(
-            {"id": left, "started": started[left]}, {"id": right, "started": started[right]}
-        )
-        for left, right in pairs
-    ]
-    found["pairs"] = data.entry("pairs.json", 200, _dump(listing))
+    found["pairs"] = data.entry("pairs.json", 200, _dump(listed_pairs(pairs, started, shipped)))
 
     results = client.get("/api/bench/results")
     content = public_bench(results.content) if results.status_code == 200 else results.content
@@ -457,9 +486,12 @@ def export_site(
     provenance: Provenance,
     bench_dir: Path = BENCH_RESULTS_DIR,
     settings: Settings | None = None,
+    shipped_pairs: Sequence[Any] | None = None,
 ) -> SiteReport:
-    """Write ``<out>/data/`` and its manifest. The web app is not touched."""
+    """Write ``<out>/data/`` and its manifest. The web app is not touched. ``shipped_pairs`` are
+    the entries of ``demo/pairs.json``, which the API lists first; they are read from there."""
     settings = settings or Settings()
+    shipped = bundled_pairs(DEMO_DIR) if shipped_pairs is None else list(shipped_pairs)
     ordered = list(sources)
     for left, right in pairs:
         ordered += [found for found in (left, right) if found not in ordered]
@@ -502,7 +534,7 @@ def export_site(
                     notes=notes,
                 )
             )
-        globals_ = export_globals(client, data, pair_ids, started)
+        globals_ = export_globals(client, data, pair_ids, started, shipped)
 
     report.pairs = [f"{left}:{right}" for left, right in pair_ids]
     manifest = {
@@ -592,6 +624,29 @@ def scan(out: Path, needles: dict[str, str]) -> list[str]:
 
 def tree_bytes(folder: Path) -> int:
     return sum(path.stat().st_size for path in folder.rglob("*") if path.is_file())
+
+
+def final_run(address_file: Path) -> str | None:
+    """The run the app opens first: ``FINAL_RUN`` in lib/address.ts."""
+    try:
+        text = address_file.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    found = re.search(r'export const FINAL_RUN\s*=\s*"([^"]+)"', text)
+    return found.group(1) if found else None
+
+
+def final_run_notes(address_file: Path, run_ids: Iterable[str]) -> list[str]:
+    """The app opens a bare ``#/run`` on its final run and puts it first in the lists that cannot
+    show every run. A site without that run opens the first one listed instead, which is a note,
+    not a failure."""
+    final = final_run(address_file)
+    if final is None or final in set(run_ids):
+        return []
+    return [
+        f"the app opens its final run, {final!r}, first, and this site does not hold it "
+        "(publish it with --runs demo/final): a bare #/run opens the first listed run instead"
+    ]
 
 
 def director_notes(sources_file: Path, run_ids: Iterable[str]) -> list[str]:
@@ -730,7 +785,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             shutil.rmtree(out, ignore_errors=True)
             out.mkdir(parents=True)
         report = export_site(sources, pair_sources, out, provenance, args.bench_dir, settings)
-        report.notes += director_notes(DIRECTOR_SOURCES, [run.run_id for run in report.runs])
+        held = [run.run_id for run in report.runs]
+        report.notes += final_run_notes(ADDRESS_FILE, held)
+        report.notes += director_notes(DIRECTOR_SOURCES, held)
         finish(out)
         report.web_bytes = tree_bytes(out) - report.data_bytes
         findings = scan(out, forbidden(settings, settings.private_dir))

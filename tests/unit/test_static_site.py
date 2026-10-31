@@ -83,6 +83,7 @@ def export(
     sources: tuple[str, ...],
     pairs: tuple[tuple[str, str], ...] = (),
     bench_files: dict[str, Any] | None = None,
+    shipped_pairs: list[dict[str, Any]] | None = None,
 ) -> Exported:
     out, bench = base / "site", base / "bench"
     out.mkdir()
@@ -97,7 +98,7 @@ def export(
     found = {name: build.resolve_source(name, cfg.runs_dir) for name in names}
     named = [(found[left], found[right]) for left, right in pairs]
     report = build.export_site(
-        [found[name] for name in sources], named, out, PROVENANCE, bench, cfg
+        [found[name] for name in sources], named, out, PROVENANCE, bench, cfg, shipped_pairs
     )
     manifest = json.loads((out / "data" / "manifest.json").read_bytes())
     live = live_client(base, bench, [source.path for source in found.values()])
@@ -595,6 +596,117 @@ class TestPairs:
             and "seed 7" in pair["label"]
         )
         assert pair["created_at"] is None and pair["billed"] is False and pair["private"] is False
+
+
+class TestShippedPairs:
+    """The pairs the repository ships (demo/pairs.json) are what the live app lists first, with
+    their labels. The site lists the same entry for a pair it holds."""
+
+    SHIPPED: dict[str, Any] = {
+        "pair_id": "pair-demo",
+        "label": "Against a rival (real model, one run)",
+        "created_at": "2026-10-30T19:36:35+00:00",
+        "seed": "1",
+        "clock": "live",
+        "private": False,
+        "rival": "central",
+        "chaos": {"name": "half-the-brains", "actions": 5},
+        "left": {"run_id": "demo-a", "scenario": "swarm", "private": False},
+        "right": {"run_id": "demo-b", "scenario": "central", "private": False},
+        "state": "completed",
+    }
+    STARTED = {
+        name: {"scenario": "swarm", "seed": 1, "clock": "sim", "params": {}}
+        for name in ("demo-a", "demo-b", "demo-c", "demo-d")
+    }
+
+    def test_a_shipped_pair_is_listed_as_the_live_app_lists_it(self) -> None:
+        listed = build.listed_pairs([("demo-a", "demo-b")], self.STARTED, [self.SHIPPED])
+        assert listed == [self.SHIPPED]
+
+    def test_a_pair_that_is_not_shipped_is_described_from_its_two_logs(self) -> None:
+        listed = build.listed_pairs([("demo-c", "demo-d")], self.STARTED, [self.SHIPPED])
+        assert [one["pair_id"] for one in listed] == ["demo-c+demo-d"]
+        assert listed[0]["left"]["run_id"] == "demo-c"
+
+    def test_the_pairs_keep_the_order_they_were_named_in(self) -> None:
+        pairs = [("demo-c", "demo-d"), ("demo-a", "demo-b")]
+        listed = build.listed_pairs(pairs, self.STARTED, [self.SHIPPED])
+        assert [one["pair_id"] for one in listed] == ["demo-c+demo-d", "pair-demo"]
+
+    def test_both_runs_must_match_before_a_shipped_entry_is_used(self) -> None:
+        listed = build.listed_pairs([("demo-a", "demo-d")], self.STARTED, [self.SHIPPED])
+        assert listed[0]["pair_id"] == "demo-a+demo-d"
+
+    @pytest.mark.parametrize("private", [True, None, "no"])
+    def test_a_shipped_pair_that_is_not_marked_public_is_refused(self, private: Any) -> None:
+        entry = {**self.SHIPPED, "private": private}
+        with pytest.raises(build.Refused, match="not marked public"):
+            build.listed_pairs([("demo-a", "demo-b")], self.STARTED, [entry])
+
+    @pytest.mark.parametrize(
+        "junk", [None, 3, "text", [], {"left": 1, "right": 2}, {"left": {}, "right": {}}]
+    )
+    def test_what_is_not_a_pair_in_the_file_is_ignored(self, junk: Any) -> None:
+        listed = build.listed_pairs([("demo-c", "demo-d")], self.STARTED, [junk])
+        assert [one["pair_id"] for one in listed] == ["demo-c+demo-d"]
+
+    def test_the_site_stores_the_shipped_entry_for_the_pair_it_holds(self, tmp_path: Path) -> None:
+        entry = {
+            **self.SHIPPED,
+            "pair_id": "pair-toy",
+            "left": {"run_id": "demo-toy", "scenario": "toy", "private": False},
+            "right": {"run_id": "demo-one-call", "scenario": "toy", "private": False},
+        }
+        site = export(tmp_path, sources=(), pairs=((TOY, ONE_CALL),), shipped_pairs=[entry])
+        assert answer_of(site, site.manifest["global"]["pairs"]) == (200, [entry])
+
+    def test_the_shipped_pairs_of_this_repository_are_public_and_have_their_bundles(self) -> None:
+        shipped = build.bundled_pairs(build.DEMO_DIR)
+        assert shipped, "demo/pairs.json lists no pair"
+        for pair in shipped:
+            assert pair["private"] is False, pair["pair_id"]
+            for side in ("left", "right"):
+                run_id = pair[side]["run_id"]
+                assert run_id.startswith(build.DEMO_PREFIX), run_id
+                bundle = build.DEMO_DIR / run_id.removeprefix(build.DEMO_PREFIX)
+                assert (bundle / "events.jsonl").is_file(), f"{pair['pair_id']}: no bundle {run_id}"
+
+
+class TestTheFinalRun:
+    @staticmethod
+    def address(tmp_path: Path, text: str = 'export const FINAL_RUN = "demo-final";\n') -> Path:
+        file = tmp_path / "address.ts"
+        file.write_text(text, encoding="utf-8")
+        return file
+
+    def test_a_site_that_holds_it_has_nothing_to_say(self, tmp_path: Path) -> None:
+        held = ["demo-final", "demo-toy"]
+        assert build.final_run_notes(self.address(tmp_path), held) == []
+
+    def test_a_site_without_it_says_what_opens_instead(self, tmp_path: Path) -> None:
+        notes = build.final_run_notes(self.address(tmp_path), ["demo-toy"])
+        assert len(notes) == 1
+        assert "'demo-final'" in notes[0] and "--runs demo/final" in notes[0]
+        assert "first listed run" in notes[0]
+
+    @pytest.mark.parametrize("text", ["", "export const OTHER = 1;\n", "FINAL_RUN = 3\n"])
+    def test_a_file_that_does_not_name_it_has_nothing_to_say(
+        self, tmp_path: Path, text: str
+    ) -> None:
+        assert build.final_run(self.address(tmp_path, text)) is None
+        assert build.final_run_notes(self.address(tmp_path, text), []) == []
+
+    def test_a_missing_file_has_nothing_to_say(self, tmp_path: Path) -> None:
+        assert build.final_run_notes(tmp_path / "none.ts", []) == []
+
+    def test_the_apps_final_run_is_a_bundle_this_repository_ships(self) -> None:
+        final = build.final_run(build.ADDRESS_FILE)
+        assert final is not None, (
+            "lib/address.ts no longer names FINAL_RUN as the exporter reads it"
+        )
+        bundle = build.DEMO_DIR / final.removeprefix(build.DEMO_PREFIX)
+        assert (bundle / "events.jsonl").is_file(), f"no bundle for {final}"
 
 
 class TestBenchResults:
