@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createClock, type FrameScheduler } from "../lib/clock";
+import { PHONE_QUERY } from "../lib/phone";
 import { firstCrashStart, marksOf } from "../lib/timeline";
 import { loadJsonl } from "../lib/testing";
 import { createRunStore, type RunApi } from "../store";
-import { watchFirstCrash } from "./PlayAction";
+import { bringRunIntoView, watchFirstCrash } from "./PlayAction";
 
 // The committed final run: its first coordinator, o0, is killed at 53.3 s.
 const events = loadJsonl("demo/final/events.jsonl");
@@ -84,5 +85,42 @@ describe("watching the first crash", () => {
     store.getState().seekTime(70_000);
     expect(clock.now()).toBe(70_000);
     expect(store.getState().playing).toBe(true);
+  });
+});
+
+// On a phone the bars above the page go up with it, and a press on a play action scrolls the state row to the top of the window.
+describe("bringing the run into view", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** A window that is a phone's (true), a wider one (false) or has no media queries (null); the frames are held until `draw()`. */
+  function windowOf(phone: boolean | null) {
+    const scrolled: unknown[] = [];
+    const frames: Array<() => void> = [];
+    vi.stubGlobal("window", phone === null ? {} : { matchMedia: (query: string) => ({ matches: phone && query === PHONE_QUERY }) });
+    vi.stubGlobal("document", { querySelector: (selector: string) => (selector === ".runstate" ? { scrollIntoView: (options: unknown) => scrolled.push(options) } : null) });
+    vi.stubGlobal("requestAnimationFrame", (callback: () => void) => frames.push(callback));
+    return { scrolled, draw: () => frames.splice(0).forEach((callback) => callback()) };
+  }
+
+  it("scrolls the state row to the top of the window on a phone, once the page is drawn for what the press did", () => {
+    const { scrolled, draw } = windowOf(true);
+    bringRunIntoView();
+    expect(scrolled).toEqual([]); // a run at its start has no tree yet: the page is too short to scroll that far until it has
+    draw();
+    expect(scrolled).toEqual([expect.objectContaining({ block: "start" })]);
+  });
+
+  it("leaves a wider window where it is: the tree is on its first screen", () => {
+    const { scrolled, draw } = windowOf(false);
+    bringRunIntoView();
+    draw();
+    expect(scrolled).toEqual([]);
+  });
+
+  it("does nothing where there is no window to ask", () => {
+    const { scrolled, draw } = windowOf(null);
+    bringRunIntoView();
+    draw();
+    expect(scrolled).toEqual([]);
   });
 });

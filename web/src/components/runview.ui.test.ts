@@ -411,6 +411,19 @@ describe("the keyboard on the run page", () => {
     expect(source).toMatch(/onClick=\{\(\) => seekTime\(m\.ts\)\}/);
   });
 
+  it("scrolls the run page as one page on a phone, the bars above it going up with it and only the replay bar staying", () => {
+    const app = readFileSync(REPO_ROOT + "web/src/App.tsx", "utf-8");
+    expect(app).toMatch(/route\.page === "run" && route\.view === "overview" \? "app app--run" : "app"/);
+    const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
+    const phone = css.indexOf("@media (max-width: 760px) {\n  /* The run page on a phone");
+    expect(phone).toBeGreaterThan(0);
+    const block = css.slice(phone, css.indexOf("\n}\n", phone));
+    expect(block).toMatch(/\.app--run \.content \{\s*flex: 1 0 auto;\s*overflow: visible;/);
+    expect(block).toMatch(/\.app--run \.lens \{\s*position: fixed;/); // the drawer is over the window, not over a page that scrolls under it
+    expect(css.slice(0, phone)).not.toContain(".app--run"); // nothing of it above a phone's width
+    expect(css).toMatch(/\.run--overview > \.timeline \{\s*position: sticky;\s*bottom: 0;/);
+  });
+
   it("has the marks of the bar as one tab stop, and the speeds as one select", async () => {
     const out = render(await opened(), createElement(RunPage));
     expect(out).toContain('<select aria-label="replay speed">');
