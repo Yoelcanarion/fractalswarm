@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { RunEvent } from "../lib/types";
-import { REPO_ROOT, renderCurrent } from "../lib/testing";
+import { loadJsonl, REPO_ROOT, renderCurrent } from "../lib/testing";
 import { EventsPage } from "../pages/EventsPage";
 import { PanelsPage } from "../pages/PanelsPage";
 import { PlanPage } from "../pages/PlanPage";
@@ -177,10 +177,16 @@ describe("the five views of a run", () => {
 });
 
 describe("the run page", () => {
-  it("opens with one line on what the page is for and one main action: play the run from its start", async () => {
+  it("opens with the state of the run and one main action beside it, and no title or lead of its own to repeat the sub-nav", async () => {
     const out = render(await opened(), createElement(RunPage));
-    expect(text(out)).toContain("A recorded run. Play it to watch coordinators get killed and the survivors take over.");
-    expect(out).toContain('<button type="button" class="btn btn--on">Play from the start</button>');
+    expect(out).toContain('<h1 class="sr-only">Run</h1>');
+    expect(out).not.toContain("pagehead");
+    expect(text(out)).not.toContain("A recorded run.");
+    // no coordinator is killed in this run, so there is no first crash to watch: playing it from its start is the main action
+    expect(out).toContain('<div class="runstate__actions"><button type="button" class="btn btn--on">Play from the start</button></div>');
+    expect(text(out)).not.toContain("Watch the first crash");
+    expect(out.indexOf("runstate__line")).toBeLessThan(out.indexOf("runstate__actions"));
+    expect(out.indexOf("runstate__actions")).toBeLessThan(out.indexOf("counters--headline"));
     // the guide is the app's, in the shell: the page has no second one, and no tab stop for every orchestrator to skip
     expect(out).not.toContain('id="guide"');
     expect(out).not.toContain("Skip the tree");
@@ -215,6 +221,33 @@ describe("the run page", () => {
   it("says in the hand-overs' hint why they can outnumber the crashes", async () => {
     const store = await opened();
     expect(text(render(store, createElement(RunPage)))).toMatch(/root duties and its subtree are two hand-overs, so there can be more of them than crashes/);
+  });
+
+  it("offers to watch the first crash where a coordinator is killed, in the row of the state and in the empty tree, with the whole run beside it", async () => {
+    const store = await opened({ loadAllEvents: async () => loadJsonl("demo/final/events.jsonl") });
+    const out = render(store, createElement(RunPage));
+    expect(out).toContain(
+      '<div class="runstate__actions"><button type="button" class="btn btn--on">Watch the first crash</button><button type="button" class="btn">Play from the start</button></div>',
+    );
+    expect(out.match(/Watch the first crash/g)).toHaveLength(2); // the empty tree says the same, so the page has one main action
+    // once it is under way the action is the one it always was
+    store.getState().seek(10);
+    expect(render(store, createElement(RunPage))).toContain('<div class="runstate__actions"><button type="button" class="btn btn--on">Carry on</button></div>');
+    store.setState({ playing: true });
+    expect(render(store, createElement(RunPage))).toContain('<div class="runstate__actions"><button type="button" class="btn btn--on">Pause</button></div>');
+    // at the end of the run, as at its start
+    store.setState({ playing: false });
+    store.getState().seek(store.getState().events.length);
+    expect(render(store, createElement(RunPage))).toContain("Watch the first crash</button><button");
+  });
+
+  it("opens the Details fold into view, not behind the replay bar pinned over the foot of the page", () => {
+    const run = readFileSync(REPO_ROOT + "web/src/pages/RunPage.tsx", "utf-8");
+    expect(run).toMatch(/<Details id="more"[^>]*\breveal\b/);
+    const fold = readFileSync(REPO_ROOT + "web/src/components/ui/Details.tsx", "utf-8");
+    expect(fold).toMatch(/scrollIntoView\(\{ block: "start"/);
+    // only a person's click does it: not a prop, not an address
+    expect(fold).toMatch(/opening\.current = reveal && !root\.current\?\.open/);
   });
 
   it("does not say a finished run has no actors alive: it says the run is finished", async () => {
@@ -371,6 +404,11 @@ describe("the keyboard on the run page", () => {
   it("leaves a plain wheel over the tree to the page: the tree is most of it, and a stranger's first scroll lands on it", () => {
     const source = readFileSync(REPO_ROOT + "web/src/components/TreeGraph.tsx", "utf-8");
     expect(source).toMatch(/preventScrolling=\{false\}/);
+  });
+
+  it("lets a replay that is playing carry on from a mark that is clicked: the click moves the playhead and nothing else", () => {
+    const source = readFileSync(REPO_ROOT + "web/src/components/Timeline.tsx", "utf-8");
+    expect(source).toMatch(/onClick=\{\(\) => seekTime\(m\.ts\)\}/);
   });
 
   it("has the marks of the bar as one tab stop, and the speeds as one select", async () => {

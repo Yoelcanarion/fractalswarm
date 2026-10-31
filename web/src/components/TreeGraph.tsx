@@ -11,6 +11,7 @@ import { rootHolder, type ActorNode, type ViewState } from "../lib/reducer";
 import { useRunStoreApi, useRunStoreShallow } from "../store";
 import { ClockScope } from "./ClockScope";
 import { EmptyState } from "./ui";
+import { useFirstCrashStart, watchFirstCrash } from "./PlayAction";
 import { useTreeMotion, type TreeShape } from "./useTreeMotion";
 
 // What a node is glowing from, if anything: an adoption or a restart within `life` ms of virtual
@@ -266,6 +267,7 @@ function Graph({ view }: { view: ViewState }) {
 function NoTreeYet() {
   const { live, cursor, total } = useRunStoreShallow((s) => ({ live: s.live, cursor: s.cursor, total: s.events.length }));
   const store = useRunStoreApi();
+  const crashAt = useFirstCrashStart();
   if (live) return <div className="empty">Waiting for the first actor to spawn…</div>;
   if (total > 0 && cursor >= total) {
     return (
@@ -280,7 +282,12 @@ function NoTreeYet() {
       title={cursor === 0 ? "The run is at its start" : "No orchestrator exists yet at this point"}
       actions={
         <>
-          <button type="button" className="btn btn--on" onClick={() => setPlaying(true)}>
+          {crashAt !== null && (
+            <button type="button" className="btn btn--on" onClick={() => watchFirstCrash(store, crashAt)}>
+              Watch the first crash
+            </button>
+          )}
+          <button type="button" className={crashAt === null ? "btn btn--on" : "btn"} onClick={() => setPlaying(true)}>
             {cursor === 0 ? "Play from the start" : "Play"}
           </button>
           <button type="button" className="btn" onClick={() => seek(total)}>

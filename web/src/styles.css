@@ -380,6 +380,8 @@ textarea {
 
 .run__more {
   margin-top: 0;
+  /* opened by a person, it is scrolled to the top of the page (components/ui/Details.tsx): not flush against the bars above */
+  scroll-margin-top: var(--space-3);
 }
 
 /* The key of the tree, in its corner. */
@@ -436,6 +438,14 @@ textarea {
 
 .runstate__line--warn .runstate__dot {
   background: var(--warn);
+}
+
+/* "Watch the first crash" and "Play from the start": the page's one main action, on the state's row between the line and the numbers. */
+.runstate__actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .counters--headline {
@@ -1317,12 +1327,27 @@ textarea {
   .speedpick__label {
     display: none;
   }
+  .runstate__actions {
+    flex: 1 1 100%;
+  }
+  .runstate__actions .btn {
+    flex: 1 1 auto;
+  }
+  /* the three numbers are one row, their labels wrapping, so that the tree comes up the page */
   .counters--headline {
     flex: 1 1 100%;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
   .counters--headline .stat {
     flex: 1 1 auto;
+    min-width: 0;
+    padding: 4px 8px;
+  }
+  .counters--headline .stat__value {
+    font-size: var(--fs-lead);
+  }
+  .counters--headline .stat--hero .stat__value {
+    font-size: var(--fs-title);
   }
   /* the tree is as tall as its cards need (components/TreeGraph.tsx), not a share of the window */
   .run--overview .run__tree {

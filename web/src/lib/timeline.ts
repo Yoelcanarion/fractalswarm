@@ -110,5 +110,14 @@ export function marksOf(events: RunEvent[]): Mark[] {
   return marks;
 }
 
+/** "Watch the first crash" starts this long before the first coordinator is killed. */
+export const FIRST_CRASH_LEAD_MS = 3000;
+
+/** Where a recording is worth watching from to see its first coordinator die: a few seconds before the kill. Null when none is killed. */
+export function firstCrashStart(marks: readonly Mark[]): number | null {
+  const first = marks.find((mark) => mark.kind === "coordinator-kill");
+  return first === undefined ? null : Math.max(0, first.ts - FIRST_CRASH_LEAD_MS);
+}
+
 /** Where a time falls along the track, 0 to 1. */
 export const fraction = (ts: number, end: number): number => (end > 0 ? Math.min(1, Math.max(0, ts / end)) : 0);
