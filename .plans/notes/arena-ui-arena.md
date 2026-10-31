@@ -29,7 +29,9 @@ here has been looked at yet** (the list for the slot is at the end).
 ### The arena for a stranger (`web/src/arena`)
 
 - **First look.** The lead is `FractalSwarm, on the left, and a rival, on the right, do the same job under the same
-  failures.` (it said "while the same coordinators are killed" until the review of `8c4ae3a`: the two sides lose different ones) and, once a pair is open, a second sentence from `rivalSentence(assumptions)` (assumptions.ts), in the
+  failures, each at about the same point of the work.` (it said "while the same coordinators are killed" until the review of `8c4ae3a`: the
+  two sides lose different ones; "each at about the same point of the work" came with the review of `96b24af`: the kills are points of the
+  work, not of time) and, once a pair is open, a second sentence from `rivalSentence(assumptions)` (assumptions.ts), in the
   words of `docs/claims.md`: in-process "…one program runs the workers, so when it crashes they stop with it." (R5); ideal durable
   "…its workers survive a crash, and it is back after 5 s." (R2); durable; swarm; single; pipeline; a default. The assumptions pill
   under it stays always on. `#/arena` alone already opens the first public pair, which on a clean clone is the durable-max one.
@@ -181,13 +183,60 @@ API, so the repo's config, which points at 8765, was not touched), and headless 
    staying in their names because a closed select shows only the chosen option.
 
 Not mine, for the coordinator:
-1. The first-visit guide band (W4's) is 143 px at 1366x768, so a first visit has the boards half under the pinned bar until "Got
-   it" is pressed. The crash is still readable (the status line, the red cross, the playhead).
+1. The first-visit guide band (W4's) was 143 px at 1366x768 that morning, so a first visit had the boards half under the pinned bar until
+   "Got it" was pressed. W4 has made it a short band (55 px since): see the review of `96b24af` below, which also supersedes item 5's
+   thresholds, floor and numbers.
 2. The chip's hover text (`describeTakeover`, lib/takeover.ts: "7 hand-overs: the heir of each, recomputed from the log, is the
    one the run used.") does not carry the reason for 5 coordinators and 7 hand-overs; the run page's Counters hint does. The end
    card has it now; a clause in that file would put it on the chip as well (outside my files, so I did not touch it).
 3. `--arena-chrome` is a constant: the height of what the page keeps around the boards at 1366x768. If a bar above them grows or
    shrinks, the number moves with it.
+
+### The review of 96b24af (Oct 31, second round): the verdict behind the bar, the laptop window, the lead
+
+Five items, in the coordinator's order of harm. `Yoelcanarion/arena` merged in first (a fast-forward onto `1581f9f`: W4's short guide band and
+`bringRunIntoView`, W7's hero, the chip's reason for more hand-overs than crashes). The look was the same scratch stack (API on 8791, a dev
+server on 5177, no model), at normal priority since the coordinator freed browser passes.
+
+1. **The verdict behind the pinned bar.** Once both runs have played out the arena carries the class `arena--played-out` (`ArenaView`,
+   from the same `playedOut` the end card uses) and the bar is `position: static`: the end card sits right under the boards (1366x768:
+   boards end at 606, the card starts under them) and the bar is the last thing on the page. A press on Watch, or on the bar's play,
+   takes the class off and pins the bar again; a pair that plays through to its end gets it back (seen at 20x: sticky while it plays,
+   static at the end). Seen on both real pairs at 1366x768 with `?at=end`: the card, its verdict and the one caveat are in the first
+   view and the numbers are under them.
+2. **A laptop's window.** The bar is pinned only where it fits with two boards above it: wider than 1100 px (the same 1100 as the
+   stacking, and a test pins that they agree) and at least 701 px high. Narrower or shorter, the page is a page that scrolls, the
+   bar at its end and the top Pause with its clock carrying the play. The board's cap lives in that window only (a stacked or short
+   page has its boards whole). The room is measured, not guessed: `room.ts` writes the height of the page's scroll area, which is the
+   window less the app's bars and the guide band while it is open, into `--arena-room` (a `ResizeObserver` on `.content`), so the
+   band and its "Got it" move the cap with no reload (seen at 1366x768: 661 px to 716 px, the boards 364 to 400 px tall).
+   `--arena-chrome` is 490 px of that room. The third line of the lead costs 20 px, so the bar gives 30 back: in a laptop window it
+   is 147 px, not 177 (padding, 30 px buttons, a 20 px scrubber, 16 px marks); a director's frame keeps the 177 px it was made with
+   (`.arena--bare`). Measured, boards then bar (page y), a returning visitor / a first visit with the 55 px band:
+   1366x768 206..606, 621..768 / 261..625 (4 px under the bar: the panel's padding); 1440x790 196..618, 643..790 / 251..618 (clear);
+   1536x864 204..667, 717..864; 1920x1080 204..745, 933..1080; 1280x720 206..570, 573..720 / 261..625 (the talks row and the foot of
+   the drawing are under the bar until "Got it"); 1536x730 first visit 251..615 against a bar at 583 (the talks row is under it).
+   Unpinned: 1366x650 the boards whole (0.76) and the bar at the end of the page; 1024x768 the boards stacked, 284..847 and 859..1421.
+   The tree is drawn at 0.67 at 1366x768 (0.59 before the bar was tightened, 0.64 in the first round).
+3. **The first kill lands on one side only.** The lead is "...do the same job under the same failures, each at about the same point of
+   the work." (the failure plan's crash points are points of the work, not of time: the coordinator read the first kills at 40.7 and
+   46.3 s on the durable pair and at 46.8 and 45.9 s on the in-process one; "about" because the durable pair's fourth crash fired one step
+   apart in the logs). The header is three lines at 1366 (70 px, it was 50).
+4. **The phone's Watch.** `bringBoardIntoView` (`play.ts`): on a phone (`PHONE_QUERY`), a press on Watch, Play both, Carry on or the
+   bar's play scrolls the first board to the top of the window once the page is drawn, as `bringRunIntoView` does for the run page's
+   state row, with the same reduced-motion rule. `bringRunIntoView` takes no target and is in W4's file, so the arena has its own six
+   lines. Seen at 390x664: the first board goes from 414 px to 0 in the scroll area, the status line says "o0 down for 1.6 s - not
+   noticed yet" and the whole tree is in view.
+5. **Small ones.** The clock is shown beside the main action only where the bar is not pinned (`display: none` in a laptop window
+   until the pair has played out): at 1366x650 it reads "Pause t = 42.3 s / 111.8 s" at the top, at 1366x768 only the bar has one.
+   Keyboard: the main action is one `<button>` whatever it says (Watch, Pause, Carry on), so the focus stays on it when it swaps, and
+   a press on the second button, which goes away, hands the focus to it (a flag and an effect in `ArenaPlay.tsx`). Seen at 1366x768
+   and 1440x790: Enter on Watch leaves the focus on Pause, and Space then pauses (Carry on, the focus still on it).
+
+Not mine, for the coordinator:
+1. `bringRunIntoView()` (components/PlayAction.tsx) could take a selector and the arena could use it instead of its six lines.
+2. The first-visit band is a short 55 px now, so the first visit clears the boards at 1366x768 and 1440x790. At 1280x720 and
+   1536x730 the talks row (and at 1280x720 the foot of the drawing) is under the bar until "Got it", as the coordinator accepted.
 
 ## Design
 

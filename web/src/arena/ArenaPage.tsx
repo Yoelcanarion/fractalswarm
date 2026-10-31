@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useStore } from "zustand";
 
 import { ClockScope } from "../components/ClockScope";
@@ -20,10 +20,14 @@ import { PairPicker } from "./PairPicker";
 import { playedOut } from "./playedOut";
 import { arenaHash, type ArenaRoute } from "./route";
 import { Scoreboard } from "./Scoreboard";
+import { useRoom } from "./room";
 import { createPairSession, type PairSession } from "./session";
 
 const NO_OFFICIAL: { left: Official | null; right: Official | null } = { left: null, right: null };
-const LEAD = "FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures.";
+// The failure plan's crash points are points of the work, not of time (profiles.py, half_the_brains_plan): on the shared clock the first kill
+// does not fall at the same second on both sides. "About" because the logs put one crash a step apart (the durable pair's fourth: progress 0.67
+// on one side, 0.72 on the other).
+const LEAD = "FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures, each at about the same point of the work.";
 
 /** The arena: the swarm and its rival on one clock, face to face. */
 export function ArenaPage({ route }: { route: ArenaRoute }) {
@@ -113,6 +117,9 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   // The end of the pair says the one-run caveat in full, so the scoreboard's is left out once both runs have played out (a director's frame has no end card).
   const leftPlayedOut = useStore(session.left, playedOut);
   const rightPlayedOut = useStore(session.right, playedOut);
+  const finished = leftPlayedOut && rightPlayedOut;
+  const root = useRef<HTMLDivElement>(null);
+  useRoom(root);
 
   const frames = useMemo(() => sharedFrames(frameOf(leftEvents), frameOf(rightEvents)), [leftEvents, rightEvents]);
   const assumptions = useMemo(() => assumptionsOf(startedOf(rightEvents), startedOf(leftEvents)), [leftEvents, rightEvents]);
@@ -137,7 +144,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   const opening = !chosen && (pairs === null || pairs.some((pair) => !pair.private));
   const watching = chosen && !loading && !loadError;
   return (
-    <div className="arena" tabIndex={-1} onKeyDown={onKeyDown}>
+    <div ref={root} className={["arena", finished && "arena--played-out", bare && "arena--bare"].filter(Boolean).join(" ")} tabIndex={-1} onKeyDown={onKeyDown}>
       {!bare && (
         <PageHeader
           compact
@@ -198,7 +205,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
             <ArenaSide store={session.right} role="rival" title={capitalize(assumptions.name)} system={assumptions.system} frame={frames[1]} />
           </div>
           {!bare && <PairEnd left={session.left} right={session.right} leftSystem={leftSystem} assumptions={assumptions} />}
-          <Scoreboard left={session.left} right={session.right} official={official} playing={playing} fixedStep={fixedStep} caveat={bare || !(leftPlayedOut && rightPlayedOut)} />
+          <Scoreboard left={session.left} right={session.right} official={official} playing={playing} fixedStep={fixedStep} caveat={bare || !finished} />
           <ArenaTimeline clock={clock} left={session.left} right={session.right} />
         </>
       )}

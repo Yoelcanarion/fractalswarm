@@ -10,9 +10,12 @@
   min-height: 100%;
   padding: var(--space-3) var(--space-4);
   outline: none;
-  /* What the page keeps around the boards (the bars, the heads, the scoreboard's first row, the pinned timeline), in px: the boards take the rest of a
-     short window, down to a floor, and the whole of their frame in a tall one. */
-  --arena-chrome: 552px;
+  /* The room the page has, which room.ts measures (its scroll area: the window less the bars of the app and the guide band while that is open), and
+     what the page keeps of it around the boards (the lead, the picker, the head of each side, the scoreboard's first row, the pinned timeline), in px.
+     The boards take the rest of a laptop's window, down to a floor, and the whole of their frame in a taller one. The first is the window's own until
+     it is measured. */
+  --arena-room: calc(100vh - 52px);
+  --arena-chrome: 490px;
 }
 
 /* The lead is two lines at a laptop's width, and narrow enough that the main action's two buttons sit beside it instead of under it. */
@@ -247,8 +250,6 @@
   display: block;
   width: 100%;
   height: 100%;
-  /* In a short window the drawing gives way, not the timeline: the frame is drawn smaller to fit (it keeps its proportions). */
-  max-height: max(190px, calc(100vh - var(--arena-chrome)));
   overflow: visible;
 }
 
@@ -738,13 +739,74 @@
   pointer-events: none;
 }
 
-/* A phone: the bar has too much in it to pin, and the page is a column. A window too short to hold the bar and the boards above it: the page
-   scrolls to it, as before. */
-@media (max-width: 760px), (max-height: 620px) {
+/* The bar is pinned in a window that holds it and two boards above it: wider than 1100 px (the boards stand side by side) and at least 701 px high. Where
+   the boards stack, or the window is too short, a pinned bar would cover the tree: the page scrolls, the bar is at its end, and the play action at the top
+   carries the clock. In a window that holds it the drawing gives way, not the bar: the frame is drawn smaller to fit (it keeps its proportions). */
+@media (min-width: 1101px) and (min-height: 701px) {
+  .board {
+    max-height: max(190px, calc(var(--arena-room) - var(--arena-chrome)));
+  }
+
+  /* the pinned bar has the clock */
+  .arena:not(.arena--played-out) .arena__clock {
+    display: none;
+  }
+
+  /* The bar, a little closer, so that the boards have the room: 147 px, not 177. A director's frame keeps the bar it was made with. */
+  .arena:not(.arena--bare) .tl {
+    padding-block: var(--space-1);
+  }
+
+  .arena:not(.arena--bare) .tl__controls {
+    margin-bottom: 0;
+  }
+
+  .arena:not(.arena--bare) .tl .btn {
+    padding-block: 5px;
+  }
+
+  .arena:not(.arena--bare) .tl .btn--play {
+    height: 30px;
+  }
+
+  .arena:not(.arena--bare) .tl select {
+    padding-block: 3px;
+  }
+
+  .arena:not(.arena--bare) .tl__grid {
+    row-gap: 2px;
+  }
+
+  .arena:not(.arena--bare) .tl__slider {
+    height: 20px;
+  }
+
+  .arena:not(.arena--bare) .tl__slider::-webkit-slider-thumb {
+    height: 20px;
+    margin-top: -7px;
+  }
+
+  .arena:not(.arena--bare) .tl__slider::-moz-range-thumb {
+    height: 20px;
+  }
+
+  .arena:not(.arena--bare) .lane__marks {
+    height: 16px;
+  }
+}
+
+@media (max-width: 1100px), (max-height: 700px) {
   .tl {
     position: static;
     box-shadow: none;
   }
+}
+
+/* Once both runs have played out the verdict is the page: the end card sits right under the boards and the numbers under it, and the bar goes to the end
+   of the page. A press on Watch pins it again. */
+.arena--played-out .tl {
+  position: static;
+  box-shadow: none;
 }
 
 @media (max-width: 1400px) {
