@@ -55,6 +55,8 @@ export function stateLine(view: ViewState, facts: StateFacts): StateLine {
   const crashed = crashedCoordinators(view);
   const { placed, expected } = talksOf(view);
   const talks = expected !== null ? `${placed} of ${expected} talks placed` : placed > 0 ? `${plural(placed, "talk", "talks")} placed` : null;
+  const unplaced = expected === null ? 0 : Math.max(0, expected - placed);
+  const violations = view.schedule.hardViolations ?? 0;
 
   if (!facts.live && facts.cursor === 0) {
     return { headline: "At the start:", tone: "muted", rest: "nothing has happened yet" };
@@ -65,6 +67,9 @@ export function stateLine(view: ViewState, facts: StateFacts): StateLine {
   const clauses: string[] = [];
   if (!facts.live && !atEnd) clauses.push(`at ${seconds(view.lastTs)} of ${seconds(facts.endMs)}`);
   if (talks !== null) clauses.push(talks);
+  // a result that is short or broken says so in words, and its dot is not green; a count still on its way is not a result
+  if (settled && unplaced > 0) clauses.push(`${unplaced} unplaced`);
+  if (settled && violations > 0) clauses.push(plural(violations, "hard violation", "hard violations"));
   // "so far" says the count can still change; a finished run's count is the run's
   if (crashed > 0) clauses.push(`${plural(crashed, "coordinator", "coordinators")} crashed${settled ? "" : " so far"}`);
   else if (settled) clauses.push("no coordinator crashed");
@@ -74,8 +79,9 @@ export function stateLine(view: ViewState, facts: StateFacts): StateLine {
   if (facts.live) return { headline: "Running:", tone: "live", rest };
   if (!atEnd) return facts.playing ? { headline: "Replaying:", tone: "live", rest } : { headline: "Paused:", tone: "muted", rest };
   const finished = facts.status === "completed" || (facts.status === null && view.completed) || (facts.status === "running" && view.completed);
-  if (finished) return { headline: "Finished:", tone: "good", rest };
+  const flawed = unplaced > 0 || violations > 0;
+  if (finished) return { headline: "Finished:", tone: flawed ? "warn" : "good", rest };
   if (facts.status === "halted") return { headline: "Halted:", tone: "warn", rest };
   if (facts.status === "interrupted") return { headline: "Interrupted:", tone: "warn", rest };
-  return { headline: view.completed ? "Finished:" : "Ended without finishing:", tone: view.completed ? "good" : "warn", rest };
+  return { headline: view.completed ? "Finished:" : "Ended without finishing:", tone: view.completed && !flawed ? "good" : "warn", rest };
 }

@@ -16,7 +16,14 @@ export function Counters({ view, headline = false }: CountersProps) {
   const coordination = (
     <Stat hero animate={false} label="coordination tokens" value={c.coordinationTokens} hint={defineTerm("coordinationTokens")} />
   );
-  const handovers = <Stat animate={false} label="hand-overs" value={c.adoptions} hint="a dead coordinator's work taken over by a survivor" />;
+  const handovers = (
+    <Stat
+      animate={false}
+      label="hand-overs"
+      value={c.adoptions}
+      hint="a dead coordinator's work taken over by a survivor. One coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes"
+    />
+  );
   const spent = <Stat animate={false} label="spent" prefix="$" value={c.spentUsd} decimals={4} />;
   if (headline) {
     return (

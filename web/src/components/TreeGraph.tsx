@@ -215,7 +215,7 @@ function moveBetweenCards(event: KeyboardEvent<HTMLDivElement>): void {
 }
 
 // On a phone the tree is as tall as it is, and the page scrolls past it: a touch on it is not a pan or a pinch of the picture.
-const ON_A_PHONE = { panOnDrag: false, zoomOnScroll: false, zoomOnPinch: false, zoomOnDoubleClick: false, preventScrolling: false } as const;
+const ON_A_PHONE = { panOnDrag: false, zoomOnScroll: false, zoomOnPinch: false, zoomOnDoubleClick: false } as const;
 
 function Graph({ view }: { view: ViewState }) {
   // The committed playhead (at most ~20 writes a second) decides which edges and glows exist;
@@ -248,6 +248,8 @@ function Graph({ view }: { view: ViewState }) {
         proOptions={{ hideAttribution: true }}
         onInit={onInit}
         minZoom={0.2}
+        // the tree is most of the page, so a plain wheel over it scrolls the page, not the picture; a pinch, or Ctrl and the wheel, still zooms
+        preventScrolling={false}
         {...(across ? ON_A_PHONE : undefined)}
       >
         <Background gap={28} size={1} color="var(--grid)" />

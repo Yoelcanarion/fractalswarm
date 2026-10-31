@@ -13,7 +13,7 @@
 // Time comes from `clock.motion()`: the real clock, or in fixed-step mode a frame count, so a
 // director take repeats exactly.
 
-import { getViewportForBounds, useReactFlow, useStore, useStoreApi, type Node, type ReactFlowInstance } from "@xyflow/react";
+import { getViewportForBounds, useReactFlow, useStore, useStoreApi, type Node, type ReactFlowInstance, type Viewport } from "@xyflow/react";
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
 
 import { createGlide, type Glide, type Point } from "../lib/glide";
@@ -23,8 +23,11 @@ import { useRunStore } from "../store";
 
 // How the camera frames the tree: as large as the pane allows, so that the labels can be read, with a margin round it. The cards are
 // small (lib/layout.ts), so a tree of a dozen agents is zoomed in to fill a page's width.
-export const FIT_PADDING = "24px";
+export const FIT_MARGIN = 24;
+export const FIT_PADDING = `${FIT_MARGIN}px`;
 export const FIT_MAX_ZOOM = 1.5;
+// What is kept clear between the key of the tree (a line in the pane's top-left corner) and the cards under it.
+const KEY_GAP = 6;
 // A tree on its side (a phone) is drawn at a scale of one, in the pixels its ids are sized in: it is never zoomed in, and its margin is small.
 export const FIT_MAX_ZOOM_ACROSS = 1;
 const FIT_RETRIES = 30; // frames to wait for React Flow to measure its pane
@@ -48,6 +51,24 @@ export interface TreeMotion<N extends Node> {
 }
 
 type FlowStore = ReturnType<typeof useStoreApi>;
+type Padding = Parameters<typeof getViewportForBounds>[5];
+
+/** Where the camera puts a tree in a pane: as large as the pane allows, in the middle of what the key leaves free. ``keyReach`` is how far down
+ * the pane's top the key reaches; no card is drawn above it, so the key never covers one (a tree with no root, in the seconds between a
+ * root's death and its heir, has three cards in the top row, and the leftmost was under it). A tree on its side has no key. */
+export function frameTree(area: Bounds, pane: { width: number; height: number; minZoom: number }, across: boolean, keyReach = 0): Viewport {
+  const top = `${Math.max(FIT_MARGIN, keyReach + KEY_GAP)}px` as const;
+  const padding: Padding = across ? `${ACROSS.pad}px` : { top, right: FIT_PADDING, bottom: FIT_PADDING, left: FIT_PADDING };
+  return getViewportForBounds(area, pane.width, pane.height, pane.minZoom, across ? FIT_MAX_ZOOM_ACROSS : FIT_MAX_ZOOM, padding);
+}
+
+/** How far down from the pane's top the key of the tree reaches. It wraps as the pane narrows, so it is measured; zero where it is not drawn. */
+function keyReach(store: FlowStore): number {
+  const pane = store.getState().domNode;
+  const key = pane?.querySelector<HTMLElement>(".run__legend");
+  if (!pane || !key || key.offsetParent === null) return 0;
+  return Math.ceil(key.getBoundingClientRect().bottom - pane.getBoundingClientRect().top);
+}
 
 /** Move the camera to show ``bounds()``. The pane may not have a size yet on the first call, so
  * ask again for a few frames. */
@@ -59,7 +80,7 @@ function fitCamera(flow: ReactFlowInstance, store: FlowStore, shape: () => TreeS
     if (attempt < FIT_RETRIES) requestAnimationFrame(() => fitCamera(flow, store, shape, duration, attempt + 1));
     return;
   }
-  const viewport = getViewportForBounds(area, width, height, minZoom, across ? FIT_MAX_ZOOM_ACROSS : FIT_MAX_ZOOM, across ? `${ACROSS.pad}px` : FIT_PADDING);
+  const viewport = frameTree(area, { width, height, minZoom }, across, keyReach(store));
   void flow.setViewport(viewport, { duration, ease: EASE_OUT, interpolate: "linear" });
 }
 
