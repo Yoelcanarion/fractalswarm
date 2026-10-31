@@ -1,10 +1,11 @@
-# Video script — v0.3 (3:00, English voice-over)
+# Video script — v1.0 (3:00, English voice-over)
 
-**Status:** draft v0.3, with the ten-seed claims. The decision gate (Oct 29, with Yoel) chose **outcome B**, so Act 3 has only version B; version A is removed.
-- Every `{{placeholder}}` left is filled from `docs/claims.md` once the final runs exist.
+**Status:** v1.0, with the ten-seed claims and the same-second pair. The decision gate (Oct 29, with Yoel) chose **outcome B**, so Act 3 has only version B; version A is removed.
+- Every `{{placeholder}}` left is filled from `docs/claims.md` once Yoel's own text has been read.
 - Every number and claim must have a row in `docs/claims.md` before recording.
 - The tagline is settled (Yoel, Oct 30; `docs/claims.md` S7): "Kill half the brains. It still finishes." Only that sentence. Numbers go under it, each with its rival named, never as part of it.
-- Yoel picks the rival of `s1` and `s6` in the edit: `central` for the contrast, `durable-max` for the honest tie (arena spec §M.5). This draft is written for `durable-max`, and a `central` take cannot go with this voice: its frame says a crash stops its workers, and the voice says its workers survive. A `central` `s6` also needs its own lower third, in R5's words, with the rival and the setting named: "tied on stall time and extra cost" is true of `durable-max` only.
+- `s1`, `s6` and `s8` play the same-second pair against `durable-max` (`demo/same-second-durable-max-*`, one real run each side): each side loses a coordinator at the same second, five times, by hand. That is not the benchmark's rule, which hits each side at the same point of the work, and `s1`'s lower third says so. The ten-seed claim of `s6` comes from the benchmark's rule.
+- `durable-max` is the honest tie (arena spec §M.5). A `central` take cannot go with this voice: its frame says a crash stops its workers, and the voice says its workers survive. A `central` `s6` also needs its own lower third, in R5's words, with the rival and the setting named: "tied on stall time and extra cost" is true of `durable-max` only.
 
 **The story:** three questions, in this order.
 1. What problem does FractalSwarm solve?
@@ -13,13 +14,13 @@
 
 Anything that doesn't answer one of them stays out of the video.
 
-**Reading pace:** about 140 words per minute. The voice-over below is about 400 words, which leaves room to breathe. Read slowly, and cut words rather than rush.
+**Reading pace:** about 140 words per minute. The voice-over below is about 410 words, which leaves room to breathe. Read slowly, and cut words rather than rush.
 
 **Recording:**
-- The scenes come from director mode (`#/director/<scene-id>`), captured by `scripts/record_scenes.*` at 1920×1080.
+- The scenes come from director mode (`#/director/<scene-id>`), captured by `scripts/record_scenes.*` at 1920×1080. `s3-ablation` needs `--ablation <run id>`, the run on Yoel's own text.
 - **Exceptions:** `s2-intake` is recorded from the real live session, and `s9-close` is a real terminal capture (OBS, or Win+Alt+R). Cut the capture on the `MATCH` line: the command goes on to start the UI, and a browser opens over the terminal.
 - Record the voice per scene. Light editing joins the clips.
-- **On-screen notes:** whenever a replay is shown, the frame says "Replay of a real recorded run · real cost $0.4783" (`demo/final`: what the run spent, read from the end of its log; another run shows its own cost).
+- **On-screen notes:** whenever a replay is shown, the frame says what the run spent, read from the end of its log: "Replay of a real recorded run · real cost $0.4783" (`demo/final`), or "Replay of two real recorded runs · real cost $0.4334 and $0.4302" (the pair).
 
 ---
 
@@ -27,19 +28,19 @@ Anything that doesn't answer one of them stays out of the video.
 
 ### s1-arena-open (0:00–0:33)
 **On screen:**
-- The arena, opening on the "half the brains" plan.
+- The arena, opening on the same-second pair.
 - **Left:** FractalSwarm's tree (10 coordinators, 12 agents).
 - **Right:** the ideal durable supervisor, with the same 12 agents.
-- **Lower third:** "Same task · same models · same failures".
-- **At about 0:22, on "Now we kill half the brains":** the first crash. The root dies on both sides. The right side's whole board pauses; on the left, the tree re-wires.
+- **Lower third:** "Kills set by hand, not the benchmark's rule" over "Same task · same models · crashes at the same second".
+- **At about 0:22, on "Now we kill half the brains":** the first crash. The root dies on both sides, at the same second. The right side's whole board pauses; on the left, the tree re-wires.
 
-**Voice-over (≈ 76 words):**
+**Voice-over (≈ 79 words):**
 > Teams of AI agents often depend on one coordinator. It plans, assigns and checks the work. When it crashes, the team waits, or does the work again.
-> On the right: the strongest supervisor we could build. On the left: FractalSwarm, ten small coordinators in a tree. Same task, same models, same failures.
+> On the right: the strongest supervisor we could build. On the left: FractalSwarm, ten small coordinators in a tree. Same task, same models, crashes at the same second.
 > Now we kill half the brains.
 > A better supervisor helps: its workers survive, and a standby takes over. Can a team recover without one?
 
-**Key points:** agent teams depend on one coordinator · the strongest rival we could build, against ten small coordinators · same task, models and failures · kill half the brains · a better supervisor helps · can a team recover without one, over the two sides reacting.
+**Key points:** agent teams depend on one coordinator · the strongest rival we could build, against ten small coordinators · same task and models, crashes at the same second · kill half the brains · a better supervisor helps · can a team recover without one, over the two sides reacting.
 
 ---
 
@@ -48,7 +49,7 @@ Anything that doesn't answer one of them stays out of the video.
 ### s2-intake (0:33–0:53) — recorded live
 **On screen:**
 - Yoel types or pastes a small conference in plain English, sped up: talks, and speakers' emails such as "I land at noon on day two".
-- Clicks **Read with Muse**.
+- Clicks **Read with Muse (billed)**.
 - The review table fills in: talks, tracks and constraints, each with its source sentence highlighted.
 - Clicks **Approve**.
 
@@ -60,7 +61,7 @@ Anything that doesn't answer one of them stays out of the video.
 
 ### s3-ablation (0:53–1:05)
 **On screen:**
-- The ablation view: regex parser on the left, Muse Spark on the right, with ✓/✗ per note.
+- The Model vs parser page: regex parser on the left, Muse Spark on the right, with ✓/✗ per note.
 - **Headline:** "parser {{ablation_parser}} of {{ablation_total}} · Muse {{ablation_muse}} of {{ablation_total}}".
 
 **Voice-over (≈ 28 words):**
@@ -102,8 +103,8 @@ Anything that doesn't answer one of them stays out of the video.
 
 ### s6-fair-fight (1:46–2:17)
 **On screen:**
-- The arena, mid-run, with crash markers on the shared timeline.
-- **Right:** at each crash, a band for 5 s, in the UI's words: "o0 down for 3.7 s · 8 agents waiting for it".
+- The arena, mid-run, with the crash markers of both sides lined up on the shared timeline.
+- **Right:** at each crash, a band for 5 s, in the UI's words: "o0 down for 1.5 s · 8 agents waiting for it", its seconds counting up.
 - **Left:** only one subtree pauses.
 - **Face-to-face counters:** idle agent-seconds, time to recover, cost, duplicated work and reassignments.
 - **Caption, always visible:** "Rival: ideal durable supervisor — 5 s detection · 0 s restart · workers survive · same log".
@@ -128,7 +129,7 @@ Anything that doesn't answer one of them stays out of the video.
 **On screen:**
 - The verify badge, "Replay verified ✓", with a short hash.
 - The recovery report (supervisor).
-- The takeover chip, as the UI words it: "Takeover OK ✓ 7 hand-overs" (`demo/final`), and its hover, "the heir of each, recomputed from the log, is the one the run used" (swarm), on "a checker recomputes every heir".
+- The takeover chip, as the UI words it: "Takeover OK ✓ 6 hand-overs" (the same-second pair), and its hover, "the heir of each, recomputed from the log, is the one the run used" (swarm), on "a checker recomputes every heir".
 
 **Voice-over (≈ 27 words):**
 > And you don't have to trust us. Every run we ship replays bit for bit from a hash-chained log, and a checker recomputes every heir from it.
@@ -164,6 +165,6 @@ Anything that doesn't answer one of them stays out of the video.
 - [ ] Every placeholder is filled and matches a row of `docs/claims.md`.
 - [ ] No "simpler", "cheaper" or "more reliable" appears without its own row in `docs/claims.md`.
 - [ ] The rival's assumptions are on screen in `s6`.
-- [ ] Nothing says that every run was valid: one real run was not (`swarm__t2_conference__C0__s5`, `.plans/progress.md`). The tagline's evidence (S7) speaks of C3.
+- [ ] Nothing says that every run was valid: one real run of the headline was not (`swarm__t2_conference__C0__s5`, `bench/REPORT.md` §4.10.7), and neither was one of the track leads' deaths (`K-o3`, seed 1, §4.10.9). The tagline's evidence (S7) speaks of C3.
 - [ ] Each scene's voice-over fits its time when read slowly.
 - [ ] **The three-question check:** someone who has not seen the project watches the cut and can say what problem it solves, why Meta's models matter and what the evidence is.

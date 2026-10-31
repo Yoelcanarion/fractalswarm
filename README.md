@@ -185,6 +185,7 @@ The web app lives in `web/` (Vite, React, TypeScript): `npm --prefix web install
 ## Limitations
 
 - A kill is an actor crash inside one Python process, and the chaos is injected. The log is centralized.
+- Not every set of deaths recovers. "Kill half" is true of the set the demo kills. Some other sets leave nobody who can start the recovery, and the run hangs: [`docs/any-survivor.md`](docs/any-survivor.md) has those sets and an opt-in repair, which costs more false deaths and is on in no recorded run.
 - The baselines run on this runtime with the failure semantics in the report; they are not the original frameworks' deployments, except LangGraph.
 - Recovery after the whole Python process dies is an opt-in feature (`fractalswarm resume`, [`docs/resume.md`](docs/resume.md)), and it is not part of the demo.
 - More in [`bench/REPORT.md`](bench/REPORT.md) §6.

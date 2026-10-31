@@ -103,6 +103,24 @@ const PAIRS = [
     rivalAt: [45.9, 62.1, 78.5, 96.0, 114.3],
     end: 154.1,
   },
+  {
+    name: "same-second, against the ideal durable supervisor",
+    left: loadJsonl("demo/same-second-durable-max-swarm/events.jsonl"),
+    right: loadJsonl("demo/same-second-durable-max-rival/events.jsonl"),
+    crashed: ["o0", "o2.1", "o1", "o3.2", "o2"],
+    swarmAt: [39.1, 49.3, 59.3, 69.2, 79.3],
+    rivalAt: [39.1, 49.3, 59.1, 69.3, 79.2],
+    end: 90.3,
+  },
+  {
+    name: "same-second, against the in-process supervisor",
+    left: loadJsonl("demo/same-second-central-swarm/events.jsonl"),
+    right: loadJsonl("demo/same-second-central-rival/events.jsonl"),
+    crashed: ["o0", "o2.1", "o1", "o3.2", "o2"],
+    swarmAt: [40.2, 50.2, 60.4, 70.4, 80.3],
+    rivalAt: [40.3, 50.3, 60.2, 70.2, 80.3],
+    end: 126.7,
+  },
 ];
 const ARENA_SCENES = ["s1-arena-open", "s6-fair-fight", "s8-proof"];
 
@@ -171,13 +189,13 @@ for (const pair of PAIRS) {
       expect(rewired!.ms).toBeLessThan(byId("s1-arena-open").durationMs);
     });
 
-    it("s1 puts its rings and its lower third on the voice's moments: the right, the left, 'same failures', then the first crash (video script, s1)", () => {
+    it("s1 puts its rings and its lower third on the voice's moments: the right, the left, 'crashes at the same second', then the first crash (video script, s1)", () => {
       const trace = play(byId("s1-arena-open"), context);
       const right = ringOf(trace, "rival-head").from / 1000;
       const left = ringOf(trace, "swarm-head").from / 1000;
-      const lower = trace.captions.find((caption) => caption.text === "Same task · same models · same failures");
+      const lower = trace.captions.find((caption) => caption.text === "Same task · same models · crashes at the same second");
       const crashed = trace.frames.find((frame) => frame.at >= crashes[0].at)!.ms;
-      // the voice reads the problem to about 0:11 over the arena at rest, then "On the right" and "On the left", then "Same task, same models, same failures"
+      // the voice reads the problem to about 0:11 over the arena at rest, then "On the right" and "On the left", then "Same task, same models, crashes at the same second"
       expect(right).toBeGreaterThan(11);
       expect(right).toBeLessThan(12);
       expect(left).toBeGreaterThan(right + 3);
@@ -233,10 +251,10 @@ for (const pair of PAIRS) {
       expect(ended.ms).toBeLessThan(scene.durationMs - 3000); // room for the lower third to be read before the clip ends
     });
 
-    it("s6 watches the rival's first outage and the takeovers after it at 1x for 11 s, then goes to the end at 10x, and the end of the clip is still for at most 6.5 s, on either pair", () => {
+    it("s6 watches the rival's first outage and the takeovers after it at 1x for 12 s, then goes to the end at 10x, and the end of the clip is still for at most 6.5 s, on any pair", () => {
       const scene = byId("s6-fair-fight");
       const trace = play(scene, context);
-      // the clip goes 5 s to the outage and 11 s on at 1x: the replay is not 11.5 s past the outage until the clip's clock has passed 15.5 s
+      // the clip goes 5 s to the outage and 12 s on at 1x: the replay is not 11.5 s past the outage until the clip's clock has passed 15.5 s
       const late = trace.frames.find((frame) => frame.at > rivalCrashes[0].at + 11_500)!;
       expect(late.ms).toBeGreaterThan(15_500);
       // the scoreboard's ring is the last thing that moves: what follows it is the board and the lower third, still

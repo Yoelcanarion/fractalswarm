@@ -1,47 +1,47 @@
 [
   {
-    "pair_id": "pair-durable-max",
-    "label": "Against an ideal durable supervisor (real model, one run)",
-    "created_at": "2026-10-30T19:39:27+00:00",
+    "pair_id": "same-second-durable-max",
+    "label": "Same second, against an ideal durable supervisor (real model, one run)",
+    "created_at": "2026-10-31T17:08:03+00:00",
     "seed": "1",
     "clock": "live",
     "private": false,
     "rival": "durable-max",
     "chaos": {
-      "name": "half-the-brains",
+      "name": "same-moment",
       "actions": 5
     },
     "left": {
-      "run_id": "demo-pair-durable-max-swarm",
+      "run_id": "demo-same-second-durable-max-swarm",
       "scenario": "swarm",
       "private": false
     },
     "right": {
-      "run_id": "demo-pair-durable-max-rival",
+      "run_id": "demo-same-second-durable-max-rival",
       "scenario": "durable-max",
       "private": false
     },
     "state": "completed"
   },
   {
-    "pair_id": "pair-central",
-    "label": "Against an in-process supervisor (real model, one run)",
-    "created_at": "2026-10-30T19:36:35+00:00",
+    "pair_id": "same-second-central",
+    "label": "Same second, against an in-process supervisor (real model, one run)",
+    "created_at": "2026-10-31T17:10:03+00:00",
     "seed": "1",
     "clock": "live",
     "private": false,
     "rival": "central",
     "chaos": {
-      "name": "half-the-brains",
+      "name": "same-moment",
       "actions": 5
     },
     "left": {
-      "run_id": "demo-pair-central-swarm",
+      "run_id": "demo-same-second-central-swarm",
       "scenario": "swarm",
       "private": false
     },
     "right": {
-      "run_id": "demo-pair-central-rival",
+      "run_id": "demo-same-second-central-rival",
       "scenario": "central",
       "private": false
     },

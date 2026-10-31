@@ -14,7 +14,7 @@
     { "do": "wait", "ms": 3900 },
     { "do": "highlight", "target": { "region": "swarm-head" }, "ms": 3500 },
     { "do": "wait", "ms": 3500 },
-    { "do": "caption", "text": "Same task · same models · same failures", "ms": 4300 },
+    { "do": "caption", "kicker": "Kills set by hand, not the benchmark's rule", "text": "Same task · same models · crashes at the same second", "ms": 4300 },
     { "do": "wait", "until": "crash:1", "timeout_ms": 24000 },
     { "do": "highlight", "target": { "actor": "$crashed:1", "side": "left" }, "ms": 4000 },
     { "do": "wait", "until": "rival-crash:1", "timeout_ms": 10000 },

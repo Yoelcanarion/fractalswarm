@@ -6,8 +6,8 @@
 //   start | end      the beginning and the end of the run
 //   crash:1          where the first coordinator went down (crash:-1 is the last)
 //   recovered:2      where the second outage ended: the takeover, or the restart
-//   rival-crash:1    the same for the rival of an arena (rival-recovered:2): the two sides of a pair do not crash at the
-//                    same second, because each plan fires at a fraction of its own run's progress
+//   rival-crash:1    the same for the rival of an arena (rival-recovered:2): the two sides of a pair may not crash at the
+//                    same second, because a plan fires at a fraction of its own run's progress (kills by hand need not)
 //   call:spark       when the call the scene calls "spark" started (call-end: when it ended)
 //
 // each with an optional offset: `crash:1-4s`, `recovered:1+500ms`, `end-2s`.

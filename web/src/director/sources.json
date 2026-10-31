@@ -1,6 +1,6 @@
 {
-  "swarm": "demo-pair-durable-max-swarm",
-  "rival": "demo-pair-durable-max-rival",
+  "swarm": "demo-same-second-durable-max-swarm",
+  "rival": "demo-same-second-durable-max-rival",
   "run": "demo-final",
   "ablation": null,
   "real": true
