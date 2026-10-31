@@ -2,7 +2,7 @@
   "id": "s8-proof",
   "title": "The proof: replay verified, every heir recomputed",
   "stage": "arena",
-  "duration_ms": 10000,
+  "duration_ms": 12000,
   "steps": [
     { "do": "seek", "to": "end" },
     { "do": "camera", "fit": { "region": "swarm-head" }, "pad": 0.35, "ms": 1200 },

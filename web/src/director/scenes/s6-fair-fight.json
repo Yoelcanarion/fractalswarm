@@ -2,7 +2,7 @@
   "id": "s6-fair-fight",
   "title": "The fair fight: who waits when a coordinator dies",
   "stage": "arena",
-  "duration_ms": 30000,
+  "duration_ms": 31000,
   "steps": [
     { "do": "seek", "to": "rival-crash:1-5s" },
     { "do": "play" },

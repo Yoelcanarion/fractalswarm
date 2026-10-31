@@ -4,7 +4,7 @@
 - Every `{{placeholder}}` left is filled from `docs/claims.md` once the final runs exist.
 - Every number and claim must have a row in `docs/claims.md` before recording.
 - The tagline is settled (Yoel, Oct 30; `docs/claims.md` S7): "Kill half the brains. It still finishes." Only that sentence. Numbers go under it, each with its rival named, never as part of it.
-- Yoel picks the rival of `s1` and `s6` in the edit: `central` for the contrast, `durable-max` for the honest tie (arena spec §M.5). This draft is written for `durable-max`, and a `central` take cannot go with this voice: its frame says a crash stops its workers, and the voice says its workers survive.
+- Yoel picks the rival of `s1` and `s6` in the edit: `central` for the contrast, `durable-max` for the honest tie (arena spec §M.5). This draft is written for `durable-max`, and a `central` take cannot go with this voice: its frame says a crash stops its workers, and the voice says its workers survive. A `central` `s6` also needs its own lower third, in R5's words, with the rival and the setting named: "tied on stall time and extra cost" is true of `durable-max` only.
 
 **The story:** three questions, in this order.
 1. What problem does FractalSwarm solve?
@@ -23,17 +23,17 @@ Anything that doesn't answer one of them stays out of the video.
 
 ---
 
-## Act 1 — The problem (0:00–0:32)
+## Act 1 — The problem (0:00–0:33)
 
-### s1-arena-open (0:00–0:32)
+### s1-arena-open (0:00–0:33)
 **On screen:**
 - The arena, opening on the "half the brains" plan.
 - **Left:** FractalSwarm's tree (10 coordinators, 12 agents).
 - **Right:** the ideal durable supervisor, with the same 12 agents.
-- **Lower third:** "Same input · same models · same failures".
+- **Lower third:** "Same task · same models · same failures".
 - **At about 0:22, on "Now we kill half the brains":** the first crash. The root dies on both sides. The right side's whole board pauses; on the left, the tree re-wires.
 
-**Voice-over (≈ 74 words):**
+**Voice-over (≈ 76 words):**
 > Teams of AI agents often depend on one coordinator. It plans, assigns and checks the work. When it crashes, the team waits, or does the work again.
 > On the right: the strongest supervisor we could build. On the left: FractalSwarm, ten small coordinators in a tree. Same task, same models, same failures.
 > Now we kill half the brains.
@@ -43,9 +43,9 @@ Anything that doesn't answer one of them stays out of the video.
 
 ---
 
-## Act 2 — Why Meta's models matter (0:32–1:22)
+## Act 2 — Why Meta's models matter (0:33–1:24)
 
-### s2-intake (0:32–0:52) — recorded live
+### s2-intake (0:33–0:53) — recorded live
 **On screen:**
 - Yoel types or pastes a small conference in plain English, sped up: talks, and speakers' emails such as "I land at noon on day two".
 - Clicks **Read with Muse**.
@@ -58,7 +58,7 @@ Anything that doesn't answer one of them stays out of the video.
 
 **Key points:** real, messy input · Spark turns it into constraints · each constraint links to its source sentence · a human approves.
 
-### s3-ablation (0:52–1:04)
+### s3-ablation (0:53–1:05)
 **On screen:**
 - The ablation view: regex parser on the left, Muse Spark on the right, with ✓/✗ per note.
 - **Headline:** "parser {{ablation_parser}} of {{ablation_total}} · Muse {{ablation_muse}} of {{ablation_total}}".
@@ -68,7 +68,7 @@ Anything that doesn't answer one of them stays out of the video.
 
 **Key points:** same notes, parser against Muse · the parser's score, then Muse's.
 
-### s4-lens (1:04–1:22)
+### s4-lens (1:05–1:24)
 **On screen:**
 - The run plays and the tree grows.
 - The lens opens on Wonder's root plan.
@@ -84,23 +84,23 @@ Anything that doesn't answer one of them stays out of the video.
 
 ---
 
-## Act 3 — The evidence (1:22–2:36)
+## Act 3 — The evidence (1:24–2:42)
 
-### s5-recovery (1:22–1:44)
+### s5-recovery (1:24–1:46)
 **On screen:**
-- The tree, slowed down. A coordinator dies (✕), and its heartbeats stop.
-- After 5 s, every survivor computes the same heir. A brief overlay: "heir = highest hash(goal, member)".
-- The subtree re-wires to the heir, and the heir picks up the results already in the log.
-- Then the root dies, and the root's duties move.
+- The tree plays on from where `s4` left it, in order, with no jump back. A coordinator dies (✕), its heartbeats stop, and the replay slows to a quarter of its speed.
+- Every survivor is working out the same heir. A brief overlay: "heir = highest hash(goal, member)".
+- Then the root dies (✕), and the replay goes back to its speed.
+- Both heirs take over: the subtree re-wires to the first, and the root's badge moves to the second.
 - **Lower third:** "Shared log, not shared brain."
 
 **Voice-over (≈ 50 words):**
 > How does a team without a boss recover? Every coordinator reads the same log. When one stops sending heartbeats, each survivor computes the same heir from the log, so there is no election.
 > Even the root can die. The heir adopts the work, and every result already in the log.
 
-**Key points:** one shared log · the same heir computed everywhere · no election · even the root · the heir adopts the work and the logged results. "Even the root can die" lands on the root's X (about 0:14.5 of the scene), and the last sentence on its heir.
+**Key points:** one shared log · the same heir computed everywhere · no election · even the root · the heir adopts the work and the logged results. "Even the root can die" lands on the root's X (about 0:14 of the scene), and the last sentence on its heir.
 
-### s6-fair-fight (1:44–2:14)
+### s6-fair-fight (1:46–2:17)
 **On screen:**
 - The arena, mid-run, with crash markers on the shared timeline.
 - **Right:** at each crash, a band for 5 s, in the UI's words: "o0 down for 3.7 s · 8 agents waiting for it".
@@ -109,42 +109,42 @@ Anything that doesn't answer one of them stays out of the video.
 - **Caption, always visible:** "Rival: ideal durable supervisor — 5 s detection · 0 s restart · workers survive · same log".
 - **Lower third, over the full board:** "Ten seeds: tied on stall time and extra cost". The board is one seed; the lower third keeps it from arguing with the voice.
 
-**Voice-over (outcome B; ≈ 68 words):**
+**Voice-over (outcome B; ≈ 73 words):**
 > Is that better than a good supervisor? We built the strongest rival we could implement fairly: its workers survive, it loses nothing, and it restarts the moment it detects the crash.
 > Under the same failures, over ten seeds, it tied with us on stall time and on extra cost. So our claim is narrower, and still useful: resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism.
 
 **Key points:** the strongest rival we could implement fairly · it tied on stall time and extra cost · the claim, in R2's words (`docs/claims.md`).
 **Not said here:** that recovery stays local, or that the swarm waits less (R1 is not claimed under B). The on-screen run may show one subtree pausing, which is what that run did; the voice-over does not generalize it.
 
-### s7-where-it-helps (2:14–2:26)
-**On screen:** the Trade-offs panel: the regime map (detection latency × coordination density), the wins/ties/losses table, and the per-process line.
+### s7-where-it-helps (2:17–2:30)
+**On screen:** the Trade-offs panel, with no camera move: its first screen holds it all. A ring on each row of the regime map as the voice reaches it (restart or failover time, the gate on the conference task, fast external restart), then on the outcome box, which has the per-process line and the false deaths in R3's words. The wins/ties/losses table and the per-process panel stay in the app.
 
 **Voice-over (outcome B; ≈ 30 words):**
 > It helps when a supervisor is slow to restart a coordinator. It ties in our main setting. It loses to a fast external restart, and its detector raises false alarms.
 
 **Key points:** helps when the supervisor restarts slowly · ties in the main setting · loses against a fast external restart · false deaths · both failure models shown (`docs/claims.md` R3).
 
-### s8-proof (2:26–2:36)
+### s8-proof (2:30–2:42)
 **On screen:**
 - The verify badge, "Replay verified ✓", with a short hash.
-- The takeover chip, as the UI words it: "Takeover OK ✓ 7 hand-overs" (`demo/final`), and its hover, "the heir of each, recomputed from the log, is the one the run used" (swarm).
 - The recovery report (supervisor).
+- The takeover chip, as the UI words it: "Takeover OK ✓ 7 hand-overs" (`demo/final`), and its hover, "the heir of each, recomputed from the log, is the one the run used" (swarm), on "a checker recomputes every heir".
 
-**Voice-over (≈ 25 words):**
+**Voice-over (≈ 27 words):**
 > And you don't have to trust us. Every run we ship replays bit for bit from a hash-chained log, and a checker recomputes every heir from it.
 
 **Key points:** bit-for-bit replay · hash-chained log · every heir recomputed by a checker.
 
 ---
 
-## Close (2:36–3:00)
+## Close (2:42–3:00)
 
-### s9-close (2:36–3:00) — a real terminal capture, then a title card
+### s9-close (2:42–3:00) — a real terminal capture, then a title card
 **On screen:**
 - A terminal: `uv run fractalswarm demo --verify` → MATCH.
 - **Title card:** "Kill half the brains. It still finishes." Under it: "FractalSwarm — built on Muse Spark, Muse Wonder and Llama PromptGuard 2 · github.com/Yoelcanarion/fractalswarm".
 
-**Voice-over (≈ 44 words):**
+**Voice-over (≈ 39 words):**
 > Clone the repo and run one command. No API key needed: it replays a real recorded run and checks every hash.
 > Kill half the brains. It still finishes. FractalSwarm, built on Muse Spark, Muse Wonder and Llama PromptGuard 2.
 

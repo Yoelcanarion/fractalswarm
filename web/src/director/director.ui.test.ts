@@ -196,8 +196,8 @@ describe("the pages that say a scene cannot be shown", () => {
     expect(html).toContain('href="#/director/s9-close"');
     expect(plainText(html)).toContain("s1-arena-open");
     // the manifest names the first pair and the final run, so those scenes need nothing; the ablation waits for a person's own text
-    expect(plainText(html)).toMatch(/s1-arena-open The arena opens.* · arena · 32 s(?! · needs)/);
-    expect(plainText(html)).toMatch(/s4-lens .* · run · 18 s(?! · needs)/);
+    expect(plainText(html)).toMatch(/s1-arena-open The arena opens.* · arena · 33 s(?! · needs)/);
+    expect(plainText(html)).toMatch(/s4-lens .* · run · 19 s(?! · needs)/);
     expect(plainText(html)).toMatch(/s3-ablation .* · ablation · \d+ s · needs ablation/);
     expect(plainText(html)).toMatch(/s9-close .* · title · 10 s(?! · needs)/);
     expect(html).not.toContain("s2-intake");

@@ -163,7 +163,7 @@ for (const pair of PAIRS) {
       const trace = play(byId("s1-arena-open"), context);
       const right = ringOf(trace, "rival-head").from / 1000;
       const left = ringOf(trace, "swarm-head").from / 1000;
-      const lower = trace.captions.find((caption) => caption.text === "Same input · same models · same failures");
+      const lower = trace.captions.find((caption) => caption.text === "Same task · same models · same failures");
       const crashed = trace.frames.find((frame) => frame.at >= crashes[0].at)!.ms;
       // the voice reads the problem to about 0:11 over the arena at rest, then "On the right" and "On the left", then "Same task, same models, same failures"
       expect(right).toBeGreaterThan(11);
