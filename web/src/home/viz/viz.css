@@ -219,6 +219,14 @@
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
+/* a place in the memorial row, empty until its brain lands in it */
+.hv-slot {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.25;
+  stroke-dasharray: 3 5;
+  vector-effect: non-scaling-stroke;
+}
 
 /* the ambient layer (tree/ambient.ts): what keeps the tree alive between the recorded events. Decoration, drawn apart from
    the recorded layer in quieter shapes (soft round pulses, not the recorded messages' bright dashes) and with no text. */
