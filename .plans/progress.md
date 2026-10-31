@@ -1517,6 +1517,15 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 - `s7` never showed its table: it was folded, so "ties" had nothing on screen. `s5` and `s7` have their first takes.
 - `s5`'s voice now says "Even the root can die" on the root's X; the sentences swapped, and the voice lost "with one rule" and "dead coordinator's" to fit 22 s (aedbc6e).
 
-**Now:** the first coordinator is on a pass over all the new takes (`rehearsal-1031\durable-b`, `central-b`) and the bundle at aedbc6e. Web suite 2,530 green. No paid run; no worker running.
+**The second pass over the takes (08:06) and W5's answer (65c2ad6):**
+- `s5` ran time backwards: a seek back with no cut, from 4 hand-overs to none, in the scene that asks a juror to trust the replay. It now plays forward only, at a quarter of the speed between the two deaths, so "Even the root can die" lands on the root's X.
+- The tree at `s4`'s pause was not the run's tree: the recorder froze a glide, because in fixed-step mode the motion clock counts frames only while the replay moves. It exists only in a take; the scene now pauses after the glide.
+- **The in-process `s6` take carried a false line.** "Ten seeds: tied on stall time and extra cost" is true of `durable-max` only. The take is renamed `central-b-not-for-the-video`, and a guard flags that lower third on any other rival, so `--strict` refuses it. The rival stays Yoel's to pick; a `central` `s6` needs its own voice and its own lower third in R5's words.
+- `s7` follows the voice with a ring on each row and no camera: the row the voice names was off screen. `s8` ends on the swarm's tooltip, on "a checker recomputes every heir". `s1` moves from its first frame.
+- The voice overran five scenes and `s9` had the room. No word changed, the total stays 3:00: s1 33, s4 19, s5 22, s6 31, s7 13, s8 12, s9 18.
+
+**Colours again (f70db44):** on W5's `s5` sheet the o3 subtree went orange for a second at about 70 s and came back: for that second o3 hung under o2. A level-1 brain now keeps its colour wherever it is hung, as `colorOf`'s comment always said. On the whole of `demo/final`, one picture per instant, no card regains a colour it has lost, and a track's changes only when it takes the root. The flash is still in `durable-c`'s `s5`.
+
+**Now:** the first coordinator is on what is meant to be the last pass before the final takes (`rehearsal-1031\durable-c`). Web suite 2,542 green. No paid run; no worker running.
 
 **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, which rival the video's `s1` and `s6` use, master, the public repo, where the static site goes.
