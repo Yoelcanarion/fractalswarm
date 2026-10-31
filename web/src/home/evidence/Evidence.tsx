@@ -207,12 +207,13 @@ function Tie() {
       aside={
         <Reveal delay={100}>
           <Claim id="R3" className="home-claim--small" />
+          <p className="home-limit">{COPY.evidence.tie.terms}</p>
         </Reveal>
       }
     >
       <Chart name="DotPlot" path="headline" duration={1.8} extra={{ setting: false }} />
       <Setting>
-        {COPY.evidence.tie.note} {captionFor(story, "headline")}
+        {COPY.evidence.tie.note} {COPY.evidence.tie.rule} {captionFor(story, "headline")}
       </Setting>
     </Beat>
   );

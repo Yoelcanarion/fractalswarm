@@ -4,6 +4,7 @@
 import type { Clock } from "../lib/clock";
 import { prefersReducedMotion } from "../lib/motion";
 import { PHONE_QUERY } from "../lib/phone";
+import { WHOLE_RUN_SPEED } from "../lib/playback";
 import { firstCrashStart, marksOf } from "../lib/timeline";
 import type { RunEvent } from "../lib/types";
 
@@ -22,9 +23,10 @@ export function watchFirstCrash(clock: Clock, at: number): void {
   clock.setPlaying(true);
 }
 
-/** Both runs from their start, at the speed they were at. */
+/** Both runs from their start, at a speed that gets through them unless the person picked one. */
 export function playFromStart(clock: Clock): void {
   clock.seekTime(0);
+  if (clock.state.getState().speed === 1) clock.setSpeed(WHOLE_RUN_SPEED);
   clock.setPlaying(true);
 }
 

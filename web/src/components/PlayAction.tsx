@@ -2,6 +2,7 @@ import { useMemo, type MouseEvent } from "react";
 
 import { prefersReducedMotion } from "../lib/motion";
 import { PHONE_QUERY } from "../lib/phone";
+import { WHOLE_RUN_SPEED } from "../lib/playback";
 import { firstCrashStart, marksOf } from "../lib/timeline";
 import { useRunStoreApi, useRunStoreShallow, type RunStoreApi } from "../store";
 
@@ -51,9 +52,10 @@ export function PlayAction() {
   if (live) return null;
   const midway = cursor > 0 && cursor < total;
   const playFromStart = (event: MouseEvent<HTMLButtonElement>) => {
-    const { seek, setPlaying } = store.getState();
+    const { seek, setPlaying, setSpeed, speed } = store.getState();
     keepFocusOnPause(event); // before the press takes the button away
     seek(0);
+    if (speed === 1) setSpeed(WHOLE_RUN_SPEED);
     setPlaying(true);
     bringRunIntoView();
   };

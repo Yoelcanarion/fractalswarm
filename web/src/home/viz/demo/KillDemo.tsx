@@ -176,6 +176,8 @@ export function KillDemo({ data, still, note = false, className }: KillDemoProps
       if (!el) return;
       touch();
       crash(el.dataset["pick"] ?? "");
+      // the line says what the click did, and a page scrolled to the tree can have left it above the window
+      say.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
       if (reduced) {
         clock += 1;
         draw();

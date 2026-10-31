@@ -1500,6 +1500,7 @@
   gap: 12px 24px;
 }
 .hv-demo-line {
+  scroll-margin-top: calc(var(--home-bar) + var(--space-4));
   flex: 1 1 320px;
   min-height: 2.9em;
   margin: 0;

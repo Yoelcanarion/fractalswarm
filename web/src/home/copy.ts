@@ -41,12 +41,12 @@ export const COPY = {
   labels: { stalled: "stalled", extraCost: "extra cost", extraCostBasis: "extra cost, pre-registered basis" },
 
   // Said next to every number that is set against the in-process supervisor (R5): the gap is mostly a property of that design.
-  rivalReason: "In-process: its agents die with it, so most of the gap comes from that design.",
+  rivalReason: "In-process: its agents die with it, so most of the gap is that design.",
   // What the other rival's name means, and what a tie with it is worth (R2). The detection is the condition: the rival that restarts sooner beats the swarm (R3).
-  durableReason: "Ideal durable: its agents survive and it restarts on detection. The tie comes with no central coordinator.",
+  durableReason: "Ideal durable: its agents survive; it restarts on detection. The tie comes with no central coordinator.",
 
   hero: {
-    kicker: "Muse Spark · Muse Wonder",
+    kicker: "Built on Meta’s Muse Spark and Muse Wonder",
     line: "AI agents plan a conference, led by a tree of small coordinators. Any of them can die, and the rest take over its work.",
     kill: "Kill one yourself",
     object: "The real tree of a recorded run: a root, its tracks and sessions, and their agents. Coordinators are killed one after another, and it heals.",
@@ -150,7 +150,13 @@ export const COPY = {
       showFewer: "Show fewer terms",
     },
     hero: { lead: "Waiting and extra cost, as coordinators die." },
-    tie: { word: "Tie.", note: "Stall time and extra cost, one dot per seed, against an ideal durable supervisor." },
+    tie: {
+      word: "Tie.",
+      note: "Stall time and extra cost, one dot per seed, against an ideal durable supervisor.",
+      // why two means that differ are a tie: bench/PREREG.md §3, and the seeds of H2 and of the stall disagree (R2's evidence)
+      rule: "The means differ, but a win needs every seed to agree by a minimum effect, a rule fixed before the runs, and these seeds disagree. The pre-registered basis estimates the cost of cancelled calls.",
+      terms: "Locality: how much of the team a crash holds up. Coordinator-dependency time: waiting on a coordinator that was down, added up over the work that waited.",
+    },
     helps: {
       lead: "Locality ties too.",
       // `crashes` is read from the data ("three and five"), so the sentence follows the pre-registered profiles.

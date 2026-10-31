@@ -26,7 +26,7 @@ export const DOORS: readonly Door[] = [
   {
     id: "arena",
     title: "Arena",
-    purpose: "Against a rival.",
+    purpose: "Against rivals.",
     href: "#/arena",
     needsServer: false,
   },
@@ -34,7 +34,7 @@ export const DOORS: readonly Door[] = [
     // One door: the page behind "#/new" is where you paste your own text and launch the run on it.
     id: "live",
     title: "New task",
-    purpose: "Your own text.",
+    purpose: "Your text.",
     href: "#/new",
     needsServer: true,
     closedNote: "Needs the local server: it launches a run and calls the model.",

@@ -75,11 +75,15 @@ describe("what the main action does to the clock", () => {
     expect(session.clock.state.getState().playing).toBe(true);
   });
 
-  it("plays both from the start", async () => {
+  it("plays both from the start, quickly unless a speed was picked", async () => {
     const session = await pair(30_000);
     playFromStart(session.clock);
     expect(session.clock.now()).toBe(0);
     expect(session.clock.state.getState().playing).toBe(true);
+    expect(session.clock.state.getState().speed).toBe(5);
+    session.clock.setSpeed(2);
+    playFromStart(session.clock);
+    expect(session.clock.state.getState().speed).toBe(2);
   });
 
   it("goes on playing when the playhead is moved to a moment on the timeline", async () => {

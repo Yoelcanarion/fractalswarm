@@ -5,6 +5,10 @@ import { emptyView, foldEvent, type ViewState } from "./reducer";
 import type { RunEvent } from "./types";
 
 export const SPEEDS = [1, 2, 5, 10, 20] as const;
+
+/** What a whole recording plays at from its start, instead of the page's 1×: it lasts about two minutes and its first crash comes late.
+ * A speed the person picked stays. */
+export const WHOLE_RUN_SPEED = 5;
 export const SNAPSHOT_EVERY = 250;
 // Real-time cap on an idle gap between two events, so a long quiet stretch never stalls the
 // replay (the timeline still shows true virtual time).

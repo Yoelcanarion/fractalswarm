@@ -39,7 +39,7 @@ describe("the evidence page, rendered with a story", () => {
   });
 
   it("brings the top bar's way in back to the home page with a plain link", () => {
-    expect(html).toContain('href="#/?at=enter"');
+    expect(html).toContain('href="#/arena"');
   });
 
   it("prints the numbers of the story and none of its own", () => {
