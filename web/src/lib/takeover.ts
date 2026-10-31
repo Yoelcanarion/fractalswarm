@@ -64,6 +64,10 @@ export function readTakeover(body: unknown): TakeoverSummary | null {
 export const logHasTakeover = (events: readonly RunEvent[]): boolean =>
   events.some((event) => event.type === "ownership.remapped" || event.type === "tree.adopted");
 
+/** A supervisor's log, a rival's: it holds a `baseline.crashed`. Its crashes are not kills and nobody takes over, so the server answers
+ * its takeover check with 501 (the evidence is the recovery chip) and the page does not ask, which would only put a red line in the console. */
+export const isSupervisorLog = (events: readonly RunEvent[]): boolean => events.some((event) => event.type === "baseline.crashed");
+
 export type ChipTone = "good" | "bad" | "muted";
 
 export interface Chip {
@@ -106,6 +110,7 @@ export function describeTakeover(report: TakeoverSummary, inLog: boolean): Chip 
 
   const checked = [
     heirs > 0 ? `${plural(heirs, "hand-over")}: ${heirs === 1 ? "its heir" : "the heir of each"}, recomputed from the log, is the one the run used.` : "",
+    heirs > (report.kills ?? heirs) ? "One coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes." : "",
     reclaims > 0 ? `${plural(reclaims, "reclaim")}: a member back from a false death took its own goal back (no heir is compared).` : "",
     adoptions > 0 ? `${plural(adoptions, "tree adoption")} checked against the log.` : "",
   ].filter(Boolean);

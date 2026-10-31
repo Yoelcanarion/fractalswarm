@@ -20,7 +20,7 @@ import { createClock, type Clock } from "./lib/clock";
 import { asRunStatus, DEFAULT_CAPABILITIES, type Capabilities, type RunStatus } from "./lib/controls";
 import { countAtTime, Folder } from "./lib/playback";
 import { emptyView, type ViewState } from "./lib/reducer";
-import type { TakeoverSummary } from "./lib/takeover";
+import { isSupervisorLog, type TakeoverSummary } from "./lib/takeover";
 import type { RunEvent, RunListing, VerifyReport } from "./lib/types";
 
 export type VerifyState =
@@ -308,7 +308,7 @@ export function createRunStore(options: RunStoreOptions = {}): RunStoreApi {
     async runTakeover() {
       const id = get().runId;
       if (!id || get().takeover.state === "pending") return;
-      if (!api.takeover) {
+      if (!api.takeover || isSupervisorLog(get().events)) {
         set({ takeover: { state: "absent" } });
         return;
       }

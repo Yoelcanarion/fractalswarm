@@ -129,7 +129,7 @@ export function createDomSurface(parts: SurfaceParts): Surface {
       return parts.lens === null ? "this stage has no lens" : parts.lens.open(call);
     },
     context(): TimeContext {
-      return { end: parts.end(), crashes: crashes(), calls: parts.lens?.times() ?? new Map() };
+      return { end: parts.end(), crashes: crashes(), rivalCrashes: sides.right === null ? [] : crashesFor(sides.right.events()), calls: parts.lens?.times() ?? new Map() };
     },
   };
 }

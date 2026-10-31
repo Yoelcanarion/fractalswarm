@@ -56,7 +56,7 @@ describe("reading a takeover report", () => {
 
 describe("what the chip says", () => {
   it("says Takeover OK with the hand-overs it recomputed an heir for", () => {
-    const chip = describeTakeover(report({ heirs: 6, adoptions: 5, kills: 5 }), true);
+    const chip = describeTakeover(report({ heirs: 6, adoptions: 5, kills: 6 }), true);
     expect(chip.tone).toBe("good");
     expect(chip.text).toBe("Takeover OK ✓ 6 hand-overs");
     expect(chip.detail).toBe("6 hand-overs: the heir of each, recomputed from the log, is the one the run used. 5 tree adoptions checked against the log.");
@@ -67,7 +67,11 @@ describe("what the chip says", () => {
 
   it("counts goals handed over, so 5 kills can read as 7 hand-overs", () => {
     // The kill-half demo bundle: 5 coordinator kills, 7 successions (all takeovers), 7 adoptions.
-    expect(describeTakeover(report({ heirs: 7, reclaims: 0, adoptions: 7, kills: 5 }), true).text).toBe("Takeover OK ✓ 7 hand-overs");
+    const chip = describeTakeover(report({ heirs: 7, reclaims: 0, adoptions: 7, kills: 5 }), true);
+    expect(chip.text).toBe("Takeover OK ✓ 7 hand-overs");
+    expect(chip.detail).toContain("One coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes.");
+    expect(describeTakeover(report({ heirs: 5, kills: 5 }), true).detail).not.toContain("root duties");
+    expect(describeTakeover(report({ heirs: 7 }), true).detail).not.toContain("root duties");
   });
 
   it("counts a reclaim apart from the heirs, and says what it is", () => {

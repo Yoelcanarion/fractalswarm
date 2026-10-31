@@ -116,7 +116,7 @@ Anything that doesn't answer one of them stays out of the video.
 **Not said here:** that recovery stays local, or that the swarm waits less (R1 is not claimed under B). The on-screen run may show one subtree pausing, which is what that run did; the voice-over does not generalize it.
 
 ### s7-where-it-helps (2:14–2:26)
-**On screen:** the "where it helps" panel: the regime map (detection latency × coordination density), the wins/ties/losses table, and the per-process line.
+**On screen:** the Trade-offs panel: the regime map (detection latency × coordination density), the wins/ties/losses table, and the per-process line.
 
 **Voice-over (outcome B; ≈ 30 words):**
 > It helps when a supervisor is slow to restart a coordinator. It ties in our main setting. It loses to a fast external restart, and its detector raises false alarms.

@@ -9,22 +9,33 @@
 //     the layout's own bounds, not the nodes' current ones, so it lands where they will.
 //   - Jumps. After a seek (`epoch` changed), under reduced motion, and for the first layout
 //     there is nothing to glide across: everything is drawn at its place at once.
+//   - Sizes. Every render of the tree makes new node objects, and React Flow takes a node object with no
+//     `measured` for a new node: it forgets the size and the handles, hides the node (`visibility: hidden`,
+//     which also takes it out of the hit test) and measures it again on the next frame. A press whose
+//     mouse-down and mouse-up fall either side of such a render (a tap makes both in one task, and the
+//     press itself renders the tree, for the focus) would click the pane, not the card. So each node is
+//     handed back with the size React Flow measured for it.
 //
 // Time comes from `clock.motion()`: the real clock, or in fixed-step mode a frame count, so a
 // director take repeats exactly.
 
-import { getViewportForBounds, useReactFlow, useStore, useStoreApi, type Node, type ReactFlowInstance } from "@xyflow/react";
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
+import { getViewportForBounds, useReactFlow, useStore, useStoreApi, type Node, type ReactFlowInstance, type Viewport } from "@xyflow/react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from "react";
 
 import { createGlide, type Glide, type Point } from "../lib/glide";
-import type { Bounds } from "../lib/layout";
+import { ACROSS, type Bounds } from "../lib/layout";
 import { EASE_OUT, GLIDE_MS, prefersReducedMotion } from "../lib/motion";
 import { useRunStore } from "../store";
 
 // How the camera frames the tree: as large as the pane allows, so that the labels can be read, with a margin round it. The cards are
 // small (lib/layout.ts), so a tree of a dozen agents is zoomed in to fill a page's width.
-export const FIT_PADDING = "24px";
+export const FIT_MARGIN = 24;
+export const FIT_PADDING = `${FIT_MARGIN}px`;
 export const FIT_MAX_ZOOM = 1.5;
+// What is kept clear between the key of the tree (a line in the pane's top-left corner) and the cards under it.
+const KEY_GAP = 6;
+// A tree on its side (a phone) is drawn at a scale of one, in the pixels its ids are sized in: it is never zoomed in, and its margin is small.
+export const FIT_MAX_ZOOM_ACROSS = 1;
 const FIT_RETRIES = 30; // frames to wait for React Flow to measure its pane
 
 export interface TreeShape {
@@ -33,6 +44,8 @@ export interface TreeShape {
   bounds: Bounds | null;
   /** Changes when a node arrives, leaves or is adopted (see ``structureKey``). */
   structure: string;
+  /** The tree is on its side, as on a phone (``ACROSS``). */
+  across: boolean;
 }
 
 export interface TreeMotion<N extends Node> {
@@ -44,19 +57,51 @@ export interface TreeMotion<N extends Node> {
 }
 
 type FlowStore = ReturnType<typeof useStoreApi>;
+type Padding = Parameters<typeof getViewportForBounds>[5];
+
+/** Where the camera puts a tree in a pane: as large as the pane allows, in the middle of what the key leaves free. ``keyReach`` is how far down
+ * the pane's top the key reaches; no card is drawn above it, so the key never covers one (a tree with no root, in the seconds between a
+ * root's death and its heir, has three cards in the top row, and the leftmost was under it). A tree on its side has no key. */
+export function frameTree(area: Bounds, pane: { width: number; height: number; minZoom: number }, across: boolean, keyReach = 0): Viewport {
+  const top = `${Math.max(FIT_MARGIN, keyReach + KEY_GAP)}px` as const;
+  const padding: Padding = across ? `${ACROSS.pad}px` : { top, right: FIT_PADDING, bottom: FIT_PADDING, left: FIT_PADDING };
+  return getViewportForBounds(area, pane.width, pane.height, pane.minZoom, across ? FIT_MAX_ZOOM_ACROSS : FIT_MAX_ZOOM, padding);
+}
+
+/** How far down from the pane's top the key of the tree reaches. It wraps as the pane narrows, so it is measured; zero where it is not drawn. */
+function keyReach(store: FlowStore): number {
+  const pane = store.getState().domNode;
+  const key = pane?.querySelector<HTMLElement>(".run__legend");
+  if (!pane || !key || key.offsetParent === null) return 0;
+  return Math.ceil(key.getBoundingClientRect().bottom - pane.getBoundingClientRect().top);
+}
 
 /** Move the camera to show ``bounds()``. The pane may not have a size yet on the first call, so
  * ask again for a few frames. */
-function fitCamera(flow: ReactFlowInstance, store: FlowStore, bounds: () => Bounds | null, duration: number, attempt = 0): void {
-  const area = bounds();
+function fitCamera(flow: ReactFlowInstance, store: FlowStore, shape: () => TreeShape, duration: number, attempt = 0): void {
+  const { bounds: area, across } = shape();
   if (!area) return;
   const { width, height, minZoom } = store.getState();
   if (width <= 0 || height <= 0) {
-    if (attempt < FIT_RETRIES) requestAnimationFrame(() => fitCamera(flow, store, bounds, duration, attempt + 1));
+    if (attempt < FIT_RETRIES) requestAnimationFrame(() => fitCamera(flow, store, shape, duration, attempt + 1));
     return;
   }
-  const viewport = getViewportForBounds(area, width, height, minZoom, FIT_MAX_ZOOM, FIT_PADDING);
+  const viewport = frameTree(area, { width, height, minZoom }, across, keyReach(store));
   void flow.setViewport(viewport, { duration, ease: EASE_OUT, interpolate: "linear" });
+}
+
+/** The nodes with the size React Flow has measured for each, on the node itself (see "Sizes" above). The same array when every node has it
+ * already, and a node that has not been measured yet is left as it is: it is new, and its first measure is due. */
+export function keepSizes<N extends Node>(flow: Pick<ReactFlowInstance, "getInternalNode">, nodes: N[]): N[] {
+  let changed = false;
+  const sized = nodes.map((node) => {
+    const measured = flow.getInternalNode(node.id)?.measured;
+    if (measured?.width === undefined || measured.height === undefined) return node;
+    if (node.measured?.width === measured.width && node.measured.height === measured.height) return node;
+    changed = true;
+    return { ...node, measured: { width: measured.width, height: measured.height } };
+  });
+  return changed ? sized : nodes;
 }
 
 export function useTreeMotion<N extends Node>(nodes: N[], shape: TreeShape): TreeMotion<N> {
@@ -82,7 +127,7 @@ export function useTreeMotion<N extends Node>(nodes: N[], shape: TreeShape): Tre
 
   const moveCamera = useCallback((duration: number) => {
     const { flow, flowStore } = latest.current;
-    fitCamera(flow, flowStore, () => latest.current.shape.bounds, duration);
+    fitCamera(flow, flowStore, () => latest.current.shape, duration);
   }, []);
 
   const onInit = useCallback(() => {
@@ -139,13 +184,15 @@ export function useTreeMotion<N extends Node>(nodes: N[], shape: TreeShape): Tre
   );
 
   const g = glide.current;
-  if (!g.moving(drawnAt.current)) return { nodes, onInit };
-  const drawn = g.at(drawnAt.current);
-  return {
-    nodes: nodes.map((n) => {
-      const at = drawn.get(n.id);
-      return at && (at.x !== n.position.x || at.y !== n.position.y) ? { ...n, position: at } : n;
-    }),
-    onInit,
-  };
+  const gliding = g.moving(drawnAt.current) ? g.at(drawnAt.current) : null;
+  const drawn =
+    gliding === null
+      ? nodes
+      : nodes.map((n) => {
+          const at = gliding.get(n.id);
+          return at && (at.x !== n.position.x || at.y !== n.position.y) ? { ...n, position: at } : n;
+        });
+  // `drawn` is `nodes` itself when nothing is moving, so the sized array is kept too, and a quiet tree costs nothing
+  const sized = useMemo(() => keepSizes(flow, drawn), [flow, drawn]);
+  return { nodes: sized, onInit };
 }

@@ -1,4 +1,4 @@
-# Submission form — draft v0
+# Submission form — draft v1
 
 **Status:** draft v1 (Oct 31, with the ten-seed claims). Yoel edits it, and the coordinator keeps it consistent with `docs/claims.md`. The final version is due on Nov 4, before 20:00 CET.
 - **Form:** `cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit`.
@@ -25,7 +25,7 @@ Skipped.
 ## Project Description
 > FractalSwarm is a runtime for teams of LLM agents. Any orchestrator can die mid-run, the root included, and the run still finishes. No process manager, standby or election service.
 >
-> **The problem.** Most agent systems depend on one coordinator. When it dies, the team waits, or redoes the work. In the simplest setup its workers die with it, and their calls are paid for twice.
+> **The problem.** Teams of AI agents often depend on one coordinator. When it dies, the team waits, or redoes the work. In the simplest setup its workers die with it, and their calls are paid for twice.
 >
 > **How it works.** Coordinators form a fractal tree (root → tracks → sessions) over one hash-chained event log. When a coordinator stops sending heartbeats, every survivor computes the same heir from the log with one rule (HRW), so there is no election. The heir adopts the work, and every result already in the log. Zero LLM tokens spent on coordination. Every run this repository ships replays bit for bit, and a checker recomputes every takeover from the log.
 >
@@ -33,7 +33,7 @@ Skipped.
 >
 > **Where it does worse.** Its failure detector declares live coordinators dead, 1.90 times per run; the supervisors never do. A supervisor that detects and restarts within a second beats it. The log remains a central component.
 >
-> **Meta's models do the understanding.** Muse Spark turns messy human input into constraints and does the agents' work. Muse Wonder plans and arbitrates. Llama PromptGuard 2 screens every input.
+> **Meta's models do the understanding.** Muse Spark turns messy human input into constraints and does the agents' work. Muse Wonder writes the root plan. Llama PromptGuard 2 screens every input.
 >
 > **Try it:** `uv run fractalswarm demo --verify`. No API key is needed.
 
@@ -88,7 +88,8 @@ https://github.com/Yoelcanarion/fractalswarm (it becomes public on Nov 3, after 
   - the scanner hard-codes the 86M PromptGuard model;
   - `scan()` reloads the model and calls `asyncio.run` on every call;
   - llamafirewall 1.0.3 imports `HfFolder`, which huggingface-hub 1.0 removed;
-  - the PromptGuard 2 tokenizer logs an "incorrect regex pattern" warning.
+  - the PromptGuard 2 tokenizer logs an "incorrect regex pattern" warning;
+  - on some web pages the preprocessing logs `Error preprocessing text: substring not found` and scores the raw text instead.
 - **PromptGuard 2 scored a politely worded injection email at 0.0009,** so it did not flag it. Only an explicit "ignore your previous instructions" scored high. That is expected from a jailbreak classifier, but worth stating in the docs. Our scope check caught the polite version.
 
 ## Feedback on partner technologies

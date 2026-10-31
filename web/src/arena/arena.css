@@ -10,6 +10,29 @@
   min-height: 100%;
   padding: var(--space-3) var(--space-4);
   outline: none;
+  /* What the page keeps around the boards (the bars, the heads, the scoreboard's first row, the pinned timeline), in px: the boards take the rest of a
+     short window, down to a floor, and the whole of their frame in a tall one. */
+  --arena-chrome: 552px;
+}
+
+/* The lead is two lines at a laptop's width, and narrow enough that the main action's two buttons sit beside it instead of under it. */
+.arena .pagehead__lead {
+  max-width: 82ch;
+}
+
+/* The main action, and the clock beside it while it plays. */
+.arena__play {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+
+.arena__clock {
+  min-width: 21ch;
+  font-size: var(--fs-base);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- the bar: the picker, and what the rival is granted ---- */
@@ -41,16 +64,30 @@
   color: var(--text-muted);
 }
 
+/* the name of a pair is long, and three of them differ only in its last words: the select is as wide as it needs, up to the bar */
 .picker select {
-  max-width: 260px;
+  max-width: min(100%, 520px);
+}
+
+/* the control is its select; the whole name it shows on a phone is only there (below) */
+.picker__control {
+  display: contents;
+}
+
+.picker__shown {
+  display: none;
 }
 
 /* Always on screen: the arena never shows a number without what the rival was granted. */
 .arena__assumptions {
+  /* on the picker's row when there is room (its text goes to two lines beside it), under it when there is not */
+  flex: 1 1 320px;
+  min-width: 0;
+  max-width: max-content;
   margin: 0 0 0 auto;
   padding: 6px 14px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-3);
   background: var(--surface-1);
   color: var(--text-primary);
   font-size: var(--fs-body);
@@ -71,7 +108,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  min-height: 420px;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-3);
@@ -99,10 +135,21 @@
   flex: none;
 }
 
+/* The chip and the badge side by side; when they do not fit (a narrow window, a long rival name) the badge goes under
+   the chip on both sides alike, so nothing is clipped and the two boards still start at the same height. */
 .side__proof {
   display: flex;
   align-items: center;
-  min-height: 32px;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  /* as tall as the settled chip and badge (36 px), so a verdict that arrives after the page does not move the boards, and the two sides
+     start them at the same height while one chip is still "Checking…" */
+  min-height: 36px;
+}
+
+.side__chip {
+  display: inline-flex;
+  min-width: 0;
 }
 
 .side__name {
@@ -126,6 +173,7 @@
 
 .side__run {
   min-width: 0;
+  flex: 1 1 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -199,6 +247,8 @@
   display: block;
   width: 100%;
   height: 100%;
+  /* In a short window the drawing gives way, not the timeline: the frame is drawn smaller to fit (it keeps its proportions). */
+  max-height: max(190px, calc(100vh - var(--arena-chrome)));
   overflow: visible;
 }
 
@@ -478,6 +528,20 @@
   transform-origin: left;
 }
 
+/* Under the bars, where the scored cost is more than the spend: one short line a side, at the size anything read is. */
+.metric__notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.metric__note {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
 .score__note {
   margin: var(--space-2) 0 0;
   font-size: var(--fs-body);
@@ -485,11 +549,22 @@
 }
 
 /* ---- the shared timeline ---- */
+/* Pinned to the bottom of the view, as the run page's replay bar is, so that the play button, the clock and the crashes on the lanes are on screen
+   with the boards. The ring in the page's own colour keeps what scrolls behind it out of its rounded corners. */
 .tl {
-  padding: var(--space-3) var(--space-4);
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  padding: var(--space-2) var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-3);
   background: var(--surface-1);
+  box-shadow: 0 0 0 var(--space-2) var(--bg);
+}
+
+.tl .btn--play {
+  width: 44px;
+  height: 36px;
 }
 
 .tl__controls {
@@ -497,7 +572,7 @@
   align-items: center;
   gap: var(--space-4);
   flex-wrap: wrap;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .tl__readout {
@@ -663,6 +738,15 @@
   pointer-events: none;
 }
 
+/* A phone: the bar has too much in it to pin, and the page is a column. A window too short to hold the bar and the boards above it: the page
+   scrolls to it, as before. */
+@media (max-width: 760px), (max-height: 620px) {
+  .tl {
+    position: static;
+    box-shadow: none;
+  }
+}
+
 @media (max-width: 1400px) {
   .score__grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -671,6 +755,148 @@
 
 @media (max-width: 1100px) {
   .arena__stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A phone (390 px): the head's badge goes under the title when the two do not fit, from the left like the chip under it, and the pair has a
+   row of its own that shows all of its name wrapped (a closed select cuts it), with the select laid over it, unseen, to take the tap. */
+@media (max-width: 760px) {
+  .side__top {
+    flex-wrap: wrap;
+    row-gap: var(--space-2);
+  }
+
+  .side__verify {
+    margin-left: 0;
+  }
+
+  .picker,
+  .picker__field {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .picker__control {
+    display: block;
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .picker__shown {
+    display: block;
+    padding: 6px 28px 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2);
+    background: var(--surface-2);
+    overflow-wrap: anywhere;
+  }
+
+  .picker__shown::after {
+    content: "▾";
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+  }
+
+  .picker__control select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    opacity: 0;
+  }
+
+  .picker__control:focus-within .picker__shown {
+    outline: 2px solid var(--accent-text);
+  }
+}
+
+/* ---- the end of a pair: what each run did, and what one pair is worth ---- */
+.pairend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-3);
+  background: var(--surface-1);
+}
+
+.pairend__title {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 700;
+}
+
+.pairend__sides {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.pairend__side dt {
+  font-size: var(--fs-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.pairend__side dd {
+  margin: 2px 0 0;
+  font-size: var(--fs-body);
+  line-height: 1.45;
+}
+
+.pairend__scope {
+  margin: 0;
+  font-size: var(--fs-body);
+  color: var(--text-muted);
+}
+
+/* A phone, the rest of it: less padding, the rival's assumptions as a block, the badge allowed to wrap, one column of text and the numbers
+   two across and then one. The picker and the head's wrap are the block above. */
+@media (max-width: 700px) {
+  .arena {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .arena__assumptions {
+    margin: 0;
+    border-radius: var(--radius-3);
+  }
+
+  .side {
+    min-height: 0;
+    padding: var(--space-3);
+  }
+
+  .side__verify {
+    max-width: 100%;
+  }
+
+  .side__verify .badge {
+    white-space: normal;
+  }
+
+  .pairend__sides {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .score__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .score__grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

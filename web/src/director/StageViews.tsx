@@ -29,11 +29,12 @@ export function ArenaStageView({ stage }: { stage: ArenaStage }) {
   );
 }
 
-export function RunStageView({ stage }: { stage: RunStage }) {
+/** `meterOpen`: the Muse meter is a fold of the strip ("What the models cost"), closed on the page; a scene that points at it opens it. */
+export function RunStageView({ stage, meterOpen = false }: { stage: RunStage; meterOpen?: boolean }) {
   return (
     <RunStoreProvider store={stage.store}>
       <ClockScope>
-        <RunStrip />
+        <RunStrip unfold={meterOpen} />
         <main className="content">
           <RunPage />
         </main>

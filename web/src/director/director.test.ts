@@ -18,6 +18,10 @@ const context: TimeContext = {
     { at: 10_000, until: 15_500 },
     { at: 30_000, until: 35_500 },
   ],
+  rivalCrashes: [
+    { at: 16_000, until: 21_000 },
+    { at: 31_000, until: 36_000 },
+  ],
   calls: new Map([["spark", { start: 4000, end: 6500 }], ["open", { start: 8000, end: null }]]),
 };
 const at = (value: unknown): number | null => resolveTime(parseTime(value, "t"), context);
@@ -35,6 +39,17 @@ describe("a moment of the replay", () => {
     expect(at("call-end:spark")).toBe(6500);
   });
 
+  it("can be the rival's own outage: its plan fires at a fraction of its own run, so it is not the swarm's second", () => {
+    expect(at("rival-crash:1")).toBe(16_000);
+    expect(at("rival-crash:2-5s")).toBe(26_000);
+    expect(at("rival-recovered:1")).toBe(21_000);
+    expect(at("rival-recovered:-1+1s")).toBe(37_000);
+    expect(at("crash:1")).toBe(10_000);
+    // a page with no rival has none: the wait that names one is skipped, and says so
+    expect(resolveTime(parseTime("rival-crash:1", "t"), { end: 60_000, crashes: context.crashes, calls: new Map() })).toBeNull();
+    expect(at("rival-crash:3")).toBeNull();
+  });
+
   it("counts crashes from the end with a negative index", () => {
     expect(at("crash:-1")).toBe(30_000);
     expect(at("crash:-2")).toBe(10_000);
@@ -50,14 +65,14 @@ describe("a moment of the replay", () => {
   });
 
   it("refuses what is not a moment, with the reason", () => {
-    for (const bad of ["crash:0", "crash:", "crash:1-4m", "soon", "-5", -5, "call:", "crash:1 - 4s", null, {}, true]) {
+    for (const bad of ["crash:0", "crash:", "crash:1-4m", "soon", "-5", -5, "call:", "crash:1 - 4s", "rival-crash:0", "rival-call:spark", "rival-start", "rival-crash", null, {}, true]) {
       expect(() => parseTime(bad, "scene.steps[0].to"), JSON.stringify(bad)).toThrow(/scene\.steps\[0\]\.to/);
     }
     expect(() => parseTime(Number.NaN, "t")).toThrow();
   });
 
   it("is written back the way it was read", () => {
-    for (const text of ["crash:1", "crash:2-4000ms", "recovered:-1+500ms", "end", "call-end:spark+250ms", "start"]) expect(formatTime(parseTime(text, "t"))).toBe(text);
+    for (const text of ["crash:1", "crash:2-4000ms", "recovered:-1+500ms", "end", "call-end:spark+250ms", "start", "rival-crash:1-5000ms", "rival-recovered:-2"]) expect(formatTime(parseTime(text, "t"))).toBe(text);
     expect(formatTime(parseTime(3000, "t"))).toBe("3000 ms");
   });
 });

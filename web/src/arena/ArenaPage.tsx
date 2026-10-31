@@ -8,18 +8,22 @@ import type { RunListing } from "../lib/types";
 import { RunStoreProvider } from "../store";
 import "./arena.css";
 import { fetchOfficial, fetchPairs, type PairListing } from "./api";
+import { ArenaPlay } from "./ArenaPlay";
 import { ArenaSide } from "./ArenaSide";
 import { ArenaTimeline } from "./ArenaTimeline";
-import { assumptionsOf, startedOf, systemKind } from "./assumptions";
+import { assumptionsOf, rivalSentence, startedOf, systemKind } from "./assumptions";
 import { frameOf, sharedFrames } from "./frame";
+import { keyAction } from "./keys";
 import type { Official } from "./official";
+import { PairEnd } from "./PairEnd";
 import { PairPicker } from "./PairPicker";
+import { playedOut } from "./playedOut";
 import { arenaHash, type ArenaRoute } from "./route";
 import { Scoreboard } from "./Scoreboard";
 import { createPairSession, type PairSession } from "./session";
 
 const NO_OFFICIAL: { left: Official | null; right: Official | null } = { left: null, right: null };
-const STEP_MS = 1000;
+const LEAD = "FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures.";
 
 /** The arena: the swarm and its rival on one clock, face to face. */
 export function ArenaPage({ route }: { route: ArenaRoute }) {
@@ -46,7 +50,8 @@ export function ArenaPage({ route }: { route: ArenaRoute }) {
   const [official, setOfficial] = useState(NO_OFFICIAL);
   const { left, right, playback } = route;
 
-  // `#/arena` alone opens the newest pair on record. A private pair (live input) is never opened on its own.
+  // `#/arena` alone opens the first pair on record: the recorded ones that ship with the repository come first. A private
+  // pair (live input) is never opened on its own.
   useEffect(() => {
     const newest = pairs?.find((pair) => !pair.private);
     if (!left && !right && newest) window.location.replace(arenaHash(newest.left, newest.right));
@@ -105,6 +110,9 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   const loadError = leftError ?? rightError;
   const playing = useStore(clock.state, (s) => s.playing);
   const fixedStep = useStore(clock.state, (s) => s.mode === "fixed-step");
+  // The end of the pair says the one-run caveat in full, so the scoreboard's is left out once both runs have played out (a director's frame has no end card).
+  const leftPlayedOut = useStore(session.left, playedOut);
+  const rightPlayedOut = useStore(session.right, playedOut);
 
   const frames = useMemo(() => sharedFrames(frameOf(leftEvents), frameOf(rightEvents)), [leftEvents, rightEvents]);
   const assumptions = useMemo(() => assumptionsOf(startedOf(rightEvents), startedOf(leftEvents)), [leftEvents, rightEvents]);
@@ -113,19 +121,19 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     const target = event.target as HTMLElement;
     if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(target.tagName)) return;
-    if (event.key === " ") {
-      event.preventDefault();
+    const action = keyAction(event.key, event.shiftKey, clock.now(), clock.end());
+    if (action === null) return;
+    event.preventDefault();
+    if ("toggle" in action) {
       clock.setPlaying(!clock.state.getState().playing);
-    } else if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
-      event.preventDefault();
-      const step = (event.shiftKey ? 5 : 1) * STEP_MS * (event.key === "ArrowRight" ? 1 : -1);
+    } else {
       clock.setPlaying(false);
-      clock.seekTime(Math.min(clock.end(), Math.max(0, clock.now() + step)));
+      clock.seekTime(action.seek);
     }
   };
 
   const chosen = Boolean(left && right);
-  // `#/arena` alone opens the newest public pair: until it has, it is not an empty page
+  // `#/arena` alone opens the first public pair: until it has, it is not an empty page
   const opening = !chosen && (pairs === null || pairs.some((pair) => !pair.private));
   const watching = chosen && !loading && !loadError;
   return (
@@ -134,21 +142,8 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
         <PageHeader
           compact
           title="Arena"
-          lead="The swarm and a rival run the same job under the same failures. Play both and watch what each does when coordinators are killed."
-          actions={
-            watching && (
-              <button
-                type="button"
-                className="btn btn--on"
-                onClick={() => {
-                  clock.seekTime(0);
-                  clock.setPlaying(true);
-                }}
-              >
-                Play both from the start
-              </button>
-            )
-          }
+          lead={watching ? `${LEAD} ${rivalSentence(assumptions)}` : LEAD}
+          actions={watching && <ArenaPlay clock={clock} left={session.left} right={session.right} />}
         />
       )}
       <header className="arena__bar">
@@ -178,14 +173,32 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
         </EmptyState>
       )}
       {chosen && loading && <ArenaSkeleton />}
-      {chosen && !loading && loadError && <div className="empty empty--bad">Could not load the pair: {loadError}</div>}
+      {chosen && !loading && loadError && (
+        <EmptyState
+          tone="bad"
+          title="Could not load the pair"
+          actions={
+            <>
+              <button type="button" className="btn btn--on" onClick={() => window.location.reload()}>
+                Try again
+              </button>
+              <a className="btn" href="#/runs">
+                Open the runs
+              </a>
+            </>
+          }
+        >
+          {loadError}
+        </EmptyState>
+      )}
       {chosen && !loading && !loadError && (
         <>
           <div className="arena__stage">
             <ArenaSide store={session.left} role="swarm" title="FractalSwarm" system={leftSystem} frame={frames[0]} />
             <ArenaSide store={session.right} role="rival" title={capitalize(assumptions.name)} system={assumptions.system} frame={frames[1]} />
           </div>
-          <Scoreboard left={session.left} right={session.right} official={official} playing={playing} fixedStep={fixedStep} />
+          {!bare && <PairEnd left={session.left} right={session.right} leftSystem={leftSystem} assumptions={assumptions} />}
+          <Scoreboard left={session.left} right={session.right} official={official} playing={playing} fixedStep={fixedStep} caveat={bare || !(leftPlayedOut && rightPlayedOut)} />
           <ArenaTimeline clock={clock} left={session.left} right={session.right} />
         </>
       )}

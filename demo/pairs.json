@@ -1,0 +1,50 @@
+[
+  {
+    "pair_id": "pair-durable-max",
+    "label": "Against an ideal durable supervisor (real model, one run)",
+    "created_at": "2026-10-30T19:39:27+00:00",
+    "seed": "1",
+    "clock": "live",
+    "private": false,
+    "rival": "durable-max",
+    "chaos": {
+      "name": "half-the-brains",
+      "actions": 5
+    },
+    "left": {
+      "run_id": "demo-pair-durable-max-swarm",
+      "scenario": "swarm",
+      "private": false
+    },
+    "right": {
+      "run_id": "demo-pair-durable-max-rival",
+      "scenario": "durable-max",
+      "private": false
+    },
+    "state": "completed"
+  },
+  {
+    "pair_id": "pair-central",
+    "label": "Against an in-process supervisor (real model, one run)",
+    "created_at": "2026-10-30T19:36:35+00:00",
+    "seed": "1",
+    "clock": "live",
+    "private": false,
+    "rival": "central",
+    "chaos": {
+      "name": "half-the-brains",
+      "actions": 5
+    },
+    "left": {
+      "run_id": "demo-pair-central-swarm",
+      "scenario": "swarm",
+      "private": false
+    },
+    "right": {
+      "run_id": "demo-pair-central-rival",
+      "scenario": "central",
+      "private": false
+    },
+    "state": "completed"
+  }
+]

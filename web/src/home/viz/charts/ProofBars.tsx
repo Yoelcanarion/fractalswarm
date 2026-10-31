@@ -187,7 +187,7 @@ function Line({ line, at }: { line: LineGeo; at: number }) {
         <g data-dots="" opacity={fx(dotsOpacity(line.order, at))} transform={`translate(${fx(dotsShift(line.order, at))} 0)`}>
           {line.dots.map((dot) => (
             <circle key={dot.seed} className="hv-proof-dot" cx={fx(dot.cx)} cy={fx(dot.cy)} r={DOT_R}>
-              <title>{`Seed ${dot.seed}: ${dot.text}`}</title>
+              <title>{`Run ${dot.seed}: ${dot.text}`}</title>
             </circle>
           ))}
         </g>

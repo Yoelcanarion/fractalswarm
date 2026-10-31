@@ -64,10 +64,8 @@ export function Timeline() {
               style={{ left: `${fraction(m.ts, end) * 100}%` }}
               title={m.label}
               aria-label={`${m.label}: jump here`}
-              onClick={() => {
-                setPlaying(false);
-                seekTime(m.ts);
-              }}
+              // a replay that is playing carries on from the mark; one that is stopped stays stopped
+              onClick={() => seekTime(m.ts)}
             />
           ))}
         </div>

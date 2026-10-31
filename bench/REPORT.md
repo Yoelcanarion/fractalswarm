@@ -1,7 +1,7 @@
 # FractalSwarm benchmark report
 
-> Status: **the $0 sections, the headline, the reading in §5 and the results of the three real-model
-> matrices run so far (§3, §4.10) are written; the results of §8 are not.** §4.1–§4.9 report the
+> Status: **the $0 sections, the headline, the reading in §5 and the results of the real-model
+> matrices (§3, §4.10) and of the scaling sweep (§8) are written.** §4.1–§4.9 report the
 > fake-LLM runs of the arena phase on the simulated clock: the rivals gate, the sensitivity sweeps,
 > an exploratory crash-time jitter sweep, the per-process view and the false deaths. §4.10 reports
 > the paid runs on the Meta Model API: 96 cells of six workflows and two tasks (`results/v1`, two
@@ -12,8 +12,8 @@
 > what ran, on which models, at which commits and for how much. Every number in §3 and §4 is read
 > from files committed under `bench/results/` (`results.csv`, `results.json`, `honesty.json`,
 > `verdicts.txt`, the cell files), except where the text says it was computed from the run logs or
-> the progress log, which are not committed with the results. Later real-model runs and the results
-> of §8 are not written yet.
+> the progress log, which are not committed with the results. §4.10.8 adds the eight LangGraph
+> cells and §8 the twenty of the scaling sweep (two seeds each, descriptive).
 
 **Headline (decision gate, Oct 29: outcome B). Resilience comparable to an ideal durable
 supervisor, without a central coordinator or a separate recovery mechanism.** Against
@@ -152,7 +152,12 @@ third, the headline extended to ten seeds, contains the 18 cells of the second, 
 their run logs), recorded from Oct 28 to Oct 30 and read in §4.10. Every cell completed, and 175 of
 the 176 are valid: the swarm at C0 on seed 5 of the ten-seed matrix is not (§4.10.7). The clock is
 live (`clock: live` in all 176 run logs), so stall times, makespans, costs and call counts are those
-of the API on the day each cell ran, and a new run would not repeat them.
+of the API on the day each cell ran, and a new run would not repeat them. The eight LangGraph cells
+(§4.10.8) and the twenty of the scaling sweep (§8), both of Oct 31, are not among the 176. Neither
+are two runs of T3, the comparative report on web
+pages, on Oct 31 (`t3-real-c0` and `t3-real-kill-half`, $0.40 each; both placed 6 of 6 cells with no
+hard violation): they are outside any matrix, their logs hold third-party pages and are not
+committed, and no claim rests on them.
 
 | Item | Value |
 |---|---|
@@ -1171,7 +1176,8 @@ All profiles pooled, 8 runs per row:
 
 Every one of the 96 runs completed and is valid, at every profile (validity is §2's), and none spent an
 LLM token on coordination: the rivals' supervisors are code too, so they spend none either
-(`docs/claims.md` S4: a property of the design, never an advantage over the rivals). Six calls ended
+(`docs/claims.md` S4: a property of the design, never an advantage over the rivals; the LangGraph
+rows, which are not among these runs, do spend some, §4.10.8). Six calls ended
 in an error in v1 and none in the headline's 18 cells (the 62 added in headline-10 have one,
 §4.10.7): five `APIConnectionError: Connection error.` in
 `pipeline` C2 seed 2 and one ledger error (`IntegrityError: UNIQUE constraint failed:
@@ -1585,6 +1591,43 @@ with `fractalswarm.bench.verdicts` and from the run logs (not committed); the re
 `.plans/notes/arena-rival.md`, Part 11. `docs/claims.md` R2 and R4–R6 and the counts in S4 and S7 are
 written from this reading.
 
+#### 4.10.8 The LangGraph rows (secondary, two seeds, descriptive)
+
+`bench/matrix-langgraph.yaml`: `langgraph` × T2 × C0–C3 × seeds 1–2 = **8 cells**, in
+`bench/results/langgraph`, on the same task, seeds and run cap as v1, with Contributor routing. They
+ran on Oct 31 at `10c2ff7`, after the handler freeze, for **$2.60** against a worst case of $4.00.
+They are not among the 176 cells of §3. This is the real framework, LangGraph's hierarchical-teams
+pattern pointed at Muse (`baselines/langgraph_teams.py`): a crash cancels every call in flight in the
+run, and 5 s later the best-case supervisor resumes the graph from its checkpoints, so only the
+supersteps in flight run again. Network faults need a bus, which it does not have, so they do not
+apply to it (§1, rule 4).
+
+All 8 cells completed and are valid. Means over the two seeds, next to v1's T2 cells for the same
+seeds; those ran days earlier at earlier commits, so this is a reading, not a verdict, and §4.10.6
+says what two seeds cannot show:
+
+| Profile | Stall (s): `langgraph` | swarm | `durable-max` | `central` | Extra cost: `langgraph` | swarm | `durable-max` | `central` |
+|---|---|---|---|---|---|---|---|---|
+| C0 | 14.0 | 19.8 | 20.1 | 29.7 | | | | |
+| C1 | 24.7 | 32.8 | 16.6 | 26.3 | +4.4% | +9.3% | −4.8% | +30.6% |
+| C2 | 22.8 | 8.2 | 5.7 | 58.3 | +18.0% | −2.8% | −5.6% | +57.5% |
+| C3 | 36.7 | 14.6 | 9.8 | 92.6 | +19.7% | +6.6% | −6.8% | +75.6% |
+
+*`bench/results/langgraph/results.csv` and `bench/results/v1/results.csv`, columns `stall_s` and
+`extra_cost_pct`.*
+
+At C2 and C3 it lands between `central` and the durable workflows, as its design predicts: it
+cancels as many calls as `central` at C3 (28.5 against 27.0), but its checkpoints keep the completed
+work. C1 does not sort that way on stall, and two seeds cannot say why.
+
+**It is the one workflow here that spends LLM tokens on coordination.** Its session supervisors route
+each contract through the model, as the pattern does: 10,480 to 11,306 coordination tokens a run on
+average by profile, 3.0% of its tokens, and 104 calls at C0 against 78 for the swarm and 84 for
+`durable-max`. Every other workflow in this report spends none, because its supervisor is code, so
+that difference belongs to this pattern and not to having a supervisor (`docs/claims.md` S4). A
+routing call on this task has little to decide; a harder task might earn it back, and these runs do
+not measure that.
+
 ## 5. Reading the chart honestly
 
 This reading covers the $0 runs of §4.1–§4.9; the real-model rows are read in §4.10.
@@ -1757,10 +1800,31 @@ sessions.
 
 **Read it knowing the ceiling.** T2 has six sessions, each a chain of three contracts (extract,
 place, blurb), so at most six agents can work at once. Past six the extra agents idle and the
-curves flatten; the chart marks the limit with a dotted line. At C0 stall is a few seconds at most
-for every workflow: the metric is built for crashes.
+curves flatten; the chart marks the limit with a dotted line. Stall is a measure built for crashes;
+at C0 it counts the moments when no agent has work in flight, which on the real model reach 25 s.
 
-Results: TBD (`bench/results/scaling/scaling-t2_conference.png`, one line per workflow).
+**Results** (Oct 31, at `10c2ff7`, real model, two seeds, $5.71 against a worst case of $10.00). All
+20 cells completed and are valid, with no LLM error and no coordination token. Means over the seeds:
+
+| Agents | Makespan (s): swarm | `central` | Cost ($): swarm | `central` | Stall (s): swarm | `central` | Quality: swarm | `central` |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 329 | 287 | 0.273 | 0.245 | 15.4 | 0.0 | 0.872 | 0.792 |
+| 2 | 194 | 193 | 0.308 | 0.312 | 3.5 | 12.9 | 0.872 | 0.872 |
+| 4 | 178 | 160 | 0.353 | 0.279 | 6.5 | 16.0 | 0.880 | 0.792 |
+| 8 | 141 | 144 | 0.278 | 0.262 | 9.8 | 10.2 | 0.860 | 0.820 |
+| 16 | 140 | 187 | 0.251 | 0.292 | 10.9 | 25.2 | 0.880 | 0.900 |
+
+*`bench/results/scaling/results.csv`, columns `makespan_s`, `cost_usd`, `stall_s` and `score`; the
+chart is `bench/results/scaling/scaling-t2_conference.png`.*
+
+![Makespan, cost and stall against total agents, swarm and central, at C0](results/scaling/scaling-t2_conference.png)
+
+Makespan falls by more than half from one agent to eight, for both workflows, and stops falling at the
+ceiling of six. Cost stays between $0.25 and $0.35 with no trend, as a fixed amount of work predicts,
+so the swarm's extra orchestrators (3 at one agent, 13 at sixteen) add no visible cost at C0. The two
+workflows read the same within what two seeds can show: `central`'s 187 s at 16 agents is the mean of
+141 and 233 s. This sweep has no crash in it, it stops at 16 agents, and its task cannot use more than
+six at once, so it says nothing about a larger team on a wider task.
 
 ```sh
 uv run fractalswarm bench bench/matrix-scaling.yaml --fake             # $0, sim clock

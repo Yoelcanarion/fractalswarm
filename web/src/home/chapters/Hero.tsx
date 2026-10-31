@@ -1,6 +1,6 @@
 import { useMotionValue } from "motion/react";
 import { ArrowDown } from "lucide-react";
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 
 import { COPY, TAGLINE } from "../copy";
 import { useStill } from "../hooks";
@@ -19,6 +19,16 @@ import "./hero.css";
  * again. It is a replay, so the run clock starts over with it and never counts past the end of the run.
  */
 export const HERO_LOOP: LoopSpec = { enter: 1.3, run: TREE_HERO_SECONDS, rest: 1.8, leave: 0.9 };
+
+/**
+ * The shape of the hero's tree, width over height. Its column is a square with one line under the figure, and the run's own picture
+ * (almost 1.5 to 1) leaves a third of it empty and every glyph small: the tree is laid out narrower, which draws it larger.
+ */
+export const HERO_ASPECT = 1.12;
+
+/** The tagline's sentences, one to a line of the title: a sentence is never broken across two lines, so the title is set no larger
+ * than its longest sentence can be and still fit the column (hero.css). */
+export const SENTENCES = (TAGLINE.match(/[^.!?]+[.!?]*/g) ?? [TAGLINE]).map((sentence) => sentence.trim());
 
 /** What the figure says it is, in the words of docs/claims.md: a recorded run, replayed. It is never called live. */
 export const HERO_NOTE = { loop: "A recorded run, replayed on a loop.", still: "The end of a recorded run." } as const;
@@ -40,7 +50,12 @@ export function Hero() {
     <section id="hero" className="home-hero" aria-labelledby="home-title">
       <div className="home-hero__copy">
         <h1 id="home-title" className="home-hero__title">
-          {TAGLINE}
+          {SENTENCES.map((sentence, i) => (
+            <Fragment key={sentence}>
+              {i > 0 && " "}
+              <span className="home-hero__sentence">{sentence}</span>
+            </Fragment>
+          ))}
         </h1>
         <p className="home-kicker">{COPY.hero.kicker}</p>
         <p className="home-hero__line">{COPY.hero.line}</p>
@@ -52,7 +67,7 @@ export function Hero() {
         </div>
       </div>
       <figure ref={figure} className="home-hero__object" aria-label={COPY.hero.object}>
-        <Viz name="SwarmTree" data={tree} progress={play} still={still} pacing="hero" ambient appear={appear} />
+        <Viz name="SwarmTree" data={tree} progress={play} still={still} pacing="hero" aspect={HERO_ASPECT} slots ambient appear={appear} />
         {tree != null && (
           <figcaption className="home-hero__note">
             <span>{still ? HERO_NOTE.still : HERO_NOTE.loop}</span>

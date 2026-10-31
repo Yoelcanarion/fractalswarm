@@ -1,4 +1,4 @@
-/* The "where it helps" panel. Colours are tokens only (lib/tokens.test.ts), and there are no container
+/* The trade-offs panel (#/helps). Colours are tokens only (lib/tokens.test.ts), and there are no container
    queries: the Chromium that records the video crashes on them. A verdict is never colour alone: a locality
    is a shape (filled, hollow, cross), a count is a number in a fixed place. */
 
@@ -26,6 +26,28 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/* what the counts were made on: one line in view, before the first of them */
+.helps__setting {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+}
+
+.helps__setting-tag {
+  display: inline-block;
+  margin-right: var(--space-2);
+  padding: 1px 8px;
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-pill);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 /* the map, and under it the full count in its fold */

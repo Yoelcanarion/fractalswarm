@@ -19,10 +19,18 @@ export interface SwarmTreeProps extends VizProps<TreeSlice> {
   /** "story" (the default, the one TREE_KEYFRAMES describe): slow enough to read, for a scroll.
    * "hero": about nine seconds when driven by time. */
   pacing?: Pacing;
+  /** Draw the tree to this shape, width over height, where its own picture (about 1.5 to 1) is too wide for the room it has: see `fitted`. */
+  aspect?: number;
   /** Under each node: its id; its id and name; nothing. */
   labels?: "ids" | "names" | "none";
   /** The run clock in the corner. */
   clock?: boolean;
+  /**
+   * Draw the memorial row from the first frame: its rule, its label and, for each brain the run kills, an empty dashed place that the
+   * brain fills as it lands there. The label never names nothing, the bottom of the picture is never blank, and nothing moves when
+   * the first brain goes (the room was already in the picture). The hero draws it; the click demo has its own shelf.
+   */
+  slots?: boolean;
   /**
    * The ambient layer (ambient.ts): pulses along the live edges, a halo breathing round each live brain, a ring pinging round
    * each working agent. It runs on a clock of its own, only while the tree is on screen and the person has not asked for less
@@ -153,13 +161,27 @@ export interface TreeSvgProps {
   scoreText?: boolean | undefined;
   /** The click demo can fill the whole memorial row, so its "KILLED" sits on the rule, where no grave covers it; the hero's is beside its row. */
   labelOnRule?: boolean | undefined;
+  /** An empty dashed place in the memorial row for each brain that will be killed, the size of its ring (see SwarmTreeProps). */
+  slots?: boolean | undefined;
 }
 
 /**
  * The tree's markup, with nothing in it moving: the parts a painter (paint.ts) finds by their data attributes and writes a frame
  * onto. The hero's tree and the click demo are two drivers of the same drawing.
  */
-export function TreeSvg({ svgRef, model, labels, clock, ambient, className, title = "The swarm tree", description, scoreText = true, labelOnRule = false }: TreeSvgProps) {
+export function TreeSvg({
+  svgRef,
+  model,
+  labels,
+  clock,
+  ambient,
+  className,
+  title = "The swarm tree",
+  description,
+  scoreText = true,
+  labelOnRule = false,
+  slots = false,
+}: TreeSvgProps) {
   const uid = useId();
   const glow = ambient ? `${uid.replace(/:/g, "")}-glow` : null;
   const b = model.bounds;
@@ -193,6 +215,10 @@ export function TreeSvg({ svgRef, model, labels, clock, ambient, className, titl
             KILLED
           </text>
         )}
+        {slots &&
+          Object.entries(model.memorial).map(([id, s]) => (
+            <circle key={id} className="hv-slot" data-slot={id} cx={fx(s.x * U)} cy={fx(s.y * U)} r={fx((model.node[id]?.size ?? 0.34) * U)} opacity="0" />
+          ))}
       </g>
       <g>
         {model.ids.map((id) => (
@@ -238,8 +264,8 @@ export function TreeSvg({ svgRef, model, labels, clock, ambient, className, titl
   );
 }
 
-export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", labels = "ids", clock = true, ambient = false, appear }: SwarmTreeProps) {
-  const player = useMemo(() => treePlayer(data, pacing), [data, pacing]);
+export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", aspect, labels = "ids", clock = true, slots = false, ambient = false, appear }: SwarmTreeProps) {
+  const player = useMemo(() => treePlayer(data, pacing, aspect), [data, pacing, aspect]);
   const { model } = player;
   const svg = useRef<SVGSVGElement>(null);
   const rig = useRef<TreeRig | null>(null);
@@ -252,7 +278,7 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
   );
   useLayoutEffect(() => {
     rig.current = svg.current ? collectTree(svg.current, sizes) : null;
-  }, [sizes, labels, clock, ambient]);
+  }, [sizes, labels, clock, slots, ambient]);
   const apply = useCallback(
     (p: number) => {
       if (!rig.current) return;
@@ -260,9 +286,9 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
       const drawn = still || prefersReducedMotion() ? 1 : (appear?.get() ?? 1);
       const frame = player.frame(p, drawn);
       shown.current = frame;
-      paintTree(rig.current, frame);
+      paintTree(rig.current, slots ? { ...frame, shelf: 1 } : frame);
     },
-    [player, appear, still],
+    [player, appear, still, slots],
   );
   useProgress(progress, apply, still, stillAt);
   useLayoutEffect(() => {
@@ -283,5 +309,5 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
     );
   }, [ambient, still, model]);
 
-  return <TreeSvg svgRef={svg} model={model} labels={labels} clock={clock} ambient={ambient} className={className} />;
+  return <TreeSvg svgRef={svg} model={model} labels={labels} clock={clock} slots={slots} ambient={ambient} className={className} />;
 }

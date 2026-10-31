@@ -16,8 +16,178 @@ built and which shapes it relies on. It is updated at each merge point.
 | 5. Director mode `#/director/<scene>` | built and committed (`web/src/director`), 8 scene scripts, 180 tests; **seen in a browser** through the recorder, first look: see "Director mode" |
 | 6. `scripts/record_scenes.*` | written and committed: PNG sequences at 1920×1080, 60 fps; no ffmpeg on the machine (the coordinator said not to install it) |
 
-No recorded pair is bundled: the coordinator said to wait for the post-freeze pair (Mon Nov 2). The arena runs on
-scratch pairs made with the fake LLM at $0.
+The two final T2 pairs ship in `demo/` since arena `d20f64f` (see "Round 3"); before that the arena ran on scratch
+pairs made with the fake LLM at $0.
+
+## Round 3 (Oct 31): the arena for a stranger, and the director on the two real pairs
+
+Merged arena `d20f64f`, then `8a98acf` (W4's phone work: the pair shown whole at 390 px, "Trade-offs", the sideways tree).
+The test held to is `redesign.md`'s: a person who has never heard of orchestrators understands the page and can use it, with no
+explanation. HOLD was on all through: code, `tsc` and `vitest` on one worker; **no build, no server, no browser, so nothing
+here has been looked at yet** (the list for the slot is at the end).
+
+### The arena for a stranger (`web/src/arena`)
+
+- **First look.** The lead is `FractalSwarm, on the left, and a rival, on the right, do the same job under the same
+  failures.` (it said "while the same coordinators are killed" until the review of `8c4ae3a`: the two sides lose different ones) and, once a pair is open, a second sentence from `rivalSentence(assumptions)` (assumptions.ts), in the
+  words of `docs/claims.md`: in-process "…one program runs the workers, so when it crashes they stop with it." (R5); ideal durable
+  "…its workers survive a crash, and it is back after 5 s." (R2); durable; swarm; single; pipeline; a default. The assumptions pill
+  under it stays always on. `#/arena` alone already opens the first public pair, which on a clean clone is the durable-max one.
+- **The plain end of a pair** (`PairEnd.tsx`, text in the pure `pairEndText.ts`): a card between the boards and the scoreboard, shown
+  only once both runs have played out (`!live` and the cursor at the end of each log) and never in a director frame (`bare`).
+  "Both runs finished." / "Only one of the two runs finished." / "Neither run finished." (a log that stops without `run.completed` is
+  "did not finish"); one or two sentences per side from its log (the swarm's lost coordinators and no call paid twice; an in-process
+  supervisor's workers stopping with it each time and the calls paid again; a durable one's board pausing for the detection and
+  restart time); then the scope: "This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after
+  X s and restarting after Y s: it shows what happened here, not what usually happens.", with links to `#/helps` (Trade-offs) and
+  `#/evidence`. No sentence says who is ahead or uses simpler, cheaper, more reliable, better (a test checks those words). The
+  scoreboard's note ("One pair is one run on one seed under one failure plan…") carries the same two links while the pair plays; at
+  the end the card's scope replaces it (the review of `8c4ae3a`, below).
+- **A way out of the load error** (`EmptyState` tone bad: Try again, Open the runs), and **Home/End** with space and the arrows
+  (`keys.ts`, pure, tested).
+- **390 px and 1366 px.** The verify badge moved from the head's top row to the proof row (`.side__proof`, which wraps: the chip
+  and the badge side by side, or the badge under the chip, the same on both sides so the boards still start at one height). The
+  chip sits in `.side__chip` and the scenes' `swarm-proof` / `rival-proof` regions are that now, so s8's tooltips still read the
+  chip's `title`. At ≤700 px: less padding, the assumptions as a block, the badge's text may wrap, the end card in one column;
+  the scoreboard's numbers two across, one at ≤480 px. The picker at 390 px is W4's (the whole name shown wrapped, the select
+  laid over it unseen); I dropped my own picker rules in the merge. No container queries.
+- **Not seen yet.** I do not know how the head, the card and the numbers look at 1920x1080, 1366x768 and 390 px, dark and light;
+  the CSS is written from the rules. The run page's `?details=` addresses and the controls count of the first view are not
+  checked either.
+
+### The director on the two real pairs
+
+- **Which pair: a parameter.** `sources.json` has the first pair (`demo-pair-durable-max-swarm` / `-rival`), `run: "demo-final"`
+  for the run scenes (s4, s5), `ablation: null` and `"real": true`, in one commit. The in-process pair is the same scenes with
+  `?swarm=demo-pair-central-swarm&rival=demo-pair-central-rival` (the address wins over the manifest; the recorder takes
+  `--swarm`/`--rival`). One manifest and an address was simpler than two manifests, and s1, s6 and s8 run on both pairs unchanged
+  (tested on both).
+- **The sides do not crash at the same second**, because each plan fires at a fraction of its own run's progress. Durable pair:
+  the swarm's root at 40.7 s, the rival's supervisor at 46.3 s (its runs end at 90.1 s and 111.8 s). In-process pair: 46.8 s and
+  45.9 s (runs end at 119.6 s and 154.1 s). So there are two new moments, `rival-crash:N` and `rival-recovered:N` (time.ts;
+  `TimeContext.rivalCrashes`, taken by the surface from the rival's own log); `crash:N` is still the swarm's (the rival's when the
+  swarm has none).
+- **Retimed from the real lengths** (the clip times are those of a take on the fake page and replay, which is the take's own clock
+  and does not depend on the browser):
+
+| scene | now | on the real logs |
+|---|---|---|
+| s1 (32 s) | from 14 s before the swarm's first crash at 1x, ring on the fallen root, `wait until rival-crash:1`, ring on the rival's board for 5 s, hold; the 0.5x slow-down is gone (the later rival crash would have outlasted it) and the replay is not paused at the end | the first crash is at 20.0 s on both pairs; the rival's board is ringed at 25.6 s on the durable pair, exactly its 5 s pause, and from 20.0 s on the in-process pair (its pause was 45.9-51.0 s of the replay, so the ring covers its last 4 s); last step at 31.1 s / 25.5 s |
+| s6 (30 s) | from 5 s before the rival's first outage; rings on the rival's status and the swarm's first fallen for 5 s; 10x to the end of the longer log; the counters | the ring at 5.0 s; the end of the log at 16.4 s (111.8 s of replay) / 20.7 s (154.1 s); last step at 22.9 s / 27.2 s. 6x as before would not reach 154 s in 14 s |
+| s4 (18 s) | 15x until `call-end:spark`, pause, the lens on Spark's call then Wonder's, the meter | the first Spark work call of `demo-final` is `o3.1.a1`, 50.9-52.5 s of the replay: 3.5 s of clip, and 0.8 s before the first outage (53.3 s); Wonder's root plan (2.3-33.0 s) is a finished call by then; last step at 16.5 s |
+| s5 (22 s) | unchanged | o2.1 (63.5 s, heir o2.2), then o0 (53.3 s, heir o1; the root holder after 58.8 s); last step at 21.5 s |
+
+  A scene that points at the Muse meter has its fold open (`pointsAtRegion`; the meter sits under "What the models cost" now). The
+  other run-page anchors the director uses are W4's kept ones; `.counters`, `.run__grid`, `.run__side` are no scene's target.
+- **Unchanged and why.** s2 is live; s3 waits for an ablation on a person's own text, so `sources.ablation` stays null and the
+  scene says it needs one (the recorder reports it and goes on); s7 is "Trade-offs" with W4's unchanged `[data-helps]` anchors; s8
+  and s9. No scene says anything about arbitration (no real Wonder dispute).
+- **Tests.** `scenes.real.test.ts` is rewritten for the final logs: the arena scenes on both pairs (the outages and their order,
+  the actors on the side they point at, every step inside the duration with no warning, s1's ring inside the rival's first outage
+  with the first crash at 20 s, s6's ring at its first outage and the counters at the end of the longer log, s8 at the end) and
+  the run scenes on the final run (its outages, the heirs, s4's picks against `lib/fixtures/lens-demo-final.json`, which is the
+  server's `GET /api/runs/demo-final/calls` taken in-process, s4 pausing after the call and before the first outage, s5's four
+  rings). The `demo/backup` tests are gone (backup is no longer a source). Hand mutants: 12 of the director step, 11 caught, the
+  survivor (s4 at 25x instead of 15x) is an equivalent one: it still pauses on the first frame after the call, and the fastest
+  speed the director allows (40x) cannot step over the 0.8 s to the first outage.
+
+### For the slot (the recorder, and a look)
+
+1. Done on Oct 31 (the next section): one scratch build and a scratch server, then shots of `#/arena` on the first pair at
+   1920x1080, 1366x768 and 390 px in dark and light, at the start and at the end (the end card).
+2. `s1`, `s6`, `s4`, `s8` with the recorder on the durable pair, then `s1` and `s6` on the in-process pair
+   (`--swarm demo-pair-central-swarm --rival demo-pair-central-rival`): look at where the rings land, at the idle seconds at the
+   end of a take (s1 on the in-process pair has 6.5 s, s6 on the durable pair 7 s; both keep playing, nothing freezes), and at
+   s4's open meter fold (it is open for the whole scene) and the pause frame.
+3. The frame-time reading with two boards at 20x, which the polish brief asks for, has not been taken.
+
+
+### The look at the arena (Oct 31, the first slot: a scratch build, a scratch server, no model called)
+
+Two passes at below-normal priority, because a paid sweep was live: `vite build --outDir` into the scratchpad (never `api/static`),
+`fractalswarm serve` on 8791 with scratch runs and ledger directories and a dummy key, a static server on 5191 that passes `/api`
+on, and headless Chromium. 15 pages in the first pass and 18 in the second, each a viewport shot plus the whole content area:
+`#/arena` (the first pair, `demo-pair-durable-max`), its end (`?at=end`), a frame in the middle (`?t=48`) and the in-process pair's
+end, at 1920x1080, 1366x768 and 390x844, dark and light, with the guide shown (first visit) and dismissed. The page was measured as
+well (sideways scroll, where each board starts, what sticks out of a side, the controls in the first view). Everything closed after
+each pass: ports 8791 and 5191, the browsers, `git status` and `api/static` untouched.
+
+Seen and fixed:
+- The two boards started at different heights while one side still said "Checking takeover...": a settled chip is 36 px tall and
+  the pending one 29 px, so the proof row (`.side__proof`) was 3-4 px shorter on that side. The row is now as tall as a settled
+  chip (`min-height: 36px`); the board tops are equal at 1920 and 1366, both themes, before and after the verdicts arrive.
+- At 390 px a line broke between a number and its unit ("restarting after 5 / s", "0 / s restart" in the rival chip).
+  `secondsText` (the arena's own) now joins them with a no-break space. The tests read the text with it as a plain space, and one
+  more pins the character.
+
+Seen and fine: no sideways scroll in any shot; the end card on both pairs at all three sizes (its two columns at 1920 and 1366, one
+column at 390); the scoreboard (7 cards in a row at 1920, 4 and 3 at 1366, 2 columns at 390); the replay bar and its lanes; the
+order at 390 (lead, Play, pair, rival chip, swarm board, rival board, card, scoreboard, replay bar); the first screen of a returning
+visitor at 1366x768 (both trees and the top of the scoreboard) and at 390 (the lead, Play, the picker, the chip and the swarm's
+board); the light theme at all three sizes.
+
+Not mine, for the coordinator:
+1. The first-visit guide band (W4's) is 540 of 844 px at 390, so a first visit on a phone opens on the guide and "Got it", and at
+   1366x768 it pushes the boards to y=517. It is the explanation, so I left it.
+2. The verify chips ("Checking takeover...", "Replaying from the log...") stay pending for several seconds when the machine is busy
+   (below-normal priority beside a paid sweep). That is timing, not a layout fault.
+3. The hidden bubbles of the tooltips on those chips are wider than the viewport in the measurement, but they cause no scroll.
+
+### The review of 8c4ae3a (Oct 31): six items, and the look at them (a scratch stack, no model called)
+
+The coordinator's review of `8c4ae3a` (three wrong statements, the first crash, the timeline), done in its order of harm. Code and
+tests first (`8d56ee2` items 1-3, `2881db4` item 6), then the look after RELEASE, at below-normal priority: `fractalswarm serve` on
+8791 (scratch directories, a dummy key) and a Vite dev server on 5177 that passes `/api` to it (a script of my own through Vite's
+API, so the repo's config, which points at 8765, was not touched), and headless Chromium. Everything closed afterwards.
+
+1. **The lead** says "do the same job under the same failures": the two sides lose different coordinators (the durable pair's swarm
+   loses o0, o3.1, o2.1, o3.2 and o3.3, and its rival's o0 five times).
+2. **One run, two costs.** The row is "Cost, pre-registered basis" once both numbers are the metrics' (`cost_usd`, which estimates
+   the calls a crash cancelled) and "Cost so far" while a number is still the fold of the log, which is the spend (the run page's
+   number). Where the scored number is more than the spend, a line under the card's bars says "$0.605 spent, $0.180 estimated for 27
+   cancelled calls": `official.costUsd`, the fold's `costUsd` (the sum of `budget.settled`) and `official.cancelledCalls`, none of
+   them typed. Nothing while the run plays, where the two agree at three decimals, or where the log holds no spend. Seen on the
+   real pairs: durable swarm $0.406 (Swarm: $0.401 spent, $0.005 estimated for 2 cancelled calls), durable rival $0.455 (no line),
+   in-process swarm $0.504 (no line), in-process rival $0.785 (Rival: $0.605 spent, $0.180 estimated for 27 cancelled calls). The
+   tooltip says it in a sentence, and that the run page shows the spend alone.
+3. **The end of a side.** Once a side has played out its status line says "Finished, lost 5 coordinators" (swarm) and "Finished,
+   supervisor crashed 5 times" (rival), "Did not finish, ..." in the danger tone for a log that stops without `run.completed`; an
+   outage the log never closed is still said first. `sideStatus` has a fifth parameter, `finished` (default false, so nothing else
+   changed), from the shared `playedOut()` (`playedOut.ts`), which the scoreboard and the end card use as well.
+4. **"Watch the first crash"** is the main action, as on the run page: both sides to 3 s before the earlier of the two first
+   coordinator kills (about 37.7 s on the durable pair), played at 1x, with "Play both from the start" beside it (the main one
+   where no coordinator is killed). While it plays the button is Pause and the clock (`t = 42.3 s / 111.8 s`, written per frame
+   through `useClockFrame`) sits beside it; stopped midway it says Carry on. Only the playhead moves (`play.ts`, `ArenaPlay.tsx`;
+   the seek comes first, because playing a clock that stands at its end starts it at 0). Seen: 4.5 s after the click the swarm
+   says "o0 down for 1.5 s - not noticed yet" with its red cross, at 1366, 1920, 1280 and 390.
+5. **The timeline is pinned** to the bottom of the view (`.tl { position: sticky; bottom: 0 }`, z-index `--z-sticky`, the page's
+   colour as a ring so that what scrolls behind it stays out of its rounded corners), a little more compact (padding, a 36 px
+   play button). To make room: the lead's `max-width` is 82ch (two lines, and the two buttons beside it instead of under it), the
+   assumptions pill shares the picker row (two lines beside it at 1366), `.side`'s `min-height: 420px` is gone, and the board's
+   height is capped to the window (`--arena-chrome: 552px`, floor 190 px), so the frame is drawn smaller to fit: the tree is 0.64
+   of its frame's size at 1366x768 (0.76 before). Measured, page y of the sides and of the bar: 1366x768 186..576 and 591..768;
+   1440x900 184..627 and 723..900; 1536x864 184..647 and 687..864; 1920x1080 184..725 and 903..1080 (the scoreboard fits above
+   it); 1280x720 the boards end 7 px under the bar's top, inside the panel's padding; at a 650 px window the work bars are under
+   it; the bar is not pinned under 620 px high or under 761 px wide; at 1100 px the sides stack, as before. The director's frames
+   keep both as they were (`.dir__stage .board` and `.dir__stage .tl` in director.css): a frame is 1920x1080 whatever the window
+   it is previewed in, and the camera pans it.
+6. **Small ones.** A click on a band or a mark of the timeline only moves the playhead (the run page's way; dragging the scrubber
+   still pauses); seen: still Pause after a jump. The end card gives the run page's reason beside "Lost 5 coordinators" when the
+   takeover check counts more hand-overs: "The takeover check counts 7 hand-overs for those 5 coordinators: one coordinator's root
+   duties and its subtree are two hand-overs, so there can be more of them than crashes." (read from the store's takeover report,
+   so it shows once the check has answered). The one-run caveat is said once at the end: the end card's, which has the rival's
+   setting, replaces the scoreboard's (`caveat` on `Scoreboard`; a director's frame has no end card and keeps its own). The picker
+   lists the pairs that ship first and the private ones under a divider (`<optgroup label="Private, made here">`), the mark
+   staying in their names because a closed select shows only the chosen option.
+
+Not mine, for the coordinator:
+1. The first-visit guide band (W4's) is 143 px at 1366x768, so a first visit has the boards half under the pinned bar until "Got
+   it" is pressed. The crash is still readable (the status line, the red cross, the playhead).
+2. The chip's hover text (`describeTakeover`, lib/takeover.ts: "7 hand-overs: the heir of each, recomputed from the log, is the
+   one the run used.") does not carry the reason for 5 coordinators and 7 hand-overs; the run page's Counters hint does. The end
+   card has it now; a clause in that file would put it on the chip as well (outside my files, so I did not touch it).
+3. `--arena-chrome` is a constant: the height of what the page keeps around the boards at 1366x768. If a bar above them grows or
+   shrinks, the number moves with it.
 
 ## Design
 

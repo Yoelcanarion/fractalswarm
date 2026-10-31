@@ -116,7 +116,7 @@ describe("the click demo's markup", () => {
     expect(crashLine("Root (o0)", ["a", "b"])).not.toContain("takes");
   });
 
-  it("draws the shelf of the dead from the start, faintly, and the hero's tree does not", () => {
+  it("draws the shelf of the dead from the start, faintly, in the click demo; a frame that is given no shelf waits for the first dead brain", () => {
     const rig = (log: Record<string, string>): TreeRig =>
       ({
         nodes: {},
@@ -168,6 +168,13 @@ describe("the Proof's data", () => {
     expect(mean(stall?.rival)).toBeCloseTo(story.numbers.r2.durableMaxStallS, 1);
     expect(mean(cost?.swarm)).toBeCloseTo(story.numbers.r2.swarmExtraPct, 1);
     expect(mean(cost?.rival)).toBeCloseTo(story.numbers.r2.durableMaxExtraPct, 1);
+  });
+
+  it("call a dot a run, since the word seed is for the setting line, which says how many", () => {
+    for (const row of [...central.rows, ...durable.rows]) expect(row.label).not.toMatch(/seed/i);
+    expect(durable.rows[0]?.label).toContain("a dot for each run");
+    expect(proofReading(panels, "FractalSwarm")).not.toMatch(/by seed/);
+    expect(durable.setting).toMatch(/\d+ seeds/);
   });
 
   it("print the data's verdict beside the ideal durable supervisor, as it is", () => {
@@ -516,6 +523,14 @@ describe("the Proof's drawing in two columns", () => {
     expect(html).toContain(">tie</text>");
   });
 
+  it("names a dot a run, in its row and in its hover text: the word seed is for the setting line", () => {
+    const html = draw(panels, 1200);
+    expect(html.match(/<title>Run \d+: /g)).toHaveLength(2 * 2 * story.numbers.r2.seeds);
+    expect(html).toContain("a dot for each run");
+    expect(html).not.toMatch(/<title>Seed |a dot for each seed/);
+    expect(html).toMatch(new RegExp(`>[^<]*${story.numbers.r2.seeds} seeds</text>`));
+  });
+
   it("writes a shared setting once, and each panel's own where they differ", () => {
     const [a, b] = panels as [BarsPanel, SeedsPanel];
     const once = draw([{ ...a, setting: "One setting" }, { ...b, setting: "One setting" }], 1200);
@@ -577,6 +592,26 @@ describe("the Solution's drawings", () => {
       expect(render(StepDrawing, { step, active: true })).toContain('data-on="true"');
       expect(render(StepDrawing, { step, active: false, still: true })).toContain('data-on="true"');
     }
+  });
+
+  it("start a replay from their first frame, and are at their end for a still page whatever the replay", () => {
+    for (const step of STEP_IDS) {
+      expect(render(StepDrawing, { step, active: true, replay: 0 })).toContain('data-on="true"');
+      expect(render(StepDrawing, { step, active: true, replay: 1 })).toContain('data-on="false"');
+      expect(render(StepDrawing, { step, active: false, replay: 1 })).toContain('data-on="false"');
+      expect(render(StepDrawing, { step, active: true, replay: 3, still: true })).toContain('data-on="true"');
+      expect(render(StepDrawing, { step, active: true, replay: 1 })).toContain('data-reset="true"');
+      expect(render(StepDrawing, { step, active: true, replay: 0 })).not.toContain("data-reset");
+    }
+  });
+
+  it("cut a replay back with no transition, by a rule that follows the one that sets the transitions", () => {
+    const css = readFileSync(`${HOME}/viz/viz.css`, "utf-8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const set = css.indexOf(".hv-step [data-part] {");
+    const cut = css.indexOf('.hv-step[data-reset="true"] [data-part] {');
+    expect(set).toBeGreaterThan(-1);
+    expect(cut).toBeGreaterThan(set);
+    expect(/\.hv-step\[data-reset="true"\] \[data-part\]\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/transition:\s*none;/);
   });
 
   it("draw their lines on with a dash as long as the path, which a stroke that does not scale would measure in pixels instead", () => {

@@ -409,6 +409,21 @@ describe("the takeover chip", () => {
     expect(await chip(undefined)).toBe("");
   });
 
+  it("does not ask for the check of a supervisor's log: its server answers 501, which is a red line in the console", async () => {
+    const supervisor = new Stream().at(0).emit("run.started", "@kernel", { seed: "0", scenario: "t", params: {}, clock: "sim" });
+    supervisor.at(900).emit("baseline.crashed", "@env", { actor: "central" }).at(2000).emit("run.completed", "@kernel");
+    let asked = 0;
+    const takeover: RunApi["takeover"] = async () => {
+      asked += 1;
+      return counted;
+    };
+    expect(await chip(takeover, supervisor.events)).toBe("");
+    expect(asked).toBe(0);
+    // a swarm's log is asked, as before
+    expect(await chip(takeover, handedOver())).not.toBe("");
+    expect(asked).toBe(1);
+  });
+
   it("says the server's words in its hint, as a hover and as text for a screen reader, and is not a tab stop", async () => {
     const { run } = await opened(demo, {}, { takeover: async () => ({ ...counted, heirs: 6, adoptions: 5, kills: 5 }), loadAllEvents: async () => log() });
     await run.getState().runTakeover();

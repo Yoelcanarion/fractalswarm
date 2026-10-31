@@ -29,6 +29,13 @@ export const GUIDE_STEPS: readonly GuideStep[] = [
   },
 ];
 
+/** How much of the guide shows: none of it; the short band a first visit gets, with a heading and where it is done for each step; or the whole
+ * of it, with what each step says. */
+export type GuideMode = "closed" | "short" | "full";
+
+/** What the Guide button in the top bar does: it asks for the sentences when there are none, and closes them when they are showing. */
+export const afterGuideButton = (mode: GuideMode): GuideMode => (mode === "full" ? "closed" : "full");
+
 /** Whether this browser has been shown the guide. It is a convenience: with no storage the guide simply shows each time. */
 export const GUIDE_KEY = "fractalswarm.guide.seen";
 

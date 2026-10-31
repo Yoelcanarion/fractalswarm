@@ -65,6 +65,14 @@ export type Step =
   | { do: "lens"; open: string | null }
   | { do: "panel"; name: PanelName; show: boolean };
 
+/** Whether a scene points the camera, a ring or a tooltip at a named part of the page. */
+export function pointsAtRegion(scene: Scene, region: RegionName): boolean {
+  return scene.steps.some((step) => {
+    const target = step.do === "highlight" || step.do === "tooltip" ? step.target : step.do === "camera" ? step.fit : null;
+    return target !== null && target.kind === "region" && target.region === region;
+  });
+}
+
 export interface Scene {
   id: string;
   title: string;

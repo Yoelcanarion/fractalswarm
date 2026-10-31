@@ -2,7 +2,7 @@
 
 > **Kill half the brains. It still finishes.**
 
-FractalSwarm is a runtime for teams of LLM agents. Its coordinators form a tree, any of them can die mid-run, the root included, and the survivors take over the work with no election and no extra tokens. Every run replays bit for bit from a hash-verified log.
+FractalSwarm is a runtime for teams of LLM agents. Its coordinators form a tree, any of them can die mid-run, the root included, and the survivors take over the work with no election. Zero LLM tokens spent on coordination. Every run this repository ships replays bit for bit from a hash-verified log.
 
 Built on Muse Spark, Muse Wonder and Llama PromptGuard 2 for the Meta Global AI Developer Hackathon.
 
@@ -14,7 +14,7 @@ uv run fractalswarm demo --verify    # no API key needed
 
 A team of LLM agents often depends on one coordinator: it plans, assigns and checks the work. When it crashes, the team waits, or does the work again.
 
-In the simplest setup the workers run inside the coordinator's process and die with it, so their calls are paid for twice. A durable supervisor fixes that: its workers survive and a standby takes over. But then you run a supervisor, a standby and something to watch them, and even an ideal one has to stop to recover.
+In the simplest setup the workers run inside the coordinator's process and die with it, so their calls are paid for twice. A durable supervisor fixes that: its workers survive and a standby takes over. But then you run a supervisor, a standby and something to watch them.
 
 **Can a team recover without one?**
 
@@ -48,11 +48,11 @@ flowchart TB
 When a coordinator stops sending heartbeats:
 
 1. **Every survivor sees the same thing.** Membership lives in the log, so all of them agree on who is dead.
-2. **Every survivor computes the same heir.** For each piece of work, the heir is the live member with the highest `hash(goal, member)`, a rule known as highest random weight (HRW). Nobody votes and nobody sends a message about it.
+2. **Every survivor computes the same heir.** For each piece of work, the heir is the live member with the highest `hash(goal, member)`, a rule known as highest random weight (HRW).
 3. **The heir adopts the work,** and every result already in the log. The dead coordinator's children re-attach to it.
 4. **The root is not special.** When the root dies, its duties move by the same rule.
 
-"No separate recovery mechanism: every survivor computes the same heir from the log with one rule (HRW), so there is no election." Takeover uses no LLM call, so coordination costs zero tokens.
+"No separate recovery mechanism: every survivor computes the same heir from the log with one rule (HRW), so there is no election." Takeover makes no LLM call.
 
 The log is still a central component. We remove the coordinator as a single point of decision, not every single point of failure.
 
@@ -61,10 +61,10 @@ The log is still a central component. We remove the coordinator as a single poin
 The hard part of the demo task, planning a conference from messy emails, is reading people.
 
 - **Muse Spark** turns human language into constraints, each linked to its source sentence. It reads the emails, places the talks, checks the work and writes the blurbs.
-- **Muse Wonder** writes the root plan and arbitrates when two agents disagree.
+- **Muse Wonder** writes the root plan. Arbitration between agents is built and tested on the fake model; the real runs we checked had no dispute to settle.
 - **Llama PromptGuard 2** runs locally and screens every email and pasted input before an agent reads it.
 
-Every Muse token goes to the problem. "Zero LLM tokens spent on coordination" is a property of the design, measured in every real run, and the rivals in this benchmark spend none either, because their supervisors are code too.
+Every Muse token goes to the problem. "Zero LLM tokens spent on coordination" is a property of the design, measured in every real run of the swarm. The rivals we built spend none either, because their supervisors are code too; the LangGraph rows do, because that pattern routes through the model (about 3% of its tokens).
 
 ## The evidence
 

@@ -33,12 +33,21 @@ export interface StateLine {
   rest: string;
 }
 
-/** The brains that were killed or declared dead by the playhead. */
-export const crashedCoordinators = (view: ViewState): number =>
-  view.order.filter((id) => {
-    const actor = view.actors[id];
-    return !isInfraKind(actor.kind) && !isLeafKind(actor.kind) && (actor.status === "killed" || actor.status === "dead");
-  }).length;
+const isBrain = (view: ViewState, id: string): boolean => {
+  const actor = view.actors[id];
+  return actor === undefined || (!isInfraKind(actor.kind) && !isLeafKind(actor.kind));
+};
+
+/** The coordinators that crashed by the playhead: the larger of three counts. The brains that are down now (killed, or declared dead: a swarm's
+ * false deaths are in this one only); the coordinator kills injected so far, which a restart does not undo (a rival's supervisor is up again
+ * after each, and a count of the ones down would forget it, and fall back between crashes); and the supervisor's crashes in the log. */
+export function crashedCoordinators(view: ViewState): number {
+  const down = view.order.filter((id) => isBrain(view, id) && (view.actors[id].status === "killed" || view.actors[id].status === "dead")).length;
+  const struck = view.chaos
+    .filter((fault) => fault.kind === "kill_coordinator")
+    .reduce((n, fault) => n + (fault.targets.length === 0 ? 1 : fault.targets.filter((id) => isBrain(view, id)).length), 0);
+  return Math.max(down, struck, view.supervision.crashes.length);
+}
 
 /** Talks placed by the playhead, and how many the plan holds when it says. */
 export function talksOf(view: ViewState): { placed: number; expected: number | null } {
@@ -55,6 +64,8 @@ export function stateLine(view: ViewState, facts: StateFacts): StateLine {
   const crashed = crashedCoordinators(view);
   const { placed, expected } = talksOf(view);
   const talks = expected !== null ? `${placed} of ${expected} talks placed` : placed > 0 ? `${plural(placed, "talk", "talks")} placed` : null;
+  const unplaced = expected === null ? 0 : Math.max(0, expected - placed);
+  const violations = view.schedule.hardViolations ?? 0;
 
   if (!facts.live && facts.cursor === 0) {
     return { headline: "At the start:", tone: "muted", rest: "nothing has happened yet" };
@@ -65,8 +76,13 @@ export function stateLine(view: ViewState, facts: StateFacts): StateLine {
   const clauses: string[] = [];
   if (!facts.live && !atEnd) clauses.push(`at ${seconds(view.lastTs)} of ${seconds(facts.endMs)}`);
   if (talks !== null) clauses.push(talks);
+  // a result that is short or broken says so in words, and its dot is not green; a count still on its way is not a result
+  if (settled && unplaced > 0) clauses.push(`${unplaced} unplaced`);
+  if (settled && violations > 0) clauses.push(plural(violations, "hard violation", "hard violations"));
   // "so far" says the count can still change; a finished run's count is the run's
-  if (crashed > 0) clauses.push(`${plural(crashed, "coordinator", "coordinators")} crashed${settled ? "" : " so far"}`);
+  // a rival's coordinator is its supervisor, which comes back after each crash: the arena's end card says it the same way
+  const supervised = view.supervision.crashes.length > 0;
+  if (crashed > 0) clauses.push(`${supervised ? `its supervisor crashed ${plural(crashed, "time", "times")}` : `${plural(crashed, "coordinator", "coordinators")} crashed`}${settled ? "" : " so far"}`);
   else if (settled) clauses.push("no coordinator crashed");
   if (settled && facts.verified) clauses.push("replay verified");
   const rest = clauses.join(", ") || "waiting for the first actor";
@@ -74,8 +90,9 @@ export function stateLine(view: ViewState, facts: StateFacts): StateLine {
   if (facts.live) return { headline: "Running:", tone: "live", rest };
   if (!atEnd) return facts.playing ? { headline: "Replaying:", tone: "live", rest } : { headline: "Paused:", tone: "muted", rest };
   const finished = facts.status === "completed" || (facts.status === null && view.completed) || (facts.status === "running" && view.completed);
-  if (finished) return { headline: "Finished:", tone: "good", rest };
+  const flawed = unplaced > 0 || violations > 0;
+  if (finished) return { headline: "Finished:", tone: flawed ? "warn" : "good", rest };
   if (facts.status === "halted") return { headline: "Halted:", tone: "warn", rest };
   if (facts.status === "interrupted") return { headline: "Interrupted:", tone: "warn", rest };
-  return { headline: view.completed ? "Finished:" : "Ended without finishing:", tone: view.completed ? "good" : "warn", rest };
+  return { headline: view.completed ? "Finished:" : "Ended without finishing:", tone: view.completed && !flawed ? "good" : "warn", rest };
 }

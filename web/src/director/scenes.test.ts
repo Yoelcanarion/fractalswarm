@@ -7,7 +7,7 @@ import { missingSources } from "./sources";
 import { SCENE_FILES, SOURCES } from "./scenes";
 import { createTake, tooltipTargets } from "./take";
 import { fakeReplay, fakeSurface } from "./testing";
-import type { Scene } from "./script";
+import { pointsAtRegion, type Scene } from "./script";
 import type { TimeContext } from "./time";
 
 const scenes: Scene[] = SCENE_FILES.map((file) => {
@@ -78,9 +78,20 @@ describe("the scenes of the video", () => {
     }
   });
 
-  it("name no run: the pair is the coordinator's to choose, in sources.json or the address", () => {
-    expect(SOURCES).toEqual({ swarm: null, rival: null, run: null, ablation: null, real: false });
-    expect(JSON.stringify(scenes)).not.toMatch(/t2-real|bench-gate|seed1/);
+  it("name no run: the runs are the manifest's (sources.json) or the address's, and the manifest is the first pair on record", () => {
+    // the pair that opens `#/arena` on a fresh clone (demo/pairs.json lists it first), the final kill-half run, the real model,
+    // and no ablation until there is one on a person's own text
+    const first = (JSON.parse(readFileSync(`${REPO_ROOT}demo/pairs.json`, "utf-8")) as { left: { run_id: string }; right: { run_id: string } }[])[0];
+    expect(SOURCES).toEqual({ swarm: first.left.run_id, rival: first.right.run_id, run: "demo-final", ablation: null, real: true });
+    expect(JSON.stringify(scenes)).not.toMatch(/t2-real|bench-gate|seed1|demo-/);
+  });
+
+  it("open the Muse meter's fold for the scene that points at it, and for no other", () => {
+    // the meter is a fold of the run page's strip ("What the models cost"), closed on the page: a ring on it needs it open
+    expect(scenes.filter((scene) => pointsAtRegion(scene, "meter")).map((scene) => scene.id)).toEqual(["s4-lens"]);
+    const read = (name: string): string => readFileSync(new URL(name, import.meta.url), "utf-8");
+    expect(read("./DirectorPage.tsx")).toContain('<RunStageView stage={stage} meterOpen={pointsAtRegion(scene, "meter")} />');
+    expect(read("./StageViews.tsx")).toContain("<RunStrip unfold={meterOpen} />");
   });
 
   it("need only what their stage needs", () => {
@@ -99,6 +110,12 @@ const context: TimeContext = {
   crashes: [
     { at: 10_000, until: 15_500 },
     { at: 30_000, until: 35_500 },
+  ],
+  // the rival's plan fires at a fraction of its own run: here its first outage is later than the swarm's, as in the pair against
+  // the ideal durable supervisor, and the second is earlier than the swarm's
+  rivalCrashes: [
+    { at: 16_000, until: 21_000 },
+    { at: 27_000, until: 32_000 },
   ],
   calls: new Map([
     ["spark", { start: 4000, end: 6500 }],
