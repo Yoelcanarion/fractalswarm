@@ -7,6 +7,7 @@ import { RunStoreProvider, useRunStore, type RunStoreApi } from "../store";
 import { startedOf, type SystemKind } from "./assumptions";
 import { ArenaBoard } from "./ArenaBoard";
 import type { Box } from "./board";
+import { playedOut } from "./playedOut";
 import { RecoveryChip } from "./RecoveryChip";
 import { sideStatus } from "./status";
 import { talksTotal, workOf } from "./work";
@@ -40,7 +41,8 @@ function SideStatusLine({ system }: { system: SystemKind }) {
   const view = useRunStore((s) => s.view);
   const playhead = useRunStore((s) => s.playhead);
   const end = useRunStore((s) => s.events.at(-1)?.ts_virtual ?? 0);
-  const status = useMemo(() => sideStatus(system, view, view.arena.windows, Math.min(playhead, end)), [system, view, playhead, end]);
+  const finished = useRunStore(playedOut);
+  const status = useMemo(() => sideStatus(system, view, view.arena.windows, Math.min(playhead, end), finished), [system, view, playhead, end, finished]);
   // The restart bar fills in CSS from the clock (--now), so it moves every frame without a render.
   const outage = status.restart === null ? undefined : Object.values(view.actors).find((a) => a.outage)?.outage;
   return (

@@ -21,7 +21,7 @@ import { Scoreboard } from "./Scoreboard";
 import { createPairSession, type PairSession } from "./session";
 
 const NO_OFFICIAL: { left: Official | null; right: Official | null } = { left: null, right: null };
-const LEAD = "FractalSwarm, on the left, and a rival, on the right, do the same job while the same coordinators are killed.";
+const LEAD = "FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures.";
 
 /** The arena: the swarm and its rival on one clock, face to face. */
 export function ArenaPage({ route }: { route: ArenaRoute }) {

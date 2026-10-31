@@ -171,6 +171,15 @@ describe("a side", () => {
     // a finished run waits for the server's scored report: the effect that asks does not run on the server
     expect(text(rival)).toContain("Checking recovery");
   });
+
+  it("says how its run ended once the replay has played it out, and not that nothing is down over the crosses it has drawn", async () => {
+    const ended = await opened(75_000);
+    expect(text(side(ended.left, "swarm", "swarm"))).toContain("Finished, lost 1 coordinator");
+    expect(text(side(ended.right, "rival", "durable-max"))).toContain("Finished, supervisor crashed 1 time");
+    expect(text(side(ended.left, "swarm", "swarm"))).not.toContain("No coordinator down");
+    // before the end the line is still the live one
+    expect(text(side((await opened(30_000)).left, "swarm", "swarm"))).toContain("No coordinator down");
+  });
 });
 
 describe("the scoreboard", () => {
@@ -200,6 +209,30 @@ describe("the scoreboard", () => {
     const html = score(session, { left: scored, right: scored });
     expect(html).toContain("Swarm ✓");
     expect(html).toContain("Rival ✓");
+  });
+
+  it("titles the cost on the pre-registered basis, and says what the scored number adds to the spend where it adds any", async () => {
+    // the swarm's log spent what the metrics scored; the rival's spent less: a crash cancelled calls, which the metrics estimate
+    const swarm = swarmStream();
+    swarm.at(1_000).emit("budget.settled", "@kernel", { effect_id: "e1", reserved_usd: 0.7, actual_usd: 0.5 });
+    swarm.at(60_000).emit("run.completed", "@kernel");
+    const rival = rivalStream(undefined, 4);
+    rival.at(1_000).emit("budget.settled", "@kernel", { effect_id: "e1", reserved_usd: 0.7, actual_usd: 0.6047 });
+    rival.at(70_000).emit("run.completed", "@kernel");
+    const session = createPairSession({ api: api({ s: swarm.events, r: rival.events }), clock: { scheduler: idle } });
+    await session.open("s", "r", { atMs: 75_000, speed: null, play: false });
+    renderCurrent(session.left);
+    renderCurrent(session.right);
+    const scored = (cost: number, cancelled: number) =>
+      readOfficial({ run_id: "x", status: "completed", metrics: { completed: true, valid: true, detail: "placed 48/48, hard violations 0", cost_usd: cost, cancelled_llm_calls: cancelled }, recovery: null });
+    const html = text(score(session, { left: scored(0.5, 0), right: scored(0.78461, 27) }));
+    expect(html).toContain("Cost, pre-registered basis");
+    expect(html).toContain("Rival: $0.605 spent, $0.180 estimated for 27 cancelled calls");
+    expect(html).not.toContain("Swarm: $");
+    // before the metrics are in it is the spend so far, and says nothing of an estimate
+    const before = text(score(session));
+    expect(before).toContain("Cost so far");
+    expect(before).not.toContain("estimated for");
   });
 
   it("says plainly that one pair is one run on one seed, and links to where the rest is", async () => {
@@ -338,7 +371,7 @@ describe("the page", () => {
   it("says what it is for and what the rival is, and has one main action once a pair is open: play both from the start", async () => {
     const session = await opened(0);
     const html = await view({ session, left: "s", right: "r" });
-    expect(text(html)).toContain("FractalSwarm, on the left, and a rival, on the right, do the same job while the same coordinators are killed.");
+    expect(text(html)).toContain("FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures.");
     expect(text(html)).toContain("The rival is an ideal durable supervisor: its workers survive a crash, and it is back after 5 s.");
     expect(html).toContain('<button type="button" class="btn btn--on">Play both from the start</button>');
   });

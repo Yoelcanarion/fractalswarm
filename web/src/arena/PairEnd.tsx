@@ -5,6 +5,7 @@ import { arenaCounters } from "../lib/arena";
 import type { RunStoreApi } from "../store";
 import { startedOf, type Assumptions, type SystemKind } from "./assumptions";
 import { pairEndText, type EndSide } from "./pairEndText";
+import { playedOut } from "./playedOut";
 import { talksTotal, workOf } from "./work";
 
 const NOT_YET: Omit<EndSide, "system"> = { finished: false, completed: false, crashes: 0, duplicatedCalls: 0, placed: 0, total: null };
@@ -13,7 +14,7 @@ const NOT_YET: Omit<EndSide, "system"> = { finished: false, completed: false, cr
 function useEndSide(store: RunStoreApi, system: SystemKind): EndSide {
   const view = useStore(store, (s) => s.view);
   const events = useStore(store, (s) => s.events);
-  const finished = useStore(store, (s) => !s.live && s.events.length > 0 && s.cursor >= s.events.length);
+  const finished = useStore(store, playedOut);
   return useMemo(() => {
     if (!finished) return { system, ...NOT_YET };
     const counters = arenaCounters(view, events.at(-1)?.ts_virtual ?? 0);

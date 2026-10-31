@@ -500,6 +500,20 @@
   transform-origin: left;
 }
 
+/* Under the bars, where the scored cost is more than the spend: one short line a side, at the size anything read is. */
+.metric__notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.metric__note {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
 .score__note {
   margin: var(--space-2) 0 0;
   font-size: var(--fs-body);

@@ -5,6 +5,7 @@ import { arenaCounters } from "../lib/arena";
 import { Stat, Tooltip } from "../components/ui";
 import type { RunStoreApi } from "../store";
 import type { Official } from "./official";
+import { playedOut } from "./playedOut";
 import { scoreRows, type ScoreCell, type ScoreRow, type SideNumbers } from "./rows";
 
 /** One side's numbers at the playhead, from its own run store. */
@@ -12,7 +13,7 @@ function useSideNumbers(store: RunStoreApi, official: Official | null): SideNumb
   const view = useStore(store, (s) => s.view);
   const playhead = useStore(store, (s) => s.playhead);
   const end = useStore(store, (s) => s.events.at(-1)?.ts_virtual ?? 0);
-  const finished = useStore(store, (s) => !s.live && s.events.length > 0 && s.cursor >= s.events.length);
+  const finished = useStore(store, playedOut);
   return useMemo(() => {
     // The playhead goes on while the other run plays; a run that has ended does not grow.
     const nowMs = Math.min(playhead, end);
@@ -61,6 +62,13 @@ function Metric({ row, animate }: MetricProps) {
           <i style={{ transform: `scaleX(${row.rightShare})` }} />
         </span>
       </div>
+      {/* Where the scored number is more than the spend, the two parts of it, read from the run: the run page shows the spend alone. */}
+      {(row.notes.left !== null || row.notes.right !== null) && (
+        <div className="metric__notes">
+          {row.notes.left !== null && <p className="metric__note">Swarm: {row.notes.left}</p>}
+          {row.notes.right !== null && <p className="metric__note">Rival: {row.notes.right}</p>}
+        </div>
+      )}
     </div>
   );
 }
