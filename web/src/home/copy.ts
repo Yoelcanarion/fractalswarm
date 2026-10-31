@@ -109,12 +109,13 @@ export const COPY = {
 
   footer: "Meta Global AI Developer Hackathon",
 
-  // ---- the evidence page (#/evidence): a plain document, nothing on it moves ----
+  // ---- the evidence page (#/evidence): a plain document, only the figure of its head moves ----
 
   evidencePage: {
     title: "The evidence",
     lede: "Everything the home page leaves out, with the settings and the limits. Every number is read from a committed result or a recorded run.",
     back: "Back to the story",
+    figure: "The recorded run's event log going by, each event chained to the one before it, and the replay matching its head hash.",
   },
 
   models: {
@@ -162,7 +163,7 @@ export const COPY = {
     helps: {
       lead: "Locality ties too.",
       // `crashes` is read from the data ("three and five"), so the sentence follows the pre-registered profiles.
-      gate: (crashes: string) => `With a fake model, at our pre-registered gate, this measure tied at ${crashes} crashes.`,
+      gate: (crashes: string) => `With the fake model (the practice model in the app), at our pre-registered gate, this measure tied at ${crashes} crashes.`,
       cost: "One loss: its failure detector declared live coordinators dead on these runs.",
       perRun: "false deaths per run",
       realistic: "Two wins against a realistic durable supervisor.",

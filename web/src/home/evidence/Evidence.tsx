@@ -19,8 +19,11 @@ export function Evidence() {
   return (
     <section id="evidence" className="home-chapter" aria-labelledby="evidence-title">
       <div className="home-wrap">
-        <SectionHead id="evidence" title={COPY.evidence.title} />
-        <Finished />
+        {/* the title and the run it opens on share one row: the title alone leaves half the page empty beside it */}
+        <div className="home-evidence__open">
+          <SectionHead id="evidence" title={COPY.evidence.title} />
+          <Finished />
+        </div>
         <FairFight />
         <HeroChart />
         <Tie />
@@ -35,16 +38,18 @@ export function Evidence() {
 /** How a beat sits on a wide screen. `split`: the words (`text`, under the lead) stand beside what they speak of
  * (`children`). `over`: the lead, the text and an `aside` make one row over the children, which keep the whole width (a chart
  * that is drawn for that width). `wide`: one column, for a chart or a row of figures that wants the whole width.
- * On a narrow screen all of them are one column, in the order lead, text, aside, children. */
+ * On a narrow screen all of them are one column, in the order lead, text, aside, children, foot. */
 type Layout = "split" | "over" | "wide";
 
-/** One thing the evidence shows. Its id is an address: R6 in the hero links to the one named `tie`. */
+/** One thing the evidence shows. Its id is an address: R6 in the hero links to the one named `tie`. `foot` is what follows from it,
+ * in a row of its own under both columns, for words that would leave the short column empty beside them. */
 function Beat({
   id,
   lead,
   text,
   aside,
   layout = "split",
+  foot,
   children,
 }: {
   id: string;
@@ -52,6 +57,7 @@ function Beat({
   text?: ReactNode;
   aside?: ReactNode;
   layout?: Layout;
+  foot?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -66,6 +72,7 @@ function Beat({
       </div>
       {aside && <div className="home-beat__aside">{aside}</div>}
       <div className="home-beat__body">{children}</div>
+      {foot && <div className="home-beat__foot">{foot}</div>}
     </article>
   );
 }
@@ -248,21 +255,25 @@ function Helps() {
           </Reveal>
         </>
       }
+      foot={
+        <>
+          <Reveal delay={90}>
+            <p className="home-beat__verdict">{COPY.evidence.helps.realistic}</p>
+            <Claim id="R7" />
+          </Reveal>
+          {cost && (
+            <Reveal delay={100}>
+              <p className="home-beat__verdict">{COPY.evidence.helps.cost}</p>
+              <div className="home-figures">
+                <Figure value={cost.perRun} format={(n) => figure(n, 2)} label={COPY.evidence.helps.perRun} tone="loss" size="stat" />
+              </div>
+            </Reveal>
+          )}
+        </>
+      }
     >
       <Chart name="PairedBars" path="verdicts" duration={1.6} extra={{ setting: false }} />
       <Setting>{captionFor(story, "headline")}</Setting>
-      <Reveal delay={90}>
-        <p className="home-beat__verdict">{COPY.evidence.helps.realistic}</p>
-        <Claim id="R7" />
-      </Reveal>
-      {cost && (
-        <Reveal delay={100}>
-          <p className="home-beat__verdict">{COPY.evidence.helps.cost}</p>
-          <div className="home-figures">
-            <Figure value={cost.perRun} format={(n) => figure(n, 2)} label={COPY.evidence.helps.perRun} tone="loss" size="stat" />
-          </div>
-        </Reveal>
-      )}
     </Beat>
   );
 }

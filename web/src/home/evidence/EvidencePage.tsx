@@ -9,11 +9,12 @@ import { StillContext, useIsoLayoutEffect } from "../hooks";
 import { currentHash, parseEvidenceAddress } from "../route";
 import { jumpToTarget } from "../scrollTo";
 import { bundledStory, StoryContext, type Story } from "../story";
+import { ChainFigure } from "./ChainFigure";
 import { Evidence } from "./Evidence";
 import { Models } from "./Models";
 
-/** The evidence page as a picture of its story. It is a plain document: nothing on it moves, so its charts are drawn in their
- * final state (the whole page is "still") and it reads the same with or without a preference for less motion. */
+/** The evidence page as a picture of its story. It is a plain document: its charts are drawn in their final state (the whole page
+ * is "still"), and only the figure of its head moves. It reads the same with or without a preference for less motion. */
 export function EvidenceView({ story }: { story: Story | null }) {
   return (
     <StoryContext.Provider value={story}>
@@ -22,12 +23,15 @@ export function EvidenceView({ story }: { story: Story | null }) {
           <TopBar onHome={false} />
           <main className="home-evidence">
             <header className="home-wrap home-evidence__head">
-              <a className="home-link" href="#/">
-                <ArrowLeft size={14} aria-hidden />
-                {COPY.evidencePage.back}
-              </a>
-              <h1 className="home-evidence__title">{COPY.evidencePage.title}</h1>
-              <p className="home-section__line">{COPY.evidencePage.lede}</p>
+              <div className="home-evidence__words">
+                <a className="home-link" href="#/">
+                  <ArrowLeft size={14} aria-hidden />
+                  {COPY.evidencePage.back}
+                </a>
+                <h1 className="home-evidence__title">{COPY.evidencePage.title}</h1>
+                <p className="home-section__line">{COPY.evidencePage.lede}</p>
+              </div>
+              <ChainFigure />
             </header>
             <Models />
             <Evidence />

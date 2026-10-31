@@ -779,9 +779,16 @@ body:has(.home) {
 
 .home-evidence__head {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.home-evidence__words {
+  display: grid;
   gap: var(--space-4);
   justify-items: start;
-  margin-bottom: var(--space-6);
 }
 
 .home-evidence__title {
@@ -790,6 +797,42 @@ body:has(.home) {
   font-size: var(--fs-display-l);
   line-height: 1.04;
   letter-spacing: var(--track-display);
+}
+
+/* tall enough for the strip's compact cards; on a wide screen for its full ones, which show each hash and the one before it */
+.home-evidence__figure {
+  position: relative;
+  height: 170px;
+  min-width: 0;
+}
+
+.home-evidence__open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1100px) {
+  .home-evidence__head {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    column-gap: var(--space-8);
+  }
+
+  .home-evidence__figure {
+    height: 272px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .home-evidence__open {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: var(--space-8);
+    align-items: start;
+  }
+
+  /* the title takes the place of a beat's lead, so it starts at the height the beat's words start */
+  .home-evidence__open .home-section__head {
+    margin-bottom: 0;
+  }
 }
 
 .home-chapter {
@@ -1131,21 +1174,22 @@ body:has(.home) {
   background: var(--accent-bg);
 }
 
-.home-ablation,
-.home-muse {
+.home-ablation {
   max-width: 896px;
+  margin-top: var(--space-7);
 }
 
-/* the question and the answer's parts: one above the other, and on a wide screen side by side */
+/* who does the understanding and what it spent: one above the other, and on a wide screen side by side */
 .home-models-pair {
   display: grid;
-  gap: var(--space-8);
+  gap: var(--space-7);
   align-items: start;
+  margin-top: var(--space-7);
 }
 
 @media (min-width: 1100px) {
   .home-models-pair {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: clamp(32px, 4vw, 72px);
   }
 }
@@ -1182,7 +1226,6 @@ body:has(.home) {
 .home-tokens {
   display: grid;
   gap: var(--space-3);
-  margin-top: var(--space-7);
 }
 
 .home-tokens__bar {
@@ -1252,12 +1295,27 @@ body:has(.home) {
   width: 100%;
 }
 
+.home-beat__foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5) var(--space-8);
+  width: 100%;
+  min-width: 0;
+}
+
 @media (min-width: 1280px) {
   .home-beat--split {
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
     column-gap: var(--space-8);
     align-items: start;
     justify-items: stretch;
+  }
+
+  .home-beat__foot {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--divider);
   }
 
   .home-beat--over {

@@ -80,22 +80,19 @@ export function Models() {
           )}
         </Reveal>
 
-        <div className="home-models-pair">
+        {/* the parser's row stands only with a result: a question with no answer leaves a hole under it, and says nothing */}
+        {result && typeof result.total === "number" && (
           <Reveal className="home-ablation">
             <h3 className="home-step__lead">{COPY.models.ablation.lead}</h3>
             <p className="home-step__more">{COPY.models.ablation.more}</p>
-            {result && typeof result.total === "number" ? (
-              <div className="home-figures">
-                <Figure value={result.parser} format={of} label={COPY.models.ablation.parser} tone="rival" size="stat" />
-                <Figure value={result.muse} format={of} label={COPY.models.ablation.muse} tone="swarm" size="stat" />
-              </div>
-            ) : (
-              <p className="home-pending">
-                <PendingTag />
-              </p>
-            )}
+            <div className="home-figures">
+              <Figure value={result.parser} format={of} label={COPY.models.ablation.parser} tone="rival" size="stat" />
+              <Figure value={result.muse} format={of} label={COPY.models.ablation.muse} tone="swarm" size="stat" />
+            </div>
           </Reveal>
+        )}
 
+        <div className="home-models-pair">
           <Reveal className="home-muse">
             <h3 className="home-step__lead">{COPY.models.muse.lead}</h3>
             <ul className="home-roles">
@@ -107,6 +104,9 @@ export function Models() {
                 </li>
               ))}
             </ul>
+          </Reveal>
+
+          <Reveal>
             <div ref={bars} className="home-tokens">
               <p className="home-label">{COPY.models.tokens}</p>
               <div className="home-tokens__bar">
