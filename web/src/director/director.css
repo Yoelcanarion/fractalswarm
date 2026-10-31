@@ -114,12 +114,14 @@ html.dir-on body {
   text-align: center;
 }
 
+/* The title is the tagline in two lines, broken where the scene breaks it (after "brains."): at this size it would wrap with "finishes." alone on its line. */
 .dir__card-title {
   margin: 0;
   font-size: 96px;
   line-height: var(--lh-tight);
   font-weight: 700;
   letter-spacing: 0.01em;
+  white-space: pre-line;
 }
 
 .dir__card-line {

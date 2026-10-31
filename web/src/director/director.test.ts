@@ -450,6 +450,33 @@ describe("the program of a scene", () => {
     expect(program.finished()).toBe(true);
   });
 
+  it("runs the seeks a scene opens with ahead of its first frame, once, and the first frame goes on after them", () => {
+    const { host, ran } = fakeHost();
+    const program = createProgram(stepsOf({ do: "seek", to: "crash:1-2s" }, { do: "seek", to: "end" }, { do: "play" }, { do: "wait", ms: 500 }, { do: "seek", to: "crash:1" }), host);
+    program.opening();
+    expect(ran).toEqual(["seek", "seek"]);
+    expect(program.position()).toBe(2);
+    program.frame();
+    expect(ran).toEqual(["seek", "seek", "play"]);
+    program.opening();
+    expect(ran).toEqual(["seek", "seek", "play"]);
+  });
+
+  it("opens only on the seeks at the very start: a scene that does not start with one has nothing to run ahead, and a later seek waits for its turn", () => {
+    const { host, ran } = fakeHost();
+    const program = createProgram(stepsOf({ do: "play" }, { do: "seek", to: "crash:1" }), host);
+    program.opening();
+    expect(ran).toEqual([]);
+    expect(program.position()).toBe(0);
+    program.frame();
+    expect(ran).toEqual(["play", "seek"]);
+
+    const only = fakeHost();
+    const seeks = createProgram(stepsOf({ do: "seek", to: "end" }), only.host);
+    seeks.opening();
+    expect(seeks.finished()).toBe(true);
+  });
+
   it("runs every step that is due in the same frame, and a wait of nothing does not hold", () => {
     const { host, ran } = fakeHost();
     const program = createProgram(stepsOf({ do: "play" }, { do: "wait", ms: 0 }, { do: "pause" }, { do: "speed", x: 2 }), host);
@@ -736,6 +763,30 @@ describe("a take", () => {
     expect(take.state.getState()).toMatchObject({ frame: 0, ms: 0, done: false, captions: [], rings: [], camera: HOME });
     expect(replay.playhead()).toBe(0);
     expect(surface.applied).toEqual(HOME);
+  });
+
+  it("makes the seeks it opens with when it starts over, ahead of the first frame, and does not make them again at it", () => {
+    const { take, replay } = takeOf({ steps: [{ do: "seek", to: "crash:1-2s" }, { do: "speed", x: 0.5 }, { do: "play" }, { do: "wait", ms: 500 }, { do: "pause" }] });
+    const before = replay.log.length;
+    take.restart();
+    expect(replay.playhead()).toBe(8000);
+    expect(replay.playing()).toBe(false);
+    expect(take.state.getState()).toMatchObject({ frame: 0, position: 1 });
+    take.tick();
+    expect(replay.log.slice(before)).toEqual(["seek 0", "seek 8000", "play"]);
+    expect(replay.speed()).toBe(0.5);
+    expect(replay.playhead()).toBeCloseTo(8000 + 0.5 * replay.perStep);
+    // starting over again goes back to the same first frame
+    take.restart();
+    expect(replay.playhead()).toBe(8000);
+    expect(replay.playing()).toBe(false);
+  });
+
+  it("leaves the replay at its start when the scene does not open on a seek", () => {
+    const { take, replay } = takeOf({ steps: [{ do: "play" }, { do: "wait", ms: 500 }, { do: "seek", to: "crash:1" }] });
+    take.restart();
+    expect(replay.playhead()).toBe(0);
+    expect(take.state.getState().position).toBe(0);
   });
 
   it("runs a scene with no replay: only the camera, the captions and the rings", () => {

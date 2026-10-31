@@ -18,6 +18,9 @@ export interface Host {
 }
 
 export interface Program {
+  /** Run the `seek` steps the scene opens with now, once, ahead of its first frame (the page settles on where they lead before the take starts). The
+   * first frame goes on from the step after them. Only the seeks at the very start: a seek later in the scene is made when its turn comes. */
+  opening(): void;
   /** Run every step that is due at this frame, up to the next `wait` that holds. Call once per frame, after the host's clock moved. */
   frame(): void;
   /** Every step has run and no wait is holding. */
@@ -31,6 +34,7 @@ type Hold = { kind: "time"; until: number } | { kind: "replay"; target: number; 
 export function createProgram(steps: readonly Step[], host: Host): Program {
   let index = 0;
   let hold: Hold | null = null;
+  let opened = false;
 
   /** Whether the wait that began at this step is still holding. */
   const holding = (h: Hold): boolean => {
@@ -60,6 +64,15 @@ export function createProgram(steps: readonly Step[], host: Host): Program {
   };
 
   return {
+    opening() {
+      if (opened) return;
+      opened = true;
+      for (; index < steps.length; index += 1) {
+        const step = steps[index];
+        if (step.do !== "seek") return;
+        host.run(step);
+      }
+    },
     frame() {
       while (true) {
         if (hold !== null) {

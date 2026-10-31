@@ -126,6 +126,12 @@ describe("the title card", () => {
     expect(plainText(html)).toBe("FractalSwarm Built on Muse Spark github.com/x/y");
     expect(occurrences(html, "<h1")).toBe(1);
   });
+
+  it("keeps the line break of the title, and sets it as the two lines it is (at 96 px it would wrap by width and leave one word alone on its line)", () => {
+    const html = renderToStaticMarkup(createElement(TitleStageView, { card: { title: "Kill half the brains.\nIt still finishes.", lines: ["FractalSwarm"] } }));
+    expect(html).toContain('<h1 class="dir__card-title">Kill half the brains.\nIt still finishes.</h1>');
+    expect(readFileSync(new URL("./director.css", import.meta.url), "utf-8")).toMatch(/\.dir__card-title \{[^}]*white-space: pre-line;/);
+  });
 });
 
 describe("what is drawn over the stage", () => {

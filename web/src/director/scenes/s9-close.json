@@ -4,8 +4,8 @@
   "stage": "title",
   "duration_ms": 10000,
   "card": {
-    "title": "FractalSwarm",
-    "lines": ["Built on Muse Spark, Muse Wonder and Llama PromptGuard 2", "github.com/Yoelcanarion/fractalswarm"]
+    "title": "Kill half the brains.\nIt still finishes.",
+    "lines": ["FractalSwarm", "Built on Muse Spark, Muse Wonder and Llama PromptGuard 2", "github.com/Yoelcanarion/fractalswarm"]
   },
   "steps": []
 }

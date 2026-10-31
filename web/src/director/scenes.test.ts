@@ -47,6 +47,14 @@ describe("the scenes of the video", () => {
     }
   });
 
+  it("close on the tagline in two lines, broken after \"brains.\", then the name, what it is built on, and the address, a line each", () => {
+    const close = scenes.find((scene) => scene.id === "s9-close")!;
+    expect(close.card).toEqual({
+      title: "Kill half the brains.\nIt still finishes.",
+      lines: ["FractalSwarm", "Built on Muse Spark, Muse Wonder and Llama PromptGuard 2", "github.com/Yoelcanarion/fractalswarm"],
+    });
+  });
+
   it("show the replay note on a replay, and nowhere else", () => {
     for (const scene of scenes) expect(scene.replayNote, scene.id).toBe(scene.stage === "arena" || scene.stage === "run");
   });

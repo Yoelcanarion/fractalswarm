@@ -91,7 +91,10 @@ export interface Take {
   /** Place the rings again on the page as it is now. A frame is drawn before React has rendered what the replay's step
    * changed, so a ring placed by `tick` can be one render behind a node that moved; the driver calls this once that has run. */
   refresh(): void;
-  /** Back to the first frame: the replay at its start and paused, the camera home, the panels as the scene opens them. */
+  /** Back to the first frame: the replay at its start and paused, or where the seeks the scene opens with put it, the camera home, the panels as the
+   * scene opens them. Those seeks are made here, not at the first frame, so that a page that is held for a while (the driver's pre-roll) has settled on
+   * the picture they lead to: after a seek the cards change colour and the tree lays itself out again for a quarter of a second, and a clip that opens
+   * on it would show that as a blink instead of a cut. */
   restart(): void;
 }
 
@@ -263,6 +266,10 @@ export function createTake(scene: Scene, replay: ReplayClock | null, surface: Su
       publish(frame >= frames);
     },
     refresh: () => publish(frame >= frames),
-    restart: reset,
+    restart() {
+      reset();
+      program.opening();
+      publish(false);
+    },
   };
 }
