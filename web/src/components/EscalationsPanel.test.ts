@@ -1,5 +1,5 @@
 // What the Escalations panel tells a person about an escalation they may answer, drawn on the server
-// (react-dom/server) from the payloads W3 logs (.plans/notes/arena-meta.md, step 4).
+// (react-dom/server) from the payloads the arbitration logs.
 
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

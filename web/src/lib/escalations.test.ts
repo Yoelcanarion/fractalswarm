@@ -1,4 +1,4 @@
-// Human escalations as W3's arbitration logs them (.plans/notes/arena-meta.md, step 4): escalation.opened is the
+// Human escalations as the arbitration logs them: escalation.opened is the
 // ruling's open window, escalation.answered the owner's verdict on an answer, and only an accepted one decides.
 
 import { describe, expect, it } from "vitest";

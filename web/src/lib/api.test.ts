@@ -125,7 +125,7 @@ describe("the escalations as the server reads them from the log", () => {
 });
 
 // The request and the answers are those of api/jobs.py (`TaskRequest`, extra="forbid") and of the API reference in
-// .plans/notes/arena-intake.md: a TaskSpec goes under `spec`, and a 202 names the run it started.
+// A TaskSpec goes under `spec`, and a 202 names the run it started.
 describe("a run started from the New task form", () => {
   const accepted = {
     job_id: "job-20261029-001228-cc5e",

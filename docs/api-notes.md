@@ -1,6 +1,6 @@
 # API notes: Meta Model API and LlamaFirewall
 
-Written by the Day 2 spike. Trust this file over memory for Meta Model API details (CLAUDE.md).
+Written by the Day 2 spike. Trust this file over memory for Meta Model API details.
 
 ## Status (2026-10-27)
 

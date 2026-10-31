@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from fractalswarm.api.catalog import Catalog
+from fractalswarm.api.lens import read_caused_by, read_typed
 
 
 def test_a_file_with_no_table_is_an_empty_log(tmp_path: Path) -> None:
@@ -17,3 +18,5 @@ def test_a_file_with_no_table_is_an_empty_log(tmp_path: Path) -> None:
     assert not catalog.halted(entry)
     assert catalog.listing(entry)["status"] == "empty"
     assert catalog.summary(entry)["events"] == 0
+    assert read_typed(catalog, entry, ("run.started",)) == []
+    assert read_caused_by(catalog, entry, 1) == []
