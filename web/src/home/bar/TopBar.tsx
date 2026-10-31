@@ -5,7 +5,7 @@ import { targetHash } from "../route";
 import { scrollToTarget, scrollToTop } from "../scrollTo";
 import { ThemeSwitch } from "./ThemeSwitch";
 
-/** The small bar at the top: the brand, the way into the simulation (always within reach), and the theme. On the home page
+/** The small bar at the top: the brand, the way into the app (always within reach), and the theme. On the home page
  * the brand and the way in glide to a place on the page; on any other page they are plain links back to the home page. */
 export function TopBar({ onHome = true }: { onHome?: boolean }) {
   return (

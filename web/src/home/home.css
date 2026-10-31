@@ -27,6 +27,7 @@ body:has(.home) {
 
 .home {
   --home-bar: 56px;
+  --home-footer: 144px;
   --home-pad: clamp(20px, 5.2vw, 104px);
   --home-pad-end: var(--home-pad);
   --home-max: 1480px;
@@ -333,10 +334,10 @@ body:has(.home) {
   color: var(--text-muted);
 }
 
+/* the size of the title is chapters/hero.css's: it is set to the width of the column this grid gives it */
 .home-hero__title {
   font-family: var(--font-display);
   font-weight: 650;
-  font-size: var(--fs-display-xl);
   line-height: 0.98;
   letter-spacing: var(--track-display);
   text-wrap: balance;
@@ -380,10 +381,6 @@ body:has(.home) {
     gap: var(--space-6);
     min-height: 0;
     padding-top: calc(var(--home-bar) + var(--space-6));
-  }
-
-  .home-hero__title {
-    font-size: clamp(44px, 13vw, 76px);
   }
 
   .home-hero__object {
@@ -1522,8 +1519,19 @@ a.home-door:active {
   }
 }
 
+/* The last screen is the way in and nothing else: the section and the footer fill the window together, so that at the end of the scroll
+   no "See more" of the section above peeks out under the bar. (A phone's section is taller than the window and needs none of this.) */
+.home-enter {
+  display: grid;
+  align-content: center;
+  min-height: calc(100svh - var(--home-footer));
+}
+
 .home-footer {
-  padding: var(--space-8) var(--home-pad);
+  display: grid;
+  align-content: center;
+  min-height: var(--home-footer);
+  padding-inline: var(--home-pad);
   text-align: center;
   font-family: var(--font-mono);
   font-size: var(--fs-body);

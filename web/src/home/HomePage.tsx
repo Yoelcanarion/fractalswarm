@@ -48,7 +48,7 @@ export function HomeView({ story, still }: { story: Story | null; still: boolean
   );
 }
 
-/** The home page: five short sections, ending in a menu into the simulation. It makes no API call, so it also works with
+/** The home page: five short sections, ending in a menu into the app. It makes no API call, so it also works with
  * no server. `story` is the generated data: the bundled file, unless a test passes its own. */
 export function HomePage({ story = bundledStory }: { story?: Story | null }) {
   const reduced = usePrefersReducedMotion();

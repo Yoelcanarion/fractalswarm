@@ -1,4 +1,5 @@
 import { notReproduced, notReproducedWords } from "../lib/catalogue";
+import { BuildVerified } from "../static/BuildVerified";
 import { useRunStore } from "../store";
 import { Hint } from "./ui";
 
@@ -26,6 +27,8 @@ export function VerifyBadge() {
     case "done": {
       const { report } = verify;
       if (report.ok && report.bundle_head_ok) {
+        // The static showcase has no server to replay on: its report was made when the page was built.
+        if (import.meta.env.MODE === "static") return <BuildVerified report={report} />;
         return (
           <Hint label={`${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head}`}>
             <span className="badge badge--good badge--big">

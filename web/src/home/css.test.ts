@@ -23,6 +23,13 @@ describe("the stylesheets of the home page", () => {
     expect(files.some((path) => path.endsWith("/home.css"))).toBe(true);
   });
 
+  it("make the last screen the way in and nothing else: the section and the footer fill the window together, so that no See more of the section above peeks under the bar at the end of the scroll", () => {
+    const home = read(`${HOME}/home.css`);
+    const rule = (selector: string): string => new RegExp(`(?:^|\\})\\s*${selector.replace(/\./g, "\\.")}\\s*\\{([^}]*)\\}`).exec(home)?.[1] ?? "";
+    expect(rule(".home-enter")).toMatch(/min-height:\s*calc\(100svh - var\(--home-footer\)\)/);
+    expect(rule(".home-footer")).toMatch(/min-height:\s*var\(--home-footer\)/);
+  });
+
   for (const path of files) {
     const name = path.slice(HOME.length + 1);
 
