@@ -85,7 +85,7 @@ describe("the page's name and the tab's title", () => {
     [{ page: "runs" }, null, "Runs", "Runs · FractalSwarm"],
     [{ page: "charts" }, null, "Charts", "Charts · FractalSwarm"],
     [{ page: "helps" }, null, "Trade-offs", "Trade-offs · FractalSwarm"],
-    [{ page: "ablation" }, null, "Ablation", "Ablation · FractalSwarm"],
+    [{ page: "ablation" }, null, "Model vs parser", "Model vs parser · FractalSwarm"],
     [{ page: "run", runId: "demo-backup", view: "plan" }, "other", "Plan · demo-backup", "Plan · demo-backup · FractalSwarm"],
   ];
 

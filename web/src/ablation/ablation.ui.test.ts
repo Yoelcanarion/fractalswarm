@@ -232,7 +232,7 @@ describe("starting and picking an ablation", () => {
     const many = Array.from({ length: 6 }, (_, i) => ({ id: `ablation-${i}`, status: "completed" }) as RunListing);
     const long = launcher(many);
     expect(long).toContain('<details id="all" class="disclosure disclosure--inline">');
-    expect(long).toContain("All 6 ablations on record");
+    expect(long).toContain("All 6 comparisons on record");
     expect(long.indexOf("ablation-3")).toBeLessThan(long.indexOf('<details id="all"'));
     expect(long.indexOf("ablation-4")).toBeGreaterThan(long.indexOf('<details id="all"'));
     expect(launcher(ablationRuns(fixture("runs.json") as RunListing[]))).not.toContain('<details id="all"');
@@ -243,26 +243,26 @@ describe("starting and picking an ablation", () => {
     expect(markup).toContain('<a href="#/ablation/ablation-34a7d710">ablation-34a7d710</a>');
     expect(markup).toContain('<a href="#/ablation/ablation-sample">ablation-sample</a>');
     expect(markup).not.toContain("demo-toy");
-    expect(plainText(launcher([]))).toContain("No ablation has been recorded here yet.");
-    expect(plainText(launcher(null))).toContain("Loading the ablations on record…");
+    expect(plainText(launcher([]))).toContain("No comparison has been recorded here yet.");
+    expect(plainText(launcher(null))).toContain("Loading the comparisons on record…");
   });
 
   it("says when the runs could not be listed, instead of saying none were recorded, and offers to ask again", () => {
     const markup = html(Launcher, { api: never, runs: null, listError: "502 Bad Gateway", onRetryList: nothing });
     const text = plainText(markup);
-    expect(text).toContain("Could not list the ablations on record (502 Bad Gateway).");
+    expect(text).toContain("Could not list the comparisons on record (502 Bad Gateway).");
     expect(text).toContain("Try again");
-    expect(text).not.toContain("No ablation has been recorded");
+    expect(text).not.toContain("No comparison has been recorded");
     expect(markup).toContain('role="alert"');
     expect(plainText(html(Launcher, { api: never, runs: null, listError: "502 Bad Gateway" }))).not.toContain("Try again");
   });
 
-  it("opens with the page's head: what an ablation is, with Muse defined where it is named", () => {
+  it("opens with the page's head: what the comparison is for, with Muse defined where it is named", () => {
     const markup = launcher([]);
     expect(markup.match(/<h1/g)).toHaveLength(1);
-    expect(markup).toContain('<h1 class="pagehead__title">Ablation</h1>');
-    expect(plainText(markup)).toContain("The same messy notes, read by a regex parser and by Muse");
-    expect(plainText(markup)).toContain(", each reading scored against the one a person approved.");
+    expect(markup).toContain('<h1 class="pagehead__title">Model vs parser</h1>');
+    expect(plainText(markup)).toContain("Is the model really doing the work? The same messy notes go to a hand-written parser and to Muse");
+    expect(plainText(markup)).toContain("each reading is scored against the one a person approved.");
     expect(markup).toContain('<span class="term">Muse</span>');
     expect(markup).toContain("Meta&#x27;s model family");
   });
@@ -272,16 +272,16 @@ describe("the flow", () => {
   const flow = (runId: string | null): string => html(AblationFlow, { api: never, runId, loadRuns: async () => [] });
 
   it("opens the launcher with no run, and waits on the server with one", () => {
-    expect(plainText(flow(null))).toContain("Run the ablation");
+    expect(plainText(flow(null))).toContain("Run the comparison");
     const waiting = flow("ablation-sample");
-    expect(plainText(waiting)).toContain("Loading the ablation…");
+    expect(plainText(waiting)).toContain("Loading the comparison…");
     expect(waiting).toContain('href="#/ablation"');
     expect(plainText(waiting)).toContain("ablation-sample");
   });
 
   it("keeps the head while it waits, and holds the result's place with a skeleton so the page does not jump", () => {
     const waiting = flow("ablation-sample");
-    expect(waiting).toContain('<h1 class="pagehead__title">Ablation</h1>');
+    expect(waiting).toContain('<h1 class="pagehead__title">Model vs parser</h1>');
     expect(waiting).toContain("skeleton-group--stack");
     expect(waiting).toContain('role="status"');
     expect(waiting).toContain("All ablations");
@@ -289,7 +289,7 @@ describe("the flow", () => {
 
   it("says when an ablation could not be loaded, and says how to go on", () => {
     const markup = html(AblationFailed, { problem: { message: "no such run", retrying: false }, onRetry: nothing });
-    expect(plainText(markup)).toContain("This ablation could not be loaded");
+    expect(plainText(markup)).toContain("This comparison could not be loaded");
     expect(plainText(markup)).toContain("no such run");
     expect(plainText(markup)).not.toContain("Asking again");
     expect(plainText(markup)).toContain("Try again");

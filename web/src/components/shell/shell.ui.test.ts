@@ -125,7 +125,7 @@ describe("the evidence's pages", () => {
     const markup = bar({ page: "helps" }, { runs: [{ id: "demo" }, { id: "ablation-1" }] });
     expect(markup).toContain('class="subnav"');
     const pages = nav(markup, "Evidence");
-    expect(labels(pages)).toEqual(["Charts", "Trade-offs", "Ablation"]);
+    expect(labels(pages)).toEqual(["Charts", "Trade-offs", "Model vs parser"]);
     expect(pages).toContain('<a class="tab tab--on" href="#/helps" aria-current="page">Trade-offs</a>');
     expect(pages).toContain('href="#/ablation"');
     expect(occurrences(pages, "aria-current")).toBe(1);
@@ -136,12 +136,12 @@ describe("the evidence's pages", () => {
     expect(labels(nav(bar({ page: "helps" }), "Evidence"))).toEqual(["Charts", "Trade-offs"]);
     expect(nav(bar({ page: "charts" }), "Evidence")).not.toContain("#/ablation");
     // an ablation run is one the listing names by its id or its scenario
-    expect(labels(nav(bar({ page: "helps" }, { runs: [{ id: "demo" }, { id: "ablation-1" }] }), "Evidence"))).toEqual(["Charts", "Trade-offs", "Ablation"]);
-    expect(labels(nav(bar({ page: "helps" }, { runs: [{ id: "x", scenario: "t2:ablation-notes" }] }), "Evidence"))).toContain("Ablation");
+    expect(labels(nav(bar({ page: "helps" }, { runs: [{ id: "demo" }, { id: "ablation-1" }] }), "Evidence"))).toEqual(["Charts", "Trade-offs", "Model vs parser"]);
+    expect(labels(nav(bar({ page: "helps" }, { runs: [{ id: "x", scenario: "t2:ablation-notes" }] }), "Evidence"))).toContain("Model vs parser");
     // the page is still there by its address, and its tab is the open one
     const open = nav(bar({ page: "ablation" }), "Evidence");
-    expect(labels(open)).toEqual(["Charts", "Trade-offs", "Ablation"]);
-    expect(open).toContain('<a class="tab tab--on" href="#/ablation" aria-current="page">Ablation</a>');
+    expect(labels(open)).toEqual(["Charts", "Trade-offs", "Model vs parser"]);
+    expect(open).toContain('<a class="tab tab--on" href="#/ablation" aria-current="page">Model vs parser</a>');
   });
 
   it("are not on a run's page", () => {

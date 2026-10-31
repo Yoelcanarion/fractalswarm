@@ -259,7 +259,7 @@ describe("words for a call", () => {
     expect(describeCall(find((c) => c.ref.kind === "judge")).title).toBe("Judge");
     expect(describeCall(find((c) => c.ref.kind === "plan" && c.ref.goal_id !== "root")).where).toMatch(/^track-/);
     expect(describeCall({ ...demoCalls[0], ref: { kind: null }, purpose: "arbitration" }).title).toBe("Arbitration");
-    expect(describeCall({ ...demoCalls[0], ref: { kind: "ablate", note_id: "N3" } })).toEqual({ title: "Ablation", where: "note N3" });
+    expect(describeCall({ ...demoCalls[0], ref: { kind: "ablate", note_id: "N3" } })).toEqual({ title: "Model vs parser", where: "note N3" });
   });
 
   it("formats figures to read on a screen", () => {

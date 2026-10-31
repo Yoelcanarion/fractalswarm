@@ -630,7 +630,7 @@ const PURPOSE_LABELS: Record<string, string> = {
   safety: "Safety",
   coordination: "Coordination",
   recovery: "Recovery",
-  ablation: "Ablation",
+  ablation: "Model vs parser",
   other: "Call",
 };
 
@@ -653,7 +653,7 @@ export function describeCall(call: CallRow): { title: string; where: string } {
       return { title: capitalize(ref.contract_kind ?? "agent"), where: `${[goal, ref.contract_id].filter(Boolean).join("/") || call.actor}${step}${retry}` };
     }
     case "ablate":
-      return { title: "Ablation", where: ref.note_id ? `note ${ref.note_id}` : call.actor };
+      return { title: "Model vs parser", where: ref.note_id ? `note ${ref.note_id}` : call.actor };
     default:
       return { title: purposeLabel(call.purpose), where: call.tag ?? call.actor };
   }

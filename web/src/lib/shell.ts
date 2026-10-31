@@ -30,7 +30,7 @@ export type EvidenceView = (typeof EVIDENCE_VIEWS)[number];
 export const EVIDENCE_TITLES: Record<EvidenceView, string> = {
   charts: "Charts",
   helps: "Trade-offs",
-  ablation: "Ablation",
+  ablation: "Model vs parser",
 };
 
 export const EVIDENCE_HASHES: Record<EvidenceView, string> = {

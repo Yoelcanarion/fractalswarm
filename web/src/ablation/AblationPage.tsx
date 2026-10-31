@@ -28,10 +28,10 @@ const messageOf = (error: unknown): string => (error instanceof Error ? error.me
 function AblationHead({ actions }: { actions?: ReactNode }) {
   return (
     <PageHeader
-      title="Ablation"
+      title="Model vs parser"
       lead={
         <>
-          The same messy notes, read by a regex parser and by <Term id="muse">Muse</Term>, each reading scored against the one a person approved.
+          Is the model really doing the work? The same messy notes go to a hand-written parser and to <Term id="muse">Muse</Term>, and each reading is scored against the one a person approved.
         </>
       }
       actions={actions}
@@ -68,8 +68,8 @@ export function Launcher({ api, runs, listError = null, onRetryList }: LauncherP
   return (
     <div className="abl abl--launch">
       <AblationHead />
-      <section className="panel abl__start" aria-label="Start an ablation">
-        <h3 className="panel__title">Run the ablation</h3>
+      <section className="panel abl__start" aria-label="Start a comparison">
+        <h3 className="panel__title">Run the comparison</h3>
         <p className="abl__hint">
           This starts the practice backend, which costs nothing; the result says what that does and does not show.
         </p>
@@ -108,11 +108,11 @@ export function Launcher({ api, runs, listError = null, onRetryList }: LauncherP
           </p>
         )}
       </section>
-      <section className="panel abl__runs" aria-label="Ablations on record">
+      <section className="panel abl__runs" aria-label="Comparisons on record">
         <h3 className="panel__title">On record</h3>
         {listError !== null ? (
           <div className="abl__error" role="alert">
-            <p>Could not list the ablations on record ({listError}).</p>
+            <p>Could not list the comparisons on record ({listError}).</p>
             {onRetryList && (
               <button type="button" className="btn" onClick={onRetryList}>
                 Try again
@@ -120,11 +120,11 @@ export function Launcher({ api, runs, listError = null, onRetryList }: LauncherP
             )}
           </div>
         ) : runs === null ? (
-          <SkeletonGroup label="Loading the ablations on record">
+          <SkeletonGroup label="Loading the comparisons on record">
             <SkeletonText lines={3} />
           </SkeletonGroup>
         ) : runs.length === 0 ? (
-          <p className="abl__hint">No ablation has been recorded here yet.</p>
+          <p className="abl__hint">No comparison has been recorded here yet.</p>
         ) : (
           <>
             <ul className="abl__list">
@@ -135,7 +135,7 @@ export function Launcher({ api, runs, listError = null, onRetryList }: LauncherP
               ))}
             </ul>
             {runs.length > RECENT && (
-              <Details inline id="all" summary={`All ${runs.length} ablations on record`}>
+              <Details inline id="all" summary={`All ${runs.length} comparisons on record`}>
                 <ul className="abl__list">
                   {runs.slice(RECENT).map((run) => (
                     <li key={run.id}>
@@ -169,7 +169,7 @@ export function AblationFailed({ problem, onRetry }: { problem: Problem; onRetry
   return (
     <EmptyState
       tone="bad"
-      title="This ablation could not be loaded"
+      title="This comparison could not be loaded"
       actions={
         <>
           <button type="button" className="btn btn--on" onClick={onRetry}>
@@ -286,7 +286,7 @@ export function AblationFlow({ api, runId, loadRuns }: AblationFlowProps) {
         {head}
         {problem === null ? (
           // the shape of the result, so the page does not jump when it arrives
-          <SkeletonGroup label="Loading the ablation" className="skeleton-group--stack">
+          <SkeletonGroup label="Loading the comparison" className="skeleton-group--stack">
             <Skeleton width={420} height={44} />
             <Skeleton height={72} />
             <Skeleton height={160} />
