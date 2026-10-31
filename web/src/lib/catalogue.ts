@@ -138,7 +138,7 @@ export function featuredRows(rows: readonly CatalogueRow[], limit = FEATURED_RUN
 /** The runs of this server, newest first: what came of a person's own text or task, which the runs to start with would not show. A reading of a
  * text is not one of them: it places no talk. */
 export function yourRows(rows: readonly CatalogueRow[], limit = FEATURED_RUNS): CatalogueRow[] {
-  return rows.filter((row) => row.listing.source !== "demo" && row.workflow.id !== "intake" && row.state !== "live" && row.state !== "empty").slice(0, limit);
+  return rows.filter((row) => row.listing.source !== "demo" && row.workflow.id !== "intake" && row.state !== "empty").slice(0, limit);
 }
 
 export const rowOf = (listing: RunListing, facts: RunFacts | null = null, index = 0): CatalogueRow => ({

@@ -343,7 +343,8 @@ describe("the picker", () => {
 
   it("shows the whole name of the pair that is open beside the select, which a phone cuts: the marks included", () => {
     const html = picker({ left: "demo-1-swarm", right: "demo-1-durable-max", pairs: [pair({ private: true, billed: true, createdAt: "2026-10-31T13:25:58+00:00" })] });
-    expect(html).toContain('<span class="picker__shown" aria-hidden="true">Your pair · Ideal durable supervisor · half the brains · 13:25 UTC · billed</span>');
+    const at = new Date("2026-10-31T13:25:58+00:00").toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    expect(html).toContain(`<span class="picker__shown" aria-hidden="true">Your pair · Ideal durable supervisor · half the brains · ${at} · billed</span>`);
     expect(picker()).toContain('<span class="picker__shown" aria-hidden="true">Choose a pair…</span>');
   });
 });

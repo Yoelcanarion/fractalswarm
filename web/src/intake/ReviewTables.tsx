@@ -124,7 +124,7 @@ function TalksTable({ original, working, facts, selection, onSelect, onChange, l
           Add a talk
         </button>
       </header>
-      <table className="rtable">
+      <table className="rtable rtable--cards">
         <thead>
           <tr>
             <th scope="col">Id</th>
@@ -180,7 +180,7 @@ function TalksTable({ original, working, facts, selection, onSelect, onChange, l
                       ))}
                     </select>
                   </td>
-                  <td>
+                  <td data-label="Attendance">
                     <input
                       aria-label={`${talk.id} attendance`}
                       className="rtable__number"
@@ -261,7 +261,7 @@ function SpeakersTable({ original, working, facts, selection, onSelect, onChange
           Add a speaker
         </button>
       </header>
-      <table className="rtable">
+      <table className="rtable rtable--cards">
         <thead>
           <tr>
             <th scope="col">Id</th>
@@ -291,11 +291,11 @@ function SpeakersTable({ original, working, facts, selection, onSelect, onChange
                     <input aria-label={`${speaker.id} name`} value={speaker.name} disabled={locked} onChange={(event) => change(speaker.id, { name: event.target.value })} />
                     {was && <Was shown={`“${was.name}”`} fields={prov.fields} field="name" />}
                   </td>
-                  <td className="rtable__avail">
+                  <td className="rtable__avail" data-label="Availability">
                     {describeCells(working, speaker.available)}
                     {was && <Was shown={describeCells(original, was.available)} fields={prov.fields} field="available" />}
                   </td>
-                  <td>
+                  <td data-label="Preference">
                     <select
                       aria-label={`${speaker.id} preference`}
                       value={speaker.preference ?? ""}

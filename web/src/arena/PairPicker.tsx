@@ -22,8 +22,8 @@ const go = (left: string, right: string): void => {
 export function pairName(pair: PairListing): string {
   const billed = pair.billed ? " · billed" : "";
   if (!pair.private) return `${pair.label}${billed}`;
-  const at = pair.createdAt?.slice(11, 16);
-  return `${["Your pair", rivalLabel(pair.rival), pair.chaos.replace(/-/g, " "), at && `${at} UTC`].filter(Boolean).join(" · ")}${billed}`;
+  const at = pair.createdAt && new Date(pair.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `${["Your pair", rivalLabel(pair.rival), pair.chaos.replace(/-/g, " "), at].filter(Boolean).join(" · ")}${billed}`;
 }
 
 /** Chooses the two runs the arena shows: a pair on record, or any swarm run and any rival run. */

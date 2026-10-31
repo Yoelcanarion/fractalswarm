@@ -292,7 +292,7 @@ describe("the runs a short list opens with", () => {
     expect(featuredRows([rowOf(listing("a", SWARM, "running"))])).toEqual([]);
   });
 
-  it("leave a person's own to their own list: newest first, without the bundled runs, the readings of a text, or what is still running", () => {
+  it("leave a person's own to their own list: newest first, what is still running among them, without the bundled runs or the readings of a text", () => {
     const yours = yourRows([
       rowOf({ ...listing("pair-2", SWARM, "completed"), source: "private" }),
       rowOf({ ...listing("reading", "fractalswarm.intake.actor:INTAKE", "completed"), source: "private" }),
@@ -300,6 +300,6 @@ describe("the runs a short list opens with", () => {
       rowOf(listing("still-going", SWARM, "running")),
       rowOf({ ...listing("demo-final", SWARM, "completed"), source: "demo" }),
     ]);
-    expect(yours.map((row) => row.listing.id)).toEqual(["pair-2", "from-the-form"]);
+    expect(yours.map((row) => row.listing.id)).toEqual(["pair-2", "from-the-form", "still-going"]);
   });
 });

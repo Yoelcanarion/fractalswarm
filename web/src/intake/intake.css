@@ -631,7 +631,7 @@
 
 .rtable__stack select {
   display: block;
-  min-width: 9rem;
+  min-width: 10rem;
 }
 
 .rtable__number {
@@ -954,6 +954,55 @@
 
   .review__source {
     position: static;
+  }
+}
+
+/* On a phone a row is a card: beside five other columns a title gets a dozen letters a line, and it is the cell read word by word. */
+@media (max-width: 720px) {
+  .rtable--cards,
+  .rtable--cards tbody,
+  .rtable--cards .rdetail,
+  .rtable--cards .rdetail td {
+    display: block;
+  }
+
+  .rtable--cards thead,
+  .rtable--cards .rdetail td:empty {
+    display: none;
+  }
+
+  .rtable--cards .rrow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-2);
+    border-bottom: 1px solid var(--divider);
+  }
+
+  .rtable--cards .rrow > * {
+    grid-column: 1 / -1;
+    min-width: 0;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .rtable--cards .rrow > th {
+    grid-area: 1 / 1;
+    align-self: center;
+  }
+
+  .rtable--cards .rrow > td:last-child {
+    grid-area: 1 / 2;
+  }
+
+  .rtable--cards [data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--fs-label);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 }
 

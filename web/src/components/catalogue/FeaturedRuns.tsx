@@ -12,7 +12,7 @@ function Row({ row, program }: { row: CatalogueRow; program?: boolean }) {
       <span className="muted">
         {STATES[state].label} · {listing.events.toLocaleString("en-US")} events · {formatDuration(listing.duration_ms)}
       </span>
-      {program && row.facts?.task === "t2_conference" && (
+      {program && state === "recorded" && row.facts?.task === "t2_conference" && (
         <a className="featured__program" href={resultsHash(listing.id)}>
           See the program
         </a>

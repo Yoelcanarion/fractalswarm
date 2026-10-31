@@ -186,6 +186,12 @@ describe("the review", () => {
     for (const field of ["attendance_source", "availability_source", "preference_source", "track_source"] as const) expect(markup).toContain(`>${FIELD_WORDS[field]}</button>`);
   });
 
+  it("keeps the names of the cells that a phone's cards show without the table's head", () => {
+    const markup = review();
+    for (const name of ["Attendance", "Availability", "Preference"]) expect(markup).toContain(`data-label="${name}"`);
+    expect(markup.match(/class="rtable rtable--cards"/g)).toHaveLength(2);
+  });
+
   it("marks, in the text pasted, the sentence picked, and shows its quote and where it stands", () => {
     const markup = review({ selection: { kind: "talks", id: "T01", field: "attendance_source" } });
     expect(markup).toMatch(/<mark class="src src--active" data-active="true"[^>]*>Expected audience: about 33 participants\.<\/mark>/);
