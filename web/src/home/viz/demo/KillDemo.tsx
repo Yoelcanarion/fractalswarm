@@ -42,9 +42,12 @@ const DESCRIPTION =
   "An illustration, not a run. Coordinators form a tree, with agents at the bottom. Crashing a coordinator makes the survivors pick " +
   "one heir by the same rule, and the work it held moves to that heir.";
 
+/** A coordinator by the id the tree shows, then the part of the conference it looks after, in words: "AI · Day 1" alone says nothing to someone who has just met the tree. */
 function nameOf(model: TreeModel, id: string): string {
   const info = model.node[id];
-  return info ? `${info.label} (${id})` : id;
+  if (!info) return id;
+  const [track, day] = info.label.split(" · ");
+  return `${id} (${info.level === 0 ? "the root" : day ? `${track} track, ${day.toLowerCase()}` : `${track} track`})`;
 }
 
 function joined(names: string[]): string {
@@ -176,8 +179,8 @@ export function KillDemo({ data, still, note = false, className }: KillDemoProps
       if (!el) return;
       touch();
       crash(el.dataset["pick"] ?? "");
-      // the line says what the click did, and a page scrolled to the tree can have left it under the top bar, where "nearest" takes it for seen
-      if (say.getBoundingClientRect().top < parseFloat(getComputedStyle(say).scrollMarginTop)) say.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+      // the line says what the click did, and a page scrolled to the tree can have left it under the top bar. Only then: a line in view stays put, or the tree jumps under the first click
+      if (say.getBoundingClientRect().top < parseFloat(getComputedStyle(say).getPropertyValue("--home-bar"))) say.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
       if (reduced) {
         clock += 1;
         draw();

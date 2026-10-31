@@ -65,8 +65,16 @@ describe("the click demo's markup", () => {
 
   it("puts a button over every one of the ten coordinators, each with a name, and none over an agent", () => {
     expect(html.match(/data-pick="/g)).toHaveLength(story.tree.counts.orchestrators);
-    for (const n of story.tree.nodes.filter((x) => x.kind === "brain")) expect(html).toContain(`aria-label="Crash ${n.label} (${n.id})"`);
+    const brains = story.tree.nodes.filter((x) => x.kind === "brain");
+    for (const n of brains) expect(html).toMatch(new RegExp(`aria-label="Crash ${n.id.replace(".", "\\.")} \\(`));
     expect(html).not.toContain('data-pick="o1.1.a1"');
+  });
+
+  it("names a coordinator by the id on the tree, and its part of the conference in words a stranger can read", () => {
+    expect(html).toContain('aria-label="Crash o0 (the root)"');
+    expect(html).toContain('aria-label="Crash o2 (AI track)"');
+    expect(html).toContain('aria-label="Crash o2.1 (AI track, day 1)"');
+    expect(html).not.toContain("AI · Day 1");
   });
 
   it("has the two buttons and the live line, and adds nine words to the page", () => {
