@@ -1570,3 +1570,21 @@ From the second read, three small changes (0e0ed22): "fake model" is the one nam
 **Now:** a fresh agent uses the app itself, by clicks, on a fresh clone with an empty home and no key, with six things to try.
 
 **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, which rival the video's `s1` and `s6` use, master, the public repo, where the static site goes.
+
+**The cold test by clicks (Sat 31, 13:17 to 14:20).** A fresh agent, with no repo, six jury tasks and 46 actions on a clean stage (fresh clone, empty home, no key, ports 8793 and 9333), used the app itself. It found what the readers of screenshots could not, and what mattered most is that the first thing a juror tries with their own text was a dead end. All of it is fixed, and each fix was tried again by clicks, on the clean stage and on a scratch static site, not only by the tests.
+
+- **Your own text (21d39a7, e530b52).** Two plain lines ended in an empty review, with no reason and no way back, and every practice reading was labelled Muse's, which is false on the only path a person without a key has. The form now counts what the practice reader can read and says so before the reading, under the box, with the button off. `input.json` keeps who read the text and the state says it as `reader`: not an event, nothing replayed moves. The review names that reader in its notes and on each row. The Paste step leads back to the form, which still holds the text.
+- **The kill demo (f540c84, e530b52).** The line that says what a click did could sit under the top bar. A click now brings it into view, with its label. The first fix, `scrollIntoView` with `nearest`, did nothing: a box inside the window counts as seen whatever its scroll margin, and every test was green. Only the check by clicks showed it.
+- **The arena (f540c84).** A whole recording from its start plays at 5x, not at the 1x of a page just opened: two minutes, with the first crash late. A picked speed stays. Same on the run page.
+- **The way in (f540c84).** "Enter the app" goes in, to the Arena, instead of scrolling to the doors.
+- **The kicker (f540c84).** It says what Muse is: "Built on Meta's Muse Spark and Muse Wonder". Four words off the home to pay for it: the home is at 230.
+- **The evidence page (f540c84, 3f81f8f).** Why two means that differ are a tie (11.2 s against 21.9 s stopped the tester): every seed has to agree by a minimum effect, and at C3 the stall and H2 are both mixed (seven seeds win, two lose, one ties on the stall). What the pre-registered basis is. What locality and coordinator-dependency time mean. A link down to where it does worse, three screens below.
+- **R3 and R4 in plain words (f540c84).** The numbers and the meaning do not move; `durable-max`, T2 at C3 and C2-C3 leave the public text. **`s7` needs a retake:** its last 2.7 s show R3's old words on the Trade-offs page.
+
+**What was left alone, on purpose:** the tester's "PENDING" beside S5, which release lifts; the counters that count up, which a person sees moving and a model that reads a frame every 15 s does not; Trade-offs, which stays technical.
+
+**The static site checked at last (e530b52):** step 3's link, the Runs fold, R7 on `#/evidence` and in the home's fold, New task with its notice, no failed request. Guide step 2 there says "Watch it in the arena".
+
+**The home film and folds (3a4b234):** the first coordinator's branch, from Yoel's two requests, merged; the film crosses the run at one speed, and See more uses two columns from 1280 px.
+
+**Now:** a second cold agent walks the path nobody has walked cold: sample text to finished program, with a change of its own, a rival and the check. The first tester's report is in `.plans/notes/arena-cold-test.md`.
