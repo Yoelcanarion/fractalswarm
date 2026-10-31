@@ -41,7 +41,7 @@ export const COPY = {
   labels: { stalled: "stalled", extraCost: "extra cost", extraCostBasis: "extra cost, pre-registered basis" },
 
   // Said next to every number that is set against the in-process supervisor (R5): the gap is mostly a property of that design.
-  rivalReason: "In-process: its agents die with it, so most of the gap is that design.",
+  rivalReason: "In-process: its agents die with it, so that design explains most of the gap.",
   // What the other rival's name means, and what a tie with it is worth (R2). The detection is the condition: the rival that restarts sooner beats the swarm (R3).
   durableReason: "Ideal durable: its agents survive; it restarts on detection. The tie comes with no central coordinator.",
 
