@@ -1,6 +1,6 @@
 // Deterministic tree layout and ownership colors for the fractal tree graph.
 
-import type { ViewState } from "./reducer";
+import { rootHolder, type ViewState } from "./reducer";
 
 // Ownership palette: ten colour-blind-safe hues defined once in styles/tokens.css (--own-1 to
 // --own-10, stepped separately for the dark and the light theme). Red is reserved for death and
@@ -87,10 +87,12 @@ const forests = new WeakMap<ViewState, Forest>();
 
 function buildForest(state: ViewState): Forest {
   const holders = new Set(Object.values(state.ownership));
+  // A real log names no owner of the root key before its first takeover: until then the root actor holds it.
+  const root = rootHolder(state);
   const inTree = state.order.filter((id) => !isInfraKind(state.actors[id].kind));
   const fallen = (id: string): boolean => {
     const actor = state.actors[id];
-    return holders.size > 0 && !isLeafKind(actor.kind) && (actor.status === "killed" || actor.status === "dead") && !holders.has(id);
+    return holders.size > 0 && !isLeafKind(actor.kind) && (actor.status === "killed" || actor.status === "dead") && !holders.has(id) && id !== root;
   };
   const gone = inTree.filter(fallen);
   const down = new Set(gone);
@@ -244,7 +246,8 @@ export function ownerOf(state: ViewState, id: string): string | null {
 }
 
 /** Colours are assigned to level-1 actors in spawn order and never change afterwards, so an
- * orchestrator keeps its colour however the tree is re-wired. */
+ * orchestrator keeps its colour however the tree is re-wired. A brain that moved up to level 1 because its parent took the
+ * root keeps the colour of the subtree it came from. */
 export function colorOf(state: ViewState, id: string): string {
   const owner = ownerOf(state, id);
   if (owner === null) return ROOT_COLOR;
@@ -252,6 +255,11 @@ export function colorOf(state: ViewState, id: string): string {
     const parent = state.actors[actor].originalParent;
     return parent !== null && state.actors[parent]?.originalParent === null;
   });
-  const index = levelOne.indexOf(owner);
+  let first = owner;
+  for (const seen = new Set<string>(); !levelOne.includes(first) && !seen.has(first); ) {
+    seen.add(first);
+    first = state.actors[first]?.originalParent ?? first;
+  }
+  const index = levelOne.indexOf(first);
   return SERIES[(index < 0 ? state.order.indexOf(owner) : index) % SERIES.length];
 }

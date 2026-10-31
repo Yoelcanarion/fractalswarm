@@ -6,23 +6,23 @@ import { foldEvents } from "../lib/reducer";
 import { loadJsonl } from "../lib/testing";
 import { FIT_MAX_ZOOM, FIT_PADDING, frameTree, keepSizes } from "./useTreeMotion";
 
-// The committed final run. Its root, o0, is killed at event 4806 (53.3 s) and its heir takes over at 5261 (58.8 s): in between there is
-// no root, and the three tracks' brains stand side by side in the top row.
+// The committed final run. Its root, o0, is killed at event 4806 (53.3 s) and its heir takes over at 5261 (58.8 s): in between the dead
+// root stays where it fell, with the tree under it, because it still holds the root key.
 const events = loadJsonl("demo/final/events.jsonl");
-const ROOTLESS = 5100;
+const ROOT_DOWN = 5100;
 
 // The pane of a 1366 px window's run page, and the key in its corner: a line 8 px from the edge and 25 px high.
 const PANE = { width: 1332, height: 336, minZoom: 0.2 };
 const KEY_REACH = 33;
 
 describe("where the camera puts the tree", () => {
-  const view = foldEvents(events.slice(0, ROOTLESS));
+  const view = foldEvents(events.slice(0, ROOT_DOWN));
   const placed = layoutTree(view);
   const area = boundsOf(view, placed)!;
 
-  it("has three brains in the top row while the run has no root: the situation the key used to cover", () => {
+  it("has the dead root alone in the top row until its heir takes over", () => {
     const top = placed.filter((p) => p.y === area.y && !p.fallen);
-    expect(top.map((p) => p.id)).toEqual(["o1", "o2", "o3"]);
+    expect(top.map((p) => p.id)).toEqual(["o0"]);
   });
 
   it("keeps every card below the key of the tree, and keeps the margin it always had on the other three sides", () => {

@@ -80,10 +80,48 @@ describe("the tree as it is drawn", () => {
   });
 });
 
+describe("the root's first death, on a log that names no owner of the root key until a takeover moves it", () => {
+  const tracks = (): Stream => {
+    const s = depthTwoTree();
+    for (const key of ["t1", "t2", "t3"]) s.emit("ownership.assigned", "root", { key, owner: key });
+    return s;
+  };
+  const before = foldEvents(tracks().events);
+  const dead = foldEvents(kill(tracks(), "root").events);
+  const handed = foldEvents(hand(kill(tracks(), "root"), "root", "t1", ["root"]).events);
+
+  it("leaves the dead root where it fell, with the tree under it, until its heir holds the key", () => {
+    expect(forestOf(dead).fallen).toEqual([]);
+    expect(byId(layoutTree(dead), "root")).toMatchObject({ depth: 0, fallen: false });
+    expect(byId(layoutTree(dead), "t1")).toMatchObject({ depth: 1, parent: "root" });
+    expect(forestOf(handed).fallen).toEqual(["root"]);
+    expect(byId(layoutTree(handed), "t1")).toMatchObject({ depth: 0, parent: null });
+  });
+
+  it("changes no colour at the death", () => {
+    for (const id of before.order) expect(colorOf(dead, id), id).toBe(colorOf(before, id));
+  });
+
+  it("gives the heir the root's colour and leaves everyone else theirs: its sessions stay in the colour of their subtree", () => {
+    expect(colorOf(handed, "t1")).toBe(colorOf(before, "root"));
+    for (const id of ["t2", "t2-d1", "t3", "t3-d2-a"]) expect(colorOf(handed, id), id).toBe(colorOf(before, id));
+    for (const id of ["t1-d1", "t1-d2", "t1-d1-a"]) expect(colorOf(handed, id), id).toBe(colorOf(before, "t1"));
+  });
+});
+
 describe("the committed final run, at the end", () => {
   const events = loadJsonl("demo/final/events.jsonl");
   const end = foldEvents(events);
   const placed = layoutTree(end);
+
+  it("changes no colour when the root dies, and only the heir's when the root moves", () => {
+    const at = (seq: number): ViewState => foldEvents(events.filter((e) => e.seq <= seq));
+    const [alive, killed, moved] = [at(4800), at(4810), at(5262)];
+    expect(forestOf(killed).fallen).toEqual([]);
+    for (const id of alive.order) expect(colorOf(killed, id), id).toBe(colorOf(alive, id));
+    const changed = alive.order.filter((id) => colorOf(moved, id) !== colorOf(alive, id));
+    expect(changed).toEqual(["o1"]);
+  });
 
   it("has five fallen brains in the order they died, under a tree rooted in the brain that holds the root duty", () => {
     expect(forestOf(end).fallen).toEqual(["o0", "o2.1", "o1", "o3.2", "o2"]);
