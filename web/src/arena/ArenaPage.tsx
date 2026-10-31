@@ -31,6 +31,9 @@ const NO_OFFICIAL: { left: Official | null; right: Official | null } = { left: n
 const LEAD = "FractalSwarm, on the left, and a rival, on the right, plan the same conference under the same failures, each at about the same point of the work.";
 // A pair whose plan is named same-moment takes its kills by hand, at fixed seconds of the shared clock: it is a film for the eye, not the benchmark's rule.
 const LEAD_SAME_MOMENT = "FractalSwarm, on the left, and a rival, on the right, plan the same conference, and a coordinator falls on each side at the same second. We set these kills by hand: the benchmark's rule hits each side at the same point of the work instead.";
+// True of every pair. It stands until the pair is known: one pair's rule is false of the other, and a log takes seconds to load.
+const LEAD_ANY_PAIR = "FractalSwarm, on the left, and a rival, on the right, plan the same conference.";
+const leadOf = (plan: string | null): string => (plan === "same-moment" ? LEAD_SAME_MOMENT : LEAD);
 const PRACTICE = "Both ran on the free practice model: nothing was billed, and their costs are only notional.";
 
 /** The arena: the swarm and its rival on one clock, face to face. */
@@ -136,7 +139,12 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   const assumptions = useMemo(() => assumptionsOf(startedOf(rightEvents), startedOf(leftEvents)), [leftEvents, rightEvents]);
   const leftSystem = useMemo(() => systemKind(String(startedOf(leftEvents)?.payload.scenario ?? "")), [leftEvents]);
   const practice = useMemo(() => [leftEvents, rightEvents].every((events) => readFacts(events[0], null).billed === false), [leftEvents, rightEvents]);
-  const lead = useMemo(() => (readFacts(leftEvents[0], null).profile === "same-moment" ? LEAD_SAME_MOMENT : LEAD), [leftEvents]);
+  // The log has the last word. While it loads, the list of pairs, which comes first, names the plan.
+  const lead = useMemo(() => {
+    if (!leftLoading && leftEvents.length > 0) return leadOf(readFacts(leftEvents[0], null).profile);
+    const pair = pairs?.find((found) => found.left === left && found.right === right);
+    return pair ? leadOf(pair.chaos) : LEAD_ANY_PAIR;
+  }, [leftEvents, leftLoading, pairs, left, right]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     const target = event.target as HTMLElement;

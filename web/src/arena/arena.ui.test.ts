@@ -445,6 +445,20 @@ describe("the page", () => {
     expect(said).not.toContain("each at about the same point of the work");
   });
 
+  it("says the pair's own rule from the list of pairs while its logs load, and no rule before the list has come", async () => {
+    const waiting = () => createPairSession({ api: api({}), clock: { scheduler: idle } });
+    const listed = (chaos: string) => [{ pairId: "p", left: "s", right: "r", label: "x", chaos, seed: "1", state: "completed", private: false, billed: false, createdAt: null } as never];
+    const byHand = text(await view({ session: waiting(), left: "s", right: "r", pairs: listed("same-moment") }));
+    expect(byHand).toContain("We set these kills by hand");
+    expect(byHand).not.toContain("each at about the same point of the work");
+    const byTheRule = text(await view({ session: waiting(), left: "s", right: "r", pairs: listed("half-the-brains") }));
+    expect(byTheRule).toContain("each at about the same point of the work");
+    const unknown = text(await view({ session: waiting(), left: "s", right: "r", pairs: null }));
+    expect(unknown).toContain("plan the same conference.");
+    expect(unknown).not.toContain("same point of the work");
+    expect(unknown).not.toContain("same second");
+  });
+
   it("says what it is for and what the rival is, and has one main action once a pair is open: watch the first crash, with playing both from the start beside it", async () => {
     const session = await opened(0);
     const html = await view({ session, left: "s", right: "r" });
