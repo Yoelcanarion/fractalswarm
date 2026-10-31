@@ -152,7 +152,11 @@ third, the headline extended to ten seeds, contains the 18 cells of the second, 
 their run logs), recorded from Oct 28 to Oct 30 and read in §4.10. Every cell completed, and 175 of
 the 176 are valid: the swarm at C0 on seed 5 of the ten-seed matrix is not (§4.10.7). The clock is
 live (`clock: live` in all 176 run logs), so stall times, makespans, costs and call counts are those
-of the API on the day each cell ran, and a new run would not repeat them.
+of the API on the day each cell ran, and a new run would not repeat them. The eight LangGraph cells
+of Oct 31 are not among the 176 (§4.10.8). Neither are two runs of T3, the comparative report on web
+pages, on Oct 31 (`t3-real-c0` and `t3-real-kill-half`, $0.40 each; both placed 6 of 6 cells with no
+hard violation): they are outside any matrix, their logs hold third-party pages and are not
+committed, and no claim rests on them.
 
 | Item | Value |
 |---|---|
@@ -1171,7 +1175,8 @@ All profiles pooled, 8 runs per row:
 
 Every one of the 96 runs completed and is valid, at every profile (validity is §2's), and none spent an
 LLM token on coordination: the rivals' supervisors are code too, so they spend none either
-(`docs/claims.md` S4: a property of the design, never an advantage over the rivals). Six calls ended
+(`docs/claims.md` S4: a property of the design, never an advantage over the rivals; the LangGraph
+rows, which are not among these runs, do spend some, §4.10.8). Six calls ended
 in an error in v1 and none in the headline's 18 cells (the 62 added in headline-10 have one,
 §4.10.7): five `APIConnectionError: Connection error.` in
 `pipeline` C2 seed 2 and one ledger error (`IntegrityError: UNIQUE constraint failed:
@@ -1584,6 +1589,42 @@ verdicts, the ratios and the completed-call figures of this sub-section are comp
 with `fractalswarm.bench.verdicts` and from the run logs (not committed); the recipes are in
 `.plans/notes/arena-rival.md`, Part 11. `docs/claims.md` R2 and R4–R6 and the counts in S4 and S7 are
 written from this reading.
+
+#### 4.10.8 The LangGraph rows (secondary, two seeds, descriptive)
+
+`bench/matrix-langgraph.yaml`: `langgraph` × T2 × C0–C3 × seeds 1–2 = **8 cells**, in
+`bench/results/langgraph`, on the same task, seeds and run cap as v1, with Contributor routing. They
+ran on Oct 31 at `10c2ff7`, after the handler freeze, for **$2.60** against a worst case of $4.00.
+They are not among the 176 cells of §3. This is the real framework, LangGraph's hierarchical-teams
+pattern pointed at Muse (`baselines/langgraph_teams.py`): a crash cancels every call in flight in the
+run, and 5 s later the best-case supervisor resumes the graph from its checkpoints, so only the
+supersteps in flight run again. Network faults need a bus, which it does not have, so they do not
+apply to it (§1, rule 4).
+
+All 8 cells completed and are valid. Means over the two seeds, next to v1's T2 cells for the same
+seeds; those ran days earlier at earlier commits, so this is a reading, not a verdict, and §4.10.6
+says what two seeds cannot show:
+
+| Profile | Stall (s): `langgraph` | swarm | `durable-max` | `central` | Extra cost: `langgraph` | swarm | `durable-max` | `central` |
+|---|---|---|---|---|---|---|---|---|
+| C0 | 14.0 | 19.8 | 20.1 | 29.7 | | | | |
+| C1 | 24.7 | 32.8 | 16.6 | 26.3 | +4.4% | +9.3% | −4.8% | +30.6% |
+| C2 | 22.8 | 8.2 | 5.7 | 58.3 | +18.0% | −2.8% | −5.6% | +57.5% |
+| C3 | 36.7 | 14.6 | 9.8 | 92.6 | +19.7% | +6.6% | −6.8% | +75.6% |
+
+*`bench/results/langgraph/results.csv` and `bench/results/v1/results.csv`, columns `stall_s` and
+`extra_cost_pct`.*
+
+It lands between `central` and the durable workflows, as its design predicts: it cancels as many
+calls as `central` at C3 (28.5 against 27.0), but its checkpoints keep the completed work.
+
+**It is the one workflow here that spends LLM tokens on coordination.** Its session supervisors route
+each contract through the model, as the pattern does: 10,480 to 11,306 coordination tokens a run on
+average by profile, 3.0% of its tokens, and 104 calls at C0 against 78 for the swarm and 84 for
+`durable-max`. Every other workflow in this report spends none, because its supervisor is code, so
+that difference belongs to this pattern and not to having a supervisor (`docs/claims.md` S4). A
+routing call on this task has little to decide; a harder task might earn it back, and these runs do
+not measure that.
 
 ## 5. Reading the chart honestly
 
