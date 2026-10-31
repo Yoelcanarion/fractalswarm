@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { isHomeHash } from "../home/route";
 import { COMMAND } from "./answers";
-import { buildDetail, buildNote, isHome } from "./Banner";
+import { buildDetail, buildNote, showsBanner } from "./Banner";
 import { readStamp, verifiedAtBuild, whereChecked } from "./BuildVerified";
 import { megabytes, overall, SHOW_FROM_BYTES, type LoadProgress } from "./progress";
 import { VERIFY, makeSite } from "./testing";
@@ -11,25 +10,21 @@ describe("where the banner shows", () => {
   it.each(["", "#", "#/", "#//", "#/?x=1", "#?x=1", "#/?at=solution", "#/home", "#/home/", "#/home?at=tie"])(
     "is not on the home page, %j",
     (hash) => {
-      expect(isHome(hash)).toBe(true);
+      expect(showsBanner(hash)).toBe(false);
     },
   );
 
-  it.each(["#/run/demo-backup", "#/run/home", "#/home/x", "#/homework", "#/arena", "#/runs", "#/helps", "#/charts", "#/new", "#/ablation", "#/director/demo-backup"])(
+  // W6's evidence page is built on the home page's bar, fixed to the window, which covers anything above it: it has none.
+  it.each(["#/evidence", "#/evidence/", "#/evidence?at=tie", "#/home-lab", "#/home-lab/"])("is not on the pages with a bar of their own, %s", (hash) => {
+    expect(showsBanner(hash)).toBe(false);
+  });
+
+  it.each(["#/run/demo-final", "#/run/home", "#/run/evidence", "#/home/x", "#/homework", "#/arena", "#/arena/a/b?at=end", "#/runs", "#/helps", "#/charts", "#/new", "#/ablation", "#/director/s1-arena-open"])(
     "is on %s",
     (hash) => {
-      expect(isHome(hash)).toBe(false);
+      expect(showsBanner(hash)).toBe(true);
     },
   );
-
-  // The banner keeps its own copy of the rule, so that the static folder imports none of the home page. This keeps the
-  // two from drifting: if W6's rule changes, this fails and Banner.tsx follows.
-  it("agrees with the home route, whatever the hash", () => {
-    const hashes = ["", "#", "#/", "#//", "#?x=1", "#/?at=solution", "#/?still", "#/home", "#/home/", "#/home?at=tie", "#/home-lab", "#/home-lab/", "#/Home"];
-    for (const hash of [...hashes, "#/run/home", "#/home/x", "#/homework", "#/arena", "#/runs", "#/charts", "#/new", "#/director", "#/director/s1-arena-open?hold"]) {
-      expect(isHome(hash), hash).toBe(isHomeHash(hash));
-    }
-  });
 });
 
 describe("what the banner says about the build", () => {

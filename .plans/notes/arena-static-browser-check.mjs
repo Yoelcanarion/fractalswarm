@@ -26,7 +26,7 @@ const BANNER = "Static showcase: recorded runs only. Run it yourself: uv run fra
 const RUNS = (process.env.RUNS ?? "demo-final").split(",");
 // The doors of the home page that lead somewhere on a site with no server (web/src/home/doors.ts); "A live run" (#/new) is the closed one.
 const OPEN_DOORS = ["#/arena", "#/runs", "#/evidence"];
-const BIG = process.env.BIG_RUN ?? "demo-backup";
+const BIG = process.env.BIG_RUN ?? RUNS[0]; // the biggest log the site holds: the final run, 8,771 events
 const VIEWS = ["", "/plan", "/panels", "/security", "/results", "/events"];
 const ORIGIN = new URL(baseUrl).origin;
 
@@ -91,6 +91,17 @@ async function visit(name, hash, { banner = true, needles = [], badge = false, w
   }
   const shown = await bannerOf(page);
   if (banner && !shown?.startsWith(BANNER)) problem(name, `banner is ${JSON.stringify(shown)}`);
+  if (banner && shown) {
+    // present is not seen: something fixed to the window (a page's own bar) can sit over it
+    const covered = await page.evaluate(() => {
+      const bar = document.querySelector(".staticbar");
+      if (!bar) return true;
+      const box = bar.getBoundingClientRect();
+      const top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return !(top && bar.contains(top));
+    });
+    if (covered) problem(name, "the banner is covered by something at the top of the window");
+  }
   if (!banner && shown !== null) problem(name, `the banner is on this page: ${JSON.stringify(shown)}`);
   if (badge) {
     const label = (await verifyBadge(page).innerText()).replace(/\s+/g, " ");
@@ -143,7 +154,8 @@ for (const [name, hash] of [["home-empty", ""], ["home-slash", "#/"], ["home-nam
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(800);
     const shown = await bannerOf(page);
-    if (!shown?.startsWith(BANNER)) problem(name, `the banner is ${JSON.stringify(shown)} on ${href}, reached from the home page`);
+    // the app's pages carry the banner; the evidence page has a bar of its own, fixed to the window, and none
+    if (href === "#/evidence" ? shown !== null : !shown?.startsWith(BANNER)) problem(name, `the banner is ${JSON.stringify(shown)} on ${href}, reached from the home page`);
     const body = await text(page);
     if (/\bundefined\b|\bNaN\b|\[object Object\]/.test(body)) problem(name, `${href} shows undefined, NaN or [object Object]`);
     if (body.trim().length < 40) problem(name, `${href} is (nearly) blank, reached from the home page`);
@@ -196,7 +208,7 @@ for (const run of RUNS) {
 
 // ---- the other pages and the doors that need the local server
 const pages = [
-  ["evidence", "#/evidence", [], { scroll: false }], // W6's page behind the home page: baked, no request but the manifest
+  ["evidence", "#/evidence", [], { scroll: false, banner: false }], // W6's page behind the home page: baked, no banner (its own fixed bar would cover it)
   ["charts", "#/charts", []],
   ["helps", "#/helps", []],
   ["runs", "#/runs", RUNS],
@@ -242,21 +254,28 @@ if (left !== "-") {
 {
   const name = "runs-verify";
   const page = await visit(name, "#/runs", { needles: RUNS, shoot: false });
+  // since the redesign the table, its filters and its verify buttons sit in a fold ("All N runs"), closed on a first visit
+  const fold = page.locator("summary", { hasText: /^All \d+ runs/ });
+  if ((await fold.count()) > 0) await fold.first().click();
   const verifyAll = page.getByRole("button", { name: /^Verify \d+ listed runs?$/ });
   if ((await verifyAll.count()) === 0) warn(name, "no 'Verify N listed runs' button on the Runs page: is W4's page merged?");
   else {
     await verifyAll.first().click();
-    await page.waitForFunction(() => !/Replaying…/.test(document.body.innerText) && /Replay verified/.test(document.body.innerText), null, { timeout: 120000 });
+    await page.waitForFunction(
+      () => {
+        const cells = [...document.querySelectorAll("tbody tr td:last-child")].map((td) => td.innerText);
+        return cells.length > 0 && cells.every((c) => /Replay verified|Could not check|Replay mismatch|Log intact/.test(c));
+      },
+      null,
+      { timeout: 120000 },
+    );
     await page.waitForTimeout(800);
-    const body = await text(page);
-    const html = await page.content();
-    const verified = (body.match(/Replay verified at build/g) ?? []).length;
-    console.log(`  ${verified} cell(s) say "Replay verified at build"`);
-    if (verified < RUNS.length) problem(name, `${verified} verify cells say "Replay verified at build", at least ${RUNS.length} expected`);
-    const plain = (body.match(/Replay verified(?! at build)/g) ?? []).length;
-    if (plain) problem(name, `${plain} cell(s) say "Replay verified" without "at build"`);
-    if (/re-run from run\.started/.test(html)) problem(name, "the page says events were re-run from run.started: a replay ran in the browser");
-    if (/Could not check|Replay mismatch/.test(body)) problem(name, "a verify cell says it could not check, or a mismatch");
+    const cells = (await page.locator("tbody tr td:last-child").allInnerTexts()).map((c) => c.replace(/\s+/g, " ").trim());
+    console.log(`  ${cells.length} verify cell(s): ${[...new Set(cells)].join(" | ")}`);
+    if (cells.length < 2) problem(name, `only ${cells.length} row(s) in the table of runs`);
+    const bad = cells.filter((c) => !/^Replay verified at build/.test(c));
+    if (bad.length) problem(name, `${bad.length} of ${cells.length} cells do not say "Replay verified at build": ${JSON.stringify(bad[0])}`);
+    if (/re-run from run\.started/.test(await page.content())) problem(name, "the page says events were re-run from run.started: a replay ran in the browser");
     await shot(page, name);
   }
   await page.close();
@@ -288,7 +307,9 @@ for (const [name, hash] of [["phone-run", `#/run/${RUNS[0]}?at=end`], ["phone-he
   console.log(`\n== ${name}  ${BIG} over 750 kB/s`);
   const page = await context.newPage();
   watch(page, name);
-  await page.goto(`${baseUrl}#/run/${RUNS[0]}?at=end`, { waitUntil: "load" });
+  // start on a small run (the arena's rival), so that going to the big one loads it: the same run would load nothing
+  const small = process.env.SMALL_RUN ?? (right !== "-" && right !== BIG ? right : "demo-toy");
+  await page.goto(`${baseUrl}#/run/${small}?at=end`, { waitUntil: "load" });
   await page.waitForLoadState("networkidle");
   const cdp = await context.newCDPSession(page);
   await cdp.send("Network.enable");
