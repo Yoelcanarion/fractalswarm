@@ -170,6 +170,13 @@ describe("the Proof's data", () => {
     expect(mean(cost?.rival)).toBeCloseTo(story.numbers.r2.durableMaxExtraPct, 1);
   });
 
+  it("call a dot a run, since the word seed is for the setting line, which says how many", () => {
+    for (const row of [...central.rows, ...durable.rows]) expect(row.label).not.toMatch(/seed/i);
+    expect(durable.rows[0]?.label).toContain("a dot for each run");
+    expect(proofReading(panels, "FractalSwarm")).not.toMatch(/by seed/);
+    expect(durable.setting).toMatch(/\d+ seeds/);
+  });
+
   it("print the data's verdict beside the ideal durable supervisor, as it is", () => {
     const rows = story.verdicts?.comparisons ?? [];
     const want = (metric: string): string | null => rows.find((c) => c.rival === "durable-max" && c.metric === metric)?.verdict ?? null;
