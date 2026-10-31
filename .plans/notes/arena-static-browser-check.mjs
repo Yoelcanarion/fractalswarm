@@ -91,8 +91,9 @@ async function visit(name, hash, { banner = true, needles = [], badge = false, w
   }
   const shown = await bannerOf(page);
   if (banner && !shown?.startsWith(BANNER)) problem(name, `banner is ${JSON.stringify(shown)}`);
-  if (banner && shown) {
-    // present is not seen: something fixed to the window (a page's own bar) can sit over it
+  if (banner && shown && !hash.startsWith("#/director/")) {
+    // present is not seen: something fixed to the window (a page's own bar) can sit over it. The director's scenes are the
+    // exception: a frame as big as the window with none of the app around it (director.css), the banner sits under it by design
     const covered = await page.evaluate(() => {
       const bar = document.querySelector(".staticbar");
       if (!bar) return true;
