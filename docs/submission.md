@@ -53,13 +53,13 @@ https://github.com/Yoelcanarion/fractalswarm (it becomes public on Nov 3, after 
 >
 >   We use tool calling (with parallel calls), a reasoning effort per role, and prompt caching with one `prompt_cache_key` per role: in the recorded demo run, 65% of input tokens were served from cache.
 > - **Muse Spark 1.3 Contributor** runs the benchmark matrix at about 1/20 of the Standard price, behind a PII gate. Calls that read emails stay on Standard.
-> - **Muse Wonder 1.0** writes the root plan of every run{{, and arbitrates semantic conflicts between agents at their lowest common ancestor}}.
+> - **Muse Wonder 1.0** writes the root plan of every run.
 > - **Llama PromptGuard 2 (22M)** runs locally through LlamaFirewall. Every email and pasted input is scored before an agent reads it. The score is logged, so replays never recompute it.
 > - **The API's usage fields** (cached and reasoning tokens) feed a per-call cost ledger and budget reservations. Its rate-limit headers drive our adaptive quotas.
 
 ## Why are Meta's models important to your solution?
 > - **Understanding.** The input is human language: emails, notes, abstracts. On the same notes, a hand-written parser understood {{ablation_parser}} of {{ablation_total}}, and Muse Spark understood {{ablation_muse}}. Without the model, there is no problem to schedule.
-> - **Planning and judgment.** Wonder breaks the conference down into tracks and sessions{{, and settles disagreements between agents with the evidence}}. Spark agents check each other's work.
+> - **Planning and judgment.** Wonder breaks the conference down into tracks and sessions. Spark agents check each other's work.
 > - **Cost.** Prompt caching and Contributor pricing make it affordable to run a dozen agents per run, and a full benchmark: 96 real benchmark runs for about $17.
 > - **Safety.** PromptGuard 2 runs locally on every input.
 > - **The tokens go to the problem.** Zero LLM tokens spent on coordination: takeover is a deterministic hash over the log.

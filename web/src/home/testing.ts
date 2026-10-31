@@ -32,7 +32,7 @@ export function claimRows(): ClaimRow[] {
   const doc = readFileSync(`${REPO_ROOT}docs/claims.md`, "utf-8");
   const rows: ClaimRow[] = [];
   for (const line of doc.split(/\r?\n/)) {
-    if (!/^\|\s*[SR]\d\s*\|/.test(line)) continue;
+    if (!/^\|\s*[SRM]\d\s*\|/.test(line)) continue;
     const cells = line
       .split("|")
       .slice(1, -1)

@@ -626,12 +626,12 @@ body:has(.home) {
 }
 
 /* ---- the proof: bars and numbers that grow once, the way to R2 and R3, the command that checks it ---- */
-/* The chart is one svg that is drawn for at most 840 px and scales with its box, so the box stops there until the chart lays its two
-   blocks side by side (then this goes, and the lines under it take the chart's two columns). */
+/* The chart is one svg that sets its own width and height from this box: one column of panels up to 840 px, two columns from a box of
+   1000 px, and it is drawn for at most 1480 px (the page's own width). */
 .home-proof__chart {
   position: relative;
   width: 100%;
-  max-width: 840px;
+  max-width: 1480px;
 }
 
 /* Under the chart: why the in-process supervisor's numbers are so far apart, and the way on. */
@@ -639,6 +639,15 @@ body:has(.home) {
   display: grid;
   gap: var(--space-4);
   margin-top: var(--space-4);
+}
+
+/* Where the chart has its panels side by side (a box of 1000 px: a window of about 1140 px, with a scrollbar), the reason stands under
+   the in-process panel it explains and the way on under the durable one, in the chart's own two columns and 48 px gap. */
+@media (min-width: 1140px) {
+  .home-proof__under {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 48px;
+  }
 }
 
 .home-proof__after {

@@ -187,9 +187,21 @@ describe("the dot plot's layout", () => {
 
   it("gives a panel the long form of its subtitle only where the whole header fits before the mean column", () => {
     const wide = dotLayout(model, 1480, 460, captions);
-    expect(wide.panels.map((p) => p.sub)).toEqual(["seconds with no agent working", "% against the run with no failures"]);
+    expect(wide.panels.map((p) => p.sub)).toEqual(["seconds with no agent working", "% against the run with no failures, pre-registered basis"]);
     const tablet = dotLayout(model, 820, 420, captions);
-    expect(tablet.panels.map((p) => p.sub)).toEqual(["seconds", "% extra"]);
+    expect(tablet.panels.map((p) => p.sub)).toEqual(["seconds", "pre-registered basis"]);
+  });
+
+  it("names the basis of the extra cost in its header wherever the header has room for the words, and says that it is a percentage where it has none", () => {
+    const names: string[] = [];
+    for (let width = 350; width <= 1700; width += 10) {
+      const extra = dotLayout(model, width, 420, captions).panels[1]!;
+      names.push(extra.sub);
+      expect(["% against the run with no failures, pre-registered basis", "pre-registered basis", "% extra"], `${width}`).toContain(extra.sub);
+    }
+    expect(new Set(names)).toEqual(new Set(["% against the run with no failures, pre-registered basis", "pre-registered basis", "% extra"]));
+    // the long form is the one on a wide screen and the shortest the one that always fits
+    expect(names[names.length - 1]).toContain("pre-registered basis");
   });
 
   it("sets the two panels side by side with the claims' names where there is room, and stacks them, with the failures only, where there is not", () => {

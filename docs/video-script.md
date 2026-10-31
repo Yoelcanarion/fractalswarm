@@ -73,15 +73,14 @@ Anything that doesn't answer one of them stays out of the video.
 - The run plays and the tree grows.
 - The lens opens on a Spark extraction: "muse-spark-1.3 · effort high · {{tokens_in}} in ({{tokens_cached}} cached) · ${{call_cost}} · {{call_latency}} s", with the fact next to its highlighted email sentence.
 - Then Wonder's root plan.
-- [If arbitration is merged] a Wonder ruling card: two agents disagreed, and Wonder decided, with the emails as evidence.
 - **The Muse meter**, opened from "What the models cost" in the strip: "coordination tokens 0 · recovery tokens 0".
 
-**Voice-over (≈ 48 words; +14 if arbitration is shown):**
+**Voice-over (≈ 46 words):**
 > Then the team works. Muse Wonder plans. Muse Spark agents read the emails, place the talks and check the results.
-> [If arbitration] When two agents disagree, Wonder settles it, with the emails as evidence.
 > Click any call to see the model, the tokens, the cost, and the sentence behind the decision. Zero LLM tokens spent on coordination: the tokens go to the problem.
 
-**Key points:** Wonder plans; Spark reads, places and checks · [Wonder arbitrates] · every call is inspectable · zero LLM tokens spent on coordination.
+**Key points:** Wonder plans; Spark reads, places and checks · every call is inspectable · zero LLM tokens spent on coordination.
+**Not said here:** that Wonder settles disputes. Arbitration is built and tested on the fake model, but no real run has a dispute: each fact has one contract (log of `demo/final` and of the 20 swarm cells of `bench/results/headline-10`).
 
 ---
 
