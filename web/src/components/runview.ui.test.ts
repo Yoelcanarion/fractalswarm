@@ -534,7 +534,7 @@ describe("the keyboard on the run page", () => {
 
   it("lets the row of numbers be narrower than the loading skeleton's blocks, which have a width of their own", () => {
     const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
-    const phone = css.indexOf("@media (max-width: 760px) {\n  /* The run page on a phone");
+    const phone = css.indexOf("@media (max-width: 760px) {\n  /* A page on a phone");
     expect(phone).toBeGreaterThan(0);
     expect(css.slice(phone)).toMatch(/\.counters--headline \{\s*flex: 1 1 100%;\s*flex-wrap: nowrap;\s*min-width: 0;/);
     const page = readFileSync(REPO_ROOT + "web/src/pages/RunPage.tsx", "utf-8");
