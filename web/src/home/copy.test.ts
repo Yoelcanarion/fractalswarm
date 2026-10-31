@@ -24,9 +24,16 @@ const BANNED: [RegExp, string][] = [
   [/where it helps/i, "where it helps"],
   [/below half/i, "below half"],
   [/on every seed/i, "on every seed"],
+  // The way into the rest of the product is the app (the coordinator, Oct 31): "Enter the simulation" sat oddly beside recordings of the real model.
+  [/\bthe simulation\b/i, "the simulation"],
 ];
 
 describe("the page's own words", () => {
+  it("call the way into the rest of the product the app", () => {
+    expect(COPY.bar.enter).toBe("Enter the app");
+    expect(COPY.bar.enterShort).toBe("Enter");
+  });
+
   it("say the tagline exactly, and only its first sentence", () => {
     expect(TAGLINE).toBe("Kill half the brains. It still finishes.");
     expect(COPY.description.startsWith(TAGLINE)).toBe(true);
