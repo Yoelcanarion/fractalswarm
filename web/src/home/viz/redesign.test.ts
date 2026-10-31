@@ -594,6 +594,26 @@ describe("the Solution's drawings", () => {
     }
   });
 
+  it("start a replay from their first frame, and are at their end for a still page whatever the replay", () => {
+    for (const step of STEP_IDS) {
+      expect(render(StepDrawing, { step, active: true, replay: 0 })).toContain('data-on="true"');
+      expect(render(StepDrawing, { step, active: true, replay: 1 })).toContain('data-on="false"');
+      expect(render(StepDrawing, { step, active: false, replay: 1 })).toContain('data-on="false"');
+      expect(render(StepDrawing, { step, active: true, replay: 3, still: true })).toContain('data-on="true"');
+      expect(render(StepDrawing, { step, active: true, replay: 1 })).toContain('data-reset="true"');
+      expect(render(StepDrawing, { step, active: true, replay: 0 })).not.toContain("data-reset");
+    }
+  });
+
+  it("cut a replay back with no transition, by a rule that follows the one that sets the transitions", () => {
+    const css = readFileSync(`${HOME}/viz/viz.css`, "utf-8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const set = css.indexOf(".hv-step [data-part] {");
+    const cut = css.indexOf('.hv-step[data-reset="true"] [data-part] {');
+    expect(set).toBeGreaterThan(-1);
+    expect(cut).toBeGreaterThan(set);
+    expect(/\.hv-step\[data-reset="true"\] \[data-part\]\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/transition:\s*none;/);
+  });
+
   it("draw their lines on with a dash as long as the path, which a stroke that does not scale would measure in pixels instead", () => {
     const css = readFileSync(`${HOME}/viz/viz.css`, "utf-8").replace(/\/\*[\s\S]*?\*\//g, "");
     const rule = /\.hv-step \.hv-st-draw,\s*\.hv-step \.hv-st-new\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
