@@ -95,7 +95,7 @@ describe("paintTree", () => {
       }
       for (const n of frame.nodes) expect(log.get(nodes[n.id]!.g.el)?.["data-state"]).toBe(n.state);
     }
-  });
+  }, 20_000); // 1,500 painted frames: about 5 s alone, more on a busy machine
 
   it("ends on the run clock at the end of the log and the memorial shown", () => {
     paintTree(rig, player.frame(1));
