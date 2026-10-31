@@ -48,7 +48,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from fractalswarm.api.catalog import Catalog, RunEntry
+from fractalswarm.api.catalog import Catalog, RunEntry, _readonly
 from fractalswarm.bench.scoring import LLMCall, is_coordination, llm_calls
 from fractalswarm.bench.tasks.t2_conference.ablation import (
     CAP_USD,
@@ -118,7 +118,7 @@ RATIONALE_KEYS = frozenset(
 
 
 def _connect(entry: RunEntry) -> sqlite3.Connection:
-    return sqlite3.connect(f"{entry.sqlite.resolve().as_uri()}?mode=ro", uri=True)
+    return _readonly(entry.sqlite).db
 
 
 def read_typed(catalog: Catalog, entry: RunEntry, types: tuple[str, ...]) -> list[Event]:
@@ -1655,10 +1655,7 @@ def lens_routes(catalog: Catalog) -> list[Route]:
             if waiting is None:
                 raise HTTPException(404, f"no ablation {run_id!r}") from None
             return JSONResponse(waiting)
-        try:
-            events = await anyio.to_thread.run_sync(read_typed, catalog, entry, ABLATION_TYPES)
-        except sqlite3.OperationalError:  # the thread has made the file and not the table yet
-            events = []
+        events = await anyio.to_thread.run_sync(read_typed, catalog, entry, ABLATION_TYPES)
         if not events and (waiting := pending(run_id)) is not None:
             return JSONResponse(waiting)
         return JSONResponse(ablation_view(events, jobs, run_id))

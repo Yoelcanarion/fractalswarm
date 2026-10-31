@@ -168,7 +168,7 @@ def half_the_brains_plan(seed: str = "0") -> dict[str, Any]:
     Five coordinator crashes at the shared crash points, and nothing else: no agent kills, no
     network or API faults, so a pair isolates coordinator recovery. The first crash names
     ``o0``, the root, in both systems. The rest name nobody: the swarm's targeting rule picks
-    the coordinator with the most work left (a track lead, mostly), and a supervisor has only
+    the coordinator with the most work left (a session owner, mostly), and a supervisor has only
     ``o0`` to lose. A name that is not a candidate is skipped, which is why ``kill-half``
     (explicit names of the swarm's coordinators) crashes a supervisor once, not five times.
     """

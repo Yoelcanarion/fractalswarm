@@ -1,4 +1,4 @@
-// The page is short on purpose (Yoel, Oct 30; .plans/arena/redesign.md): about 200 words with every "See more" closed, and at most 230.
+// The page is short on purpose: about 200 words with every "See more" closed, and at most 230.
 // This holds the number on the page as it renders, W7's drawings included. The height (at most 7,000 px at 1920x1080) needs a
 // browser: layout.test.ts holds it when it is given one, and the structure that bounds it is held here.
 

@@ -47,7 +47,7 @@ function WhatHappens() {
       </li>
       <li>
         <b>The swarm</b>
-        <span>Coordinators split the program into tracks and sessions, and agents place the talks. By default the run kills half the brains, and you get the finished program: each talk with its time and room.</span>
+        <span>Coordinators split the program into tracks and sessions, and agents place the talks. By default the run kills half the brains, and you get its program: each talk with its time and room.</span>
       </li>
     </ol>
   );

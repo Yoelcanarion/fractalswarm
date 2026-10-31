@@ -1,4 +1,5 @@
 import { resultsHash } from "../lib/address";
+import { hasReport } from "../lib/results";
 import { readingOf } from "../lib/program";
 import { stateLine } from "../lib/runstate";
 import type { ViewState } from "../lib/reducer";
@@ -35,7 +36,7 @@ export function RunState({ view }: { view: ViewState }) {
           <strong className="runstate__head">{line.headline}</strong> {line.rest}.
         </span>
       </p>
-      <PlayAction program={runId !== null && view.completed && readingOf(events[0]) !== null ? resultsHash(runId) : null} />
+      <PlayAction program={runId !== null && view.completed && hasReport(events) && readingOf(events[0]) !== null ? resultsHash(runId) : null} />
       <Counters view={view} headline />
     </div>
   );

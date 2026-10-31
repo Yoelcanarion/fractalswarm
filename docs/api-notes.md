@@ -1,6 +1,6 @@
 # API notes: Meta Model API and LlamaFirewall
 
-Written by the Day 2 spike. Trust this file over memory for Meta Model API details (CLAUDE.md).
+Written by the Day 2 spike. Trust this file over memory for Meta Model API details.
 
 ## Status (2026-10-27)
 
@@ -18,7 +18,7 @@ Each §24 item has three parts:
 
 ### Running the live spike
 1. Put the key in `~/.fractalswarm/.env` (`MODEL_API_KEY=LLM_...`).
-2. Ask Yoel to confirm that the credits show on dev.meta.ai under Billing → Free credits. Until then, calls are charged to the card on file.
+2. Confirm that the credits show on dev.meta.ai under Billing → Free credits. Until then, calls are charged to the card on file.
 3. `uv run python scripts/spike_api.py`. It makes about 45 probes, which are listed in the script. Worst case: $0.20, hard cap: $0.50. Rejected requests are free. `--probe-429` adds an opt-in burst of up to 200 tiny contributor calls that stops at the first 429 (worst case about $0.002).
 4. Evidence goes to `runs/spike/spike-<time>-live.json`, with a summary in `.md` next to it. Copy the findings into the **Live** lines below and record the spend in the progress log.
 
