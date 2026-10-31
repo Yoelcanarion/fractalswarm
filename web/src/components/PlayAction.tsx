@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type MouseEvent } from "react";
 
 import { prefersReducedMotion } from "../lib/motion";
 import { PHONE_QUERY } from "../lib/phone";
@@ -31,6 +31,16 @@ export function bringRunIntoView(): void {
   });
 }
 
+/** The start buttons (the row's and the empty tree's) give way to Pause when the replay plays, and a key press on one that has the focus would
+ * leave it on the page's body, with Space and Enter pressing nothing. So the focus goes to Pause, the button of the row that is left, as it
+ * stays on Pause and Carry on (one element for the two). Only a button that has the focus gives it up: a click that did not focus it (Safari's
+ * buttons) moves nothing. It waits for the page to be drawn for the press, and does not scroll, so it does not fight the phone's scroll to
+ * the row (`bringRunIntoView`). */
+export function keepFocusOnPause(event: Pick<MouseEvent<HTMLElement>, "currentTarget">): void {
+  if (document.activeElement !== event.currentTarget) return;
+  requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-replay-pause]")?.focus({ preventScroll: true }));
+}
+
 /** The main action of a recorded run, which says what it will do now: pause it while it plays, carry on from where it was stopped, and from
  * its start (or its end) watch its first coordinator die, with playing the whole run from its start beside it. A run in which no
  * coordinator is killed has the second only. A live run is played by the run itself. */
@@ -40,8 +50,9 @@ export function PlayAction() {
   const crashAt = useFirstCrashStart();
   if (live) return null;
   const midway = cursor > 0 && cursor < total;
-  const playFromStart = () => {
+  const playFromStart = (event: MouseEvent<HTMLButtonElement>) => {
     const { seek, setPlaying } = store.getState();
+    keepFocusOnPause(event); // before the press takes the button away
     seek(0);
     setPlaying(true);
     bringRunIntoView();
@@ -49,7 +60,7 @@ export function PlayAction() {
   return (
     <div className="runstate__actions">
       {playing ? (
-        <button type="button" className="btn btn--on" onClick={() => store.getState().setPlaying(false)}>
+        <button type="button" className="btn btn--on" data-replay-pause onClick={() => store.getState().setPlaying(false)}>
           Pause
         </button>
       ) : midway ? (
@@ -69,7 +80,8 @@ export function PlayAction() {
             <button
               type="button"
               className="btn btn--on"
-              onClick={() => {
+              onClick={(event) => {
+                keepFocusOnPause(event);
                 watchFirstCrash(store, crashAt);
                 bringRunIntoView();
               }}

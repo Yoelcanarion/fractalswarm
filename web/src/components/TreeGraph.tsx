@@ -11,7 +11,7 @@ import { rootHolder, type ActorNode, type ViewState } from "../lib/reducer";
 import { useRunStoreApi, useRunStoreShallow } from "../store";
 import { ClockScope } from "./ClockScope";
 import { EmptyState } from "./ui";
-import { bringRunIntoView, useFirstCrashStart, watchFirstCrash } from "./PlayAction";
+import { bringRunIntoView, keepFocusOnPause, useFirstCrashStart, watchFirstCrash } from "./PlayAction";
 import { useTreeMotion, type TreeShape } from "./useTreeMotion";
 
 // What a node is glowing from, if anything: an adoption or a restart within `life` ms of virtual
@@ -286,7 +286,8 @@ function NoTreeYet() {
             <button
               type="button"
               className="btn btn--on"
-              onClick={() => {
+              onClick={(event) => {
+                keepFocusOnPause(event);
                 watchFirstCrash(store, crashAt);
                 bringRunIntoView();
               }}
@@ -297,7 +298,8 @@ function NoTreeYet() {
           <button
             type="button"
             className={crashAt === null ? "btn btn--on" : "btn"}
-            onClick={() => {
+            onClick={(event) => {
+              keepFocusOnPause(event);
               setPlaying(true);
               bringRunIntoView();
             }}

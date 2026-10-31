@@ -5,7 +5,7 @@ import { PHONE_QUERY } from "../lib/phone";
 import { firstCrashStart, marksOf } from "../lib/timeline";
 import { loadJsonl } from "../lib/testing";
 import { createRunStore, type RunApi } from "../store";
-import { bringRunIntoView, watchFirstCrash } from "./PlayAction";
+import { bringRunIntoView, keepFocusOnPause, watchFirstCrash } from "./PlayAction";
 
 // The committed final run: its first coordinator, o0, is killed at 53.3 s.
 const events = loadJsonl("demo/final/events.jsonl");
@@ -122,5 +122,43 @@ describe("bringing the run into view", () => {
     bringRunIntoView();
     draw();
     expect(scrolled).toEqual([]);
+  });
+});
+
+// A start button gives way to Pause when the replay plays: a key press on it would leave the focus on the page's body.
+describe("keeping the focus on Pause", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** A page whose focused element is `focused`, with a Pause button (or none) in it; the frames are held until `draw()`. */
+  function pageWith(focused: object | null, pause: { focus: (options?: unknown) => void } | null) {
+    const frames: Array<() => void> = [];
+    vi.stubGlobal("document", { activeElement: focused, querySelector: (selector: string) => (selector === "[data-replay-pause]" ? pause : null) });
+    vi.stubGlobal("requestAnimationFrame", (callback: () => void) => frames.push(callback));
+    return { draw: () => frames.splice(0).forEach((callback) => callback()) };
+  }
+
+  it("moves the focus to Pause, without scrolling, once the page is drawn, when the button pressed had the focus", () => {
+    const button = {};
+    const focused: unknown[] = [];
+    const { draw } = pageWith(button, { focus: (options) => focused.push(options) });
+    keepFocusOnPause({ currentTarget: button as HTMLElement });
+    expect(focused).toEqual([]); // the button is still there until the page is drawn for the press
+    draw();
+    expect(focused).toEqual([{ preventScroll: true }]);
+  });
+
+  it("moves nothing when the button pressed did not have the focus: a click that did not focus it", () => {
+    const focused: unknown[] = [];
+    const { draw } = pageWith({}, { focus: (options) => focused.push(options) });
+    keepFocusOnPause({ currentTarget: {} as HTMLElement });
+    draw();
+    expect(focused).toEqual([]);
+  });
+
+  it("does nothing when there is no Pause to give it to", () => {
+    const button = {};
+    const { draw } = pageWith(button, null);
+    keepFocusOnPause({ currentTarget: button as HTMLElement });
+    expect(() => draw()).not.toThrow();
   });
 });

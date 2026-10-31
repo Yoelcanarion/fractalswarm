@@ -235,11 +235,20 @@ describe("the run page", () => {
     store.getState().seek(10);
     expect(render(store, createElement(RunPage))).toContain('<div class="runstate__actions"><button type="button" class="btn btn--on">Carry on</button></div>');
     store.setState({ playing: true });
-    expect(render(store, createElement(RunPage))).toContain('<div class="runstate__actions"><button type="button" class="btn btn--on">Pause</button></div>');
+    expect(render(store, createElement(RunPage))).toContain(
+      '<div class="runstate__actions"><button type="button" class="btn btn--on" data-replay-pause="true">Pause</button></div>',
+    );
     // at the end of the run, as at its start
     store.setState({ playing: false });
     store.getState().seek(store.getState().events.length);
     expect(render(store, createElement(RunPage))).toContain("Watch the first crash</button><button");
+  });
+
+  it("gives the focus to Pause when a start button, which Pause replaces, had it: in the row, and in the empty tree", () => {
+    for (const file of ["PlayAction.tsx", "TreeGraph.tsx"]) {
+      const source = readFileSync(REPO_ROOT + "web/src/components/" + file, "utf-8");
+      expect(source.match(/keepFocusOnPause\(event\)/g)?.length, file).toBeGreaterThanOrEqual(2); // Watch the first crash, and playing from the start
+    }
   });
 
   it("opens the Details fold into view, not behind the replay bar pinned over the foot of the page", () => {
@@ -263,7 +272,7 @@ describe("the run page", () => {
 
   it("says what the one main action will do now: play from the start, pause while it plays, carry on from where it stopped", async () => {
     const store = await opened();
-    const label = () => /<button type="button" class="btn btn--on">([^<]+)<\/button>/.exec(render(store, createElement(RunPage)))?.[1];
+    const label = () => /<button type="button" class="btn btn--on"[^>]*>([^<]+)<\/button>/.exec(render(store, createElement(RunPage)))?.[1];
     expect(label()).toBe("Play from the start");
     store.getState().seek(10);
     expect(label()).toBe("Carry on");
@@ -443,7 +452,17 @@ describe("the keyboard on the run page", () => {
     expect(block).toMatch(/\.app--run \.content \{\s*flex: 1 0 auto;\s*overflow: visible;/);
     expect(block).toMatch(/\.app--run \.lens \{\s*position: fixed;/); // the drawer is over the window, not over a page that scrolls under it
     expect(css.slice(0, phone)).not.toContain(".app--run"); // nothing of it above a phone's width
-    expect(css).toMatch(/\.run--overview > \.timeline \{\s*position: sticky;\s*bottom: 0;/);
+    expect(css).toMatch(/\.run--overview > \.timeline \{\s*position: sticky;\s*bottom: var\(--foot\);/);
+  });
+
+  it("keeps the replay bar the same distance above the foot of the window where the page ends and where it goes on under it", () => {
+    const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
+    // the page's padding at its foot and the bar's sticky offset are the one variable, in both sticky rules, so the bar does not move by it
+    expect(css).toMatch(/\.run \{[^}]*--foot: var\(--space-3\);\s*padding: 12px 16px var\(--foot\);/);
+    expect(css).toMatch(/\.run > \.timeline \{\s*position: sticky;\s*bottom: var\(--foot\);/);
+    expect(css).toMatch(/box-shadow: 0 var\(--foot\) 0 0 var\(--bg\)/);
+    expect(css).toMatch(/@media \(max-height: 700px\) \{\s*\.run--overview \{[^}]*--foot: 8px;/); // the short window's closer rows
+    expect(css).not.toMatch(/\.timeline \{\s*position: sticky;\s*bottom: 0;/);
   });
 
   it("has the marks of the bar as one tab stop, and the speeds as one select", async () => {
