@@ -68,13 +68,19 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, busy
   return (
     <div className="intake__form">
       <div className="intake__fields">
-        <label className="field">
-          <span className="field__label">
-            Talks <span className="field__hint">titles, speakers, abstracts. Required.</span>
-          </span>
-          <textarea className="field__box" rows={14} value={form.talks} onChange={(event) => set("talks", event.target.value)} spellCheck={false} autoComplete="off" placeholder="Submission 1&#10;Title: …&#10;Speaker: …&#10;Track: …&#10;Abstract: …" />
+        <div className="field">
+          {/* the sample stands by the box it fills, in the first screen at any width: it is the way in for whoever has no text to hand */}
+          <div className="field__head">
+            <label className="field__label" htmlFor="intake-talks">
+              Talks <span className="field__hint">titles, speakers, abstracts. Required.</span>
+            </label>
+            <button type="button" className="btn" disabled={sampling || busy} onClick={onSample}>
+              {sampling ? "Loading…" : "Use the sample text"}
+            </button>
+          </div>
+          <textarea id="intake-talks" className="field__box" rows={14} value={form.talks} onChange={(event) => set("talks", event.target.value)} spellCheck={false} autoComplete="off" placeholder="Submission 1&#10;Title: …&#10;Speaker: …&#10;Track: …&#10;Abstract: …" />
           <span className="field__count mono">{count(form.talks)}</span>
-        </label>
+        </div>
         {problems.length > 0 && form.talks.trim() !== "" && (
           <ul className="field__problems">
             {problems.map((problem) => (
@@ -136,8 +142,6 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, busy
       </div>
 
       <div className="intake__side">
-        <ShapeCard />
-        <PrivacyNotice backend={backend} />
         <Details id="reader" summary="Reader" hint={real ? "Muse · billed" : "the practice reader · free"} open={real}>
           <fieldset className="reader">
             <legend className="sr-only">Reader</legend>
@@ -157,16 +161,13 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, busy
             </label>
           </fieldset>
         </Details>
-        <div className="intake__actions">
-          {!real && (
+        {!real && (
+          <div className="intake__actions">
             <button type="button" className="btn btn--big btn--on" disabled={busy || problems.length > 0} onClick={onRead}>
               {busy ? "Starting…" : "Read with the practice reader"}
             </button>
-          )}
-          <button type="button" className="btn" disabled={sampling || busy} onClick={onSample}>
-            {sampling ? "Loading…" : "Use the sample text"}
-          </button>
-        </div>
+          </div>
+        )}
         {real && problems.length === 0 && spend}
         {real && problems.length > 0 && <p className="field__problem">Fill in the form first: the cost depends on the text.</p>}
         {error !== null && (
@@ -174,6 +175,8 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, busy
             {error}
           </p>
         )}
+        <ShapeCard />
+        <PrivacyNotice backend={backend} />
       </div>
     </div>
   );

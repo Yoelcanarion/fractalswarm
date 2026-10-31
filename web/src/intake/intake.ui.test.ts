@@ -57,6 +57,12 @@ describe("the form", () => {
     expect(text).toContain("Email addresses are replaced by placeholders");
   });
 
+  it("puts what starts a reading, and the sample for whoever has no text, above the cards, which held them off a laptop's first screen", () => {
+    const text = plainText(form());
+    expect(text.indexOf("Read with the practice reader")).toBeLessThan(text.indexOf("3 tracks × 2 blocks"));
+    expect(text.indexOf("Use the sample text")).toBeLessThan(text.indexOf("kept on this machine"));
+  });
+
   it("gives the program's fixed shape, so the person knows what Muse will fit the text to", () => {
     const text = plainText(form());
     expect(text).toContain("2 days");
