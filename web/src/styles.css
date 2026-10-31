@@ -1330,18 +1330,20 @@ textarea {
    them is off the screen and the bar leaves the page its room), and the three numbers of a run's line share the width instead of running
    off it. */
 @media (max-width: 760px) {
-  /* The run page on a phone is one page that scrolls, the bars above it (the top bar, the run's strip, the guide) going up off the screen with
-     it, and only the replay bar stays (it is sticky). Else 370 px of the 844 of a phone are bars that stay, and the tree, which is what a
-     press on Watch the first crash is for, has what is left. The Muse lens is a drawer over the window, so it is fixed to it. */
-  .app--run {
+  /* A page on a phone is one page that scrolls, the bars above it (the top bar, the run's strip, the guide) going up off the screen with it, and
+     only the replay bar stays (it is sticky). Else 370 px of the 844 of a phone are bars that stay on a run and 170 px on the other pages, and
+     what the page is for has what is left. It clips sideways, as the scroller it replaces did. The Muse lens is a drawer over the window, so it
+     is fixed to it. */
+  .app {
     height: auto;
     min-height: 100%;
   }
-  .app--run .content {
+  .content {
     flex: 1 0 auto;
     overflow: visible;
+    overflow-x: clip;
   }
-  .app--run .lens {
+  .app .lens {
     position: fixed;
   }
   .timeline {

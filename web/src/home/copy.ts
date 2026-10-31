@@ -32,7 +32,7 @@ export const COPY = {
   description:
     "Kill half the brains. It still finishes. FractalSwarm is a multi-agent runtime on Muse Spark and Muse Wonder. Kill a coordinator yourself, watch the rest take over, then step into the app.",
 
-  bar: { brand: "FractalSwarm", enter: "Enter the app", enterShort: "Enter", skip: "Skip to the story", home: "Back to the home page" },
+  bar: { brand: "FractalSwarm", enter: "Enter the app", enterShort: "App", skip: "Skip to the story", home: "Back to the home page" },
 
   seeMore: "See more",
   repeat: "Repeat",

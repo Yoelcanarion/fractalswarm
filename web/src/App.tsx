@@ -108,8 +108,8 @@ export function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, [loadRuns, loadCapabilities]);
 
-  // Every page shares one scroller (and the window, for a run on a phone), so a new screen would open where the last one was left: a press
-  // on Evidence at the foot of the arena landed on the last chart. Before the paint, so the new screen never shows at the old place.
+  // Every page shares one scroller (the window, on a phone), so a new screen would open where the last one was left: a press on Evidence at
+  // the foot of the arena landed on the last chart. Before the paint, so the new screen never shows at the old place.
   const screen = screenOf(window.location.hash);
   useLayoutEffect(() => {
     const main = document.getElementById("main");
@@ -149,8 +149,7 @@ export function App() {
   const opening = route.page === "run" && loadError === null && openingRun({ runId, named: route.runId, runs, runsLoaded }) !== null;
 
   return (
-    // on a phone the run page and its results are scrolled as a page, with the bars above them (styles.css `.app--run`)
-    <div className={route.page === "run" && (route.view === "overview" || route.view === "results") ? "app app--run" : "app"}>
+    <div className="app">
       <TopBar
         where={route}
         runId={runId}

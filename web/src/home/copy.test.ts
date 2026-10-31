@@ -31,7 +31,7 @@ const BANNED: [RegExp, string][] = [
 describe("the page's own words", () => {
   it("call the way into the rest of the product the app", () => {
     expect(COPY.bar.enter).toBe("Enter the app");
-    expect(COPY.bar.enterShort).toBe("Enter");
+    expect(COPY.bar.enterShort).toBe("App");
   });
 
   it("say the tagline exactly, and only its first sentence", () => {
