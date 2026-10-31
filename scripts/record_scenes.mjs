@@ -56,7 +56,7 @@ const USAGE = `usage: node scripts/record_scenes.mjs <scene>... | all  [options]
   --from <n> --to <n>    only frames n to m (1-based, inclusive): to record a long scene in chunks
   --every <n>            only every nth frame: a quick sample
   --no-encode            leave the frames, do not call ffmpeg
-  --strict               a warning, or a script that does not finish, fails the run
+  --strict               a warning, a script that does not finish, a real take with no cost, or a scene written for one rival taken against another fails the run
   --crf <n>              H.264 quality for the mp4 (default 12; lower is better)
 `;
 

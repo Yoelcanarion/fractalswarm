@@ -7,7 +7,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { plainText, occurrences } from "../arena/helps/testing";
+import { RegimeMap } from "../arena/helps/RegimeMap";
+import { plainText, occurrences, parsedSample } from "../arena/helps/testing";
 import { call, kill, rivalStream, swarmStream, takeOver } from "../arena/testing";
 import { CallView } from "../components/lens/CallView";
 import { readCallDetail, type CallDetail } from "../lib/lens";
@@ -100,6 +101,21 @@ describe("the run stage's lens regions", () => {
     expect(REGIONS["lens-sentence"].css).toBe(".lens .facts > .fact:first-child mark.evidence");
     for (const name of ["lens-call", "lens-sentence"] as const) expect(REGIONS[name].stages).toEqual(["run"]);
     expect(readFileSync(new URL("./director.css", import.meta.url), "utf8")).toContain(".dir__stage:has(.run__tree .actor--lens) .run__tree");
+  });
+});
+
+describe("the helps stage's row regions", () => {
+  it("find the three rows of the regime map that s7 rings, one each, by the row's own id", () => {
+    const html = renderToStaticMarkup(createElement(RegimeMap, { honesty: parsedSample(), rival: "durable-max" }));
+    const titles = Object.fromEntries([...html.matchAll(/<div class="map__row" data-helps="([^"]+)"><div class="map__head"><span class="map__title">([^<]+)<\/span>/g)].map((found) => [found[1], found[2]]));
+    const rows = { "restart-row": "Restart or failover time", "gate-row": "Gate · T2 conference", "fast-restart-row": "Fast external restart" } as const;
+    for (const [name, title] of Object.entries(rows)) {
+      const css = REGIONS[name as keyof typeof rows].css;
+      const id = /^\[data-helps="([^"]+)"\]$/.exec(css)?.[1] ?? "";
+      expect(occurrences(html, `data-helps="${id}"`), name).toBe(1);
+      expect(titles[id], name).toBe(title);
+      expect(REGIONS[name as keyof typeof rows].stages).toEqual(["helps"]);
+    }
   });
 });
 
@@ -215,6 +231,14 @@ describe("the pages that say a scene cannot be shown", () => {
     // the run page's strip is full: its stage starts under a band that is the note's
     expect(read("./director.css")).toMatch(/\.dir\[data-stage="run"\] \.dir__camera \{\s*padding-top: var\(--dir-band\);/);
     expect(read("./director.css")).toMatch(/\.dir\[data-stage="run"\] \.dir__stage--fit \{\s*height: calc\(1080px - var\(--dir-band\)\);\s*min-height: 0;/);
+  });
+
+  it("keeps the statement over the run page on a solid box, in the strip's empty middle and clear of the state line", () => {
+    // a statement on a box that lets the page through shows the end of "Replaying: ... 3 coordinators crashed so far" under its edge
+    const css = readFileSync(new URL("./director.css", import.meta.url), "utf-8");
+    expect(css).toMatch(/\.dir__statement \{[^}]*background: var\(--surface-1\);/);
+    expect(css).toMatch(/\.dir\[data-stage="run"\] \.dir__statement \{\s*top: 40px;/);
+    expect(css).toMatch(/\.dir\[data-stage="run"\] \.dir__statement \.dir__text \{\s*font-size: var\(--fs-hero\);/);
   });
 
   it("says which run a scene still needs, and where to give it", () => {

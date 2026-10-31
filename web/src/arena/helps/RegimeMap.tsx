@@ -81,7 +81,7 @@ export function RegimeMap({ honesty, rival }: RegimeMapProps) {
       ) : (
         <div className="map__rows">
           {rows.map((row) => (
-            <div className="map__row" key={row.id}>
+            <div className="map__row" key={row.id} data-helps={`row:${row.id}`}>
               <div className="map__head">
                 <span className="map__title">{row.title}</span>
                 <span className="map__detail">{row.detail}</span>

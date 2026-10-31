@@ -176,16 +176,27 @@ describe("the surface of a page", () => {
     const run = fakePage({ '.react-flow__node[data-id="o1"]': [{ x: 10, y: 20, w: 30, h: 40 }] });
     const surface = surfaceOf(run, { left: side(swarm) });
     expect(surface.screenRect({ kind: "actor", actor: "o1", side: null, subtree: false })).toEqual({ x: 10, y: 20, w: 30, h: 40 });
-    expect(run.asked).toEqual(['[data-actor="o1"]', '.react-flow__node[data-id="o1"]']);
+    expect(run.asked).toEqual(['[data-actor="o1"]', '.react-flow__node[data-id="o1"]', '.react-flow__node[data-id="o1"] .actor__duty']);
+  });
+
+  it("takes the ROOT badge in with the card that carries it, so that a ring does not cut it", () => {
+    // the badge sits above the card's top edge, out of the card's own box
+    const run = fakePage({
+      '.react-flow__node[data-id="o1"]': [{ x: 100, y: 200, w: 150, h: 50 }],
+      '.react-flow__node[data-id="o1"] .actor__duty': [{ x: 215, y: 189, w: 43, h: 20 }],
+    });
+    const surface = surfaceOf(run, { left: side(swarm) });
+    expect(surface.screenRect({ kind: "actor", actor: "o1", side: null, subtree: false })).toEqual({ x: 100, y: 189, w: 158, h: 61 });
   });
 
   it("follows the root to whoever holds it at the moment the replay is at", () => {
     const early = fakePage({});
     surfaceOf(early, { left: side(swarm, 5) }).screenRect({ kind: "actor", actor: "$root", side: null, subtree: false });
-    expect(early.asked.at(-1)).toBe('.react-flow__node[data-id="o0"]');
+    expect(early.asked).toContain('.react-flow__node[data-id="o0"]');
     const late = fakePage({});
     surfaceOf(late, { left: side(swarm) }).screenRect({ kind: "actor", actor: "$root", side: null, subtree: false });
-    expect(late.asked.at(-1)).toBe('.react-flow__node[data-id="o2"]');
+    expect(late.asked).toContain('.react-flow__node[data-id="o2"]');
+    expect(late.asked.filter((css) => css.includes("o0"))).toEqual([]);
   });
 
   it("has no actor on a side the page does not have", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { readOfficial, type Official } from "../arena/official";
-import { kill, rivalStream, swarmStream, takeOver } from "../arena/testing";
+import { CENTRAL_SCENARIO, kill, rivalStream, swarmStream, takeOver } from "../arena/testing";
 import { createClock } from "../lib/clock";
 import { loadFixture } from "../lib/testing";
 import { readCallDetail, readCalls, readMeter } from "../lib/lens";
@@ -10,7 +10,7 @@ import type { LensApi, LensStoreApi } from "../lensStore";
 import type { RunApi } from "../store";
 import { callTimes, pickCall } from "./calls";
 import type { CallPick } from "./script";
-import { clockReplay, createArenaStage, createRunStage, lensHandle, noteProblems, replayNote, takeClock } from "./stages";
+import { clockReplay, createArenaStage, createRunStage, lensHandle, noteProblems, replayNote, rivalProblems, takeClock } from "./stages";
 
 const swarmLog = (() => {
   const s = swarmStream();
@@ -22,6 +22,12 @@ const swarmLog = (() => {
 
 const rivalLog = (() => {
   const s = rivalStream();
+  s.at(70_000).emit("run.completed", "@kernel", {});
+  return s.events;
+})();
+
+const centralLog = (() => {
+  const s = rivalStream(CENTRAL_SCENARIO);
   s.at(70_000).emit("run.completed", "@kernel", {});
   return s.events;
 })();
@@ -260,5 +266,25 @@ describe("the note on a replay", () => {
     expect(noteProblems([12.3, 0], true)).toEqual(["declared real, but the server has no cost for the rival run"]);
     expect(noteProblems([null, null], true)).toHaveLength(2);
     expect(noteProblems([null, 0], false)).toEqual([]);
+  });
+
+  it("flags a take of a scene written for one rival against another, and nothing else", () => {
+    expect(rivalProblems(null, "central")).toEqual([]);
+    expect(rivalProblems("durable-max", "durable-max")).toEqual([]);
+    expect(rivalProblems("durable-max", "central")).toEqual(["written for the ideal durable supervisor (durable-max), but the rival run is the in-process supervisor (central)"]);
+    expect(rivalProblems("durable-max", "durable")).toHaveLength(1);
+    expect(rivalProblems("durable-max", null)).toEqual(["written for the ideal durable supervisor (durable-max), but the rival run is not a rival"]);
+  });
+
+  it("knows the system of its rival from the rival's own log", async () => {
+    const stage = createArenaStage("s", "r", { api: fakeApi({ s: swarmLog, r: rivalLog }), official: async () => null });
+    expect(stage.rival()).toBe("other"); // nothing has arrived yet
+    await vi.waitFor(() => expect(stage.loaded()).toBe(true));
+    expect(stage.rival()).toBe("durable-max");
+    stage.dispose();
+    const central = createArenaStage("s", "c", { api: fakeApi({ s: swarmLog, c: centralLog }), official: async () => null });
+    await vi.waitFor(() => expect(central.loaded()).toBe(true));
+    expect(central.rival()).toBe("central");
+    central.dispose();
   });
 });

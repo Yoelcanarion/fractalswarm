@@ -232,10 +232,21 @@ html.dir-on body {
   padding: var(--space-3) var(--space-6);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-4);
-  background: color-mix(in srgb, var(--surface-1) 94%, transparent);
+  background: var(--surface-1);
   box-shadow: var(--shadow-overlay);
   text-align: center;
   transform: translateX(-50%);
+}
+
+/* On the run page the statement goes in the empty middle of the strip, clear of the state line under it ("Replaying: at 70.7 s ... crashed so far"), whose end
+   showed through the box: a compact line (the strip's chips start at the frame's right, and its title ends at the left), on a solid box. */
+.dir[data-stage="run"] .dir__statement {
+  top: 40px;
+  padding: var(--space-2) var(--space-5);
+}
+
+.dir[data-stage="run"] .dir__statement .dir__text {
+  font-size: var(--fs-hero);
 }
 
 .dir__kicker {

@@ -41,8 +41,10 @@ interface Trace {
   state: ReturnType<ReturnType<typeof createTake>["state"]["getState"]>;
   /** The take's clock, the replay's playhead and whether it ran, at each frame. */
   frames: { ms: number; at: number; playing: boolean }[];
-  /** Every ring the take drew, with the take's clock when it began. */
-  rings: { target: Target; from: number }[];
+  /** Every ring the take drew, with the take's clock when it began and when it goes. */
+  rings: { target: Target; from: number; to: number }[];
+  /** Every tooltip, the same. */
+  tips: { target: Target; from: number; to: number }[];
   /** Every lower third, with the take's clock when it came on and when it goes. */
   captions: { text: string; from: number; to: number }[];
   opened: (string | null)[];
@@ -54,25 +56,33 @@ function play(scene: Scene, context: TimeContext): Trace {
   const surface = fakeSurface({}, context, { x: 300, y: 200, w: 400, h: 200 }, "the hover text of the page");
   const take = createTake(scene, scene.stage === "arena" || scene.stage === "run" ? replay : null, surface);
   const frames: Trace["frames"] = [];
-  const rings = new Map<number, { target: Target; from: number }>();
+  const rings = new Map<number, { target: Target; from: number; to: number }>();
+  const tips = new Map<number, { target: Target; from: number; to: number }>();
   const captions = new Map<number, { text: string; from: number; to: number }>();
   for (let i = 0; i < take.frames; i++) {
     take.tick();
     const state = take.state.getState();
     frames.push({ ms: state.ms, at: replay.playhead(), playing: replay.playing() });
-    for (const placed of state.rings) rings.set(placed.ring.id, { target: placed.ring.target, from: placed.ring.from });
+    for (const placed of state.rings) rings.set(placed.ring.id, { target: placed.ring.target, from: placed.ring.from, to: placed.ring.to });
+    for (const placed of state.tips) tips.set(placed.tip.id, { target: placed.tip.target, from: placed.tip.from, to: placed.tip.to });
     for (const caption of state.captions) captions.set(caption.id, { text: caption.text, from: caption.from, to: caption.to });
   }
-  return { state: take.state.getState(), frames, rings: [...rings.values()], captions: [...captions.values()], opened: surface.opened };
+  return { state: take.state.getState(), frames, rings: [...rings.values()], tips: [...tips.values()], captions: [...captions.values()], opened: surface.opened };
 }
 
 /** Where the replay was when the take's clock reached ``ms``. */
 const playheadAt = (trace: Trace, ms: number): number => trace.frames.find((frame) => frame.ms >= ms)?.at ?? Number.NaN;
-const ringOf = (trace: Trace, region: string): { target: Target; from: number } => {
-  const ring = trace.rings.find((r) => r.target.kind === "region" && r.target.region === region);
+/** The rings on a region, in the order they came on. */
+const ringsOn = (trace: Trace, region: string): Trace["rings"] => trace.rings.filter((r) => r.target.kind === "region" && r.target.region === region);
+const ringOf = (trace: Trace, region: string): Trace["rings"][number] => {
+  const ring = ringsOn(trace, region)[0];
   if (!ring) throw new Error(`no ring on ${region}`);
   return ring;
 };
+/** The regions and actors the take pointed at, in order. */
+const pointedAt = (trace: Trace): string[] => trace.rings.map((ring) => (ring.target.kind === "region" ? ring.target.region : ring.target.kind === "actor" ? ring.target.actor : ring.target.kind));
+/** The take's clock at the first frame whose replay had reached ``at``, in seconds. */
+const clockAt = (trace: Trace, at: number): number => trace.frames.find((frame) => frame.at >= at)!.ms / 1000;
 
 const PAIRS = [
   {
@@ -143,13 +153,15 @@ for (const pair of PAIRS) {
       });
     }
 
-    it("s1 rings the rival's board while its supervisor is down, and not before the swarm's first crash has been shown", () => {
+    it("s1 rings the rival's board a second time while its supervisor is down, and not before the swarm's first crash has been shown", () => {
       const trace = play(byId("s1-arena-open"), context);
-      const at = playheadAt(trace, ringOf(trace, "rival-board").from);
+      const rings = ringsOn(trace, "rival-board");
+      expect(rings).toHaveLength(2);
+      const at = playheadAt(trace, rings[1].from);
       expect(at).toBeGreaterThanOrEqual(rivalCrashes[0].at);
       expect(at).toBeLessThan(rivalCrashes[0].until);
       expect(at).toBeGreaterThanOrEqual(crashes[0].at);
-      // the swarm's first crash is on screen 14 s into the replay it starts from, about 0:22.5 into the clip: on the voice's "Now we kill half the brains" (video script, s1)
+      // the swarm's first crash is on screen 22.5 s into the replay it starts from, and so 0:22.5 into the clip: on the voice's "Now we kill half the brains" (video script, s1)
       const crashed = trace.frames.find((frame) => frame.at >= crashes[0].at)!;
       expect(crashed.ms / 1000).toBeGreaterThan(22);
       expect(crashed.ms / 1000).toBeLessThan(23);
@@ -176,6 +188,24 @@ for (const pair of PAIRS) {
       // and it is still on when "Now we kill half the brains" lands the first crash, and gone soon after
       expect(lower!.to).toBeGreaterThan(crashed);
       expect(lower!.to - crashed).toBeLessThan(2000);
+    });
+
+    it("s1 moves from its first frame: the replay runs from 22.5 s before the swarm's first crash, at 1x, with no hold and no jump, and rings the rival's board on 'on one coordinator'", () => {
+      const scene = byId("s1-arena-open");
+      const trace = play(scene, context);
+      expect(scene.steps.slice(0, 2).map((step) => step.do)).toEqual(["seek", "play"]);
+      expect(trace.frames[0].playing).toBe(true);
+      expect(Math.abs(trace.frames[0].at - (crashes[0].at - 22_500))).toBeLessThan(100);
+      // never faster than the clock, never back: the first frames are the run at rest, and then the run moving
+      for (let i = 1; i < trace.frames.length && trace.frames[i].at < crashes[0].at + 1000; i++) {
+        const step = trace.frames[i].at - trace.frames[i - 1].at;
+        expect(step, `frame ${i}`).toBeGreaterThan(0);
+        expect(step, `frame ${i}`).toBeLessThan(20);
+      }
+      // the voice says "on one coordinator" from 2.6 to 3.9 s: the ring is on from about 2 to 6.9 s, "It plans, assigns and checks the work" included
+      const first = ringsOn(trace, "rival-board")[0];
+      expect(Math.abs(first.from - 2000)).toBeLessThan(100);
+      expect(Math.abs(first.to - 6900)).toBeLessThan(100);
     });
 
     it("s6 rings the rival's status at its first outage, then runs both logs to their end and shows the counters", () => {
@@ -222,6 +252,19 @@ for (const pair of PAIRS) {
       const trace = play(byId("s8-proof"), context);
       expect(playheadAt(trace, ringOf(trace, "swarm-head").from)).toBe(context.end);
     });
+
+    it("s8 reports the supervisor's recovery first and says 'heir' over the swarm's takeover chip, from 7.5 s to the end: the voice's last clause", () => {
+      // voice at 140 wpm: "And you don't have to trust us" from 0 s, "replays bit for bit from a hash-chained log" to 8.1 s, "a checker recomputes every heir from it" from 8.1 to 11.6 s
+      const scene = byId("s8-proof");
+      const trace = play(scene, context);
+      expect(pointedAt(trace)).toEqual(["rival-head", "swarm-head"]);
+      expect(trace.tips.map((tip) => (tip.target.kind === "region" ? tip.target.region : ""))).toEqual(["rival-proof", "swarm-proof"]);
+      const swarm = trace.tips[1];
+      expect(Math.abs(swarm.from - 7500)).toBeLessThan(150);
+      expect(swarm.to).toBeGreaterThan(11_500);
+      expect(swarm.to).toBeLessThanOrEqual(scene.durationMs);
+      expect(trace.tips[0].to).toBeLessThanOrEqual(ringOf(trace, "swarm-head").from + 100); // one tooltip at a time
+    });
   });
 }
 
@@ -249,6 +292,10 @@ describe("the final run, as s4 and s5 meet it", () => {
   it("puts the root on the root's heir once it has taken over, and not before", () => {
     expect(actor("$root", crashes[0].at - 1000)).toBe("o0");
     expect(actor("$root", crashes[0].until + 1000)).toBe(actor("$heir:1"));
+    // and the root's second death: its heir holds the root a second before the whole outage is over, which is where s5's last ring begins
+    expect(actor("$root", crashes[2].at - 500)).toBe("o1");
+    expect(actor("$root", crashes[2].until - 900)).toBe(actor("$heir:3"));
+    expect(actor("$heir:3")).toBe("o2");
   });
 
   it("has every actor the run scenes point at", () => {
@@ -297,7 +344,7 @@ describe("the final run, as s4 and s5 meet it", () => {
     });
   }
 
-  it("s4 plays the tree to the end of the call that publishes the first fact, past the first kill, and opens Wonder's root plan, then that call, then the meter", () => {
+  it("s4 plays the tree to the end of the call that publishes the first fact, past the first kill and the hand-over's glide, and opens Wonder's root plan, then that call, then the meter", () => {
     const scene = byId("s4-lens");
     const times = callTimes(rows, scene.calls);
     const trace = play(scene, context(scene));
@@ -308,12 +355,40 @@ describe("the final run, as s4 and s5 meet it", () => {
     // the kill is in the take: the root is dead when the lens opens, and the second outage has not begun
     expect(at).toBeGreaterThan(crashes[0].at);
     expect(at).toBeLessThan(crashes[1].at);
+    // the heir's hand-over glides for 450 ms of the replay's own time, and a tree paused inside it holds a frozen glide: the pause is after it
+    expect(at).toBeGreaterThanOrEqual(crashes[0].until + 450);
     expect(trace.opened).toEqual(["wonder", "spark", null]);
     // no call is opened from the playhead's future: both have started by the pause, and the replay does not move after it
     for (const name of ["spark", "wonder"]) expect(times.get(name)!.start, name).toBeLessThanOrEqual(at);
     // what the take points at, in order: the drawer, the agent that made the second call (beside the drawer), the sentence the fact rests on, the meter
-    const rings = trace.rings.map((ring) => (ring.target.kind === "region" ? ring.target.region : ring.target.kind === "actor" ? ring.target.actor : ring.target.kind));
-    expect(rings).toEqual(["lens", "o3.1.a1", "lens-sentence", "meter"]);
+    expect(pointedAt(trace)).toEqual(["lens", "o3.1.a1", "lens-sentence", "meter"]);
+  });
+
+  it("s4 runs to the hand-over fast and through it at 1x, and the lens follows the voice from the pause, to the second", () => {
+    // voice at 140 wpm: "Muse Wonder plans" to 3.0 s, "Muse Spark agents read the emails, place the talks and check the results" to 8.6 s, "Click any call ... the sentence behind the decision" from 8.6 to 15.9 s ("and the sentence behind the decision" from 13.3 s), "Zero LLM tokens spent on coordination" to 18.4 s
+    const scene = byId("s4-lens");
+    const trace = play(scene, context(scene));
+    const paused = trace.frames.findIndex((frame, i) => i > 0 && trace.frames[i - 1].playing && !frame.playing);
+    // the replay is paused at 59.3 s of its own time wherever the 25x frames fall, which is 3.0 to 3.35 s into the clip
+    const pause = trace.frames[paused].ms;
+    expect(pause / 1000).toBeGreaterThan(2.9);
+    expect(pause / 1000).toBeLessThan(3.4);
+    // fast until 500 ms before the hand-over, then the replay's own pace: the glide plays out in real time, 0.5 s of it before the pause
+    expect(Math.abs(clockAt(trace, crashes[0].until - 500) - 2.34)).toBeLessThan(0.15);
+    const hand = trace.frames.filter((frame) => frame.at >= crashes[0].until && frame.at <= crashes[0].until + 450);
+    expect(hand.length).toBeGreaterThan(25);
+    expect(hand.every((frame) => frame.playing)).toBe(true);
+    const named = (ring: Trace["rings"][number]): string => (ring.target.kind === "region" ? ring.target.region : ring.target.kind === "actor" ? ring.target.actor : "");
+    const [lens, agent, sentence, meter] = ["lens", "o3.1.a1", "lens-sentence", "meter"].map((name) => trace.rings.find((ring) => named(ring) === name)!);
+    expect(Math.abs(lens.from - pause)).toBeLessThan(40);
+    expect(Math.abs(agent.from - (pause + 2000))).toBeLessThan(40);
+    expect(Math.abs(sentence.from - (pause + 10_250))).toBeLessThan(40);
+    expect(Math.abs(meter.from - (pause + 12_850))).toBeLessThan(40);
+    expect(meter.to).toBeLessThanOrEqual(scene.durationMs);
+    expect(meter.to).toBeGreaterThan(18_000);
+    // the camera fits the call once, and no ring is drawn while it holds on the call's figures
+    expect(scene.steps.filter((step) => step.do === "camera" && step.fit !== null)).toHaveLength(1);
+    expect(trace.rings.filter((ring) => ring.from > agent.to && ring.from < sentence.from)).toEqual([]);
   });
 
   it("s5 shows two outages, the one two levels down first and the root's second, each from just before it to the heir's takeover", () => {
@@ -322,44 +397,59 @@ describe("the final run, as s4 and s5 meet it", () => {
     const first = trace.frames.find((frame) => frame.at >= crashes[1].at)!;
     expect(first.at).toBeLessThan(crashes[1].at + 200);
     const rings = trace.rings.filter((ring) => ring.target.kind === "actor").map((ring) => (ring.target.kind === "actor" ? ring.target.actor : ""));
-    expect(rings).toEqual(["$crashed:2", "$heir:2", "$crashed:1", "$root"]);
-    // the last ring is on the root once its heir holds it
+    expect(rings).toEqual(["$crashed:2", "$crashed:3", "$heir:2", "$root"]);
+    // the last ring is on the root once its heir holds it: 950 ms before the outage is over, which is when the heir takes the root
     const root = trace.rings.find((ring) => ring.target.kind === "actor" && ring.target.actor === "$root")!;
-    expect(playheadAt(trace, root.from)).toBeGreaterThanOrEqual(crashes[0].until);
+    expect(playheadAt(trace, root.from)).toBeGreaterThanOrEqual(crashes[2].until - 1000);
+    expect(playheadAt(trace, root.from)).toBeLessThan(crashes[2].until);
   });
 
-  it("s5 runs the tree slowed until the first outage, which lands where the voice says the heartbeats stop, and gives the root's heir the last seconds", () => {
-    // voice at 140 wpm: "When one stops sending heartbeats" from 6.0 s, "each survivor computes the same heir" to 12.0 s, "Even the root can die" from 21.4 s
+  it("s5 runs on in order, never back: slowed to the first outage, to a quarter of that speed for the heir, and back to 1x on the root's death", () => {
+    // voice at 140 wpm: "When one stops sending heartbeats" from 6.0 s, "computes the same heir" from 9.0 s, "Even the root can die" from 14.1 s, "The heir adopts the work" from 16.3 s, "and every result already in the log" from 18.4 s
     const scene = byId("s5-recovery");
     const trace = play(scene, context(scene));
-    const first = trace.frames.find((frame) => frame.at >= crashes[1].at)!;
-    expect(first.ms).toBeGreaterThan(5500);
-    expect(first.ms).toBeLessThan(6500);
-    // the heir overlay is on when the first heir takes over, 5.4 s later, still at 1x
+    for (let i = 1; i < trace.frames.length; i++) expect(trace.frames[i].at, `frame ${i}`).toBeGreaterThanOrEqual(trace.frames[i - 1].at);
+    expect(scene.steps.filter((step) => step.do === "seek")).toHaveLength(1);
+    expect(scene.steps.filter((step) => step.do === "camera")).toEqual([]); // a fit over the tree zooms the page's edges out of the frame
+    const outage = (index: number): number => clockAt(trace, crashes[index].at);
+    expect(Math.abs(outage(1) - 6.0)).toBeLessThan(0.3);
+    expect(Math.abs(outage(2) - 14.1)).toBeLessThan(0.4);
+    // the heir overlay comes on at "computes the same heir", while the replay creeps, and is gone before the root dies
     const overlay = trace.captions.find((caption) => caption.text.startsWith("heir ="))!;
-    expect(overlay.from).toBeGreaterThan(first.ms + 5000);
-    expect(overlay.from).toBeLessThan(first.ms + 6000);
-    // the root's heir takes over in the last two seconds, and the script is over before the scene is
+    expect(Math.abs(overlay.from - 9500)).toBeLessThan(250);
+    expect(overlay.to).toBeLessThanOrEqual(outage(2) * 1000 + 200);
+    // the first heir takes over on "The heir adopts the work", the root's heir a second later, on "every result"
+    expect(Math.abs(clockAt(trace, crashes[1].until) - 17.5)).toBeLessThan(0.4);
+    expect(Math.abs(clockAt(trace, crashes[2].until - 950) - 18.55)).toBeLessThan(0.4);
+    const heir = trace.rings.find((ring) => ring.target.kind === "actor" && ring.target.actor === "$heir:2")!;
     const root = trace.rings.find((ring) => ring.target.kind === "actor" && ring.target.actor === "$root")!;
-    expect(root.from).toBeGreaterThan(scene.durationMs - 2500);
+    expect(heir.to).toBeLessThanOrEqual(root.from + 150); // one ring at a time on the takeovers
+    // the replay is paused on the root's heir, and the script is over before the scene is
+    expect(root.to).toBeLessThanOrEqual(scene.durationMs);
+    expect(trace.frames.at(-1)!.playing).toBe(false);
     expect(trace.state.ms).toBeGreaterThanOrEqual(scene.durationMs - 100);
   });
 });
 
 describe("s7, which meets no log", () => {
-  it("rings the map, the table, the per-process line and the outcome as the voice reaches each, and ends before its scene does", () => {
-    // voice at 140 wpm: "helps" from 0 s, "ties" from 4.7 s, "loses to a fast external restart" from 6.9 s, "false alarms" from 9.9 s
+  it("rings the three rows of the regime map and then the outcome as the voice reaches each, with no camera, and ends before its scene does", () => {
+    // voice at 140 wpm: "It helps when a supervisor is slow to restart a coordinator" to 4.7 s, "It ties in our main setting" to 7.3 s, "It loses to a fast external restart" to 10.3 s, "and its detector raises false alarms" to 12.9 s
     const scene = byId("s7-where-it-helps");
     const trace = play(scene, { end: 0, crashes: [], calls: new Map() });
     expect(trace.state.warnings).toEqual([]);
     expect(trace.state.position).toBe(scene.steps.length);
-    const rings = trace.rings.map((ring) => (ring.target.kind === "region" ? ring.target.region : ring.target.kind));
-    expect(rings).toEqual(["map", "table", "process", "outcome"]);
-    const at = (region: string): number => ringOf(trace, region).from;
-    expect(at("map")).toBeLessThan(1000);
-    expect(Math.abs(at("table") - 4700)).toBeLessThan(150);
-    expect(Math.abs(at("process") - 6900)).toBeLessThan(150);
-    expect(Math.abs(at("outcome") - 9900)).toBeLessThan(150);
-    expect(at("outcome") + 2000).toBeLessThanOrEqual(scene.durationMs);
+    expect(scene.steps.filter((step) => step.do === "camera")).toEqual([]);
+    expect(pointedAt(trace)).toEqual(["restart-row", "gate-row", "fast-restart-row", "outcome"]);
+    const [restart, gate, fast, outcome] = trace.rings;
+    expect(restart.from).toBeLessThan(1000);
+    expect(Math.abs(gate.from - 4700)).toBeLessThan(150);
+    expect(Math.abs(fast.from - 7300)).toBeLessThan(150);
+    expect(Math.abs(outcome.from - 10_000)).toBeLessThan(150);
+    // each ring ends where the next begins, and the outcome's goes to the end of the scene
+    expect(Math.abs(restart.to - gate.from)).toBeLessThan(150);
+    expect(Math.abs(gate.to - fast.from)).toBeLessThan(150);
+    expect(Math.abs(fast.to - outcome.from)).toBeLessThan(150);
+    expect(Math.abs(outcome.to - scene.durationMs)).toBeLessThan(150);
+    expect(trace.state.ms).toBeLessThanOrEqual(scene.durationMs + 1);
   });
 });

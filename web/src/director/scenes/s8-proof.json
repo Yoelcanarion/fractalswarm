@@ -5,15 +5,15 @@
   "duration_ms": 12000,
   "steps": [
     { "do": "seek", "to": "end" },
-    { "do": "camera", "fit": { "region": "swarm-head" }, "pad": 0.35, "ms": 1200 },
-    { "do": "highlight", "target": { "region": "swarm-head" }, "ms": 4000 },
-    { "do": "wait", "ms": 1400 },
-    { "do": "tooltip", "target": { "region": "swarm-proof" }, "ms": 2600 },
-    { "do": "wait", "ms": 2600 },
     { "do": "camera", "fit": { "region": "rival-head" }, "pad": 0.35, "ms": 1200 },
-    { "do": "highlight", "target": { "region": "rival-head" }, "ms": 5600 },
+    { "do": "highlight", "target": { "region": "rival-head" }, "ms": 6100 },
     { "do": "wait", "ms": 1400 },
-    { "do": "tooltip", "target": { "region": "rival-proof" }, "ms": 4200 },
-    { "do": "wait", "ms": 4200 }
+    { "do": "tooltip", "target": { "region": "rival-proof" }, "ms": 4700 },
+    { "do": "wait", "ms": 4700 },
+    { "do": "camera", "fit": { "region": "swarm-head" }, "pad": 0.35, "ms": 1200 },
+    { "do": "highlight", "target": { "region": "swarm-head" }, "ms": 5900 },
+    { "do": "wait", "ms": 1400 },
+    { "do": "tooltip", "target": { "region": "swarm-proof" }, "ms": 4400 },
+    { "do": "wait", "ms": 4400 }
   ]
 }

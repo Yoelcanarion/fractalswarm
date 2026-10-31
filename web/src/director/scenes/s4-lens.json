@@ -8,23 +8,26 @@
     "wonder": { "model": "wonder", "role": "root_planner" }
   },
   "steps": [
-    { "do": "speed", "x": 15 },
+    { "do": "speed", "x": 25 },
     { "do": "play" },
-    { "do": "wait", "until": "call-end:spark", "timeout_ms": 8000 },
+    { "do": "wait", "until": "recovered:1-500ms", "timeout_ms": 8000 },
+    { "do": "speed", "x": 1 },
+    { "do": "wait", "until": "call-end:spark", "timeout_ms": 4000 },
+    { "do": "wait", "ms": 300 },
     { "do": "pause" },
     { "do": "lens", "open": "wonder" },
-    { "do": "highlight", "target": { "region": "lens" }, "ms": 1400 },
-    { "do": "wait", "ms": 2800 },
+    { "do": "highlight", "target": { "region": "lens" }, "ms": 2000 },
+    { "do": "wait", "ms": 2000 },
     { "do": "lens", "open": "spark" },
-    { "do": "highlight", "target": { "actor": "o3.1.a1" }, "ms": 1700 },
-    { "do": "wait", "ms": 1800 },
+    { "do": "highlight", "target": { "actor": "o3.1.a1" }, "ms": 3300 },
+    { "do": "wait", "ms": 3300 },
     { "do": "camera", "fit": { "region": "lens-call" }, "pad": 0.03, "ms": 1000 },
-    { "do": "wait", "ms": 1100 },
-    { "do": "highlight", "target": { "region": "lens-sentence" }, "ms": 4850 },
-    { "do": "wait", "ms": 4850 },
+    { "do": "wait", "ms": 4950 },
+    { "do": "highlight", "target": { "region": "lens-sentence" }, "ms": 2600 },
+    { "do": "wait", "ms": 2600 },
     { "do": "camera", "home": true, "ms": 700 },
     { "do": "lens", "close": true },
-    { "do": "highlight", "target": { "region": "meter" }, "ms": 3350 },
-    { "do": "wait", "ms": 3350 }
+    { "do": "highlight", "target": { "region": "meter" }, "ms": 2400 },
+    { "do": "wait", "ms": 2400 }
   ]
 }

@@ -8,6 +8,7 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import { fetchOfficial as serverOfficial } from "../arena/api";
+import { startedOf, systemKind, systemName } from "../arena/assumptions";
 import type { Official } from "../arena/official";
 import { createPairSession, type PairSession } from "../arena/session";
 import { createClock, type Clock, type ClockOptions, type FrameScheduler } from "../lib/clock";
@@ -43,6 +44,8 @@ export interface StageController {
   readonly lens: LensHandle | null;
   /** The cost of each run on the page, in the order they are on screen; null where the server did not say. */
   costs(): (number | null)[];
+  /** The system the rival of an arena was recorded with, as `run.started` names it ("durable-max", "central"); null where the stage has no rival. */
+  rival(): string | null;
   /** Everything the frame shows has arrived: the logs, the scored numbers, the checks, the calls. Polled. */
   loaded(): boolean;
   /** Why the stage cannot be shown (a run that does not load), or null. */
@@ -125,6 +128,10 @@ export function createArenaStage(left: string, right: string, options: StageOpti
     sides: { left: sideOf(session.left), right: sideOf(session.right) },
     lens: null,
     costs: () => [spentOf(session.left) ?? scored.getState().left?.costUsd ?? null, spentOf(session.right) ?? scored.getState().right?.costUsd ?? null],
+    rival: () => {
+      const scenario = startedOf(session.right.getState().events)?.payload.scenario;
+      return systemKind(typeof scenario === "string" ? scenario : null);
+    },
     loaded: () => scored.getState().settled && arrived(session.left.getState()) && arrived(session.right.getState()),
     problem: () => problemOf(session.left, session.right),
     dispose() {
@@ -204,6 +211,7 @@ export function createRunStage(runId: string, calls: Readonly<Record<string, Cal
     sides: { left: sideOf(store), right: null },
     lens: lensHandle(lens, calls),
     costs: () => [spentOf(store) ?? state.cost],
+    rival: () => null,
     loaded() {
       const s = store.getState();
       const takeover = s.takeover.state;
@@ -245,4 +253,11 @@ export function noteProblems(costs: readonly (number | null)[], real: boolean): 
   if (!real) return [];
   const names = costs.length === 1 ? ["the run"] : ["the swarm run", "the rival run"];
   return costs.flatMap((cost, i) => (cost !== null && cost > 0 ? [] : [`declared real, but the server has no cost for ${names[i]}`]));
+}
+
+/** Why a take cannot go in the video: a scene written for one rival, taken against another. What its lower third says (a tie on stall time and extra
+ * cost) is true of that rival only, and the voice says its workers survive. */
+export function rivalProblems(wanted: string | null, rival: string | null): string[] {
+  if (wanted === null || rival === wanted) return [];
+  return [`written for the ${systemName(wanted)} (${wanted}), but the rival run is ${rival === null ? "not a rival" : `the ${systemName(rival)} (${rival})`}`];
 }

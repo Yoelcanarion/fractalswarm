@@ -180,6 +180,15 @@ describe("a scene script", () => {
     expect(ok.ok && ok.value.replayNote).toBe(false);
   });
 
+  it("names the rival an arena scene is written for, and an arena scene only", () => {
+    const ok = parseScene(arenaScene({ rival: "durable-max" }));
+    expect(ok.ok && ok.value.rival).toBe("durable-max");
+    const plain = parseScene(arenaScene({}));
+    expect(plain.ok && plain.value.rival).toBeNull();
+    expect(reason(arenaScene({ stage: "run", rival: "durable-max" }))).toMatch(/only an arena scene has a rival/);
+    expect(reason(arenaScene({ rival: 3 }))).toMatch(/scene\.rival/);
+  });
+
   it("cannot hide the arena's assumptions line: it is not a panel", () => {
     expect(reason(arenaScene({ steps: [{ do: "panel", name: "assumptions", show: false }] }))).toMatch(/\.name/);
     expect(reason(arenaScene({ panels: { assumptions: false } }))).toMatch(/scene\.panels\.assumptions/);
@@ -274,7 +283,7 @@ describe("what a target finds on the page", () => {
     expect(selectorsOf({ kind: "counter", counter: "idle" })).toEqual(['.metric[data-row="idle"]']);
     expect(selectorsOf({ kind: "actor", actor: "o1", side: "left", subtree: false }, ["o1"])).toEqual(['.side--swarm [data-actor="o1"]']);
     expect(selectorsOf({ kind: "actor", actor: "o1", side: "right", subtree: false }, ["o1"])).toEqual(['.side--rival [data-actor="o1"]']);
-    expect(selectorsOf({ kind: "actor", actor: "o1", side: null, subtree: false }, ["o1"])).toEqual(['[data-actor="o1"]', '.react-flow__node[data-id="o1"]']);
+    expect(selectorsOf({ kind: "actor", actor: "o1", side: null, subtree: false }, ["o1"])).toEqual(['[data-actor="o1"]', '.react-flow__node[data-id="o1"]', '.react-flow__node[data-id="o1"] .actor__duty']);
     expect(selectorsOf({ kind: "actor", actor: "o1", side: "left", subtree: true }, ["o1", "o1.a1"])).toHaveLength(2);
   });
 

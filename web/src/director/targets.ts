@@ -53,6 +53,10 @@ export const REGIONS = {
   map: region(["helps"], '[data-helps="map"]'),
   table: region(["helps"], '[data-helps="table"]'),
   process: region(["helps"], '[data-helps="process"]'),
+  // three rows of the regime map, each by its row id (axis:task): the restart the supervisor needs, the gate at T2, the fast external restart
+  "restart-row": region(["helps"], '[data-helps="row:rival_restart_ms:t2_conference"]'),
+  "gate-row": region(["helps"], '[data-helps="row:gate:t2_conference"]'),
+  "fast-restart-row": region(["helps"], '[data-helps="row:rival_recovery_ms:t2_conference"]'),
   // the ablation
   headline: region(["ablation"], ".abl__head"),
   caveats: region(["ablation"], ".abl__caveats"),
@@ -81,7 +85,8 @@ export const attr = (value: string): string => `"${value.replace(/["\\]/g, "\\$&
 /** The side's column of the arena; the swarm is always on the left. */
 export const SIDE_CSS: Record<Side, string> = { left: ".side--swarm", right: ".side--rival" };
 
-/** The selectors that find a target. ``actors`` is the actor and, for a subtree, everyone under it, already resolved to ids. */
+/** The selectors that find a target. ``actors`` is the actor and, for a subtree, everyone under it, already resolved to ids. On the run page the root's
+ * card carries its ROOT badge above its top edge, out of the card's own box: a ring takes it in, so that it does not cut the badge. */
 export function selectorsOf(target: Target, actors: readonly string[] = []): string[] {
   switch (target.kind) {
     case "region":
@@ -91,7 +96,7 @@ export function selectorsOf(target: Target, actors: readonly string[] = []): str
     case "actor":
       return actors.flatMap((id) =>
         target.side === null
-          ? [`[data-actor=${attr(id)}]`, `.react-flow__node[data-id=${attr(id)}]`]
+          ? [`[data-actor=${attr(id)}]`, `.react-flow__node[data-id=${attr(id)}]`, `.react-flow__node[data-id=${attr(id)}] .actor__duty`]
           : [`${SIDE_CSS[target.side]} [data-actor=${attr(id)}]`],
       );
   }

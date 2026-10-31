@@ -80,6 +80,9 @@ export interface Scene {
   durationMs: number;
   /** "Replay of a real recorded run · real cost $X" on the frame (the video script asks for it wherever a replay is shown). */
   replayNote: boolean;
+  /** The rival (a system kind, such as "durable-max") the scene is written for, when what it says is true of that rival only: a lower third like "tied on
+   * stall time and extra cost" is. A take against another rival gets a flag, and `--strict` refuses it. */
+  rival: string | null;
   /** Parts hidden or shown when the scene opens. */
   panels: Partial<Record<PanelName, boolean>>;
   calls: Record<string, CallPick>;
@@ -267,12 +270,13 @@ function check(scene: Scene): void {
   if (waits > scene.durationMs) bad("scene.steps", `the waits add up to ${waits} ms, more than the scene's ${scene.durationMs} ms: the last steps would never run`);
   if (stage === "title" && scene.card === null) bad("scene.card", "a title stage shows a card");
   if (stage !== "title" && scene.card !== null) bad("scene.card", "only a title stage has a card");
+  if (stage !== "arena" && scene.rival !== null) bad("scene.rival", "only an arena scene has a rival");
 }
 
 export function parseScene(raw: unknown): Read<Scene> {
   return reading(() => {
     const r = record(raw, "scene");
-    known(r, ["id", "title", "stage", "duration_ms", "replay_note", "panels", "calls", "card", "steps"], "scene");
+    known(r, ["id", "title", "stage", "duration_ms", "replay_note", "rival", "panels", "calls", "card", "steps"], "scene");
     const id = text(r.id, "scene.id");
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) bad("scene.id", `"${id}" is not a scene id (lower case words joined by dashes, as in docs/video-script.md)`);
     const stage = oneOf(r.stage, STAGES, "scene.stage");
@@ -289,6 +293,7 @@ export function parseScene(raw: unknown): Read<Scene> {
       stage,
       durationMs: milliseconds(r.duration_ms, "scene.duration_ms", 1000, MAX_DURATION_MS),
       replayNote: r.replay_note === undefined ? stage === "arena" || stage === "run" : flag(r.replay_note, "scene.replay_note"),
+      rival: r.rival === undefined ? null : text(r.rival, "scene.rival"),
       panels,
       calls,
       card: r.card === undefined ? null : readCard(r.card, "scene.card"),

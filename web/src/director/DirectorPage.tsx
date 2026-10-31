@@ -14,7 +14,7 @@ import { directorHash, type DirectorRoute } from "./route";
 import { SCENE_FILES, sceneFile, SOURCES } from "./scenes";
 import { pointsAtRegion, type Scene, type Stage } from "./script";
 import { missingSources, resolveSources, type Sources } from "./sources";
-import { createArenaStage, createRunStage, noteProblems, replayNote, type StageController } from "./stages";
+import { createArenaStage, createRunStage, noteProblems, replayNote, rivalProblems, type StageController } from "./stages";
 import { AblationStageView, ArenaStageView, HelpsStageView, RunStageView, TitleStageView } from "./StageViews";
 import { createDomSurface } from "./surface";
 import { createTake, TIP_WAIT_POLLS, tooltipTargets, type Take } from "./take";
@@ -87,7 +87,7 @@ function build(scene: Scene, sources: Sources): Built {
       return { controller: stage, view: <RunStageView stage={stage} meterOpen={pointsAtRegion(scene, "meter")} /> };
     }
     case "helps":
-      return { controller: null, view: <HelpsStageView tableOpen={pointsAtRegion(scene, "table")} /> };
+      return { controller: null, view: <HelpsStageView /> };
     case "ablation":
       return { controller: null, view: <AblationStageView runId={need(sources.ablation, "ablation run")} /> };
     case "title":
@@ -275,7 +275,7 @@ function Frame({ scene, sources, hold, hud }: FrameProps) {
       clearInterval(poll);
       ready = true;
       words = scene.replayNote && controller !== null ? replayNote(controller.costs(), sources.real) : null;
-      noted = scene.replayNote && controller !== null ? noteProblems(controller.costs(), sources.real) : [];
+      noted = controller === null ? [] : [...(scene.replayNote ? noteProblems(controller.costs(), sources.real) : []), ...rivalProblems(scene.rival, controller.rival())];
       setNote(words);
       made.restart();
       drive.ready();

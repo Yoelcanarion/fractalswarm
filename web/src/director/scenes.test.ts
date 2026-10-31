@@ -94,12 +94,10 @@ describe("the scenes of the video", () => {
     expect(read("./StageViews.tsx")).toContain("<RunStrip unfold={meterOpen} />");
   });
 
-  it("open the full count's fold for the scene that points at the table, and for no other", () => {
-    // the wins, ties and losses are under the helps page's "The full count", closed on the page: a camera on them needs it open
-    expect(scenes.filter((scene) => pointsAtRegion(scene, "table")).map((scene) => scene.id)).toEqual(["s7-where-it-helps"]);
-    const read = (name: string): string => readFileSync(new URL(name, import.meta.url), "utf-8");
-    expect(read("./DirectorPage.tsx")).toContain('<HelpsStageView tableOpen={pointsAtRegion(scene, "table")} />');
-    expect(read("./StageViews.tsx")).toContain("<HelpsPage unfold={tableOpen} />");
+  it("name the rival a scene is written for when what it says is true of that rival only: s6, and no other", () => {
+    // "Ten seeds: tied on stall time and extra cost" is true of durable-max only (the head of docs/video-script.md): a take against another rival is flagged
+    expect(scenes.filter((scene) => scene.rival !== null).map((scene) => [scene.id, scene.rival])).toEqual([["s6-fair-fight", "durable-max"]]);
+    expect(VIDEO_SCRIPT).toMatch(/"tied on stall time and extra cost" is true of `durable-max` only/);
   });
 
   it("need only what their stage needs", () => {
@@ -118,6 +116,8 @@ const context: TimeContext = {
   crashes: [
     { at: 10_000, until: 15_500 },
     { at: 30_000, until: 35_500 },
+    // the root's death, as in the final run, comes while the second outage is still on, and its heir takes over a second before the work is all adopted
+    { at: 31_500, until: 37_500 },
   ],
   // the rival's plan fires at a fraction of its own run: here its first outage is later than the swarm's, as in the pair against
   // the ideal durable supervisor, and the second is earlier than the swarm's
@@ -136,17 +136,18 @@ describe("the tooltip steps of the scenes", () => {
   it("s8 shows the hover text of both proofs, and has no words of its own", () => {
     const scene = scenes.find((s) => s.id === "s8-proof")!;
     const tips = scene.steps.filter((step) => step.do === "tooltip");
+    // the supervisor's report first, the swarm's last: the swarm's words ("recomputed from the log") are the voice's last clause
     expect(tips.map((step) => step.do === "tooltip" && step.target)).toEqual([
-      { kind: "region", region: "swarm-proof" },
       { kind: "region", region: "rival-proof" },
+      { kind: "region", region: "swarm-proof" },
     ]);
     for (const step of tips) expect(Object.keys(step).sort()).toEqual(["do", "ms", "target"]);
   });
 
   it("are the ones the page waits for the hover text of before it starts the take, and only those", () => {
     expect(tooltipTargets(scenes.find((s) => s.id === "s8-proof")!)).toEqual([
-      { kind: "region", region: "swarm-proof" },
       { kind: "region", region: "rival-proof" },
+      { kind: "region", region: "swarm-proof" },
     ]);
     // a highlight points at things too; it needs no words from them
     expect(scenes.some((s) => s.steps.some((step) => step.do === "highlight"))).toBe(true);
