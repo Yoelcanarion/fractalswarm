@@ -44,6 +44,8 @@ export interface ScoreRow {
   /** Each side's bar, 0 to 1, against the larger of the two numbers of the row. */
   leftShare: number;
   rightShare: number;
+  /** A line under a side's scored number, for what the number alone leaves out; null where there is none. */
+  notes: { left: string | null; right: string | null };
 }
 
 interface RowDef {
@@ -55,8 +57,12 @@ interface RowDef {
   definition: string;
   /** What the sentence says about the live figure, when it counts something else than the scored one. */
   liveNote?: string;
+  /** What the row is called while a number of it is still the fold's, when that is not the scored one. */
+  liveLabel?: string;
   live(side: SideNumbers): number | null;
   official(side: SideNumbers, official: Official): number | null;
+  /** A line on one side's scored number, for what it leaves out. */
+  note?(side: SideNumbers): string | null;
 }
 
 const seconds = (ms: number): number => ms / 1000;
@@ -72,6 +78,19 @@ function meanOutageS(side: SideNumbers): number | null {
 function scoredViolations(official: Official): number | null {
   const match = /hard violations\s+(\d+)/i.exec(official.detail);
   return match ? Number(match[1]) : null;
+}
+
+/** "$0.605 spent, $0.180 estimated for 27 cancelled calls": the scored cost is the spend in the log plus an estimate for the calls a crash
+ * cancelled, so where it is more than the spend this says by how much, from the two numbers of the run itself. Nothing where the two agree at the
+ * three decimals shown, and nothing where the log holds no spend to split. */
+function costNote(side: SideNumbers): string | null {
+  const scored = side.finished ? (side.official?.costUsd ?? null) : null;
+  const spent = side.counters.costUsd;
+  if (scored === null || spent <= 0) return null;
+  const estimated = scored - spent;
+  if (estimated < 0.0005) return null;
+  const cancelled = side.official?.cancelledCalls ?? 0;
+  return `$${spent.toFixed(3)} spent, $${estimated.toFixed(3)} estimated${cancelled > 0 ? ` for ${cancelled} cancelled ${cancelled === 1 ? "call" : "calls"}` : ""}`;
 }
 
 export const ROW_DEFS: readonly RowDef[] = [
@@ -104,13 +123,17 @@ export const ROW_DEFS: readonly RowDef[] = [
   },
   {
     id: "cost",
-    label: "Cost",
+    // The run page shows the spend alone, so the same run has two costs: this one is the pre-registered basis (docs/claims.md R5), the metrics' cost.
+    label: "Cost, pre-registered basis",
+    liveLabel: "Cost so far",
     unit: "",
     prefix: "$",
     decimals: 3,
-    definition: "What the run has spent on model calls.",
+    definition: "What the run cost on the pre-registered basis: what it spent on model calls, plus an estimate for the calls a crash cancelled. The run page shows the spend alone.",
+    liveNote: "So far: what the run has spent on model calls. The scored figure adds an estimate for the calls a crash cancelled.",
     live: (s) => s.counters.costUsd,
     official: (_s, o) => o.costUsd,
+    note: costNote,
   },
   {
     id: "duplicated",
@@ -161,7 +184,7 @@ export function scoreRows(left: SideNumbers, right: SideNumbers): ScoreRow[] {
     const live = l.source === "live" || r.source === "live";
     return {
       id: def.id,
-      label: def.label,
+      label: live && def.liveLabel ? def.liveLabel : def.label,
       unit: def.unit,
       prefix: def.prefix ?? "",
       decimals: def.decimals,
@@ -170,6 +193,10 @@ export function scoreRows(left: SideNumbers, right: SideNumbers): ScoreRow[] {
       right: r,
       leftShare: share(l.value, scale),
       rightShare: share(r.value, scale),
+      notes: {
+        left: l.source === "official" ? (def.note?.(left) ?? null) : null,
+        right: r.source === "official" ? (def.note?.(right) ?? null) : null,
+      },
     };
   });
 }

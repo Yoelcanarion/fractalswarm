@@ -13,6 +13,8 @@ export interface EndSide {
   completed: boolean;
   /** Coordinators (for a rival, the supervisor) that crashed. */
   crashes: number;
+  /** Hand-overs the takeover check counted for a swarm (goals that changed owner); null or absent where it has not said. */
+  handOvers?: number | null;
   /** Model calls made again for work already paid for. */
   duplicatedCalls: number;
   placed: number;
@@ -36,6 +38,15 @@ function finishing(side: EndSide): string {
   return side.completed ? `finished with ${talks} placed` : `did not finish: ${talks} placed`;
 }
 
+/** Why the takeover check counts more hand-overs than there were coordinators lost, in the words the run page uses for it. Nothing where it counts
+ * no more. */
+function handedOver(side: EndSide): string {
+  const { handOvers, crashes } = side;
+  if (handOvers == null || crashes === 0 || handOvers <= crashes) return "";
+  const those = crashes === 1 ? "that coordinator" : `those ${crashes} coordinators`;
+  return ` The takeover check counts ${handOvers} hand-overs for ${those}: one coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes.`;
+}
+
 const paid = (side: EndSide): string => (side.duplicatedCalls === 0 ? "No call was paid for twice." : `${count(side.duplicatedCalls, "call")} paid for again.`);
 
 /** What one side did, in a sentence or two, by the kind of system it is. */
@@ -44,7 +55,7 @@ export function sideText(side: EndSide, assumptions: Assumptions): string {
   const pause = secondsText(assumptions.detectionMs + assumptions.restartMs);
   switch (side.system) {
     case "swarm":
-      return n === 0 ? `No coordinator crashed. It ${finishing(side)}. ${paid(side)}` : `Lost ${count(n, "coordinator")} and ${side.completed ? "still " : ""}${finishing(side)}. ${paid(side)}`;
+      return n === 0 ? `No coordinator crashed. It ${finishing(side)}. ${paid(side)}` : `Lost ${count(n, "coordinator")} and ${side.completed ? "still " : ""}${finishing(side)}. ${paid(side)}${handedOver(side)}`;
     case "central":
       return n === 0
         ? `Its supervisor did not crash. It ${finishing(side)}. ${paid(side)}`
