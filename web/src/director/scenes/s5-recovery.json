@@ -8,7 +8,7 @@
     { "do": "speed", "x": 0.5 },
     { "do": "play" },
     { "do": "wait", "ms": 3000 },
-    { "do": "caption", "text": "Shared log, not shared brain.", "ms": 5000 },
+    { "do": "caption", "text": "Shared log, not shared brain. The log is a central component.", "ms": 5000 },
     { "do": "wait", "until": "crash:2", "timeout_ms": 8000 },
     { "do": "speed", "x": 0.25 },
     { "do": "highlight", "target": { "actor": "$crashed:2" }, "ms": 3500 },

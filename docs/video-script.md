@@ -17,7 +17,7 @@ Anything that doesn't answer one of them stays out of the video.
 
 **Recording:**
 - The scenes come from director mode (`#/director/<scene-id>`), captured by `scripts/record_scenes.*` at 1920×1080.
-- **Exceptions:** `s2-intake` is recorded from the real live session, and `s9-close` is a real terminal capture (OBS, or Win+Alt+R).
+- **Exceptions:** `s2-intake` is recorded from the real live session, and `s9-close` is a real terminal capture (OBS, or Win+Alt+R). Cut the capture on the `MATCH` line: the command goes on to start the UI, and a browser opens over the terminal.
 - Record the voice per scene. Light editing joins the clips.
 - **On-screen notes:** whenever a replay is shown, the frame says "Replay of a real recorded run · real cost $0.4783" (`demo/final`: what the run spent, read from the end of its log; another run shows its own cost).
 
@@ -70,7 +70,7 @@ Anything that doesn't answer one of them stays out of the video.
 
 ### s4-lens (1:05–1:24)
 **On screen:**
-- The run plays and the tree grows.
+- The run plays at speed, with the whole tree on screen, up to the first call that publishes facts.
 - The lens opens on Wonder's root plan.
 - Then on a Spark extraction (`o3.1.a1`, the first call that publishes facts): "muse-spark-1.3 · effort low · 3,311 in (2,929 cached) · $0.0111 · 6.5 s", with the fact next to its highlighted email sentence. The root has already fallen at this point of the run, and the tree shows it: `s1` has shown the kill, and `s5` opens on the same tree.
 - **The Muse meter**, opened from "What the models cost" in the strip: "coordination tokens 0 · recovery tokens 0".
@@ -92,7 +92,7 @@ Anything that doesn't answer one of them stays out of the video.
 - Every survivor is working out the same heir. A brief overlay: "heir = highest hash(goal, member)".
 - Then the root dies (✕), and the replay goes back to its speed.
 - Both heirs take over: the subtree re-wires to the first, and the root's badge moves to the second.
-- **Lower third:** "Shared log, not shared brain."
+- **Lower third:** "Shared log, not shared brain. The log is a central component." The second sentence is S6's limitation, and the only place the video states it.
 
 **Voice-over (≈ 50 words):**
 > How does a team without a boss recover? Every coordinator reads the same log. When one stops sending heartbeats, each survivor computes the same heir from the log, so there is no election.
@@ -159,6 +159,7 @@ Anything that doesn't answer one of them stays out of the video.
 | `{{ablation_parser}}`, `{{ablation_muse}}`, `{{ablation_total}}` | The ablation result on the live input |
 
 ## Checks before recording
+- [ ] S5 is confirmed at the release commit, as its row in `docs/claims.md` says: `s8` and `s9` state it.
 - [x] The outcome has been decided with Yoel (B, Oct 29), and only that version is in the script.
 - [ ] Every placeholder is filled and matches a row of `docs/claims.md`.
 - [ ] No "simpler", "cheaper" or "more reliable" appears without its own row in `docs/claims.md`.
