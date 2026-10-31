@@ -1657,3 +1657,31 @@ From the second read, three small changes (0e0ed22): "fake model" is the one nam
 - The university address on the 784 commits stays, for the same reason.
 - `docs/submission.md` and `docs/video-script.md` stay, filled: `web/src/director/scenes.test.ts` reads the script, and `docs/claims.md` names both. What is left: the three ablation numbers, the video link, the partners line. The numbers need Yoel's own text; without that run those sentences are cut. **Release gate:** no double braces in `docs/` or `README.md`.
 - **The public tree holds no personal data:** the hits for a name inside the demo logs are random base64.
+
+**Merged, Oct 31, 19:36: `Yoelcanarion/arena` is at 93464b3, a fast-forward of 23 commits (the first coordinator's `arena-review-polish`, which holds `arena-decisions`).** Not on `master` and **not pushed**: Yoel's "no merge to master, push or publication without his explicit approval" covers all four decisions, and it is later than the nightly push of CLAUDE.md. **GitHub will refuse the push as things stand:** the tree now holds its first workflow, `.github/workflows/replay.yml`, and the `gh` token has the scopes `gist`, `read:org`, `repo`, with no `workflow`. Yoel runs `gh auth refresh -h github.com -s workflow` once, before the first push.
+
+**What came in, in the first coordinator's words:**
+- **Decision 1, `any_survivor`:** `docs/any-survivor.md` is complete. 421 cells at $0: off, 136 hang, 54 of them among the 194 drawn at random; on, none hangs and all replay. False deaths 131 to 256 where both ended, 113 of the 125 more from whole-bus cuts. Rule 1 is the mutual ring, not the goal ring. It is on in no recorded run.
+- **Decision 2:** Kill half the brains is offered only on a run with no failures (8c523f6).
+- **Decision 3:** the five split-brain flags on the real C3 rows were false alarms, the rule now reads tenures (b82209a), and the before and after are in `bench/results/split-brain-fix/`.
+- **Decision 4, track leads:** $2.87 of the strict $5, ten real cells, all replay. **PREREG §9's refutation rule tripped** on swarm `K-o3` seed 1, partial with 40 of 48 talks, and it is reported as a refutation in `bench/REPORT.md` §4.10.9. The takeover itself was clean, cdt 0 in every outage, no run reran. No real run crashed a lead with its plan in flight.
+- **Same-second pairs (Yoel: fewer choices, the ones that leave us best, and the coordinator falling at the same time on both sides):** $1.82, four real runs, one take each. `demo/pairs.json` lists only these two. The old pair bundles stay byte-identical in `demo/`, in Runs and in CI. The arena's lead, `s1`'s lower third and the README's caption say the kills were set by hand.
+- **The video:** `s1`, `s6` and `s8` play `demo/same-second-durable-max-*`; `s4` and `s5` stay on `demo/final`; the rival stays `durable-max`, so the voice keeps "it tied with us", and it checked the crossing in `s6` frame by frame. `s7` gained a second lower third, in R3's short form, because the page now folds R3's words. `docs/video-script.md` is v1.0. The takes are in `~/.fractalswarm/takes/final`, recorded from d81bbca: a UI change after that needs `takes\grabar_escenas.ps1`, about 10 minutes for all seven.
+- **`docs/claims.md`:** S8 counts the site's five logs (24,871 events), S2 says what it does not cover, and "Not claimed" gains "Any half" and a track lead's death on the real model.
+- **A slip of its chain:** a merge was committed with conflict markers in `story.json`, because the generator reads that file and the chain did not stop on its error. It amended that before anything used it. None is left in the tree.
+
+**My reading before the merge, counted from the logs, not read from the mail:**
+- **The pairs:** five kills on each side, within 0.2 s of each other on both pairs (`chaos.injected`: 39.1, 49.3, 59.1 to 59.3, 69.2 to 69.3, 79.2 to 79.3 s against `durable-max`). All four runs place 48 of 48 with no hard violation. "At the same second" is true.
+- **M3:** all 32 inputs scanned by `promptguard2-22m`, all allowed, in each of `demo/final`, `demo/backup` and the eight pair bundles.
+- **S4's "every real run of the swarm" in the README:** 0 coordination tokens in the ten shipped real runs and the 14 midlevel cells, by the bench's own scorer.
+- **The five logs of S8:** 8,771 + 6,434 + 1,275 + 6,612 + 1,779 = 24,871.
+- **R3's short form:** 19 false deaths in the swarm's ten runs at C3, none in the 30 of the three supervisors.
+- **`K-o3`, seed 1:** `completed` true, `valid` false, placed 40 of 48. So R6 and S7 stand: they speak of C3, and this cell is not C3.
+- **The README's caption and its alt text** match the frame: $0.4334 and $0.4302, 48 of 48 on both sides.
+- **Two words changed after the merge (898ed04):** the GIF's alt text said that the rival's agents "wait for each restart", next to a table that says they keep working through a crash; it now says what needs the supervisor waits. REPORT §6 said "All 86 coordinator crashes of the real swarm runs hit a session coordinator", and the six of §4.10.9 are real too: it now says "before §4.10.9".
+
+**Checks on the merged tree:** 1,247 unit on 93464b3; web 2,701 of 2,701, tsc and ruff clean, the build and `story.json` reproduce what is committed (a rebuild differs in line endings only). At 93464b3 and d81bbca the first coordinator ran 1,247 unit, 931 integration, 3 PromptGuard, a clean clone's `demo --verify`, 11 of 11 bundles MATCH, `takeover demo/final` OK, and `secret_scan.py` with no new hit. The whole suite runs again at the release.
+
+**Ledger:** spent $60.03, reserved $13.73; at 17:28 it was $55.35 and $12.86. Against Yoel's ceiling of $85 for everything together, that is $73.76.
+
+**For the release:** the site is five logs: `--runs demo/final --pair demo/same-second-durable-max-swarm:demo/same-second-durable-max-rival --pair demo/same-second-central-swarm:demo/same-second-central-rival`. The README's badge and its Replay sentence point at `actions/workflows/replay.yml`, which runs only on a push to `master`, so at release look at that first run before anyone reads the sentence. `.plans/notes/arena-static-browser-check.mjs` exits 1 on stale expectations of its own, not on faults.
