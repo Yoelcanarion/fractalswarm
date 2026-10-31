@@ -1,6 +1,27 @@
-# FractalSwarm
+<p align="center">
+  <a href="#verify-it-yourself">
+    <picture>
+      <source media="(prefers-color-scheme: light)" srcset="docs/assets/banner-light.svg">
+      <img src="docs/assets/banner-dark.svg" alt="FractalSwarm. Kill half the brains. It still finishes. A tree of ten coordinators loses five of them, the root among them, each one handing its work to a survivor, and the recorded run places all 48 talks." width="100%">
+    </picture>
+  </a>
+</p>
 
-> **Kill half the brains. It still finishes.**
+<p align="center">
+  <a href="#verify-it-yourself"><img alt="Replay: bit for bit" src="https://img.shields.io/badge/replay-bit_for_bit-17855a?style=flat-square"></a>
+  <a href="bench/REPORT.md"><img alt="LLM tokens on coordination: zero" src="https://img.shields.io/badge/LLM_tokens_on_coordination-zero-2563c9?style=flat-square"></a>
+  <a href="#why-metas-models-matter"><img alt="Built on Muse Spark, Muse Wonder and Llama PromptGuard 2" src="https://img.shields.io/badge/built_on-Muse_Spark_%C2%B7_Muse_Wonder_%C2%B7_Llama_PromptGuard_2-a36a00?style=flat-square"></a>
+  <img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-555?style=flat-square">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-555?style=flat-square"></a>
+</p>
+
+<p align="center">
+  <a href="#verify-it-yourself"><b>Verify it yourself</b></a> ·
+  <a href="#the-idea-shared-log-not-shared-brain">How it works</a> ·
+  <a href="#why-metas-models-matter">Meta's models</a> ·
+  <a href="#the-evidence">The evidence</a> ·
+  <a href="bench/REPORT.md">The report</a>
+</p>
 
 FractalSwarm is a runtime for teams of LLM agents. Its coordinators form a tree, any of them can die mid-run, the root included, and the survivors take over the work with no election. Zero LLM tokens spent on coordination. Every run this repository ships replays bit for bit from a hash-verified log.
 
@@ -11,6 +32,12 @@ Clone it and run one command. [uv](https://docs.astral.sh/uv/) installs the rest
 ```sh
 uv run fractalswarm demo --verify    # no API key needed
 ```
+
+<!-- arena-gif -->
+
+> "On the real model, with five of its ten coordinators crashed and half its agents killed, every run finished with a valid result. It stalled 11.2 s against 42.8 s for an in-process supervisor, and tied an ideal durable supervisor on stall time and extra cost."
+>
+> [The conditions, and where it does worse](#the-evidence).
 
 ## The problem
 
@@ -62,17 +89,39 @@ The log is still a central component. We remove the coordinator as a single poin
 
 The hard part of the demo task, planning a conference from messy emails, is reading people.
 
-- **Muse Spark** turns human language into constraints, each linked to its source sentence. It reads the emails, places the talks, checks the work and writes the blurbs.
-- **Muse Wonder** writes the root plan. Arbitration between agents is built and tested on the fake model; the real runs we checked had no dispute to settle.
-- **Llama PromptGuard 2** runs locally and screens each email and pasted input before an agent reads it. It screened all 32 inputs of every recorded demo and pair run. The bench's runs, runs on the fake LLM and an install without it use a pattern scanner instead.
+| Model | What it does here |
+|---|---|
+| **Muse Spark** | Turns human language into constraints, each linked to its source sentence. It reads the emails, places the talks, checks the work and writes the blurbs. |
+| **Muse Wonder** | Writes the root plan. Arbitration between agents is built and tested on the fake model; the real runs we checked had no dispute to settle. |
+| **Llama PromptGuard 2** | Runs locally and screens each email and pasted input before an agent reads it. It screened all 32 inputs of every recorded demo and pair run. The bench's runs, runs on the fake LLM and an install without it use a pattern scanner instead. |
 
 Every Muse token goes to the problem. "Zero LLM tokens spent on coordination" is a property of the design, measured in every real run of the swarm: takeover, routing and recovery are code. Planning and judging do call the model, and they count as work ([`bench/REPORT.md`](bench/REPORT.md) §2). The rivals we built spend none either, because their supervisors are code too; the LangGraph rows do, because that pattern routes through the model (about 3% of its tokens).
 
 ## The evidence
 
-We built the strongest rival we could implement fairly, and ran everything under the same failures on the real model. The rules, the rival's assumptions and every comparison are in [`bench/REPORT.md`](bench/REPORT.md); the hypotheses were committed in [`bench/PREREG.md`](bench/PREREG.md) before any run against that rival. Every claim here maps to its runs in [`docs/claims.md`](docs/claims.md).
+We built the strongest rival we could implement fairly, and ran the headline under the same failures on the real model; the sweeps around it ran at $0 on the fake model, and the table says which is which. The rules, the rival's assumptions and every comparison are in [`bench/REPORT.md`](bench/REPORT.md); the hypotheses were committed in [`bench/PREREG.md`](bench/PREREG.md) before any run against that rival. Every claim here maps to its runs in [`docs/claims.md`](docs/claims.md).
 
 **The headline, outcome B of the preregistration:** "Resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism."
+
+| Against | Where the swarm stands | What decides it | Setting |
+|---|---|---|---|
+| An ideal durable supervisor, whose agents keep working through a crash | **Tie** | Preserved work, extra cost, time to recover, duplicated spend and stall time | Real model, T2, 10 seeds |
+| The same rival, on false deaths | **Loss** | 1.90 per run against none: the swarm's failure detector declares live coordinators dead | Real model, T2, 10 seeds |
+| A realistic durable supervisor, which redoes its in-flight calls | **Ahead per crash** | Coordinator-dependency time 11.4 s against 50.3 s. Stall time and extra cost tie, and false deaths are a loss | Real model, T2 at C3, 10 seeds, per crash |
+| An external supervisor that detects and restarts within 0.5–1 s | **Loss** | Locality fails, at 13.2 and 5.7 times the supervisor's dependency time | Fake model, T2 at C3 |
+| The ideal durable supervisor, with each coordinator process failing at the same rate | **Comparable** | The supervisor recovers sooner | Fake model, T2, single-crash probes, 4 seeds |
+| An in-process supervisor, whose workers die with it | **Ahead** | Stalled 11.2 s against 42.8 s, with +2.4% extra cost against +67.0% on the pre-registered basis, or −1.1% against +29.2% on completed calls only. Most of that gap comes from the rival's design, so it is no evidence against a well-built supervisor | Real model, T2 at C3, 10 seeds |
+
+T2 is the conference task and C3 its harshest failure profile.
+
+![Stall time and extra cost against coordinators killed, on the real model](bench/results/headline-10/hero-t2_conference.png)
+
+**What we do not claim:** "simpler", "cheaper" or "more reliable". Having no supervisor is not, by itself, evidence for any of them.
+
+<details>
+<summary><b>Every claim with its setting</b></summary>
+
+<br>
 
 Below, T2 is the conference task, C0 a run with no failures, and C3 the harshest failure profile: five coordinator crashes, half the agents killed, 20% API faults, 20% message loss and a network partition. The ideal durable supervisor is one coordinator whose agents keep working through a crash; it is back after 5 s and loses nothing.
 
@@ -83,9 +132,7 @@ Below, T2 is the conference task, C0 a run with no failures, and C3 the harshest
 - **Against an in-process supervisor (`central`), whose workers die with it,** the swarm at C3 stalled 11.2 s against 42.8 s, with +2.4% extra cost against +67.0% on the pre-registered basis (which estimates the cost of cancelled calls), or −1.1% against +29.2% on completed calls only (real model, T2, 10 seeds). Most of that gap comes from the rival's design, so it is no evidence against a well-built supervisor.
 - **Also on the real model, two seeds each, descriptive only:** LangGraph's hierarchical-teams pattern (`bench/REPORT.md` §4.10.8) and a scaling sweep from 1 to 16 agents (§8).
 
-![Stall time and extra cost against coordinators killed, on the real model](bench/results/headline-10/hero-t2_conference.png)
-
-**What we do not claim:** "simpler", "cheaper" or "more reliable". Having no supervisor is not, by itself, evidence for any of them.
+</details>
 
 ## Verify it yourself
 
@@ -117,6 +164,11 @@ uv run fractalswarm run tasks/examples/t2-conference.yaml     # a run on the fak
 
 `uv sync --extra safety` adds PromptGuard 2 for real runs: it needs `HF_TOKEN`, with access to the gated model. Without it, a real run says so and a pattern scanner screens its inputs.
 
+<details>
+<summary><b>Real runs</b></summary>
+
+<br>
+
 Real runs need a key (`MODEL_API_KEY`, see [`.env.example`](.env.example)) and an explicit flag. They reserve budget before each call and stop at hard caps:
 
 ```sh
@@ -126,12 +178,7 @@ uv run fractalswarm spend
 
 The web app lives in `web/` (Vite, React, TypeScript): `npm --prefix web install`, `npm --prefix web run dev`.
 
-## Safety
-
-- External content is data, never instructions: emails, pages and pasted text are scanned, wrapped in delimiters and kept out of system prompts.
-- Tool capabilities are denied by default. `fetch` only accepts URLs with provenance.
-- A plan's scope is approved and recorded. Work an email tries to add is logged as a request and blocked, which stops task splitting even when the classifier misses a polite injection.
-- Every real call reserves budget first and settles after, with hard caps per contract, squad, run and project.
+</details>
 
 ## Limitations
 
@@ -140,7 +187,22 @@ The web app lives in `web/` (Vite, React, TypeScript): `npm --prefix web install
 - Recovery after the whole Python process dies is an opt-in feature (`fractalswarm resume`, [`docs/resume.md`](docs/resume.md)), and it is not part of the demo.
 - More in [`bench/REPORT.md`](bench/REPORT.md) §6.
 
-## Repository
+<details>
+<summary><b>Safety</b></summary>
+
+<br>
+
+- External content is data, never instructions: emails, pages and pasted text are scanned, wrapped in delimiters and kept out of system prompts.
+- Tool capabilities are denied by default. `fetch` only accepts URLs with provenance.
+- A plan's scope is approved and recorded. Work an email tries to add is logged as a request and blocked, which stops task splitting even when the classifier misses a polite injection.
+- Every real call reserves budget first and settles after, with hard caps per contract, squad, run and project.
+
+</details>
+
+<details>
+<summary><b>Repository</b></summary>
+
+<br>
 
 | Path | What it holds |
 |---|---|
@@ -150,6 +212,8 @@ The web app lives in `web/` (Vite, React, TypeScript): `npm --prefix web install
 | `bench/` | Matrices, preregistration, results and the report |
 | `demo/` | Recorded runs, with their cassettes |
 | `docs/` | Claims, the video script, the submission drafts |
+
+</details>
 
 ## License
 
