@@ -12,8 +12,8 @@
 > what ran, on which models, at which commits and for how much. Every number in §3 and §4 is read
 > from files committed under `bench/results/` (`results.csv`, `results.json`, `honesty.json`,
 > `verdicts.txt`, the cell files), except where the text says it was computed from the run logs or
-> the progress log, which are not committed with the results. Later real-model runs and the results
-> of §8 are not written yet.
+> the progress log, which are not committed with the results. §4.10.8 adds the eight LangGraph
+> cells (two seeds, descriptive). The results of §8 are not written yet.
 
 **Headline (decision gate, Oct 29: outcome B). Resilience comparable to an ideal durable
 supervisor, without a central coordinator or a separate recovery mechanism.** Against
@@ -1615,8 +1615,9 @@ says what two seeds cannot show:
 *`bench/results/langgraph/results.csv` and `bench/results/v1/results.csv`, columns `stall_s` and
 `extra_cost_pct`.*
 
-It lands between `central` and the durable workflows, as its design predicts: it cancels as many
-calls as `central` at C3 (28.5 against 27.0), but its checkpoints keep the completed work.
+At C2 and C3 it lands between `central` and the durable workflows, as its design predicts: it
+cancels as many calls as `central` at C3 (28.5 against 27.0), but its checkpoints keep the completed
+work. C1 does not sort that way on stall, and two seeds cannot say why.
 
 **It is the one workflow here that spends LLM tokens on coordination.** Its session supervisors route
 each contract through the model, as the pattern does: 10,480 to 11,306 coordination tokens a run on
