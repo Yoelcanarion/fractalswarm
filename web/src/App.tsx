@@ -123,6 +123,15 @@ export function App() {
     }
   }, [route, runs, runId, openRun, store]);
 
+  // A run that ends with its page open gets the check a recorded one gets on opening.
+  useEffect(
+    () =>
+      store.subscribe((now, before) => {
+        if (before.live && !now.live && before.runId === now.runId) void now.runVerify();
+      }),
+    [store],
+  );
+
   // Director mode is the frame of the video: none of the app around it. After the hooks, so they run in the same order.
   if (route.page === "director") return <DirectorPage route={route.director} />;
 

@@ -44,8 +44,9 @@ export function keepFocusOnPause(event: Pick<MouseEvent<HTMLElement>, "currentTa
 
 /** The main action of a recorded run, which says what it will do now: pause it while it plays, carry on from where it was stopped, and from
  * its start (or its end) watch its first coordinator die, with playing the whole run from its start beside it. A run in which no
- * coordinator is killed has the second only. A live run is played by the run itself. */
-export function PlayAction() {
+ * coordinator is killed has the second only. A live run is played by the run itself. A run on a text a person approved ends on what they came
+ * for: `program` is the address of the finished program, the main action then, with the first crash beside it. */
+export function PlayAction({ program = null }: { program?: string | null }) {
   const { live, playing, cursor, total } = useRunStoreShallow((s) => ({ live: s.live, playing: s.playing, cursor: s.cursor, total: s.events.length }));
   const store = useRunStoreApi();
   const crashAt = useFirstCrashStart();
@@ -78,10 +79,15 @@ export function PlayAction() {
         </button>
       ) : (
         <>
+          {program !== null && (
+            <a className="btn btn--on" href={program}>
+              See the program
+            </a>
+          )}
           {crashAt !== null && (
             <button
               type="button"
-              className="btn btn--on"
+              className={program === null ? "btn btn--on" : "btn"}
               onClick={(event) => {
                 keepFocusOnPause(event);
                 watchFirstCrash(store, crashAt);
@@ -91,9 +97,11 @@ export function PlayAction() {
               Watch the first crash
             </button>
           )}
-          <button type="button" className={crashAt === null ? "btn btn--on" : "btn"} onClick={playFromStart}>
-            Play from the start
-          </button>
+          {(program === null || crashAt === null) && (
+            <button type="button" className={crashAt === null && program === null ? "btn btn--on" : "btn"} onClick={playFromStart}>
+              Play from the start
+            </button>
+          )}
         </>
       )}
     </div>

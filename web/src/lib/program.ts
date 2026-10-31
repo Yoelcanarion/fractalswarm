@@ -57,12 +57,17 @@ function hoursOf(id: string, slot: Record<string, unknown> | undefined): string 
   return end === null ? start : `${start}–${end}`;
 }
 
+/** The fingerprint of the reading a person approved, for a run built from one. */
+export function readingOf(started: RunEvent | undefined): string | null {
+  const input = asRecord(asRecord(started?.payload.params).input);
+  return input.source === "intake" ? (text(input.sha256)?.slice(0, FINGERPRINT) ?? null) : null;
+}
+
 /** The program of a report's placements, by day and by hour, in the rooms it uses: free rooms and free hours are left out. */
 export function programOf(placements: readonly Placement[], started: RunEvent | undefined): Program {
   const params = asRecord(started?.payload.params);
   const corpus = asRecord(params.corpus);
   const attendance = asRecord(asRecord(params.truth).attendance);
-  const input = asRecord(params.input);
   const rooms = byId(records(corpus.rooms), "id");
   const slots = byId(records(corpus.slots), "index");
   const talks = byId(records(corpus.talks), "id");
@@ -96,6 +101,6 @@ export function programOf(placements: readonly Placement[], started: RunEvent | 
           .sort(natural)
           .map((slot) => ({ id: slot, hours: hoursOf(slot, slots.get(slot)), talks: roomIds.map((room) => talkOf(at.get(`${day}|${room}|${slot}`))) })),
       })),
-    reading: input.source === "intake" ? (text(input.sha256)?.slice(0, FINGERPRINT) ?? null) : null,
+    reading: readingOf(started),
   };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { programOf } from "./program";
+import { programOf, readingOf } from "./program";
 import type { Placement } from "./results";
 import { Stream } from "./testing";
 
@@ -74,6 +74,13 @@ describe("the finished program", () => {
     expect(bare.rooms.map((room) => room.name)).toEqual(["main-hall", "room-b"]);
     expect(bare.days[0].slots[0].hours).toBe("Slot 0");
     expect(bare.days[0].slots[0].talks[0]).toEqual({ id: "T02", title: "T02", speaker: null, track: null, attendance: null });
+  });
+
+  it("knows a run built from a reading a person approved from one that was not", () => {
+    expect(readingOf(startedWith({ input: { source: "intake", sha256: "abcdef0123456789" } }))).toBe("abcdef012345");
+    expect(readingOf(startedWith({ input: { source: "file", sha256: "abcdef0123456789" } }))).toBeNull();
+    expect(readingOf(startedWith({}))).toBeNull();
+    expect(readingOf(undefined)).toBeNull();
   });
 
   it("shows the fingerprint of an approved reading, as the review does, and none for a task from a file", () => {

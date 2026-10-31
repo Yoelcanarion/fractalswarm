@@ -1,3 +1,5 @@
+import { resultsHash } from "../lib/address";
+import { readingOf } from "../lib/program";
 import { stateLine } from "../lib/runstate";
 import type { ViewState } from "../lib/reducer";
 import { useRunStoreShallow } from "../store";
@@ -7,7 +9,8 @@ import { PlayAction } from "./PlayAction";
 /** What a run page says before it shows anything: the state of the run in one sentence, the one main action beside it, and the three
  * numbers that are the run's claim (coordination tokens, hand-overs, what it cost). Every other counter is under the page's Details. */
 export function RunState({ view }: { view: ViewState }) {
-  const { live, playing, cursor, events, runStatus, verify } = useRunStoreShallow((s) => ({
+  const { runId, live, playing, cursor, events, runStatus, verify } = useRunStoreShallow((s) => ({
+    runId: s.runId,
     live: s.live,
     playing: s.playing,
     cursor: s.cursor,
@@ -32,7 +35,7 @@ export function RunState({ view }: { view: ViewState }) {
           <strong className="runstate__head">{line.headline}</strong> {line.rest}.
         </span>
       </p>
-      <PlayAction />
+      <PlayAction program={runId !== null && view.completed && readingOf(events[0]) !== null ? resultsHash(runId) : null} />
       <Counters view={view} headline />
     </div>
   );

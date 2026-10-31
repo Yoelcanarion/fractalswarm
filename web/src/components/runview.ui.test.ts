@@ -283,6 +283,20 @@ describe("the run page", () => {
     expect(text(render(store, createElement(RunPage)))).toContain("Paused: at ");
   });
 
+  it("ends a run on a text a person approved on what they came for, the program, and says its spend is notional", async () => {
+    const own = events();
+    own[0] = { ...own[0], payload: { ...own[0].payload, project_remaining_usd: null, params: { ...(own[0].payload.params as object), input: { source: "intake", sha256: "abcdef0123456789" } } } };
+    const store = await opened({ loadAllEvents: async () => own });
+    expect(render(store, createElement(RunPage))).not.toContain("See the program"); // at its start there is none yet
+    store.getState().seek(store.getState().events.length);
+    const out = render(store, createElement(RunPage));
+    expect(out).toContain('<a class="btn btn--on" href="#/run/toy/results?at=end">See the program</a>');
+    expect(text(out)).toContain("notional spend");
+    const billed = events();
+    billed[0] = { ...billed[0], payload: { ...billed[0].payload, project_remaining_usd: 90 } };
+    expect(text(render(await opened({ loadAllEvents: async () => billed }), createElement(RunPage)))).not.toContain("notional spend");
+  });
+
   it("says a recorded run is at its start, where it opens, and offers to play it or to jump to its end", async () => {
     const out = render(await opened(), createElement(RunPage));
     const t = text(out);

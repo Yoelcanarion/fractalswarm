@@ -1,6 +1,10 @@
+import { useMemo } from "react";
+
+import { BILLING, readFacts } from "../lib/catalogue";
 import { defineTerm } from "../lib/glossary";
 import { isInfraKind } from "../lib/layout";
 import type { ViewState } from "../lib/reducer";
+import { useRunStore } from "../store";
 import { Stat } from "./ui";
 
 export interface CountersProps {
@@ -13,6 +17,8 @@ export interface CountersProps {
 // (animate={false}) instead of chasing it with a count-up.
 export function Counters({ view, headline = false }: CountersProps) {
   const c = view.counters;
+  const first = useRunStore((s) => s.events[0]);
+  const notional = useMemo(() => readFacts(first, null).billed === false, [first]);
   const coordination = (
     <Stat hero animate={false} label="coordination tokens" value={c.coordinationTokens} hint={defineTerm("coordinationTokens")} />
   );
@@ -24,7 +30,7 @@ export function Counters({ view, headline = false }: CountersProps) {
       hint="a dead coordinator's work taken over by a survivor. One coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes"
     />
   );
-  const spent = <Stat animate={false} label="spent" prefix="$" value={c.spentUsd} decimals={4} />;
+  const spent = <Stat animate={false} label={notional ? "notional spend" : "spent"} prefix="$" value={c.spentUsd} decimals={4} hint={notional ? BILLING.notBilled.says : undefined} />;
   if (headline) {
     return (
       <div className="counters counters--headline">
