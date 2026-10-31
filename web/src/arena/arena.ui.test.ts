@@ -200,8 +200,11 @@ describe("the scoreboard", () => {
     expect(html).toContain("Rival ✓");
   });
 
-  it("says plainly that one pair is one seed", async () => {
-    expect(text(score(await opened(0)))).toContain("One pair is one seed");
+  it("says plainly that one pair is one run on one seed, and links to where the rest is", async () => {
+    const html = score(await opened(0));
+    expect(text(html)).toContain("One pair is one run on one seed under one failure plan");
+    expect(html).toContain('<a href="#/helps">Where it helps</a>');
+    expect(html).toContain('<a href="#/evidence">the Evidence page</a>');
   });
 });
 
@@ -303,10 +306,11 @@ describe("the page", () => {
       ),
     );
 
-  it("says what it is for, and has one main action once a pair is open: play both from the start", async () => {
+  it("says what it is for and what the rival is, and has one main action once a pair is open: play both from the start", async () => {
     const session = await opened(0);
     const html = await view({ session, left: "s", right: "r" });
-    expect(text(html)).toContain("The swarm and a rival run the same job under the same failures");
+    expect(text(html)).toContain("FractalSwarm, on the left, and a rival, on the right, do the same job while the same coordinators are killed.");
+    expect(text(html)).toContain("The rival is an ideal durable supervisor: its workers survive a crash, and it is back after 5 s.");
     expect(html).toContain('<button type="button" class="btn btn--on">Play both from the start</button>');
   });
 
@@ -318,7 +322,7 @@ describe("the page", () => {
     expect(text(html)).not.toContain("POST /api/arena");
   });
 
-  it("waits, with the page's own skeleton, for `#/arena` alone to open the newest public pair", async () => {
+  it("waits, with the page's own skeleton, for `#/arena` alone to open the first public pair", async () => {
     const html = await view({ pairs: [{ pairId: "p", left: "a", right: "b", label: "x", seed: "1", state: "completed", private: false, billed: false, createdAt: null } as never] });
     expect(html).toContain('<span class="sr-only">Loading the pair…</span>');
     expect(text(html)).not.toContain("No pair to watch yet");
@@ -327,5 +331,70 @@ describe("the page", () => {
   it("has no header of its own in a director's frame, which is the page and nothing around it", async () => {
     const html = await view({ bare: true });
     expect(html).not.toContain("pagehead");
+  });
+});
+
+describe("the end of a pair", () => {
+  const page = async (atMs: number, over: Partial<Parameters<typeof ArenaView>[0]> = {}) => {
+    const session = await opened(atMs);
+    return renderToStaticMarkup(
+      createElement(
+        RunStoreProvider,
+        { store: session.left as never },
+        createElement(ArenaView, { session, pairs: [], runs: [], official: { left: null, right: null }, left: "s", right: "r", ...over }),
+      ),
+    );
+  };
+
+  it("is not there while the pair plays", async () => {
+    expect(await page(30_000)).not.toContain("pairend");
+  });
+
+  it("says that both runs finished, what each did and that one pair is one run on one seed, once both have played out", async () => {
+    const html = await page(75_000);
+    const t = text(html);
+    expect(html).toContain('<section class="pairend" role="status"');
+    expect(t).toContain("Both runs finished.");
+    expect(t).toContain("FractalSwarm Lost 1 coordinator and still finished");
+    expect(t).toContain("Ideal durable supervisor Its supervisor crashed 1 time; its workers kept going and the board paused 5 s each time.");
+    expect(t).toContain("This is one run of each, on one seed, under one failure plan");
+    expect(html).toContain('<a href="#/helps">Where it helps</a>');
+    expect(html).toContain('<a href="#/evidence">the Evidence page</a>');
+  });
+
+  it("waits for the slower run: one side done is not the end of the pair", async () => {
+    // the swarm ends at 60 s and the rival at 70 s
+    expect(await page(65_000)).not.toContain("pairend");
+  });
+
+  it("is not in a director's frame, which is the arena and nothing around it", async () => {
+    expect(await page(75_000, { bare: true })).not.toContain("pairend");
+  });
+});
+
+describe("a pair that cannot be loaded", () => {
+  it("says what went wrong and offers a way out, instead of a bare line", async () => {
+    const failing: RunApi = {
+      ...api({}),
+      loadAllEvents: async () => {
+        throw new Error("run not found");
+      },
+    };
+    const session = createPairSession({ api: failing, clock: { scheduler: idle } });
+    await session.open("s", "r", { atMs: 0, speed: null, play: false });
+    renderCurrent(session.left);
+    renderCurrent(session.right);
+    const html = renderToStaticMarkup(
+      createElement(
+        RunStoreProvider,
+        { store: session.left as never },
+        createElement(ArenaView, { session, pairs: [], runs: [], official: { left: null, right: null }, left: "s", right: "r" }),
+      ),
+    );
+    expect(text(html)).toContain("Could not load the pair");
+    expect(text(html)).toContain("run not found");
+    expect(html).toContain(">Try again</button>");
+    expect(html).toContain('<a class="btn" href="#/runs">Open the runs</a>');
+    expect(html).toContain('role="alert"');
   });
 });

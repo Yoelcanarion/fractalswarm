@@ -93,7 +93,7 @@ export function Scoreboard({ left, right, official, playing, fixedStep }: Scoreb
         {settled
           ? "✓ Scored by the metrics from each run's log."
           : "Counted from each log up to the playhead; ✓ marks a number the metrics have scored, which the count ends on."}{" "}
-        One pair is one seed under one failure plan: the verdicts are the multi-seed ones in “Where it helps”.
+        One pair is one run on one seed under one failure plan, so it shows what happened here and nothing more: <a href="#/helps">Where it helps</a> holds the multi-seed verdicts, and <a href="#/evidence">the Evidence page</a> the numbers.
       </p>
     </section>
   );

@@ -23,12 +23,14 @@ function SideHead({ role, title }: { role: "swarm" | "rival"; title: string }) {
         <span className="side__run mono" title={runId ?? undefined}>
           {runId ?? ""}
         </span>
+      </div>
+      {/* The same row on both sides, so the two boards start at the same height. The chip is what the scenes point at. */}
+      <div className="side__proof">
+        <span className="side__chip">{role === "swarm" ? <TakeoverChip /> : <RecoveryChip />}</span>
         <span className="side__verify">
           <VerifyBadge />
         </span>
       </div>
-      {/* The same row on both sides, so the two boards start at the same height. */}
-      <div className="side__proof">{role === "swarm" ? <TakeoverChip /> : <RecoveryChip />}</div>
     </header>
   );
 }

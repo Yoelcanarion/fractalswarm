@@ -78,6 +78,27 @@ const FACTS: Record<SystemKind, string[]> = {
   other: ["same log"],
 };
 
+/** What the rival is, in a sentence for someone who has never met a supervisor. The words are those of docs/claims.md
+ * (R2: an ideal durable supervisor; R5: an in-process supervisor, whose workers die with it). */
+export function rivalSentence(assumptions: Pick<Assumptions, "system" | "detectionMs" | "restartMs">): string {
+  switch (assumptions.system) {
+    case "central":
+      return "The rival is an in-process supervisor: one program runs the workers, so when it crashes they stop with it.";
+    case "durable-max":
+      return `The rival is an ideal durable supervisor: its workers survive a crash, and it is back after ${secondsText(assumptions.detectionMs + assumptions.restartMs)}.`;
+    case "durable":
+      return "The rival is a durable supervisor: its workers survive a crash, but the plan it was making is lost.";
+    case "swarm":
+      return "The rival is another swarm run.";
+    case "single":
+      return "The rival is a single agent doing the whole job alone.";
+    case "pipeline":
+      return "The rival is a fixed pipeline of steps.";
+    default:
+      return "The rival is a supervisor that runs the job.";
+  }
+}
+
 /** The assumptions of a pair, from the `run.started` events of the rival's log and (optionally) the swarm's. */
 export function assumptionsOf(rival: RunEvent | undefined, swarm?: RunEvent): Assumptions {
   const system = systemKind(typeof rival?.payload.scenario === "string" ? rival.payload.scenario : null);

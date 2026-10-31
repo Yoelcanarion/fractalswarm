@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { Stream } from "../lib/testing";
-import { assumptionsOf, secondsText, startedOf, systemKind } from "./assumptions";
+import { assumptionsOf, rivalSentence, secondsText, startedOf, systemKind, type SystemKind } from "./assumptions";
 
 const started = (scenario: string, params: Record<string, unknown> = {}) =>
   startedOf(new Stream().emit("run.started", "@kernel", { seed: "1", scenario, params, clock: "sim" }).events);
@@ -59,5 +59,23 @@ describe("the system of a scenario", () => {
     expect(secondsText(2500)).toBe("2.5 s");
     expect(secondsText(0)).toBe("0 s");
     expect(secondsText(1234)).toBe("1.23 s");
+  });
+});
+
+describe("what the rival is, in a sentence", () => {
+  it("names each rival as docs/claims.md does, and says what a crash does to its workers", () => {
+    const at = (system: SystemKind, detectionMs = 5000, restartMs = 0) => rivalSentence({ system, detectionMs, restartMs });
+    expect(at("central")).toBe("The rival is an in-process supervisor: one program runs the workers, so when it crashes they stop with it.");
+    expect(at("durable-max")).toBe("The rival is an ideal durable supervisor: its workers survive a crash, and it is back after 5 s.");
+    expect(at("durable-max", 2500, 1000)).toContain("back after 3.5 s");
+    expect(at("durable")).toBe("The rival is a durable supervisor: its workers survive a crash, but the plan it was making is lost.");
+    for (const system of ["swarm", "single", "pipeline", "other"] as const) expect(at(system)).toMatch(/^The rival is /);
+  });
+
+  it("claims nothing about being simpler, cheaper, more reliable or better", () => {
+    for (const system of ["central", "durable-max", "durable", "swarm", "single", "pipeline", "other"] as const) {
+      const sentence = rivalSentence({ system, detectionMs: 5000, restartMs: 0 }).toLowerCase();
+      for (const word of ["simpler", "cheaper", "more reliable", "better", "worse"]) expect(sentence, `${system}: ${word}`).not.toContain(word);
+    }
   });
 });

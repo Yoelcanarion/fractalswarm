@@ -21,8 +21,8 @@ export const REGIONS = {
   "swarm-head": region(ARENA, ".side--swarm .side__head"),
   "rival-head": region(ARENA, ".side--rival .side__head"),
   // the verdict chip of each side: the takeover chip, and the supervisor's recovery chip
-  "swarm-proof": region(ARENA, ".side--swarm .side__proof"),
-  "rival-proof": region(ARENA, ".side--rival .side__proof"),
+  "swarm-proof": region(ARENA, ".side--swarm .side__chip"),
+  "rival-proof": region(ARENA, ".side--rival .side__chip"),
   heads: region(ARENA, ".side__head"),
   "swarm-board": region(ARENA, ".side--swarm .side__board"),
   "rival-board": region(ARENA, ".side--rival .side__board"),
