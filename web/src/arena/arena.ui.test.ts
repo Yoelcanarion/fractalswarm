@@ -427,6 +427,23 @@ describe("the page", () => {
       ),
     );
 
+  it("says so when the two sides were crashed by hand at the same second, which is not the benchmark's rule", async () => {
+    const swarm = swarmStream();
+    const params = swarm.events[0].payload.params as Record<string, unknown>;
+    params.chaos = { profile: "same-moment", seed: "1", actions: [] };
+    swarm.at(60_000).emit("run.completed", "@kernel");
+    const rival = rivalStream(undefined, 4, { recovery_ms: 5000 });
+    rival.at(70_000).emit("run.completed", "@kernel");
+    const session = createPairSession({ api: api({ s: swarm.events, r: rival.events }), clock: { scheduler: idle } });
+    await session.open("s", "r", { atMs: 0, speed: null, play: false });
+    renderCurrent(session.left);
+    renderCurrent(session.right);
+    const said = text(await view({ session, left: "s", right: "r" }));
+    expect(said).toContain("a coordinator falls on each side at the same second");
+    expect(said).toContain("We set these kills by hand");
+    expect(said).not.toContain("each at about the same point of the work");
+  });
+
   it("says what it is for and what the rival is, and has one main action once a pair is open: watch the first crash, with playing both from the start beside it", async () => {
     const session = await opened(0);
     const html = await view({ session, left: "s", right: "r" });
