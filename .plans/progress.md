@@ -1443,3 +1443,17 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 - **Secret scan** (`coord/secret_scan.py`, every blob of every local ref, 3,745 blobs; it prints names and counts, never a value): `MODEL_API_KEY` and `HF_TOKEN` appear in none. Its one alarm was `FRACTALSWARM_RUNS_DIR`, a path. The key-shaped strings in `tests/unit/test_llm.py` and `test_safety_scanners.py` are test data. Yoel's Gmail address: none.
 - **For Yoel at the publish step:** 261 lines hold `C:\Users\yogar` paths, nearly all under `.plans/`, which also holds his words and notes on this machine; and every commit carries his university address. Neither is a secret; whether `.plans/` goes public is his call.
 - **Fresh clone:** clean checkout, an empty home, no keys: `demo --verify` MATCH in 9 s, `replay demo/final --verify` MATCH, `takeover demo/final` OK. A clone under a path of more than about 148 characters fails on Windows, because the longest tracked path is 112 characters; my scratchpad was one such path, and a normal one is not.
+
+**My slip at 79f09af, fixed:** the M rows broke `home/claims.test.ts`, whose row reader knew only S and R. I had run that test, but my tail of the output showed vitest's banner, not the result. W4 found it. Merges now read the JSON reporter's counts.
+
+**Merged 00:14–01:38:** W7's demo (the result stays 14 s, plurals, fast clicks, one window at every size), step cards and Proof in two columns; W4's phone bars, Panels fold and lens drawer; W6's cap on the Proof and its checks at 1000, 1480 and 390 px in Chromium and Firefox. Web suite 2,148 green at 3157e01. Then every session hit the usage limit at 00:15, W4, W6 and W7 with open items, and the window reset at 01:30.
+
+**Paid, from 01:32, with no session working (`coord/paid_oct31.ps1`, `arena` worktree at 10c2ff7):**
+- **The ablation rehearsal** (`ablation-sample-1`, private): $0.03. The real path works; parser and Muse both 21 of 21, as expected on this text. Quoted nowhere.
+- **T3 real, for the first time:** `t3-real-c0` $0.40, 6 of 6 cells, 18 citations; `t3-real-kill-half` $0.40, 6 of 6, 15 citations, with o0, o2.1, o1, o3.2 and o2 crashed and 7 adoptions. 0 hard violations in both, soft score 0.67. Replay MATCH at HEAD for both, `takeover` OK. **Decision:** these logs stay out of the repository: they hold third-party page text, and a page with a phone number (the firewall's `findings`).
+- **LlamaFirewall's `Error preprocessing text: substring not found`** on some pages is harmless: 35 and 34 scans all ran on PromptGuard 2, and on that error it scores the raw text instead of the normalized one.
+- **My block list had no out field,** so the chain stopped at $0 and I restarted it at 01:38: LangGraph, then scaling.
+
+**A fresh clone had no arena.** `/api/pairs` read only the private directory, so the first door of the home page opened "No pair to watch yet" for anyone but me. **Fixed (d20f64f):** the two T2 pairs ship as `demo/pair-durable-max-*` and `demo/pair-central-*`, 25 MB, with `demo/pairs.json`; the API lists them first, also with no private directory, and `#/arena` alone opens durable-max. All four replay MATCH, `takeover` and `recovery` OK. **Decision:** durable-max first, because it is the honest rival; the picker has the other. The private manifests of the same runs stay listed on this machine.
+
+**W5 is back at 01:43** (`term_4ed4f7d5`, dispatch ctx_ba013385cf34, task task_01175eab5eae): the arena for a stranger, then the director on these pairs. It takes `#/arena` at 390 px from W4. HOLD for everyone until the chain ends.

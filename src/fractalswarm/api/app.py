@@ -490,11 +490,16 @@ def create_app(
         return JSONResponse(started, status_code=202)
 
     async def list_pairs(request: Request) -> JSONResponse:
-        return JSONResponse(arena.list_pairs(need_private()[1]))
+        recorded = arena.list_pairs(manager) if manager is not None else []
+        return JSONResponse(arena.bundled_pairs(demo_dir) + recorded)
 
     async def get_pair(request: Request) -> JSONResponse:
+        pair_id = request.path_params["pair_id"]
+        for pair in arena.bundled_pairs(demo_dir):
+            if pair["pair_id"] == pair_id:
+                return JSONResponse(pair)
         try:
-            return JSONResponse(arena.get_pair(need_private()[1], request.path_params["pair_id"]))
+            return JSONResponse(arena.get_pair(need_private()[1], pair_id))
         except JobError as exc:
             raise job_error(exc) from None
 

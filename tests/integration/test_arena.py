@@ -73,6 +73,26 @@ class Api:
         return self.wait(ended, f"job {job_id} to end")
 
 
+def test_a_server_with_no_private_dir_lists_the_pairs_the_repository_ships(tmp_path: Path) -> None:
+    client = TestClient(
+        create_app(tmp_path / "runs", REPO / "demo", tmp_path / "b", tmp_path / "s")
+    )
+    pairs = client.get("/api/pairs").json()
+    assert [pair["rival"] for pair in pairs] == ["durable-max", "central"]
+    listed = {run["id"] for run in client.get("/api/runs").json()}
+    for pair in pairs:
+        assert {pair["left"]["run_id"], pair["right"]["run_id"]} <= listed
+        assert pair["state"] == "completed" and pair["private"] is False
+        assert client.get(f"/api/pairs/{pair['pair_id']}").json() == pair
+        left, right = (
+            load_events(REPO / "demo" / pair[side]["run_id"].removeprefix("demo-"))[0]
+            for side in ("left", "right")
+        )
+        assert left.payload["params"]["chaos"] == right.payload["params"]["chaos"]
+        assert left.payload["scenario"].endswith(":SWARM")
+        assert right.payload["scenario"].endswith(":" + pair["rival"].upper().replace("-", "_"))
+
+
 @pytest.fixture
 def api(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Api]:
     monkeypatch.setenv("FRACTALSWARM_LEDGER_PATH", str(tmp_path / "ledger.sqlite"))
