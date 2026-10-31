@@ -293,6 +293,12 @@ def release_when_ready(
 # -- reading pairs -------------------------------------------------------------------------
 
 
+def bundled_pairs(demo_dir: Path | None) -> list[dict[str, Any]]:
+    """The pairs the repository ships (``demo/pairs.json``), so a fresh clone has an arena."""
+    found = read_json(demo_dir / "pairs.json") if demo_dir is not None else None
+    return found if isinstance(found, list) else []
+
+
 def pair_view(manager: JobManager, manifest: dict[str, Any]) -> dict[str, Any]:
     """The manifest with each side's run status and the job's state, as of now."""
     job = manager.jobs.get(manifest["job_id"])
