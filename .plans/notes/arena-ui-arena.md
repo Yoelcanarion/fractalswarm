@@ -16,8 +16,89 @@ built and which shapes it relies on. It is updated at each merge point.
 | 5. Director mode `#/director/<scene>` | built and committed (`web/src/director`), 8 scene scripts, 180 tests; **seen in a browser** through the recorder, first look: see "Director mode" |
 | 6. `scripts/record_scenes.*` | written and committed: PNG sequences at 1920×1080, 60 fps; no ffmpeg on the machine (the coordinator said not to install it) |
 
-No recorded pair is bundled: the coordinator said to wait for the post-freeze pair (Mon Nov 2). The arena runs on
-scratch pairs made with the fake LLM at $0.
+The two final T2 pairs ship in `demo/` since arena `d20f64f` (see "Round 3"); before that the arena ran on scratch
+pairs made with the fake LLM at $0.
+
+## Round 3 (Oct 31): the arena for a stranger, and the director on the two real pairs
+
+Merged arena `d20f64f`, then `8a98acf` (W4's phone work: the pair shown whole at 390 px, "Trade-offs", the sideways tree).
+The test held to is `redesign.md`'s: a person who has never heard of orchestrators understands the page and can use it, with no
+explanation. HOLD was on all through: code, `tsc` and `vitest` on one worker; **no build, no server, no browser, so nothing
+here has been looked at yet** (the list for the slot is at the end).
+
+### The arena for a stranger (`web/src/arena`)
+
+- **First look.** The lead is `FractalSwarm, on the left, and a rival, on the right, do the same job while the same
+  coordinators are killed.` and, once a pair is open, a second sentence from `rivalSentence(assumptions)` (assumptions.ts), in the
+  words of `docs/claims.md`: in-process "…one program runs the workers, so when it crashes they stop with it." (R5); ideal durable
+  "…its workers survive a crash, and it is back after 5 s." (R2); durable; swarm; single; pipeline; a default. The assumptions pill
+  under it stays always on. `#/arena` alone already opens the first public pair, which on a clean clone is the durable-max one.
+- **The plain end of a pair** (`PairEnd.tsx`, text in the pure `pairEndText.ts`): a card between the boards and the scoreboard, shown
+  only once both runs have played out (`!live` and the cursor at the end of each log) and never in a director frame (`bare`).
+  "Both runs finished." / "Only one of the two runs finished." / "Neither run finished." (a log that stops without `run.completed` is
+  "did not finish"); one or two sentences per side from its log (the swarm's lost coordinators and no call paid twice; an in-process
+  supervisor's workers stopping with it each time and the calls paid again; a durable one's board pausing for the detection and
+  restart time); then the scope: "This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after
+  X s and restarting after Y s: it shows what happened here, not what usually happens.", with links to `#/helps` (Trade-offs) and
+  `#/evidence`. No sentence says who is ahead or uses simpler, cheaper, more reliable, better (a test checks those words). The
+  scoreboard's note ("One pair is one run on one seed under one failure plan…") carries the same two links.
+- **A way out of the load error** (`EmptyState` tone bad: Try again, Open the runs), and **Home/End** with space and the arrows
+  (`keys.ts`, pure, tested).
+- **390 px and 1366 px.** The verify badge moved from the head's top row to the proof row (`.side__proof`, which wraps: the chip
+  and the badge side by side, or the badge under the chip, the same on both sides so the boards still start at one height). The
+  chip sits in `.side__chip` and the scenes' `swarm-proof` / `rival-proof` regions are that now, so s8's tooltips still read the
+  chip's `title`. At ≤700 px: less padding, the assumptions as a block, the badge's text may wrap, the end card in one column;
+  the scoreboard's numbers two across, one at ≤480 px. The picker at 390 px is W4's (the whole name shown wrapped, the select
+  laid over it unseen); I dropped my own picker rules in the merge. No container queries.
+- **Not seen yet.** I do not know how the head, the card and the numbers look at 1920x1080, 1366x768 and 390 px, dark and light;
+  the CSS is written from the rules. The run page's `?details=` addresses and the controls count of the first view are not
+  checked either.
+
+### The director on the two real pairs
+
+- **Which pair: a parameter.** `sources.json` has the first pair (`demo-pair-durable-max-swarm` / `-rival`), `run: "demo-final"`
+  for the run scenes (s4, s5), `ablation: null` and `"real": true`, in one commit. The in-process pair is the same scenes with
+  `?swarm=demo-pair-central-swarm&rival=demo-pair-central-rival` (the address wins over the manifest; the recorder takes
+  `--swarm`/`--rival`). One manifest and an address was simpler than two manifests, and s1, s6 and s8 run on both pairs unchanged
+  (tested on both).
+- **The sides do not crash at the same second**, because each plan fires at a fraction of its own run's progress. Durable pair:
+  the swarm's root at 40.7 s, the rival's supervisor at 46.3 s (its runs end at 90.1 s and 111.8 s). In-process pair: 46.8 s and
+  45.9 s (runs end at 119.6 s and 154.1 s). So there are two new moments, `rival-crash:N` and `rival-recovered:N` (time.ts;
+  `TimeContext.rivalCrashes`, taken by the surface from the rival's own log); `crash:N` is still the swarm's (the rival's when the
+  swarm has none).
+- **Retimed from the real lengths** (the clip times are those of a take on the fake page and replay, which is the take's own clock
+  and does not depend on the browser):
+
+| scene | now | on the real logs |
+|---|---|---|
+| s1 (32 s) | from 14 s before the swarm's first crash at 1x, ring on the fallen root, `wait until rival-crash:1`, ring on the rival's board for 5 s, hold; the 0.5x slow-down is gone (the later rival crash would have outlasted it) and the replay is not paused at the end | the first crash is at 20.0 s on both pairs; the rival's board is ringed at 25.6 s on the durable pair, exactly its 5 s pause, and from 20.0 s on the in-process pair (its pause was 45.9-51.0 s of the replay, so the ring covers its last 4 s); last step at 31.1 s / 25.5 s |
+| s6 (30 s) | from 5 s before the rival's first outage; rings on the rival's status and the swarm's first fallen for 5 s; 10x to the end of the longer log; the counters | the ring at 5.0 s; the end of the log at 16.4 s (111.8 s of replay) / 20.7 s (154.1 s); last step at 22.9 s / 27.2 s. 6x as before would not reach 154 s in 14 s |
+| s4 (18 s) | 15x until `call-end:spark`, pause, the lens on Spark's call then Wonder's, the meter | the first Spark work call of `demo-final` is `o3.1.a1`, 50.9-52.5 s of the replay: 3.5 s of clip, and 0.8 s before the first outage (53.3 s); Wonder's root plan (2.3-33.0 s) is a finished call by then; last step at 16.5 s |
+| s5 (22 s) | unchanged | o2.1 (63.5 s, heir o2.2), then o0 (53.3 s, heir o1; the root holder after 58.8 s); last step at 21.5 s |
+
+  A scene that points at the Muse meter has its fold open (`pointsAtRegion`; the meter sits under "What the models cost" now). The
+  other run-page anchors the director uses are W4's kept ones; `.counters`, `.run__grid`, `.run__side` are no scene's target.
+- **Unchanged and why.** s2 is live; s3 waits for an ablation on a person's own text, so `sources.ablation` stays null and the
+  scene says it needs one (the recorder reports it and goes on); s7 is "Trade-offs" with W4's unchanged `[data-helps]` anchors; s8
+  and s9. No scene says anything about arbitration (no real Wonder dispute).
+- **Tests.** `scenes.real.test.ts` is rewritten for the final logs: the arena scenes on both pairs (the outages and their order,
+  the actors on the side they point at, every step inside the duration with no warning, s1's ring inside the rival's first outage
+  with the first crash at 20 s, s6's ring at its first outage and the counters at the end of the longer log, s8 at the end) and
+  the run scenes on the final run (its outages, the heirs, s4's picks against `lib/fixtures/lens-demo-final.json`, which is the
+  server's `GET /api/runs/demo-final/calls` taken in-process, s4 pausing after the call and before the first outage, s5's four
+  rings). The `demo/backup` tests are gone (backup is no longer a source). Hand mutants: 12 of the director step, 11 caught, the
+  survivor (s4 at 25x instead of 15x) is an equivalent one: it still pauses on the first frame after the call, and the fastest
+  speed the director allows (40x) cannot step over the 0.8 s to the first outage.
+
+### For the slot (the recorder, and a look)
+
+1. One scratch build and a scratch server, then shots of `#/arena` on the first pair at 1920x1080, 1366x768 and 390 px in dark and
+   light, at the start and at the end (the end card).
+2. `s1`, `s6`, `s4`, `s8` with the recorder on the durable pair, then `s1` and `s6` on the in-process pair
+   (`--swarm demo-pair-central-swarm --rival demo-pair-central-rival`): look at where the rings land, at the idle seconds at the
+   end of a take (s1 on the in-process pair has 6.5 s, s6 on the durable pair 7 s; both keep playing, nothing freezes), and at
+   s4's open meter fold (it is open for the whole scene) and the pause frame.
+3. The frame-time reading with two boards at 20x, which the polish brief asks for, has not been taken.
 
 ## Design
 
