@@ -37,7 +37,7 @@ from pydantic import ValidationError
 from fractalswarm.bench.scoring import llm_calls, load_events
 from fractalswarm.coord.hrw import rank, score
 from fractalswarm.coord.membership import FencingToken, MembersView
-from fractalswarm.coord.tree import GoalRecord, TreeView, candidates, heir
+from fractalswarm.coord.tree import GoalRecord, TreeView, heir, successors
 from fractalswarm.kernel.events import Event
 from fractalswarm.kernel.ids import digest
 from fractalswarm.kernel.replay import ReplayReport
@@ -371,6 +371,8 @@ class _Folded:
 
 def _fold(ix: _Index, found: list[Violation]) -> _Folded:
     members, tree = MembersView(), TreeView()
+    started = ix.of("run.started")
+    last_resort = bool(started and (started[0].payload.get("params") or {}).get("any_survivor"))
     remaps = ix.of("ownership.remapped")
     by_cause: dict[int, list[Event]] = defaultdict(list)
     for remap in remaps:
@@ -384,7 +386,9 @@ def _fold(ix: _Index, found: list[Violation]) -> _Folded:
     for event in ix.events:
         p = event.payload
         if event.type == "ownership.remapped":
-            at_event[event.seq] = _decide(tree, members, p["previous"], p["key"], p["owner"])
+            at_event[event.seq] = _decide(
+                tree, members, p["previous"], p["key"], p["owner"], last_resort
+            )
             remap_seq[(event.causation_id, p["key"], p["previous"], p["owner"])] = event.seq
         elif event.type == "write.fenced":
             fenced = _fenced(event, members)
@@ -408,13 +412,22 @@ def _fold(ix: _Index, found: list[Violation]) -> _Folded:
             _violation(found, "invariants", "malformed-event", event.seq, f"{event.type}: {exc!r}")
         for remap in by_cause.get(event.seq, ()):
             rp = remap.payload
-            at_cause[remap.seq] = _decide(tree, members, rp["previous"], rp["key"], rp["owner"])
+            at_cause[remap.seq] = _decide(
+                tree, members, rp["previous"], rp["key"], rp["owner"], last_resort
+            )
     successions = [_succession(ix, e, at_cause.get(e.seq), at_event[e.seq], found) for e in remaps]
     _split_brain(successions, found)
     return _Folded(tree, successions, adoptions, fencing)
 
 
-def _decide(tree: TreeView, members: MembersView, previous: str, gid: str, owner: str):
+def _decide(
+    tree: TreeView,
+    members: MembersView,
+    previous: str,
+    gid: str,
+    owner: str,
+    any_survivor: bool = False,
+):
     record = tree.goals.get(gid)
     if record is None:
         return _Decision()
@@ -428,8 +441,8 @@ def _decide(tree: TreeView, members: MembersView, previous: str, gid: str, owner
         owner_incarnation=seat.incarnation if seat is not None else 0,
         done=record.done,
         root=record.parent is None,
-        heir=heir(tree, gid, members),
-        pool=tuple(candidates(record.owner, members)),
+        heir=heir(tree, gid, members, any_survivor),
+        pool=tuple(successors(record, members, any_survivor)),
         works=tuple(works),
         adopted=adopted,
     )

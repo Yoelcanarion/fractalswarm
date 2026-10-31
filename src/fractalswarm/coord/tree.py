@@ -214,15 +214,26 @@ def candidates(dead: str, members: Any) -> list[str]:
     return members.alive(role=ROLE, group=dead) or members.alive(role=ROLE)
 
 
-def heir(tree: TreeView, gid: str, members: Any) -> str | None:
-    """The new owner of a dead owner's goal: bounded-load HRW over ``candidates`` (spec §5.3).
+def successors(record: GoalRecord, members: Any, any_survivor: bool = False) -> list[str]:
+    """Who may inherit a goal: ``candidates`` of its owner. With ``any_survivor`` the root goal
+    has a last resort. Once a track lead holds it, its owner has a group that can die whole, and
+    a root has no parent goal whose owner could respawn a member, so nobody would inherit it. It
+    then goes to any live coordinator."""
+    pool = candidates(record.owner, members)
+    if not pool and any_survivor and record.parent is None:
+        return members.alive(role=ROLE)
+    return pool
+
+
+def heir(tree: TreeView, gid: str, members: Any, any_survivor: bool = False) -> str | None:
+    """The new owner of a dead owner's goal: bounded-load HRW over ``successors`` (spec §5.3).
 
     The keys are the goal and its siblings (the children of its parent goal), so a survivor
     that already owns siblings counts them as load. Every survivor gets the same answer.
     ``None``: no candidate is alive.
     """
     record = tree.goals[gid]
-    pool = candidates(record.owner, members)
+    pool = successors(record, members, any_survivor)
     if not pool:
         return None
     siblings = tree.children_goals(record.parent) if record.parent is not None else [gid]

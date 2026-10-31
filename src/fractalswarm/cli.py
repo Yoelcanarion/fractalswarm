@@ -165,6 +165,10 @@ def run(
     feasibility_report: Annotated[
         bool, typer.Option(help="record the feasibility report at plan approval (spec §12)")
     ] = False,
+    any_survivor: Annotated[
+        bool,
+        typer.Option(help="keep going while any coordinator lives (docs/any-survivor.md); swarm"),
+    ] = False,
     live_control: Annotated[
         bool,
         typer.Option(
@@ -220,6 +224,8 @@ def run(
         params["cross_audit"] = True
     if feasibility_report:
         params["feasibility_report"] = True
+    if any_survivor:
+        params["any_survivor"] = True
     if live_control:
         params["live_control"] = True
     if chaos_plan is not None:

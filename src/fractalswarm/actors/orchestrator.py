@@ -73,7 +73,7 @@ from fractalswarm.comms.channel_breakers import Guard
 from fractalswarm.comms.chaos import CRASH_TOPIC
 from fractalswarm.coord import membership
 from fractalswarm.coord.hrw import assign, rank
-from fractalswarm.coord.membership import Detector
+from fractalswarm.coord.membership import ISOLATION_LIMIT_MS, Detector
 from fractalswarm.coord.tree import ROLE, heir
 from fractalswarm.kernel.events import GOAL_CONTROL, Event
 from fractalswarm.kernel.scheduler import (
@@ -169,6 +169,7 @@ def orchestrator_init(actor_id: str, args: dict[str, Any]) -> dict[str, Any]:
         "audit": bool(args.get("audit")),  # the cross-squad audit (verify/cross_audit.py)
         "arbitration": bool(args.get("arbitration")),  # Wonder rules disputes (arbitration.py)
         "feasibility": bool(args.get("feasibility")),  # the report at plan approval
+        "any_survivor": bool(args.get("any_survivor")),  # any coordinator alive can finish
         "market": args.get("market"),  # the economy's settings; None: no epochs (the default)
         "autoscale": args.get("autoscale"),  # the caps of scaling.mode: autoscale; None: exact
         "spend": {"trips": 0, "open": False},  # the global spend breaker trips this one reported
@@ -219,6 +220,8 @@ def _detector(actor_id: str, args: dict[str, Any]) -> Detector:
     det = Detector(member=actor_id, role=ROLE, group=args.get("parent"))
     if args.get("detect_ms") is not None:
         det.interval_ms = heartbeat_interval_ms(int(args["detect_ms"]))
+    if args.get("any_survivor"):
+        det.isolation_limit_ms = ISOLATION_LIMIT_MS
     return det
 
 
@@ -664,7 +667,10 @@ def _assign_children(state: dict[str, Any], gid: str, children: list[dict[str, A
 
 
 def _child_group(state: dict[str, Any], entry: dict[str, Any], view: View) -> list[str]:
-    """Who the goal's child subgoals go to: the live members of its child group."""
+    """Who the goal's child subgoals go to: the live members of its child group. A wholly dead
+    group goes to the planner, or with ``any_survivor`` stays named: a planner of an upper level
+    has no agents to run a session with, while a goal that enters the log with a dead owner takes
+    the path that exists, no live sibling, so the parent goal's owner respawns a member."""
     if state["mode"] in CENTRAL_MODES:
         return [state["id"]]
     members = view.views.get("members")
@@ -672,7 +678,9 @@ def _child_group(state: dict[str, Any], entry: dict[str, Any], view: View) -> li
         alive = members.alive(role=ROLE, group=entry["group"])
         if autoscale.enabled(state):  # spawned by this very handler call: not joined yet
             alive = sorted({*alive, *(c for c in state["children"] if _alive(view, c))})
-        return alive or [state["id"]]
+        if alive or not state["any_survivor"]:
+            return alive or [state["id"]]
+        return members.dead(role=ROLE, group=entry["group"]) or [state["id"]]
     return list(state["children"])
 
 
@@ -1310,7 +1318,8 @@ def _retry(state: dict[str, Any], gid: str, cid: str, stage: str, reasons: list[
 
 
 def _peers(state: dict[str, Any], view: View) -> list[str]:
-    """Siblings, the (current) parent and the (current) child orchestrators (spec §5.2)."""
+    """Siblings, the (current) parent and the (current) child orchestrators (spec §5.2), and with
+    ``any_survivor`` its neighbours on the ring of survivors."""
     me, det = state["id"], state["det"]
     members, tree = view.views.get("members"), view.views.get("tree")
     peers: set[str] = set()
@@ -1326,10 +1335,25 @@ def _peers(state: dict[str, Any], view: View) -> list[str]:
             peers.add(state["parent"])
         if not state["leaf"]:
             peers |= set(state["children"])
+    if state["any_survivor"] and members is not None:
+        peers |= _ring(me, members)
     peers.discard(me)
     if members is not None:
         peers = {peer for peer in peers if not members.is_gone(peer)}
     return sorted(peers)
+
+
+def _ring(me: str, members: Any) -> set[str]:
+    """Once the log holds a death, the two next to this member on the sorted list of those the
+    log calls alive. The tree can leave a crashed coordinator without a live watcher, and then
+    its death never enters the log. On a ring some live member always sits next to a crashed
+    one, and each verdict closes the gap for the next. Both ends of a link read the same list,
+    so each beats for the other: a watch from one side only would kill a live member."""
+    alive = members.alive(role=ROLE)
+    if me not in alive or not members.dead(role=ROLE):
+        return set()
+    at = alive.index(me)
+    return {alive[at - 1], alive[(at + 1) % len(alive)]}
 
 
 def _zombie(state: dict[str, Any], view: View) -> bool:
@@ -1367,7 +1391,7 @@ def _reconcile(state: dict[str, Any], view: View):
         record = tree.goals[gid]
         if record.done or gid in state["goals"] or not members.is_gone(record.owner):
             continue
-        new_owner = heir(tree, gid, members)
+        new_owner = heir(tree, gid, members, state["any_survivor"])
         if new_owner == me:
             state, more = _adopt(state, gid, view)
             commands += more
@@ -1951,7 +1975,7 @@ def _opt_ins(state: dict[str, Any]) -> dict[str, Any]:
     """The opt-in features this run turned on, and a sweep's detection time, for the
     orchestrators spawned below. They are left out when off, so a run that did not ask for
     them logs the spawn args it always did."""
-    names = ("audit", "feasibility", "arbitration")
+    names = ("audit", "feasibility", "arbitration", "any_survivor")
     passed: dict[str, Any] = {name: True for name in names if state[name]}
     if state.get("human_approval"):
         passed["human_approval"] = True
