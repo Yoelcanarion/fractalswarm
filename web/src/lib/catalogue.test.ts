@@ -10,6 +10,8 @@ import {
   filterRows,
   formatDuration,
   NO_FILTER,
+  offersKillHalf,
+  plansFailures,
   readFacts,
   rowOf,
   sortRows,
@@ -125,6 +127,35 @@ describe("the failures of a run, in words", () => {
     expect(chaosWords(facts(null, 3))).toEqual({ term: null, label: "Custom plan", killed: "3 coordinators killed" });
     expect(chaosWords(facts("K-o0", null))).toEqual({ term: null, label: "K-o0", killed: null });
     expect(chaosWords(facts(null, null))).toBeNull();
+  });
+});
+
+describe("Kill half the brains on a live run", () => {
+  const started = (chaos?: Record<string, unknown>): RunEvent => ({ seq: 1, type: "run.started", payload: { params: chaos ? { chaos } : {} } }) as unknown as RunEvent;
+  const quiet = { chaos: [], netFaults: {} };
+
+  it("reads a plan the way the server does: no plan is C0, listed actions are the plan, and a name is its profile", () => {
+    expect(plansFailures(started())).toBe(false);
+    expect(plansFailures(started({ profile: "C0", seed: "1" }))).toBe(false);
+    expect(plansFailures(started({ profile: "custom", actions: [] }))).toBe(false);
+    expect(plansFailures(started({ profile: "C0", actions: [{ kind: "kill_agents" }] }))).toBe(true);
+    expect(plansFailures(started({ profile: "C3", seed: "1" }))).toBe(true);
+    expect(plansFailures(started({ profile: "kill-half", actions: [{ kind: "kill_coordinator", target: "o0" }] }))).toBe(true);
+  });
+
+  it("knows nothing until the log's first event is here", () => {
+    expect(plansFailures(null)).toBeNull();
+    expect(plansFailures({ seq: 2, type: "actor.spawned", payload: {} } as unknown as RunEvent)).toBeNull();
+    expect(offersKillHalf(null, quiet)).toBe(false);
+  });
+
+  it("is offered only on a run with no failures, neither planned nor so far", () => {
+    expect(offersKillHalf(started({ profile: "C0", seed: "1" }), quiet)).toBe(true);
+    expect(offersKillHalf(started({ profile: "C2", seed: "1" }), quiet)).toBe(false);
+    expect(offersKillHalf(started({ profile: "half-the-brains", actions: [{ kind: "kill_coordinator" }] }), quiet)).toBe(false);
+    const injected = { seq: 9, ts: 1, kind: "kill_coordinator", targets: ["o0"], detail: "" };
+    expect(offersKillHalf(started({ profile: "C0", seed: "1" }), { ...quiet, chaos: [injected] })).toBe(false);
+    expect(offersKillHalf(started({ profile: "C0", seed: "1" }), { ...quiet, netFaults: { drop: 1 } })).toBe(false);
   });
 });
 

@@ -7,6 +7,7 @@ import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_CAPABILITIES } from "../lib/controls";
 import { GUIDE_STEPS, guideSteps } from "../lib/guide";
 import type { RunEvent } from "../lib/types";
 import { loadJsonl, REPO_ROOT, renderCurrent } from "../lib/testing";
@@ -17,6 +18,7 @@ import { ResultsPage } from "../pages/ResultsPage";
 import { RunPage } from "../pages/RunPage";
 import { SecurityPage } from "../pages/SecurityPage";
 import { createRunStore, RunStoreProvider, type RunApi, type RunStoreApi } from "../store";
+import { ChaosPanel } from "./ChaosPanel";
 import { Meter, PStat, Pill } from "./PanelParts";
 import { RunFrame, RunGate } from "./RunFrame";
 import { Guide, GuideButton, useGuide, type GuideState } from "./shell/Guide";
@@ -158,6 +160,24 @@ describe("the five views of a run", () => {
     expect(text(live)).toContain("Apply cap");
     expect(text(live)).toContain("Kill switch");
     expect(text(live)).toContain("live run: these act on it");
+  });
+
+  it("offers Kill half the brains on a live run with no failures, and says why not on one with failures of its own", async () => {
+    const started = (chaos: Record<string, unknown>) => [{ seq: 1, type: "run.started", payload: { params: { chaos } } }] as unknown as RunEvent[];
+    const live = async (chaos: Record<string, unknown>) => {
+      const store = await opened({ loadAllEvents: async () => started(chaos) });
+      store.setState({ runStatus: "running", capabilities: { ...DEFAULT_CAPABILITIES, chaos: true } });
+      return render(store, createElement(ChaosPanel, { runId: "live", view: store.getState().view }));
+    };
+    const clean = await live({ profile: "C0", seed: "1" });
+    expect(clean).toContain("btn--danger");
+    expect(text(clean)).not.toContain("has failures of its own");
+
+    const failing = await live({ profile: "C3", seed: "1" });
+    expect(failing).not.toContain("btn--danger");
+    expect(text(failing)).toContain("only offered on a run with none");
+    expect(failing).toContain('href="#/new"');
+    expect(text(failing)).toContain("More ways to break it");
   });
 
   it("explains the jargon of the panels in place", async () => {
