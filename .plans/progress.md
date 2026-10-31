@@ -1508,6 +1508,15 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 
 **The recovery checks read as sentences (79b071a):** no "crash(es)" in the proof tooltip. `verify/` is not a handler.
 
-**In progress:** W5 on the live idle card, which falls back on the last frame because it counts another measure than the scored one (206.2 to 62.5), `s6`, `s4`, `s1`, the tooltip and the new takes. W4 on five items of the static site and the key's reserve.
+**W4 (faa8fe2):** the site says what is true of it: the Guide's link goes to the arena, Runs lists all five (it was cut at four, and the fifth was the run the arena opens) and hides the form it cannot use, New task and "Private by design" speak of the site, the badge is short. The banner is one line on a phone and does not scroll away: it sits outside the app, and every page but the run page scrolls inside `.content`. The key's reserve is now paid only where a card would be under the key: 4–5 % more tree where height is the limit.
+
+**W5 (445ce36, c266db5):**
+- **The first card is a dash until its side is scored.** The live count was another measure than the scored one (206.2 to 62.5 on the last frame). Porting the scored rule is about 150 lines and a Python run, so it stays as the fallback the first coordinator proposed; the dash also removes a live "the swarm waits less", which R1 does not let us say.
+- `s4` shows the first fact and its two marked sentences at a zoom that reads at 1080p. `s1` kills on its word: crash at 22.5 s, rival's at 28.1 s, re-wire by 28.4 s.
+- `s6`: 11 s at 1x so that the first band and takeover can be read, and 4.7 s still at the end (it was 10.1 s).
+- `s7` never showed its table: it was folded, so "ties" had nothing on screen. `s5` and `s7` have their first takes.
+- `s5`'s voice now says "Even the root can die" on the root's X; the sentences swapped, and the voice lost "with one rule" and "dead coordinator's" to fit 22 s (aedbc6e).
+
+**Now:** the first coordinator is on a pass over all the new takes (`rehearsal-1031\durable-b`, `central-b`) and the bundle at aedbc6e. Web suite 2,530 green. No paid run; no worker running.
 
 **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, which rival the video's `s1` and `s6` use, master, the public repo, where the static site goes.
