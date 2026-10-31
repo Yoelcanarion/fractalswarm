@@ -76,7 +76,7 @@ describe("what the chip says of the server's report", () => {
     expect(chip.tone).toBe("good");
     expect(chip.text).toBe("Recovery OK ✓ 5 restarts");
     expect(chip.detail).toContain("Checked on the finished log:");
-    expect(chip.detail).toContain("✓ every crash has its restart: 5 crash(es), 5 restarted");
+    expect(chip.detail).toContain("✓ every crash has its restart: 5 crashes, 5 restarted");
     expect(chip.detail.split("\n")).toHaveLength(6);
   });
 

@@ -218,6 +218,13 @@ def test_durable_max_cancels_nothing_and_pays_no_call_twice(arena: dict[str, Pat
     assert {key: n for key, n in started.items() if n > 1} == {}
 
 
+def test_the_checks_details_read_as_sentences(arena: dict[str, Path]) -> None:
+    # A viewer reads them in the arena's proof tooltip, so no "crash(es)".
+    details = {check.name: check.detail for check in check_run(arena["durable-max"]).checks}
+    assert details["restarted"] == "5 crashes, 5 restarted"
+    assert not any("(s)" in detail or "(es)" in detail for detail in details.values())
+
+
 def test_durable_max_waits_for_its_own_calls_in_flight(arena: dict[str, Path]) -> None:
     log = load_events(arena["durable-max"])
     waited = [

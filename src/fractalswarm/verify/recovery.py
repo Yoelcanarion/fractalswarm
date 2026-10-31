@@ -305,6 +305,10 @@ def _violation(check: str, kind: str, seq: int | None, detail: str) -> Violation
     return Violation(check=check, kind=kind, seq=seq, detail=detail)
 
 
+def _plural(n: int, one: str, many: str | None = None) -> str:
+    return f"{n} {one if n == 1 else (many or one + 's')}"
+
+
 def _skipped(name: str, why: str) -> Check:
     return Check(name=name, title=dict(CHECKS)[name], applies=False, detail=why)
 
@@ -322,7 +326,7 @@ def _restarted(outages: list[_Outage]) -> Check:
         for o in outages
         if o.restarted is None
     ]
-    detail = f"{len(outages)} crash(es), {len(outages) - len(found)} restarted"
+    detail = f"{_plural(len(outages), 'crash', 'crashes')}, {len(outages) - len(found)} restarted"
     return Check(
         name="restarted",
         title=dict(CHECKS)["restarted"],
@@ -363,7 +367,10 @@ def _quiet(log: list[Event], report: RecoveryReport, outages: list[_Outage]) -> 
                         f"(crash {outage.number})",
                     )
                 )
-    detail = f"{seen} event(s) authored by the coordinator during {len(outages)} outage(s)"
+    detail = (
+        f"{_plural(seen, 'event')} authored by the coordinator "
+        f"during {_plural(len(outages), 'outage')}"
+    )
     return Check(name=name, title=dict(CHECKS)[name], applies=True, detail=detail, violations=found)
 
 
@@ -409,7 +416,7 @@ def _consumed(log: list[Event], report: RecoveryReport, outages: list[_Outage]) 
                     f"but the log holds the results of {sorted(due)[:SHOWN]}",
                 )
             )
-    detail = f"{logged} result(s) logged while down, {consumed} consumed after the restart"
+    detail = f"{_plural(logged, 'result')} logged while down, {consumed} consumed after the restart"
     return Check(name=name, title=dict(CHECKS)[name], applies=True, detail=detail, violations=found)
 
 
@@ -432,7 +439,7 @@ def _own_calls(log: list[Event], report: RecoveryReport, outages: list[_Outage])
             )
             for e in cancelled
         ]
-        detail = f"{len(cancelled)} own call(s) cancelled in the whole run"
+        detail = f"{_plural(len(cancelled), 'own call')} cancelled in the whole run"
         return Check(
             name=name, title=dict(CHECKS)[name], applies=True, detail=detail, violations=found
         )
@@ -456,7 +463,10 @@ def _own_calls(log: list[Event], report: RecoveryReport, outages: list[_Outage])
                     f"{sorted(cancelled)[:SHOWN]}, named lost {sorted(named)[:SHOWN]}",
                 )
             )
-    detail = f"{flying} own call(s) in flight at {len(outages)} crash(es), {lost} cancelled"
+    detail = (
+        f"{_plural(flying, 'own call')} in flight at "
+        f"{_plural(len(outages), 'crash', 'crashes')}, {lost} cancelled"
+    )
     return Check(name=name, title=dict(CHECKS)[name], applies=True, detail=detail, violations=found)
 
 
@@ -477,7 +487,9 @@ def _no_repeat(log: list[Event]) -> Check:
         return _skipped(name, "the log is empty")
     duplicates, found = duplicates_of(log)
     dispatched = sum(e.type == "contract.dispatched" for e in log)
-    detail = f"{dispatched} attempt(s) dispatched, {duplicates.llm_paid} call(s) paid"
+    detail = (
+        f"{_plural(dispatched, 'attempt')} dispatched, {_plural(duplicates.llm_paid, 'call')} paid"
+    )
     return Check(
         name=name,
         title=dict(CHECKS)[name],

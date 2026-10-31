@@ -199,7 +199,7 @@
       "name": "no_repeat",
       "title": "no attempt is dispatched twice and no call is paid twice",
       "applies": true,
-      "detail": "18 attempt(s) dispatched, 58 call(s) paid",
+      "detail": "18 attempts dispatched, 58 calls paid",
       "violations": [],
       "ok": true
     }

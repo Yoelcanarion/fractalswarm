@@ -278,7 +278,7 @@
       "name": "restarted",
       "title": "every crash has its restart",
       "applies": true,
-      "detail": "5 crash(es), 5 restarted",
+      "detail": "5 crashes, 5 restarted",
       "violations": [],
       "ok": true
     },
@@ -286,7 +286,7 @@
       "name": "quiet",
       "title": "the coordinator authors only timers while it is down",
       "applies": true,
-      "detail": "30 event(s) authored by the coordinator during 5 outage(s)",
+      "detail": "30 events authored by the coordinator during 5 outages",
       "violations": [],
       "ok": true
     },
@@ -294,7 +294,7 @@
       "name": "consumed",
       "title": "results logged while it was down are consumed after the restart",
       "applies": true,
-      "detail": "6 result(s) logged while down, 6 consumed after the restart",
+      "detail": "6 results logged while down, 6 consumed after the restart",
       "violations": [],
       "ok": true
     },
@@ -302,7 +302,7 @@
       "name": "own_calls",
       "title": "its own calls in flight: kept by durable-max, lost by durable",
       "applies": true,
-      "detail": "0 own call(s) cancelled in the whole run",
+      "detail": "0 own calls cancelled in the whole run",
       "violations": [],
       "ok": true
     },
@@ -310,7 +310,7 @@
       "name": "no_repeat",
       "title": "no attempt is dispatched twice and no call is paid twice",
       "applies": true,
-      "detail": "18 attempt(s) dispatched, 58 call(s) paid",
+      "detail": "18 attempts dispatched, 58 calls paid",
       "violations": [],
       "ok": true
     }
