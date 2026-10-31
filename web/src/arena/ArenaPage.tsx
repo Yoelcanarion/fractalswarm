@@ -8,6 +8,7 @@ import type { RunListing } from "../lib/types";
 import { RunStoreProvider } from "../store";
 import "./arena.css";
 import { fetchOfficial, fetchPairs, type PairListing } from "./api";
+import { ArenaPlay } from "./ArenaPlay";
 import { ArenaSide } from "./ArenaSide";
 import { ArenaTimeline } from "./ArenaTimeline";
 import { assumptionsOf, rivalSentence, startedOf, systemKind } from "./assumptions";
@@ -142,20 +143,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
           compact
           title="Arena"
           lead={watching ? `${LEAD} ${rivalSentence(assumptions)}` : LEAD}
-          actions={
-            watching && (
-              <button
-                type="button"
-                className="btn btn--on"
-                onClick={() => {
-                  clock.seekTime(0);
-                  clock.setPlaying(true);
-                }}
-              >
-                Play both from the start
-              </button>
-            )
-          }
+          actions={watching && <ArenaPlay clock={clock} left={session.left} right={session.right} />}
         />
       )}
       <header className="arena__bar">

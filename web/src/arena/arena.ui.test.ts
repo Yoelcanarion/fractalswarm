@@ -53,7 +53,7 @@ function api(logs: Record<string, RunEvent[]>): RunApi {
 
 /** A pair opened on a clock, at ``atMs``. The swarm lost o1 (adopted by o2); the rival lost its supervisor. Each had a
  * contract ready at 9 s that only went out at 15 s. */
-async function opened(atMs: number) {
+async function opened(atMs: number, play = false) {
   const swarm = swarmStream();
   call(swarm, "o2.a1", "e1");
   ready(swarm, "g1", "o1", 9_000);
@@ -69,9 +69,10 @@ async function opened(atMs: number) {
   sent(rival, "g1", "o0", 15_000, "o0.a1");
   rival.at(70_000).emit("run.completed", "@kernel");
   const session = createPairSession({ api: api({ s: swarm.events, r: rival.events }), clock: { scheduler: idle } });
-  await session.open("s", "r", { atMs, speed: null, play: false });
+  await session.open("s", "r", { atMs, speed: null, play });
   renderCurrent(session.left);
   renderCurrent(session.right);
+  renderCurrent(session.clock.state); // what the clock is doing (playing, where) is seen by the components that read it
   return session;
 }
 
@@ -378,12 +379,40 @@ describe("the page", () => {
       ),
     );
 
-  it("says what it is for and what the rival is, and has one main action once a pair is open: play both from the start", async () => {
+  it("says what it is for and what the rival is, and has one main action once a pair is open: watch the first crash, with playing both from the start beside it", async () => {
     const session = await opened(0);
     const html = await view({ session, left: "s", right: "r" });
     expect(text(html)).toContain("FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures.");
     expect(text(html)).toContain("The rival is an ideal durable supervisor: its workers survive a crash, and it is back after 5 s.");
+    expect(html).toContain('<button type="button" class="btn btn--on">Watch the first crash</button>');
+    expect(html).toContain('<button type="button" class="btn">Play both from the start</button>');
+    expect(html).not.toContain("arena__clock"); // nothing to read before it starts
+  });
+
+  it("turns the main action into Pause with the clock beside it while the pair plays, and into Carry on when it is stopped midway", async () => {
+    const playing = await view({ session: await opened(20_000, true), left: "s", right: "r" });
+    expect(playing).toContain('<button type="button" class="btn btn--on">Pause</button>');
+    expect(playing).toContain('class="arena__clock mono"');
+    expect(text(playing)).not.toContain("Watch the first crash");
+    const stopped = await view({ session: await opened(20_000), left: "s", right: "r" });
+    expect(stopped).toContain('<button type="button" class="btn btn--on">Carry on</button>');
+    expect(stopped).toContain('class="arena__clock mono"');
+    // played out, it offers the first crash again
+    expect(text(await view({ session: await opened(75_000), left: "s", right: "r" }))).toContain("Watch the first crash");
+  });
+
+  it("makes playing the pair the main action where no coordinator is killed, and offers no first crash", async () => {
+    const swarm = swarmStream();
+    swarm.at(60_000).emit("run.completed", "@kernel");
+    const rival = rivalStream(undefined, 4);
+    rival.at(60_000).emit("run.completed", "@kernel");
+    const session = createPairSession({ api: api({ s: swarm.events, r: rival.events }), clock: { scheduler: idle } });
+    await session.open("s", "r", { atMs: 0, speed: null, play: false });
+    renderCurrent(session.left);
+    renderCurrent(session.right);
+    const html = await view({ session, left: "s", right: "r" });
     expect(html).toContain('<button type="button" class="btn btn--on">Play both from the start</button>');
+    expect(html).not.toContain("Watch the first crash");
   });
 
   it("says what to do next when there is no pair, instead of a bare page", async () => {

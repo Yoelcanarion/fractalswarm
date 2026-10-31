@@ -8,10 +8,9 @@ import { fraction, MARK_TONE } from "../lib/timeline";
 import type { RunStoreApi } from "../store";
 import { useRoving } from "../components/useRoving";
 import { laneOf, sharedEnd, type Lane } from "./bands";
+import { clockReadout, seconds } from "./play";
 
 const BAND_ROW = 13; // px of a band row: the band and its gap
-
-const seconds = (ms: number): string => `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
 
 function LaneTrack({ clock, lane, end, label, noun }: { clock: Clock; lane: Lane; end: number; label: string; noun: string }) {
   // a lane is one tab stop, the bands and then the marks along it: Tab lands on one, the arrow keys move between them
@@ -82,7 +81,7 @@ export function ArenaTimeline({ clock, left, right }: ArenaTimelineProps) {
   const readout = useRef<HTMLSpanElement>(null);
   useClockFrame((t) => {
     if (slider.current) slider.current.value = String(Math.min(t, end));
-    if (readout.current) readout.current.textContent = `t = ${seconds(Math.min(t, end))} / ${seconds(end)}`;
+    if (readout.current) readout.current.textContent = clockReadout(t, end);
   });
 
   return (

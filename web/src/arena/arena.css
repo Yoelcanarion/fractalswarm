@@ -10,6 +10,29 @@
   min-height: 100%;
   padding: var(--space-3) var(--space-4);
   outline: none;
+  /* What the page keeps around the boards (the bars, the heads, the scoreboard's first row, the pinned timeline), in px: the boards take the rest of a
+     short window, down to a floor, and the whole of their frame in a tall one. */
+  --arena-chrome: 552px;
+}
+
+/* The lead is two lines at a laptop's width, and narrow enough that the main action's two buttons sit beside it instead of under it. */
+.arena .pagehead__lead {
+  max-width: 82ch;
+}
+
+/* The main action, and the clock beside it while it plays. */
+.arena__play {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+
+.arena__clock {
+  min-width: 21ch;
+  font-size: var(--fs-base);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- the bar: the picker, and what the rival is granted ---- */
@@ -57,10 +80,14 @@
 
 /* Always on screen: the arena never shows a number without what the rival was granted. */
 .arena__assumptions {
+  /* on the picker's row when there is room (its text goes to two lines beside it), under it when there is not */
+  flex: 1 1 320px;
+  min-width: 0;
+  max-width: max-content;
   margin: 0 0 0 auto;
   padding: 6px 14px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-3);
   background: var(--surface-1);
   color: var(--text-primary);
   font-size: var(--fs-body);
@@ -81,7 +108,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  min-height: 420px;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-3);
@@ -221,6 +247,8 @@
   display: block;
   width: 100%;
   height: 100%;
+  /* In a short window the drawing gives way, not the timeline: the frame is drawn smaller to fit (it keeps its proportions). */
+  max-height: max(190px, calc(100vh - var(--arena-chrome)));
   overflow: visible;
 }
 
@@ -521,11 +549,22 @@
 }
 
 /* ---- the shared timeline ---- */
+/* Pinned to the bottom of the view, as the run page's replay bar is, so that the play button, the clock and the crashes on the lanes are on screen
+   with the boards. The ring in the page's own colour keeps what scrolls behind it out of its rounded corners. */
 .tl {
-  padding: var(--space-3) var(--space-4);
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  padding: var(--space-2) var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-3);
   background: var(--surface-1);
+  box-shadow: 0 0 0 var(--space-2) var(--bg);
+}
+
+.tl .btn--play {
+  width: 44px;
+  height: 36px;
 }
 
 .tl__controls {
@@ -533,7 +572,7 @@
   align-items: center;
   gap: var(--space-4);
   flex-wrap: wrap;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .tl__readout {
@@ -697,6 +736,15 @@
   background: var(--text-primary);
   opacity: 0.55;
   pointer-events: none;
+}
+
+/* A phone: the bar has too much in it to pin, and the page is a column. A window too short to hold the bar and the boards above it: the page
+   scrolls to it, as before. */
+@media (max-width: 760px), (max-height: 620px) {
+  .tl {
+    position: static;
+    box-shadow: none;
+  }
 }
 
 @media (max-width: 1400px) {
