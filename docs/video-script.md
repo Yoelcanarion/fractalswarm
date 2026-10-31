@@ -4,7 +4,7 @@
 - Every `{{placeholder}}` left is filled from `docs/claims.md` once the final runs exist.
 - Every number and claim must have a row in `docs/claims.md` before recording.
 - The tagline is settled (Yoel, Oct 30; `docs/claims.md` S7): "Kill half the brains. It still finishes." Only that sentence. Numbers go under it, each with its rival named, never as part of it.
-- Yoel picks the rival of `s1` and `s6` in the edit: `central` for the contrast, `durable-max` for the honest tie (arena spec §M.5). This draft is written for `durable-max`.
+- Yoel picks the rival of `s1` and `s6` in the edit: `central` for the contrast, `durable-max` for the honest tie (arena spec §M.5). This draft is written for `durable-max`, and a `central` take cannot go with this voice: its frame says a crash stops its workers, and the voice says its workers survive.
 
 **The story:** three questions, in this order.
 1. What problem does FractalSwarm solve?
@@ -19,7 +19,7 @@ Anything that doesn't answer one of them stays out of the video.
 - The scenes come from director mode (`#/director/<scene-id>`), captured by `scripts/record_scenes.*` at 1920×1080.
 - **Exceptions:** `s2-intake` is recorded from the real live session, and `s9-close` is a real terminal capture (OBS, or Win+Alt+R).
 - Record the voice per scene. Light editing joins the clips.
-- **On-screen notes:** whenever a replay is shown, the frame says "Replay of a real recorded run · real cost $0.48" (`demo/final`; another run shows its own cost).
+- **On-screen notes:** whenever a replay is shown, the frame says "Replay of a real recorded run · real cost $0.4783" (`demo/final`: what the run spent, read from the end of its log; another run shows its own cost).
 
 ---
 
@@ -31,15 +31,15 @@ Anything that doesn't answer one of them stays out of the video.
 - **Left:** FractalSwarm's tree (10 coordinators, 12 agents).
 - **Right:** the ideal durable supervisor, with the same 12 agents.
 - **Lower third:** "Same input · same models · same failures".
-- **At about 0:20:** the first crash. The root dies on both sides. The right side's whole board pauses; on the left, the tree re-wires.
+- **At about 0:22, on "Now we kill half the brains":** the first crash. The root dies on both sides. The right side's whole board pauses; on the left, the tree re-wires.
 
 **Voice-over (≈ 74 words):**
 > Teams of AI agents often depend on one coordinator. It plans, assigns and checks the work. When it crashes, the team waits, or does the work again.
-> A better supervisor helps: its workers survive, and a standby takes over. Can a team recover without one?
 > On the right: the strongest supervisor we could build. On the left: FractalSwarm, ten small coordinators in a tree. Same task, same models, same failures.
 > Now we kill half the brains.
+> A better supervisor helps: its workers survive, and a standby takes over. Can a team recover without one?
 
-**Key points:** agent teams depend on one coordinator · a better supervisor helps · can a team recover without one · the strongest rival we could build, against ten small coordinators · same task, models and failures · kill half the brains.
+**Key points:** agent teams depend on one coordinator · the strongest rival we could build, against ten small coordinators · same task, models and failures · kill half the brains · a better supervisor helps · can a team recover without one, over the two sides reacting.
 
 ---
 
@@ -71,13 +71,13 @@ Anything that doesn't answer one of them stays out of the video.
 ### s4-lens (1:04–1:22)
 **On screen:**
 - The run plays and the tree grows.
-- The lens opens on a Spark extraction: "muse-spark-1.3 · effort high · {{tokens_in}} in ({{tokens_cached}} cached) · ${{call_cost}} · {{call_latency}} s", with the fact next to its highlighted email sentence.
-- Then Wonder's root plan.
+- The lens opens on Wonder's root plan.
+- Then on a Spark extraction (`o3.1.a1`, the first call that publishes facts): "muse-spark-1.3 · effort low · 3,311 in (2,929 cached) · $0.0111 · 6.5 s", with the fact next to its highlighted email sentence. The root has already fallen at this point of the run, and the tree shows it: `s1` has shown the kill, and `s5` opens on the same tree.
 - **The Muse meter**, opened from "What the models cost" in the strip: "coordination tokens 0 · recovery tokens 0".
 
-**Voice-over (≈ 46 words):**
+**Voice-over (≈ 43 words):**
 > Then the team works. Muse Wonder plans. Muse Spark agents read the emails, place the talks and check the results.
-> Click any call to see the model, the tokens, the cost, and the sentence behind the decision. Zero LLM tokens spent on coordination: the tokens go to the problem.
+> Click any call to see the model, the tokens, the cost, and the sentence behind the decision. Zero LLM tokens spent on coordination.
 
 **Key points:** Wonder plans; Spark reads, places and checks · every call is inspectable · zero LLM tokens spent on coordination.
 **Not said here:** that Wonder settles disputes. Arbitration is built and tested on the fake model, but no real run has a dispute: each fact has one contract (log of `demo/final` and of the 20 swarm cells of `bench/results/headline-10`).
@@ -103,10 +103,11 @@ Anything that doesn't answer one of them stays out of the video.
 ### s6-fair-fight (1:44–2:14)
 **On screen:**
 - The arena, mid-run, with crash markers on the shared timeline.
-- **Right:** at each crash, a "supervisor down · 12 agents waiting" band for 5 s.
+- **Right:** at each crash, a band for 5 s, in the UI's words: "o0 down for 3.7 s · 8 agents waiting for it".
 - **Left:** only one subtree pauses.
 - **Face-to-face counters:** idle agent-seconds, time to recover, cost, duplicated work and reassignments.
 - **Caption, always visible:** "Rival: ideal durable supervisor — 5 s detection · 0 s restart · workers survive · same log".
+- **Lower third, over the full board:** "Ten seeds: tied on stall time and extra cost". The board is one seed; the lower third keeps it from arguing with the voice.
 
 **Voice-over (outcome B; ≈ 68 words):**
 > Is that better than a good supervisor? We built the strongest rival we could implement fairly: its workers survive, it loses nothing, and it restarts the moment it detects the crash.
@@ -156,7 +157,6 @@ Anything that doesn't answer one of them stays out of the video.
 | Placeholder | Source |
 |---|---|
 | `{{ablation_parser}}`, `{{ablation_muse}}`, `{{ablation_total}}` | The ablation result on the live input |
-| `{{tokens_in}}`, `{{tokens_cached}}`, `{{call_cost}}`, `{{call_latency}}` | The lens, on the chosen call |
 
 ## Checks before recording
 - [x] The outcome has been decided with Yoel (B, Oct 29), and only that version is in the script.
