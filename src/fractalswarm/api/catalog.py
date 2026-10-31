@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from fractalswarm.kernel.store import COLUMNS, EventStore, _from_row
+from fractalswarm.kernel.store import COLUMNS, SCHEMA, EventStore, _from_row
 
 DEMO_PREFIX = "demo-"
 PRIVATE_SOURCE = "private"
@@ -248,10 +248,15 @@ def _mtime(path: Path) -> int:
 
 
 class _readonly:
-    """A read-only SQLite connection that never creates or migrates the file."""
+    """A read-only SQLite connection that never creates or migrates the file. A run that is
+    starting has made the file and not the table yet, and reads as an empty log."""
 
     def __init__(self, path: Path) -> None:
         self.db = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+        if not self.db.execute("SELECT 1 FROM sqlite_master WHERE name = 'events'").fetchone():
+            self.db.close()
+            self.db = sqlite3.connect(":memory:")
+            self.db.execute(SCHEMA)
 
     def __enter__(self) -> sqlite3.Connection:
         return self.db
