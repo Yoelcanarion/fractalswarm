@@ -1,17 +1,18 @@
-// Recovery figures of a run so far: W1's definitions of coordinator-dependency time (`cdt_s`) and of duplicated work
-// (`dup_calls`) in bench/recovery.py, run on the events a view has folded, so a scrubber can drag them through a run
-// and the figure the arena shows live is the one it ends on.
+// Recovery figures of a run so far: W1's definitions of coordinator-dependency time (`cdt_s`), of duplicated work
+// (`dup_calls`) and of idle agent-seconds (`idle_agent_s`) in bench/recovery.py, run on the events a view has folded, so a
+// scrubber can drag them through a run and the figure the arena shows live is the one it ends on.
 //
-// A port, function for function, of what `analyze` needs for those two figures: the wait intervals of the contracts
-// (`_items`), the down span of each goal an outage took (`_outages`, `_Owners`), their overlap (`cdt`), and the fate of
-// every LLM call (`_fates`). Times are virtual ms. "So far" is `analyze` applied to the log up to the playhead, with the
-// end of the run at the playhead: a wait counts once both its ends are in the log (an open one is not an interval yet),
-// and an outage still going ends at the playhead. The figure therefore moves when a wait ends, not while it goes on. At
-// the last event it is the scored number, to the millisecond; arena.parity.test.ts checks the full logs and 400 prefixes
-// of them against Python.
+// A port, function for function, of what `analyze` needs for those three figures: the wait intervals of the contracts
+// (`_items`), the down span of each goal an outage took (`_outages`, `_Owners`), their overlap (`cdt`), the fate of every
+// LLM call (`_fates`), and, for the idle agent-seconds, the lifetime of each agent, the spans in which it holds an attempt
+// and the sessions it served (`_lifetimes`, `_held`, `_idle`). Times are virtual ms. "So far" is `analyze` applied to the
+// log up to the playhead: a wait counts once both its ends are in the log (an open one is not an interval yet), so a
+// figure moves when a wait ends, not while it goes on. The playhead itself changes nothing: every interval ends at an
+// event, so the end of the run (where an outage, an agent or an attempt that is still going ends) cuts none of them, and
+// the figures are a function of the events alone. At the last event they are the scored numbers, to the millisecond;
+// arena.parity.test.ts checks the shipped logs, whole and at their prefixes, against Python.
 //
-// Not ported, because the figures here do not need it: the cause of a duplicate, the idle agent-seconds, the blast
-// radius, the cost.
+// Not ported, because the figures here do not need it: the cause of a duplicate, the blast radius, the cost.
 
 import { asNumber, asString, asStrings } from "./generic";
 import type { RunEvent } from "./types";
@@ -170,9 +171,21 @@ class Log {
     this.coordinators = new Set(orchestrators);
   }
 
-  /** The end of the run: its completion, else the playhead (never before the last event). */
-  endAt(playhead: number): number {
-    return this.completedAt ?? Math.max(this.lastTs, playhead);
+  /** The end of the run: its completion, else its last event. */
+  get end(): number {
+    return this.completedAt ?? this.lastTs;
+  }
+
+  /** The agents, by name (``_Log.agents``). */
+  agents(): string[] {
+    const agents: string[] = [];
+    for (const [actor, kind] of this.kind) if (kind === "agent") agents.push(actor);
+    return agents.sort();
+  }
+
+  /** The spans in which ``actor`` was alive, one per incarnation (``_Log.lifetimes``). */
+  lifetimes(actor: string): Span[] {
+    return (this.spawns.get(actor) ?? []).map((spawn): Span => [spawn.ts_virtual, this.stopAfter(actor, spawn.seq)?.ts_virtual ?? this.end]);
   }
 
   private add(event: RunEvent): void {
@@ -600,6 +613,110 @@ function duplicatedCalls(log: Log): number {
   return count;
 }
 
+// -- idle agent-seconds ----------------------------------------------------------------------
+
+/** The parts of ``spans`` that lie inside any of ``inside`` (``_within``). */
+function within(spans: readonly Span[], inside: readonly Span[]): Span[] {
+  const parts: Span[] = [];
+  for (const [from, to] of inside) {
+    for (const [start, end] of spans) {
+      const a = Math.max(start, from);
+      const b = Math.min(end, to);
+      if (b > a) parts.push([a, b]);
+    }
+  }
+  return parts;
+}
+
+/** How much of ``spans`` the agent was alive for and held no attempt (``_free``): the spans, cut to its lifetime, merged,
+ * less the spans of the attempts it held. */
+function freeMs(spans: readonly Span[], alive: readonly Span[], busy: readonly Span[]): number {
+  const holes = merge(busy);
+  let free = 0;
+  let first = 0;
+  for (const [start, end] of merge(within(spans, alive))) {
+    free += end - start;
+    while (first < holes.length && holes[first][1] <= start) first += 1;
+    for (let i = first; i < holes.length && holes[i][0] < end; i += 1) free -= Math.min(end, holes[i][1]) - Math.max(start, holes[i][0]);
+  }
+  return free;
+}
+
+/** One agent as the idle agent-seconds read it: when it was alive, when it held an attempt, and the sessions it served. */
+interface Hand {
+  alive: Span[];
+  busy: Span[];
+  sessions: ReadonlySet<string>;
+}
+
+/** The agents that served a session. A session is served by the assignee of a contract when it is created and by the
+ * assignee of each dispatch of it (``serves`` in ``analyze``). An agent holds an attempt from its dispatch to the
+ * result it sends, or to its stop (``_held``). */
+function handsOf(log: Log): Hand[] {
+  const serves = new Map<string, Set<string>>();
+  const serve = (agent: string, goal: string): void => {
+    if (!agent) return;
+    const goals = serves.get(agent);
+    if (goals) goals.add(goal);
+    else serves.set(agent, new Set([goal]));
+  };
+  for (const created of log.created.values()) {
+    const contract = (created.payload.contract ?? {}) as Record<string, unknown>;
+    serve(asString(contract.assignee), asString(contract.goal_id));
+  }
+  const held = new Map<string, Span[]>();
+  for (const [key, sent] of log.dispatches) {
+    const goal = key.split(SEP)[0];
+    for (const dispatch of sent) {
+      const agent = asString(dispatch.payload.assignee);
+      serve(agent, goal);
+      const ends = [log.end];
+      const result = after(log.results.get(keyOf(dispatch.payload)), dispatch.seq);
+      if (result) ends.push(result.ts_virtual);
+      const stop = log.stopAfter(agent, dispatch.seq);
+      if (stop) ends.push(stop.ts_virtual);
+      push(held, agent, [dispatch.ts_virtual, Math.max(Math.min(...ends), dispatch.ts_virtual)]);
+    }
+  }
+  const hands: Hand[] = [];
+  for (const agent of log.agents()) {
+    const sessions = serves.get(agent);
+    if (sessions) hands.push({ alive: log.lifetimes(agent), busy: held.get(agent) ?? [], sessions });
+  }
+  return hands;
+}
+
+/** The waits of an outage, by session: each wait interval cut to the down span of its goal (what ``_idle`` collects from the
+ * outage's blocked items). */
+function waitsOf(outage: Outage, byGoal: ReadonlyMap<string, Item[]>): Map<string, Span[]> {
+  const waits = new Map<string, Span[]>();
+  for (const [goal, [from, to]] of outage.spans) {
+    for (const item of byGoal.get(goal) ?? []) {
+      const start = Math.max(item.start, from);
+      const end = Math.min(item.end, to);
+      if (end > start) push(waits, goal, [start, end]);
+    }
+  }
+  return waits;
+}
+
+/** Idle agent-ms (``idle_agent_s``, the primary reading in bench/PREREG.md), added up over the outages: for each, the time
+ * an agent was alive and held no attempt while one of the sessions it served had work waiting on a coordinator that was
+ * down. A session is waiting while one of its wait intervals runs inside the down span of its goal. */
+function idleMsOf(log: Log, outages: readonly Outage[], byGoal: ReadonlyMap<string, Item[]>): number {
+  const waited = outages.map((outage) => waitsOf(outage, byGoal)).filter((waits) => waits.size > 0);
+  if (waited.length === 0) return 0;
+  let idle = 0;
+  for (const { alive, busy, sessions } of handsOf(log)) {
+    for (const waits of waited) {
+      const spans: Span[] = [];
+      for (const goal of sessions) for (const span of waits.get(goal) ?? []) spans.push(span);
+      if (spans.length > 0) idle += freeMs(spans, alive, busy);
+    }
+  }
+  return idle;
+}
+
 // -- the figures -----------------------------------------------------------------------------
 
 export interface Recovery {
@@ -609,43 +726,52 @@ export interface Recovery {
   blockedMs: number;
   /** Calls that were duplicated work (``dup_calls``). */
   duplicatedCalls: number;
+  /** Idle agent-seconds (``idle_agent_s``), in ms: agent-time spent alive, holding no attempt, while a session the agent served
+   * had work waiting on a coordinator that was down. */
+  idleMs: number;
+  /** A coordinator's crash stopped workers. An in-process supervisor takes its workers down with it, and a worker that is gone
+   * is not idle: what such a side scores on ``idleMs`` is not how long its workers waited. */
+  crashStopped: boolean;
 }
 
-interface Analysis {
-  log: Log;
-  owners: Owners;
-  items: Item[];
-  blockedMs: number;
-  duplicatedCalls: number;
+const NOTHING: Recovery = { dependencyMs: 0, blockedMs: 0, duplicatedCalls: 0, idleMs: 0, crashStopped: false };
+
+function analyse(rows: Recorded): Recovery {
+  const log = new Log(recordedEvents(rows));
+  const items = itemsOf(log);
+  const byGoal = new Map<string, Item[]>();
+  let blockedMs = 0;
+  for (const item of items) {
+    push(byGoal, item.goal, item);
+    blockedMs += item.end - item.start;
+  }
+  const outages = outagesOf(log, new Owners(log), log.end);
+  const down = new Map<string, Span[]>();
+  for (const outage of outages) for (const [goal, span] of outage.spans) push(down, goal, span);
+  let dependencyMs = 0;
+  for (const [goal, spans] of down) {
+    const merged = merge(spans);
+    for (const item of byGoal.get(goal) ?? []) dependencyMs += overlap([item.start, item.end], merged);
+  }
+  return {
+    dependencyMs,
+    blockedMs,
+    duplicatedCalls: duplicatedCalls(log),
+    idleMs: idleMsOf(log, outages, byGoal),
+    crashStopped: log.of("actor.stopped").some((stop) => stop.payload.reason === "crash"),
+  };
 }
 
-const analyses = new WeakMap<Recorded, Analysis>();
+const figures = new WeakMap<Recorded, Recovery>();
 
-function analysisOf(rows: Recorded): Analysis {
-  let found = analyses.get(rows);
+/** The figures of the kept events: the log so far, read once per change of it, however often a frame asks. The playhead is
+ * only accepted, because the callers have it: the figures do not depend on it (see the head of this file). */
+export function recoveryAt(rows: Recorded, _playheadMs?: number): Recovery {
+  if (rows.full.length === 0 && rows.tail.length === 0) return NOTHING;
+  let found = figures.get(rows);
   if (!found) {
-    const log = new Log(recordedEvents(rows));
-    const items = itemsOf(log);
-    found = { log, owners: new Owners(log), items, blockedMs: items.reduce((sum, item) => sum + (item.end - item.start), 0), duplicatedCalls: duplicatedCalls(log) };
-    analyses.set(rows, found);
+    found = analyse(rows);
+    figures.set(rows, found);
   }
   return found;
-}
-
-/** The figures of the kept events at virtual time ``playheadMs`` (the end of the run so far). */
-export function recoveryAt(rows: Recorded, playheadMs: number): Recovery {
-  if (rows.full.length === 0 && rows.tail.length === 0) return { dependencyMs: 0, blockedMs: 0, duplicatedCalls: 0 };
-  const { log, owners, items, blockedMs, duplicatedCalls: dup } = analysisOf(rows);
-  const down = new Map<string, Span[]>();
-  for (const outage of outagesOf(log, owners, log.endAt(playheadMs))) {
-    for (const [goal, span] of outage.spans) {
-      const spans = down.get(goal);
-      if (spans) spans.push(span);
-      else down.set(goal, [span]);
-    }
-  }
-  const merged = new Map([...down].map(([goal, spans]) => [goal, merge(spans)] as const));
-  let dependencyMs = 0;
-  for (const item of items) dependencyMs += overlap([item.start, item.end], merged.get(item.goal) ?? []);
-  return { dependencyMs, blockedMs, duplicatedCalls: dup };
 }

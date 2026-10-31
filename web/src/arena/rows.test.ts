@@ -2,14 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { arenaCounters } from "../lib/arena";
 import { foldEvents } from "../lib/reducer";
+import { recoveryAt } from "../lib/recovery";
 import { readOfficial, type Official } from "./official";
 import { isSettled, ROW_DEFS, scoreRows, type SideNumbers } from "./rows";
-import { call, crash, kill, ready, restart, rivalStream, sent, swarmStream, takeOver } from "./testing";
+import { crash, kill, ready, restart, rivalStream, sent, swarmStream, takeOver } from "./testing";
 
 /** One side at ``nowMs``: the view folds the events that have happened by then, as the store's does. */
 function side(events: ReturnType<typeof swarmStream>["events"], nowMs: number, over: Partial<SideNumbers> = {}): SideNumbers {
   const view = foldEvents(events.filter((e) => e.ts_virtual <= nowMs));
-  return { counters: arenaCounters(view, nowMs), windows: view.arena.windows, nowMs, finished: false, official: null, ...over };
+  const { idleMs, crashStopped } = recoveryAt(view.arena.recorded, nowMs);
+  return { counters: arenaCounters(view, nowMs), idleMs, windows: view.arena.windows, nowMs, finished: false, official: null, crashStopped, ...over };
 }
 
 /** A swarm that lost o1 for 5 s and a supervisor that was down for 5 s, each with a contract that was ready at 9 s and
@@ -70,29 +72,56 @@ describe("the scoreboard rows", () => {
     expect(at(15_000)).toEqual([5, 5]); // the contract goes out: 10 s to 15 s of its wait was spent with the owner down
   });
 
-  it("shows no idle agent-seconds while the run plays, and says why: the number that is shown is the scored one, so it never falls back", () => {
-    const rival = rivalStream(undefined, 4);
-    call(rival, "o0.a1", "e1");
-    crash(rival, "o0", 10_000, 5000);
-    restart(rival, "o0", 15_000);
-    const idle = scoreRows(side(rival.events, 15_000), side(rival.events, 15_000)).find((r) => r.id === "idle")!;
-    expect(idle.right).toEqual({ value: null, source: "live" });
-    expect(idle.rightShare).toBe(0);
-    expect(idle.definition).toContain("Shown once the run is scored");
-    // and where the run has no scored number (a server without the recovery metrics) the row stays on the dash, not on a count that is wider
-    const none = scoreRows(side(rival.events, 16_000, { finished: true, official: official(null) }), side(rival.events, 16_000, { finished: true, official: official(null) })).find((r) => r.id === "idle")!;
-    expect(none.right).toEqual({ value: null, source: "live" });
+  it("counts the idle agent-seconds as the metrics score them, so the number shown while the run plays is the one it ends on: a wait counts once it has ended", () => {
+    const { swarm, rival } = pair();
+    const at = (ms: number, over: Partial<SideNumbers> = {}) => {
+      const row = scoreRows(side(swarm, ms, over), side(rival, ms, over)).find((r) => r.id === "idle")!;
+      return [row.left.value, row.right.value];
+    };
+    expect(at(12_000)).toEqual([0, 0]); // the outage is open and the contract still waits: no interval yet
+    expect(at(14_999)).toEqual([0, 0]);
+    expect(at(15_000)).toEqual([5, 5]); // the contract goes out to an agent that was free: 10 s to 15 s of its wait was spent with the owner down
+    const row = scoreRows(side(swarm, 15_000), side(rival, 15_000)).find((r) => r.id === "idle")!;
+    expect(row.left.source).toBe("live");
+    expect(row.definition).toBe("Agent time spent idle because the coordinator they answer to was down."); // nothing is said of a dash: there is none
+    // and where the run has no scored number (a server without the recovery metrics) the row stays on the count, which is the same rule
+    expect(at(16_000, { finished: true, official: official(null) })).toEqual([5, 5]);
   });
 
-  it("says under a side's scored idle number that a worker a crash stopped is not idle, only for a side whose crash stopped workers", () => {
-    const { swarm, rival } = pair();
+  it("does not count an agent while it holds an attempt, nor one that a crash has stopped", () => {
+    const busy = rivalStream(undefined, 4);
+    sent(busy, "g0", "o0", 8_000, "o0.a1", "c0"); // o0.a1 took an attempt before the crash and has not handed it in
+    ready(busy, "g1", "o0", 9_000);
+    crash(busy, "o0", 10_000, 5000);
+    restart(busy, "o0", 15_000);
+    sent(busy, "g1", "o0", 15_000, "o0.a1");
+    const gone = rivalStream(undefined, 4);
+    ready(gone, "g1", "o0", 9_000);
+    crash(gone, "o0", 10_000, 5000, ["o0.a1"]);
+    restart(gone, "o0", 15_000, ["o0.a1"]);
+    sent(gone, "g1", "o0", 15_000, "o0.a1");
+    const idle = (events: typeof busy.events) => scoreRows(side(events, 15_000), side(events, 15_000)).find((r) => r.id === "idle")!.right.value;
+    expect(idle(busy.events)).toBe(0);
+    expect(idle(gone.events)).toBe(0);
+    expect(idle(pair().rival)).toBe(5); // the same wait with a free agent
+  });
+
+  it("says under a side's idle number that a worker a crash stopped is not idle, as soon as one has and only for a side whose crash stopped workers", () => {
+    const { swarm } = pair();
+    const rival = rivalStream(undefined, 4);
+    ready(rival, "g1", "o0", 9_000);
+    crash(rival, "o0", 10_000, 5000, ["o0.a1", "o0.a2"]);
+    restart(rival, "o0", 15_000, ["o0.a1", "o0.a2"]);
+    sent(rival, "g1", "o0", 15_000, "o0.a1");
+    const note = "A worker a crash stopped is not idle: see coordinator-dependency time.";
+    const idle = (ms: number) => scoreRows(side(swarm, ms), side(rival.events, ms)).find((r) => r.id === "idle")!;
+    expect(idle(9_000).notes).toEqual({ left: null, right: null }); // nothing has stopped yet: there is nothing to explain
+    expect(idle(12_000).notes).toEqual({ left: null, right: note }); // the number is live and so is the line
+    // and on the scored number, which the line goes on explaining
     const scored = official({ idle_agent_s: 0, ttr_own_mean_s: 5.2, cdt_s: 4.8, dup_calls: 1, unnecessary_reassignments: 0 });
-    const rows = scoreRows(side(swarm, 16_000, { finished: true, official: scored }), side(rival, 16_000, { finished: true, official: scored, crashStopped: true }));
-    const idle = rows.find((r) => r.id === "idle")!;
-    expect(idle.notes).toEqual({ left: null, right: "A worker a crash stopped is not idle: see coordinator-dependency time." });
-    // not before the number is scored: a note under a dash would explain nothing
-    const playing = scoreRows(side(swarm, 15_000), side(rival, 15_000, { crashStopped: true })).find((r) => r.id === "idle")!;
-    expect(playing.notes).toEqual({ left: null, right: null });
+    const done = scoreRows(side(swarm, 16_000, { finished: true, official: scored }), side(rival.events, 16_000, { finished: true, official: scored })).find((r) => r.id === "idle")!;
+    expect(done.right).toEqual({ value: 0, source: "official" });
+    expect(done.notes).toEqual({ left: null, right: note });
   });
 
   it("measures the time to recover as the mean outage so far", () => {

@@ -117,6 +117,96 @@ describe("coordinator-dependency time", () => {
   });
 });
 
+describe("idle agent-seconds", () => {
+  const give = (s: Stream, goal: string, cid: string, agent: string) =>
+    s.emit("contract.created", "o0", { owner: "o0", contract: { id: cid, goal_id: goal, depends_on: [], assignee: agent } });
+  const send = (s: Stream, goal: string, cid: string, attempt: number, agent: string) =>
+    s.emit("contract.dispatched", "o0", { goal_id: goal, contract_id: cid, attempt, assignee: agent, idem_key: `k-${goal}-${cid}-${attempt}`, work: `${goal}/${cid}` });
+  const report = (s: Stream, goal: string, cid: string, attempt: number, agent: string) =>
+    s.emit("msg.sent", agent, { to: "o0", topic: "contract.result", body: { goal_id: goal, contract_id: cid, attempt, agent } });
+
+  /** A swarm. Session g1 has two contracts: c1 went to a1, which handed it in and was paid at 6 s; c2 went to a2, which hands
+   * its result in at 22 s. The coordinator o0 is killed at 20 s and the session is taken over at 25 s, which is when the result
+   * is taken in: it waited 3 s on a coordinator that was down. a1 and a2 both hold nothing for those 3 s. */
+  function sessionLosesItsCoordinator(): Stream {
+    const s = run("swarm");
+    s.spawn("o1", "orchestrator", "o0");
+    s.at(1000).emit("ownership.assigned", "o0", { key: "g1", owner: "o0", group: "o0" });
+    give(s, "g1", "c1", "o0.a1");
+    give(s, "g1", "c2", "o0.a2");
+    send(s.at(1500), "g1", "c1", 1, "o0.a1");
+    send(s.at(2000), "g1", "c2", 1, "o0.a2");
+    report(s.at(5000), "g1", "c1", 1, "o0.a1");
+    completed(s.at(6000), "g1", "c1", 1);
+    s.at(20_000).emit("chaos.injected", "@chaos", { fault: "kill_coordinator", target: "o0", detail: {} });
+    report(s.at(22_000), "g1", "c2", 1, "o0.a2");
+    s.at(25_000).emit("ownership.remapped", "o1", { key: "g1", owner: "o1", previous: "o0", works: [] });
+    completed(s, "g1", "c2", 1);
+    return s;
+  }
+
+  it("is the time the agents of a session were free while its work waited on a coordinator that was down", () => {
+    const s = sessionLosesItsCoordinator();
+    expect(at(s)).toMatchObject({ dependencyMs: 3000, idleMs: 2 * 3000 });
+  });
+
+  it("is nothing when no outage held anything up", () => {
+    expect(at(run("swarm"))).toMatchObject({ dependencyMs: 0, idleMs: 0 });
+    const s = run();
+    created(s.at(1000), "g1", "c1");
+    s.at(10_000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 0, lost: [], restart_in_ms: 5000 });
+    s.at(15_000).emit("baseline.restarted", "o0", { coordinator: "o0", crash: 1, redo: [] });
+    dispatched(s.at(9000), "g1", "c1", 1, "k1"); // sent before the crash: the wait ended while the owner was up
+    expect(at(s).idleMs).toBe(0);
+  });
+
+  it("does not count an agent that holds an attempt, only the ones that are free", () => {
+    const s = sessionLosesItsCoordinator();
+    send(s.at(21_000), "g1", "c3", 1, "o0.a1"); // a1 takes another attempt before the result arrives and never hands it in
+    expect(at(s).idleMs).toBe(3000); // a2 alone
+  });
+
+  it("counts an agent only for as long as it was alive", () => {
+    const s = sessionLosesItsCoordinator();
+    s.at(23_000).emit("actor.stopped", "o0.a2", { actor_id: "o0.a2", reason: "chaos" });
+    expect(at(s).idleMs).toBe(3000 + 1000); // a2 is gone from 23 s, so its free time stops there
+  });
+
+  it("counts only the agents that served the session that waited", () => {
+    const s = sessionLosesItsCoordinator();
+    s.spawn("o0.a3", "agent", "o0"); // never given anything of g1
+    expect(at(s).idleMs).toBe(2 * 3000);
+  });
+
+  it("ignores the playhead: an outage that has not ended costs the same however far on it is read", () => {
+    const s = run("swarm");
+    s.at(1000).emit("ownership.assigned", "o0", { key: "g1", owner: "o0", group: "o0" });
+    give(s, "g1", "c1", "o0.a1");
+    send(s.at(3000), "g1", "c1", 1, "o0.a1");
+    s.at(50_000).emit("chaos.injected", "@chaos", { fault: "kill_coordinator", target: "o0", detail: {} });
+    report(s.at(51_000), "g1", "c1", 1, "o0.a1");
+    completed(s.at(60_000), "g1", "c1", 1); // nobody took the goal over: o0's own completion ends the wait
+    const figures = at(s, 60_000);
+    expect(figures.idleMs).toBe(9000);
+    expect(at(s, 3_600_000)).toEqual(figures);
+  });
+
+  it("says whether a crash has stopped workers, so far", () => {
+    const s = run();
+    expect(at(s).crashStopped).toBe(false);
+    s.at(10_000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 0, lost: [], restart_in_ms: 5000 });
+    expect(at(s).crashStopped).toBe(false);
+    s.emit("actor.stopped", "o0.a1", { actor_id: "o0.a1", reason: "crash" });
+    expect(at(s).crashStopped).toBe(true);
+  });
+
+  it("is read once for each change of the log: a frame that brings no event costs a lookup", () => {
+    const s = sessionLosesItsCoordinator();
+    const rows = foldEvents(s.events).arena.recorded;
+    expect(recoveryAt(rows, 30_000)).toBe(recoveryAt(rows, 31_000));
+  });
+});
+
 describe("duplicated work", () => {
   const dup = (s: Stream) => at(s).duplicatedCalls;
 
