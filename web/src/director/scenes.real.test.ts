@@ -453,4 +453,8 @@ describe("s7, which meets no log", () => {
     expect(Math.abs(outcome.to - scene.durationMs)).toBeLessThan(150);
     expect(trace.state.ms).toBeLessThanOrEqual(scene.durationMs + 1);
   });
+
+  it("seats its lower third on the right: at the left it hides the fast restart row's chips, and that row's ring comes on (7.3 s) while the third is still up (to 7.8 s)", () => {
+    expect(byId("s7-where-it-helps").steps.find((step) => step.do === "caption")).toMatchObject({ style: "lower", align: "right" });
+  });
 });

@@ -113,8 +113,8 @@ describe("a scene script", () => {
       { do: "camera", fit: { kind: "actor", actor: "$crashed:1", side: "left", subtree: true }, zoom: null, pan: null, pad: 0.2, ms: 900, ease: "out" },
       { do: "camera", fit: null, zoom: null, pan: null, pad: 0.1, ms: 0, ease: "inout" },
       { do: "highlight", target: { kind: "counter", counter: "idle" }, ms: 2000 },
-      { do: "caption", text: "Same input", kicker: "Fair fight", ms: 3000, style: "lower" },
-      { do: "caption", text: "heir = highest hash", kicker: null, ms: 2500, style: "overlay" },
+      { do: "caption", text: "Same input", kicker: "Fair fight", ms: 3000, style: "lower", align: "left" },
+      { do: "caption", text: "heir = highest hash", kicker: null, ms: 2500, style: "overlay", align: "left" },
       { do: "panel", name: "scoreboard", show: false },
     ]);
     expect(scene.replayNote).toBe(true);
@@ -130,6 +130,17 @@ describe("a scene script", () => {
     expect(reason(arenaScene({ duration_ms: 10 }))).toMatch(/scene\.duration_ms/);
     expect(reason(arenaScene({ id: "Not A Slug" }))).toMatch(/scene\.id/);
     expect(reason("not a scene")).toMatch(/expected an object/);
+  });
+
+  it("seats a lower third at the left, or at the right when the scene says so, and gives an overlay no side", () => {
+    const step = (extra: Record<string, unknown>) => sceneOf({ steps: [{ do: "caption", text: "x", ms: 1000, ...extra }] }).steps[0];
+    expect(step({})).toMatchObject({ style: "lower", align: "left" });
+    expect(step({ align: "right" })).toMatchObject({ style: "lower", align: "right" });
+    expect(step({ style: "overlay" })).toMatchObject({ style: "overlay", align: "left" });
+    expect(reason(arenaScene({ steps: [{ do: "caption", text: "x", ms: 1000, align: "middle" }] }))).toMatch(/scene\.steps\[0\]\.align/);
+    const overlay = reason(arenaScene({ steps: [{ do: "caption", text: "x", ms: 1000, style: "overlay", align: "right" }] }));
+    expect(overlay).toMatch(/scene\.steps\[0\]\.align/);
+    expect(overlay).toMatch(/overlay is centred/);
   });
 
   it("wants a wait to say what it waits for", () => {
@@ -394,8 +405,8 @@ describe("the captions and the rings", () => {
   });
 
   it("show one caption of each style at a time: a new one takes the place of the one before", () => {
-    const lower = (id: number, from: number, to: number) => ({ id, text: `c${id}`, kicker: null, style: "lower" as const, from, to });
-    const overlay = { id: 9, text: "o", kicker: null, style: "overlay" as const, from: 0, to: 10_000 };
+    const lower = (id: number, from: number, to: number) => ({ id, text: `c${id}`, kicker: null, style: "lower" as const, align: "left" as const, from, to });
+    const overlay = { id: 9, text: "o", kicker: null, style: "overlay" as const, align: "left" as const, from: 0, to: 10_000 };
     const now = addCaption(addCaption([overlay], lower(1, 0, 8000)), lower(2, 3000, 6000));
     expect(now.find((c) => c.id === 1)?.to).toBe(3000 + FADE_MS);
     expect(now.find((c) => c.id === 9)?.to).toBe(10_000);

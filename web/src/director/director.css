@@ -222,6 +222,12 @@ html.dir-on body {
   box-shadow: var(--shadow-overlay);
 }
 
+/* For a page that has what the voice points at under the left seat: s7's fast restart row has its chips there, and its ring comes on while the lower third is still up. */
+.dir__lower--right {
+  left: auto;
+  right: 96px;
+}
+
 .dir__statement {
   position: absolute;
   top: 54px;

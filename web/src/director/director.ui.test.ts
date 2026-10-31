@@ -157,6 +157,16 @@ describe("what is drawn over the stage", () => {
     expect(html).toContain('aria-hidden="true"');
   });
 
+  it("seats a lower third against the right edge when its step says so, and the stylesheet gives that seat its own side", () => {
+    const take = createTake(sceneOf({ steps: [{ do: "caption", text: "Real model", kicker: "Realistic durable supervisor", align: "right", ms: 3000 }] }), fakeReplay(), surface());
+    frames(take, 30);
+    renderCurrent(take.state);
+    const html = renderToStaticMarkup(createElement(OverlayLayer, { take, note: null }));
+    expect(html).toContain('class="dir__lower dir__lower--right"');
+    expect(html).not.toContain('class="dir__lower"');
+    expect(readFileSync(new URL("./director.css", import.meta.url), "utf-8")).toMatch(/\.dir__lower--right \{[^}]*left: auto;[^}]*right: 96px;/);
+  });
+
   it("draws a tooltip as a box with the words, under a target in the upper half and over one in the lower half", () => {
     const key = JSON.stringify({ kind: "region", region: "swarm-proof" });
     const take = createTake(
