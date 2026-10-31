@@ -1540,6 +1540,13 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 
 **Checks at 091d8ea:** web suite 2,609 green; `tsc` clean. Python is green at 0ccaffb, and nothing under `src/fractalswarm` has changed since but the static bundle. Spent $55.35, reserved $12.86, remaining $81.79; no real call today.
 
-**Now:** a rehearsal of the release (fresh clone, the one command with no key, secret scan), so that nothing is found on the last day.
+**A rehearsal of the release (7151a6c), so that nothing is found on the last day:**
+- **Windows, fresh clone, empty home, no key:** the README's commands work. `demo --verify` MATCH in 10 s (the 77 packages included), `replay`, `takeover`, a run on the fake model. Served from that clone, `verify_all.ps1` gives 8 of 8 MATCH; `tests/unit` 1,211; a rebuild of the web from `npm ci` changes no byte of the committed bundle.
+- **Real Linux (Ubuntu 24.04 on WSL2), the same:** the first time anything has run off Windows. The same head hashes, all seven shipped runs MATCH, 1,211 unit tests, the UI served. `coord/linux_juror.sh`. Not run: a Mac, and the web build on Linux (that box has no npm).
+- **WebKit 18 (Safari's engine, on Windows), desktop and an iPhone 14 profile with touch:** home, arena, a run: no error, no sideways overflow. It is not real Safari, and it is not iOS.
+- **Secret scan, every blob of every ref (4,364):** `MODEL_API_KEY` and `HF_TOKEN` in none. Its alarm was `FRACTALSWARM_RUNS_DIR`, a path in the same `.env`; the script now compares the two real names. 426 home paths in 14 files, all but one under `.plans/` or in `CLAUDE.md`: still Yoel's call at publish, as is the address in the commits.
+- **A clone on a path over 148 characters fails on Windows:** the repo's longest paths are 112. The clone warns and checks out a part, and a partial checkout still prints MATCH. No juror's path is that long; noted, not changed.
+
+**Now:** a cold reader (a fresh agent with only the screenshots) tries the redesign's own test: can someone who has never heard of an orchestrator follow the page?
 
 **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, which rival the video's `s1` and `s6` use, master, the public repo, where the static site goes.
