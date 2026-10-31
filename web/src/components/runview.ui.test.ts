@@ -212,6 +212,11 @@ describe("the run page", () => {
     expect(render(store, createElement(RunPage, { unfold: true }))).toMatch(/<details id="more" class="disclosure run__more" open="">/);
   });
 
+  it("says in the hand-overs' hint why they can outnumber the crashes", async () => {
+    const store = await opened();
+    expect(text(render(store, createElement(RunPage)))).toMatch(/root duties and its subtree are two hand-overs, so there can be more of them than crashes/);
+  });
+
   it("does not say a finished run has no actors alive: it says the run is finished", async () => {
     const store = await opened();
     expect(text(render(store, createElement(RunPage)))).toContain("actors alive");
@@ -361,6 +366,11 @@ describe("the keyboard on the run page", () => {
     // the card Tab lands on is one, and the arrow keys, Home and End move between the cards
     expect(source).toMatch(/role="button"\s+tabIndex=\{tabbable \? 0 : -1\}/);
     expect(source).toMatch(/onKeyDown=\{moveBetweenCards\}/);
+  });
+
+  it("leaves a plain wheel over the tree to the page: the tree is most of it, and a stranger's first scroll lands on it", () => {
+    const source = readFileSync(REPO_ROOT + "web/src/components/TreeGraph.tsx", "utf-8");
+    expect(source).toMatch(/preventScrolling=\{false\}/);
   });
 
   it("has the marks of the bar as one tab stop, and the speeds as one select", async () => {
