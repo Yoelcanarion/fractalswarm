@@ -13,17 +13,18 @@
 // Time comes from `clock.motion()`: the real clock, or in fixed-step mode a frame count, so a
 // director take repeats exactly.
 
-import { getViewportForBounds, useReactFlow, useStoreApi, type Node, type ReactFlowInstance } from "@xyflow/react";
-import { useCallback, useLayoutEffect, useReducer, useRef } from "react";
+import { getViewportForBounds, useReactFlow, useStore, useStoreApi, type Node, type ReactFlowInstance } from "@xyflow/react";
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
 
 import { createGlide, type Glide, type Point } from "../lib/glide";
 import type { Bounds } from "../lib/layout";
 import { EASE_OUT, GLIDE_MS, prefersReducedMotion } from "../lib/motion";
 import { useRunStore } from "../store";
 
-// How the camera frames the tree.
-export const FIT_PADDING = 0.18;
-export const FIT_MAX_ZOOM = 1.3;
+// How the camera frames the tree: as large as the pane allows, so that the labels can be read, with a margin round it. The cards are
+// small (lib/layout.ts), so a tree of a dozen agents is zoomed in to fill a page's width.
+export const FIT_PADDING = "24px";
+export const FIT_MAX_ZOOM = 1.5;
 const FIT_RETRIES = 30; // frames to wait for React Flow to measure its pane
 
 export interface TreeShape {
@@ -89,6 +90,12 @@ export function useTreeMotion<N extends Node>(nodes: N[], shape: TreeShape): Tre
     seenStructure.current = latest.current.shape.structure;
     moveCamera(0);
   }, [moveCamera]);
+
+  // The pane changed size (the window was resized, a fold opened above or below): the tree is framed again, so it still fills it.
+  const size = useStore((s) => `${s.width}x${s.height}`);
+  useEffect(() => {
+    if (ready.current) moveCamera(0);
+  }, [size, moveCamera]);
 
   const tick = useCallback(() => {
     frame.current = null;

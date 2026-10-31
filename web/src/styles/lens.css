@@ -29,11 +29,24 @@
   .runstrip .meter {
     column-gap: 12px;
   }
-  .meter__tok,
-  .meter > :has(> .meter__cache),
-  .meter__sep:has(+ * > .meter__cache),
   .verify__head {
     display: none;
+  }
+}
+
+/* The meter in the strip is a fold that floats under "What the models cost": wide enough for its row of models and chips. */
+.meter-fold > .disclosure__body {
+  width: max-content;
+  max-width: min(980px, calc(100vw - 40px));
+}
+
+/* A phone: the strip says it in the fold's name alone, and the drawer clears a replay bar of two rows. */
+@media (max-width: 760px) {
+  .meter-fold .disclosure__hint {
+    display: none;
+  }
+  .run {
+    --timeline-h: 112px;
   }
 }
 
@@ -149,6 +162,8 @@
   top: 12px;
   right: 16px;
   bottom: calc(var(--timeline-h) + 24px);
+  /* a page that is taller than the window (the run page, with its Details open) gives the drawer a height of its own: see --lens-max-h */
+  max-height: var(--lens-max-h, none);
   display: flex;
   flex-direction: column;
   width: min(720px, calc(100% - 32px));
