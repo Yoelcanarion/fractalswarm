@@ -96,11 +96,12 @@ export function createDomSurface(parts: SurfaceParts): Surface {
     return boundsOf(elements.map((element) => rectOf(element.getBoundingClientRect())), rectOf(frame.getBoundingClientRect()), parts.scale());
   }
 
-  /** The hover text of the target: the first `title` on the elements or under them. It is the page's own wording. */
+  /** The hover text of the target: the first `title` on the elements or under them, else the words of a hint under them (components/ui/Hint.tsx, which
+   * has no `title`: its bubble is in the page, closed, with the same words). It is the page's own wording. */
   function titleOf(target: Target): string | null {
     for (const element of elementsOf(target)) {
       const carrier = element.hasAttribute("title") ? element : element.querySelector("[title]");
-      const words = carrier?.getAttribute("title")?.trim();
+      const words = carrier?.getAttribute("title")?.trim() || element.querySelector('[role="tooltip"]')?.textContent?.trim();
       if (words) return words;
     }
     return null;

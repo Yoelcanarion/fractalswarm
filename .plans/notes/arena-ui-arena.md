@@ -14,7 +14,7 @@ built and which shapes it relies on. It is updated at each merge point.
 | 3. Intake and review UI `#/new` | built (`web/src/intake`), tested on real W2 bodies; **driven end to end in a browser** (sample, practice reader, review, approve, start the arena pair) with no console error |
 | 4. Ablation view `#/ablation` | built (`web/src/ablation`), tested on real W3 bodies; **seen in a browser** on a run it started itself |
 | 5. Director mode `#/director/<scene>` | built and committed (`web/src/director`), 8 scene scripts, 180 tests; **seen in a browser** through the recorder, first look: see "Director mode" |
-| 6. `scripts/record_scenes.*` | written and committed: PNG sequences at 1920×1080, 60 fps; no ffmpeg on the machine (the coordinator said not to install it) |
+| 6. `scripts/record_scenes.*` | written and committed: PNG sequences at 1920×1080, 60 fps; an H.264 mp4 per take now that ffmpeg is on the machine (Gyan.FFmpeg 9.0.2, on PATH); six takes recorded outside the repo on Oct 31, see "The recorder slot" |
 
 The two final T2 pairs ship in `demo/` since arena `d20f64f` (see "Round 3"); before that the arena ran on scratch
 pairs made with the fake LLM at $0.
@@ -97,11 +97,10 @@ here has been looked at yet** (the list for the slot is at the end).
 
 1. Done on Oct 31 (the next section): one scratch build and a scratch server, then shots of `#/arena` on the first pair at
    1920x1080, 1366x768 and 390 px in dark and light, at the start and at the end (the end card).
-2. `s1`, `s6`, `s4`, `s8` with the recorder on the durable pair, then `s1` and `s6` on the in-process pair
-   (`--swarm demo-pair-central-swarm --rival demo-pair-central-rival`): look at where the rings land, at the idle seconds at the
-   end of a take (s1 on the in-process pair has 6.5 s, s6 on the durable pair 7 s; both keep playing, nothing freezes), and at
-   s4's open meter fold (it is open for the whole scene) and the pause frame.
-3. The frame-time reading with two boards at 20x, which the polish brief asks for, has not been taken.
+2. Done on Oct 31 (second slot, "The recorder slot" below): `s1`, `s6`, `s4`, `s8` on the durable pair, then `s1` and `s6` on the in-process
+   pair. The idle seconds I predicted from the logs (s1 in-process 6.5 s, s6 durable 7 s) were wrong for s1 (no still frame at its end) and close for s6
+   (5.85 s); the measured numbers are below.
+3. Done: the frame-time reading with two boards at 20x (59 fps, nothing over 50 ms): see "The recorder slot".
 
 
 ### The look at the arena (Oct 31, the first slot: a scratch build, a scratch server, no model called)
@@ -237,6 +236,70 @@ Not mine, for the coordinator:
 1. `bringRunIntoView()` (components/PlayAction.tsx) could take a selector and the arena could use it instead of its six lines.
 2. The first-visit band is a short 55 px now, so the first visit clears the boards at 1366x768 and 1440x790. At 1280x720 and
    1536x730 the talks row (and at 1280x720 the foot of the drawing) is under the bar until "Got it", as the coordinator accepted.
+
+### The recorder slot (Oct 31): six takes, what I watched, what changed, the frame-time reading
+
+The coordinator gave the recorder slot after the review of `96b24af` (arena merged in first: a fast-forward onto `364a52d`). No model was called.
+The takes come from my own scratch stack, not 8765: a production bundle built from my working tree into the scratchpad (never `api/static`),
+a Vite preview on 5191 that passes `/api` to a scratch `fractalswarm serve` on 8791 (scratch runs and ledger directories, a dummy key), and
+`RECORD_TOOLS` pointing at the scratchpad's `playwright-core@1.48.2`. ffmpeg is on this machine now (winget, Gyan.FFmpeg 9.0.2, on PATH), so
+the recorder encoded each take itself (H.264, 60 fps, yuv420p, crf 12). Each take is 1920x1080 at 60 fps and took about 3.5 min per 30 s.
+
+**Where they are** (outside the repo): `C:\Users\yogar\.fractalswarm\takes\rehearsal-1031\`
+- `durable\` s1-arena-open (32 s), s6-fair-fight (30 s), s4-lens (18 s), s8-proof (10 s): the mp4, the PNG sequence in the folder of the same name
+  and the sidecar `.json`, on `demo-pair-durable-max-swarm` and `-rival`;
+- `central\` s1-arena-open and s6-fair-fight on `demo-pair-central-swarm` and `-rival` (the in-process rival);
+- `sheets\` a 3x4 contact sheet per take (twelve frames, evenly spaced) for a quick look; `dry\` is the dry run's leftovers.
+Every sidecar has `flags: []`, and every frame was captured (1920, 1800, 1080, 600, 1920, 1800).
+
+**What I watched**, with the stillness measured on the PNGs (a frame byte-identical to the one before), not by eye:
+- **s1, durable and in-process:** the title card "Same input · same models · same failures" is on over the arena at its start; the ring on both heads
+  fades at 3.5 s and nothing moves until 6.0 s (a still stretch of 2.5 s, the scene's own `wait`), then the replay is put 14 s before the first crash
+  and plays at 1x (the card stays on for the first second of it). The swarm's first crash is ringed on o0 exactly (durable, frame 1320 at 22 s: the
+  ring is on the `o0 ✕` node, "o0 down for 2.0 s · not noticed yet", the rival's supervisor still up), then the rival's board is ringed
+  ("o0 down for 2.4 s · 8 agents waiting for it" on the durable rival; "o0 down for 3.6 s · 12 workers stopped with it", every worker dot
+  red, on the in-process one). The two assumptions captions at the top are never covered. No still frames at the end.
+- **s6, durable:** plays to the first crash at 1x, rings the rival's status and the swarm's o0, goes to 10x; both are finished when
+  the camera takes the scoreboard (ringed), then the idle-agent-seconds counter (46.3 against 62.5), then home at 24.1 s. **Still from 24.1 s to the
+  end, 5.85 s.** **In-process:** the rival runs on to 154.1 s, so the same script reaches the end later; **still for 1.6 s at the end.**
+- **s4, durable:** the meter's fold is open at the first frame and the totals fill in (Spark $0.0615, Wonder $0.0515, 81% of input tokens from
+  the cache); the replay stops at 52.5 s (event 4698 of 8771, the "▶" shows it paused), the lens drawer opens on the Spark "Extract" call of
+  o3.1.a1 (50.9 to 52.5 s, 2,973 in, 312 out, $0.0039, the model's own words legible at 1080p), then on Wonder's root plan (o0 ringed and in view),
+  closes, and the meter is ringed with "Carry on" showing. No still stretch of a second anywhere. One thing to know: the drawer covers the right third of the page, so
+  o3.1.a1 is under it during the first call (the drawer is the app's own, over the tree).
+- **s8, durable:** see the fix below. Both tooltips are the chips' own words and legible at 1080p.
+
+**What I changed** (both in my scope, both in this commit):
+1. `web/src/director/surface.ts`, `titleOf`: it reads the words of a hint's bubble (`[role="tooltip"]` under the target) when the target has no
+   `title`; `surface.test.ts` pins the order (a title on it, a title under it, the hint's words, else none). Why: W4's keyboard work turned the
+   chips' native `title` into `Hint` (components/ui/Hint.tsx, `a488c11` and `75db2e4`), which has no `title`, so s8's tooltip steps found no hover
+   text: the dry run said "a tooltip's target has no hover text (it began at 1.40 s)" and the first s8 take, on the committed bundle, was flagged and drew no
+   tooltip (the director skips one with no words). **The static
+   bundle at `48d3754` has this bug: s8 on 8765 needs a rebuild after this merge.**
+2. `web/src/director/scenes/s8-proof.json`: the tooltips are on screen 3.2 s and 3.6 s (they were 2.4 s and 1.8 s: a 70-word paragraph for 1.8 s), the
+   rings follow them (4.6 s and 5.0 s), and the script now ends at 9.6 s of the 10 s (it ended at 7.4 s: 2.8 s of the take was a still frame).
+   The scene's length is unchanged (a test pins it). Re-recorded: no flag, 0.4 s still at the end.
+
+**Not changed, for the coordinator** (the video script's pacing is not mine to move):
+- s6 on the durable pair holds its end state 5.85 s, on the in-process pair 1.6 s. The script waits for the replay's end and then has a fixed tail, so
+  the pair's length sets the hold. If the durable pair is the video's, the two scoreboard close-ups could take 1.5 s each from it; the in-process
+  pair would then run about 1.4 s over its scene (a flag). I left it.
+- The sidecar's `real` field is the `--real` flag (false here), while the frame says "real" through `sources.json`'s `"real": true`: the note in the
+  same sidecar ("Replay of two real recorded runs") is the truth.
+
+**The frame-time reading** (two boards at 20x, a real log played to its end; Chromium 130 headless, 1920x1080, DPR 1, the production bundle,
+a fresh page per run, three runs each; software drawing and main-thread bound here, so the numbers compare pages and builds, not a GPU browser):
+
+| page, 20x to the end of the log | wall | fps | median / p95 / max frame | frames over 50 ms | long tasks | speed got |
+|---|---|---|---|---|---|---|
+| arena, nothing playing (6 s) | 6 s | 60 | 16.7 / 16.8 / 17 ms | 0 | 0 | |
+| arena, durable pair (111.8 s log) | 5.7-5.9 s | 59.1-59.5 | 16.7 / 16.8 / 33 ms | 0 | 0 | 19.8-20x |
+| arena, in-process pair (154.1 s log) | 7.8-8.0 s | 59.6-59.9 | 16.7 / 16.8 / 33 ms | 0 | 0 | 19.7-20x |
+| run page, one tree (the durable swarm) | 4.6 s | 53.0-53.5 | 16.7 / 33.3-33.4 / 50 ms | 0 to 0.4% | 1 (60-70 ms) | 19.9-20x |
+
+Both boards move: in samples every 250 ms the left board showed 11 to 12 distinct states and the right one 13 to 14 of 22 to 23 on the durable pair
+(14 and 21 to 22 of 31 to 32 on the in-process pair). The arena at 20x drops a frame now and then (59.1 to 59.9 of 60 fps), each one a single skipped frame of 33 ms at most;
+nothing is over 50 ms. The run page with its one tree is the heavier page here. The scripts are in the scratchpad, not the repo (`frame_time.mjs`, `still_runs.py`, `stack.ps1 -Action preview`).
 
 ## Design
 
@@ -554,9 +617,8 @@ W4's `.mark`, `.btn`, `.speeds`, `.badge`, `.empty` and `.stat` on purpose. `ass
 7. The status note under each claim in the panel ("Status in docs/claims.md: …") is my addition; it can come out.
 8. The static `GET /api/ablation` caveat labels (Generated notes / The reference / Practice backend) are mine; the
    text next to them is the server's.
-9. **ffmpeg is not on this machine** and installing it waits for Yoel's OK (coordinator, Oct 29). The recorder keeps the
-   PNG sequences (`video/clips/<scene>/f00001.png`, 60 fps) and prints the exact mp4 command; Playwright's bundled
-   ffmpeg is VP8-only, so it does not help.
+9. ffmpeg was not on this machine on Oct 29 and is now (winget, Gyan.FFmpeg 9.0.2, on PATH): the recorder encodes the mp4 itself and
+   keeps the PNG sequences (`<out>/<scene>/f00001.png`, 60 fps) next to it. Without it the recorder still prints the exact command.
 10. `docs/video-script.md` s8 mentions hovering a takeover chip ("the heir of each, recomputed from the log, is the one
     the run used"). That text is a native `title`, which a headless screenshot does not draw: the director's `tooltip`
     step draws it (answered yes by the coordinator).

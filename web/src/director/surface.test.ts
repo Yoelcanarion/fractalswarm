@@ -111,6 +111,35 @@ describe("the surface of a page", () => {
     expect(surface.contentRect({ kind: "region", region: "scoreboard" })).toBeNull();
   });
 
+  it("reads the hover text of a target: its title, a title under it, else the words of a hint under it", () => {
+    // what the DOM gives of an element: a title of its own, a title under it, the bubble of a Hint (components/ui/Hint.tsx) under it
+    const element = (own: string | null, under: { title?: string; bubble?: string } = {}) => ({
+      getBoundingClientRect: () => ({ x: 0, y: 0, width: 10, height: 10 }),
+      hasAttribute: (name: string) => name === "title" && own !== null,
+      getAttribute: (name: string) => (name === "title" ? own : null),
+      querySelector: (css: string) =>
+        css === "[title]" && under.title !== undefined
+          ? { getAttribute: () => under.title }
+          : css === '[role="tooltip"]' && under.bubble !== undefined
+            ? { textContent: ` ${under.bubble} ` }
+            : null,
+    });
+    const found: Record<string, unknown[]> = {
+      ".score": [element("The title", { bubble: "The bubble" })],
+      ".side--swarm .side__head": [element(null, { title: "A title under it", bubble: "The bubble" })],
+      ".side--swarm .side__chip": [element(null, { bubble: "The words of the hint" })],
+      ".side--rival .side__chip": [element(null)],
+    };
+    const stage = { dataset: {}, querySelectorAll: (css: string) => found[css] ?? [] } as unknown as HTMLElement;
+    const surface = createDomSurface({ ...fakePage({}).elements, stage, scale: () => 1, sides: { left: null, right: null }, lens: null, end: () => 60_000 });
+    const hover = (region: "scoreboard" | "swarm-head" | "swarm-proof" | "rival-proof" | "rival-head") => surface.titleOf({ kind: "region", region });
+    expect(hover("scoreboard")).toBe("The title");
+    expect(hover("swarm-head")).toBe("A title under it");
+    expect(hover("swarm-proof")).toBe("The words of the hint");
+    expect(hover("rival-proof")).toBeNull();
+    expect(hover("rival-head")).toBeNull();
+  });
+
   it("looks for the coordinator that crashed, on the side the scene names", () => {
     const page = fakePage({ '.side--swarm [data-actor="o1"]': [{ x: 400, y: 300, w: 100, h: 40 }] });
     const surface = surfaceOf(page, { left: side(swarm), right: side(rivalStream(CENTRAL_SCENARIO, 2).events) });
