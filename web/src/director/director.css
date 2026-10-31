@@ -90,6 +90,14 @@ html.dir-on body {
   display: none;
 }
 
+/* A take with the Muse lens open on an actor's call frames the tree in what the drawer leaves free (the drawer's width and its gap, as lens.css has
+   them), so that the actor is ringed beside the drawer, not under it. The tree frames itself again whenever its pane changes size
+   (components/useTreeMotion.ts), on the way in and on the way out. The card that carries the ring says the lens is open: the drawer itself stays in the
+   page for a while after it closes, and the pane would stay narrow with it. */
+.dir__stage:has(.run__tree .actor--lens) .run__tree {
+  margin-right: calc(720px + 12px);
+}
+
 /* ---- the title card ---- */
 .dir__title {
   display: flex;
@@ -137,11 +145,13 @@ html.dir-on body {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 28px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
-/* The hover text of an element, drawn where a pointer would show it (a take has no pointer). The words are the page's own. */
+/* The hover text of an element, drawn where a pointer would show it (a take has no pointer). The words are the page's own, and so are its line breaks:
+   a title that lists checks puts one on each line (arena/recovery.ts), as the browser's own tooltip shows it. */
 .dir__tip {
   position: absolute;
   width: max-content;
   max-width: 760px;
+  white-space: pre-line;
   margin: 0;
   padding: 10px 16px;
   border: 1px solid var(--border-strong);

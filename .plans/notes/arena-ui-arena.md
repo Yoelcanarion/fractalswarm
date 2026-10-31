@@ -301,6 +301,51 @@ Both boards move: in samples every 250 ms the left board showed 11 to 12 distinc
 (14 and 21 to 22 of 31 to 32 on the in-process pair). The arena at 20x drops a frame now and then (59.1 to 59.9 of 60 fps), each one a single skipped frame of 33 ms at most;
 nothing is over 50 ms. The run page with its one tree is the heavier page here. The scripts are in the scratchpad, not the repo (`frame_time.mjs`, `still_runs.py`, `stack.ps1 -Action preview`).
 
+### The review of the takes (Oct 31, evening): the scoreboard that never falls back, s6 on the voice, s4 on its sentence, s1 on its order, s8 a check a line
+
+Six items from the coordinator, on top of the s4 mail (`1fd453c`). Arena was merged in first (a fast-forward onto `d55bcd3`, with the new video script).
+No model was called. The takes are in `C:\Users\yogar\.fractalswarm\takes\rehearsal-1031\durable-b\` (s1, s4, s6, s8) and `central-b\` (s6 on the
+in-process pair), each with its mp4, its PNG sequence, its sidecar and a 3x4 contact sheet in `sheets\`. The old takes were not touched. Every sidecar has `flags: []`.
+
+1. **The first card no longer falls back** (`web/src/arena/rows.ts`, `Scoreboard.tsx`). I did the fallback, not the live rule: **the idle row shows a dash until its
+   side is scored.** Why: the scored rule (`bench/recovery.py`, `_idle`, the "session reading") needs the wait intervals clipped to each goal's down span, each
+   agent's held spans, its lifetime and the sessions it served. `lib/recovery.ts` ports only cdt and dup (its own comment says idle is not ported), and the parity
+   fixture has no prefix numbers for it. Porting it is about 150 lines and a Python run that needs a slot, which is not a small change. The row's definition says
+   "Shown once the run is scored: ..." so the dash explains itself. `lib/arena.ts` is untouched (its fold of every free agent while something is down still exists;
+   nothing reads it for the card now). **Reassignments:** the live row is "Contracts sent again" (a `liveLabel`, as the cost card has), the scored one "Unnecessary
+   reassignments", and its definition now names the three cases. **The note** "A worker a crash stopped is not idle: see coordinator-dependency time." is under the
+   idle card of a side where a crash stopped a worker, once that side is scored (the in-process rival: "Rival: ..."); the durable pair has none.
+2. **s6 rings the whole board and no card.** The idle ring and its wait are gone, and a lower third in the voice's words, "Ten seeds: tied on stall time and extra
+   cost", comes on when both logs have played out and stays to the last frame (durable: 16.62 s to 30.00 s; in-process: 20.90 s to 30.00 s). It covers the last 5.9 s
+   you named and the seconds before them, because the board is final from there and the lower third is what keeps it from arguing with the voice.
+3. **s6's camera:** the fit on the scoreboard is gone (no camera step is left in the scene), so there is no shrunken page and no dark band.
+   **A consequence:** the durable take's end is one still stretch of 10.1 s (19.9 s to 30 s: the board, ringed 3.5 s, then the board with the lower third), where it was 5.85 s,
+   because the idle ring and the fit were the only motion left there. The in-process take is still for 5.8 s at its end. If the tail should move, the 1x lead-in before the 10x is the
+   place to give seconds to.
+4. **s4:** committed earlier as `1fd453c` (Wonder's root plan, then Spark's call with the sentence, then the meter; o3.1.a1 ringed beside the drawer; the tree pane narrows
+   beside an open drawer in a take, `director.css`). **The drawer's words at the pause** (replay t 59.0 s, event 5357 of 8771; o0 dead since 53.3 s, o1 holds the root):
+   Spark 1.3, EFFORT LOW, WORK; "Extract track-hci/d1/extract · step 2"; "Made by o3.1.a1 (agent) · started at 52.5 s · ended at 59.0 s"; input 3,311 (2,929 cached, 88%), reasoning 507,
+   output 2,396, cost $0.0111, latency 6.5 s; "Facts, next to the sentence they came from 15"; the first, `speaker:S01:availability`, "day 1: all day; day 2: all day; prefers afternoon",
+   published to the board, from "E01 EMAIL Lars Sato", with AVAILABLE "I'm flexible: both days are fine, any time." and PREFERENCE "If you can, put me in the afternoon." marked.
+5. **s1:** the third step is 8500 ms: the first crash is at 22.5 s and the rival's at 28.1 s, the rival's board is ringed to 31.7 s (3.6 s, it was 5), and the left's re-wire (o1 took over, o0 down 5.9 s)
+   is on screen from about 28.4 s. **Decided differently: the caption and the ring moved.** With the voice reordered (the problem to about 0:11, "On the right", "On the left", "Same task, same
+   models, same failures", then "Now we kill half the brains" on the crash), the lower third and the ring at 0 to 7 s were ten seconds early. Now: the arena at rest to 8.5 s (one still stretch,
+   your 8500 ms), a ring on the rival's head at 11.3 s ("On the right"), on the swarm's head at 15.2 s ("On the left"), the lower third at 18.7 s to 23.0 s (on at the crash, 18.88 to 22.80 s measured). The
+   times are from 74 words in 32 s; a slower voice moves them, and each is one number in `s1-arena-open.json`.
+6. **s8:** the director's hover text keeps its line breaks (`.dir__tip { white-space: pre-line }`), so the rival's five checks are one a line under "Checked on the finished log:". Nothing a check says was
+   shortened. **In the app:** the rival's chip is a native `title` (`RecoveryChip.tsx`) whose text already has a check a line (`lib/recovery.ts` joins them with a newline), which a browser's own tooltip
+   shows as lines; no `Hint` is on that chip. The `Hint` bubble itself (`.tip__bubble`, `styles/ui.css`, not mine) wraps text and cannot break a line: `white-space: pre-line` there would let it.
+   The rival's tooltip is on 4.2 s (it was 3.6) and the swarm's 2.6 s (3.2), the rings follow them; the script still ends at 9.6 s of 10.
+
+**What I saw** (frames, by index at 60 fps): s6 durable, 12.0 s (playhead 67.5 s): both idle cards "—", "Contracts sent again" live; 17.5 s: the board ringed at full size, no dark band, the lower third on; 29.5 s: idle
+46.3 / 62.5, the last frame's numbers, never lower than what was shown before. s6 in-process, 20.0 s (playhead 147.1 s): the finished swarm reads 15.9 ✓, the rival's idle is "—" and "Contracts sent again" 0 / 25; last frame: 15.9 ✓ / 0.0 ✓
+with the crash note under the card, "Unnecessary reassignments" 0 / 0, the lower third on. s1: the rings and the lower third at the moments above; the first crash ringed on o0 at 22.67 s with the lower third still on.
+s4 and s8 as in items 4 and 6.
+
+**For the coordinator:** (a) the replay pill's "real cost" on the in-process pair now reads $0.6047 for the rival where the old take read $0.7846: that is `09c6427` (the frame says what the run spent), while the cost card
+keeps the scored basis ($0.785, with $0.180 estimated for 27 cancelled calls). (b) The durable s6 ends in the long still stretch of item 3. (c) `tsc --noEmit` is clean and the whole web suite is
+151 files, 2511 tests, green on one worker; pytest and the $0 reference comparison were not run (web only, nothing under `src/` or `scripts/refs` changed).
+
 ## Design
 
 The arena layout, the board and the director's design ran under `/hard-task`. The decisions that are not obvious

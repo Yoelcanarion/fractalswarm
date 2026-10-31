@@ -40,6 +40,10 @@ export const REGIONS = {
   meter: region(RUN, ".meter"),
   proof: region(RUN, ".runstrip__proof"),
   lens: region(RUN, ".lens"),
+  // the call open in the lens at a glance: the card of the actor that made it, then the call's model, effort and purpose, down to the first fact it
+  // published with the email it came from (the figures sit between); and the sentences of that email the fact rests on
+  "lens-call": region(RUN, ".run__tree .actor--lens, .lens .call__head, .lens .facts > .fact:first-child"),
+  "lens-sentence": region(RUN, ".lens .facts > .fact:first-child mark.evidence"),
   counters: region(RUN, ".counters"),
   feed: region(RUN, ".run__side"),
   // both have a replay scrubber, and each calls it something else

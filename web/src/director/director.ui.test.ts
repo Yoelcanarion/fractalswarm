@@ -9,7 +9,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { plainText, occurrences } from "../arena/helps/testing";
 import { call, kill, rivalStream, swarmStream, takeOver } from "../arena/testing";
-import { renderCurrent } from "../lib/testing";
+import { CallView } from "../components/lens/CallView";
+import { readCallDetail, type CallDetail } from "../lib/lens";
+import { loadFixture, renderCurrent } from "../lib/testing";
 import type { RunEvent } from "../lib/types";
 import type { RunApi } from "../store";
 import { DirectorPage } from "./DirectorPage";
@@ -81,6 +83,23 @@ describe("the arena stage", () => {
       }
     }
     for (const row of ["idle", "recover", "cost", "duplicated", "reassigned"]) expect(html).toContain(`data-row="${row}"`);
+  });
+});
+
+describe("the run stage's lens regions", () => {
+  it("point at what the lens draws for a call that published facts: its head, the first fact's card, and the marks of the sentences it rests on", () => {
+    const fixture = loadFixture<{ details: Record<string, unknown> }>("lens-demo-backup.json");
+    const detail = readCallDetail(fixture.details["eff-3895.0"]) as CallDetail;
+    const html = renderToStaticMarkup(createElement(CallView, { row: detail, entry: { state: "ready", detail }, playhead: 1e9, onRetry: () => undefined }));
+    // the head of the call (model, effort, purpose); the card is the first child of the facts list, and the marks are the sentences of the email drawn in it
+    expect(html).toContain('<header class="call__head">');
+    expect(html).toMatch(/<ol class="facts"><li class="fact">/);
+    expect(html).toContain('<mark class="evidence"');
+    // the card of the actor whose call is open is the tree's own ring (TreeGraph), which the director's css also takes the tree's room from
+    expect(REGIONS["lens-call"].css).toBe(".run__tree .actor--lens, .lens .call__head, .lens .facts > .fact:first-child");
+    expect(REGIONS["lens-sentence"].css).toBe(".lens .facts > .fact:first-child mark.evidence");
+    for (const name of ["lens-call", "lens-sentence"] as const) expect(REGIONS[name].stages).toEqual(["run"]);
+    expect(readFileSync(new URL("./director.css", import.meta.url), "utf8")).toContain(".dir__stage:has(.run__tree .actor--lens) .run__tree");
   });
 });
 

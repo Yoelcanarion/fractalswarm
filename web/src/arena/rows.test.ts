@@ -70,13 +70,29 @@ describe("the scoreboard rows", () => {
     expect(at(15_000)).toEqual([5, 5]); // the contract goes out: 10 s to 15 s of its wait was spent with the owner down
   });
 
-  it("counts idle agent-seconds from the agents that wait on a coordinator that is out", () => {
+  it("shows no idle agent-seconds while the run plays, and says why: the number that is shown is the scored one, so it never falls back", () => {
     const rival = rivalStream(undefined, 4);
     call(rival, "o0.a1", "e1");
     crash(rival, "o0", 10_000, 5000);
     restart(rival, "o0", 15_000);
     const idle = scoreRows(side(rival.events, 15_000), side(rival.events, 15_000)).find((r) => r.id === "idle")!;
-    expect(idle.right.value).toBeCloseTo(15, 6); // 3 idle agents for 5 s
+    expect(idle.right).toEqual({ value: null, source: "live" });
+    expect(idle.rightShare).toBe(0);
+    expect(idle.definition).toContain("Shown once the run is scored");
+    // and where the run has no scored number (a server without the recovery metrics) the row stays on the dash, not on a count that is wider
+    const none = scoreRows(side(rival.events, 16_000, { finished: true, official: official(null) }), side(rival.events, 16_000, { finished: true, official: official(null) })).find((r) => r.id === "idle")!;
+    expect(none.right).toEqual({ value: null, source: "live" });
+  });
+
+  it("says under a side's scored idle number that a worker a crash stopped is not idle, only for a side whose crash stopped workers", () => {
+    const { swarm, rival } = pair();
+    const scored = official({ idle_agent_s: 0, ttr_own_mean_s: 5.2, cdt_s: 4.8, dup_calls: 1, unnecessary_reassignments: 0 });
+    const rows = scoreRows(side(swarm, 16_000, { finished: true, official: scored }), side(rival, 16_000, { finished: true, official: scored, crashStopped: true }));
+    const idle = rows.find((r) => r.id === "idle")!;
+    expect(idle.notes).toEqual({ left: null, right: "A worker a crash stopped is not idle: see coordinator-dependency time." });
+    // not before the number is scored: a note under a dash would explain nothing
+    const playing = scoreRows(side(swarm, 15_000), side(rival, 15_000, { crashStopped: true })).find((r) => r.id === "idle")!;
+    expect(playing.notes).toEqual({ left: null, right: null });
   });
 
   it("measures the time to recover as the mean outage so far", () => {
@@ -141,9 +157,11 @@ describe("the scoreboard rows", () => {
     const { swarm, rival } = pair();
     const live = scoreRows(side(swarm, 15_000), side(rival, 15_000)).find((r) => r.id === "reassigned")!;
     expect(live.definition).toContain("unnecessary");
+    expect(live.label).toBe("Contracts sent again");
     const scored = official({ unnecessary_reassignments: 0 });
     const settled = scoreRows(side(swarm, 16_000, { finished: true, official: scored }), side(rival, 16_000, { finished: true, official: scored })).find((r) => r.id === "reassigned")!;
     expect(settled.definition).not.toContain("So far");
+    expect(settled.label).toBe("Unnecessary reassignments");
   });
 });
 

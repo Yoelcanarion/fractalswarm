@@ -6,14 +6,14 @@
   "steps": [
     { "do": "seek", "to": "end" },
     { "do": "camera", "fit": { "region": "swarm-head" }, "pad": 0.35, "ms": 1200 },
-    { "do": "highlight", "target": { "region": "swarm-head" }, "ms": 4600 },
+    { "do": "highlight", "target": { "region": "swarm-head" }, "ms": 4000 },
     { "do": "wait", "ms": 1400 },
-    { "do": "tooltip", "target": { "region": "swarm-proof" }, "ms": 3200 },
-    { "do": "wait", "ms": 3200 },
+    { "do": "tooltip", "target": { "region": "swarm-proof" }, "ms": 2600 },
+    { "do": "wait", "ms": 2600 },
     { "do": "camera", "fit": { "region": "rival-head" }, "pad": 0.35, "ms": 1200 },
-    { "do": "highlight", "target": { "region": "rival-head" }, "ms": 5000 },
+    { "do": "highlight", "target": { "region": "rival-head" }, "ms": 5600 },
     { "do": "wait", "ms": 1400 },
-    { "do": "tooltip", "target": { "region": "rival-proof" }, "ms": 3600 },
-    { "do": "wait", "ms": 3600 }
+    { "do": "tooltip", "target": { "region": "rival-proof" }, "ms": 4200 },
+    { "do": "wait", "ms": 4200 }
   ]
 }
