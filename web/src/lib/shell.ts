@@ -6,6 +6,15 @@ import { AT_END } from "./address";
 export const RUN_VIEWS = ["overview", "plan", "panels", "security", "results", "events"] as const;
 export type RunView = (typeof RUN_VIEWS)[number];
 
+/** The views a run's row always shows. The others are in its "More views" menu, which is one click away. */
+export const MAIN_RUN_VIEWS: readonly RunView[] = ["overview", "results"];
+
+/** The views the row shows (the main ones, and the one the person is on) and the ones in the menu, each in the order of `RUN_VIEWS`. */
+export function runViewsShown(current: RunView): { shown: RunView[]; more: RunView[] } {
+  const shown = RUN_VIEWS.filter((view) => MAIN_RUN_VIEWS.includes(view) || view === current);
+  return { shown, more: RUN_VIEWS.filter((view) => !shown.includes(view)) };
+}
+
 export const RUN_VIEW_TITLES: Record<RunView, string> = {
   overview: "Run",
   plan: "Plan",
@@ -20,7 +29,7 @@ export type EvidenceView = (typeof EVIDENCE_VIEWS)[number];
 
 export const EVIDENCE_TITLES: Record<EvidenceView, string> = {
   charts: "Charts",
-  helps: "Where it helps",
+  helps: "Trade-offs",
   ablation: "Ablation",
 };
 
@@ -31,6 +40,11 @@ export const EVIDENCE_HASHES: Record<EvidenceView, string> = {
 };
 
 export const isEvidence = (page: string): page is EvidenceView => (EVIDENCE_VIEWS as readonly string[]).includes(page);
+
+/** The pages the evidence's row shows. The ablation's page has nothing to read until one has been recorded (it is where one is started), so its
+ * tab waits for one; its address works all the same, and the tab is there for as long as the person is on that page. */
+export const evidenceViewsShown = (current: EvidenceView, ablationRecorded: boolean): EvidenceView[] =>
+  EVIDENCE_VIEWS.filter((view) => view !== "ablation" || ablationRecorded || current === "ablation");
 
 export type Place = "arena" | "runs" | "new" | "evidence";
 

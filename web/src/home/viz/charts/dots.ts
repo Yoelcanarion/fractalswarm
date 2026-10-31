@@ -48,8 +48,16 @@ export interface DotModel {
 
 const mean = (values: number[]): number => values.reduce((s, v) => s + v, 0) / values.length;
 
-export function dotModel(data: HeadlineSlice): DotModel {
-  const cells = data.cells;
+/**
+ * The systems the tie is about: the swarm and the two durable supervisors. The in-process supervisor's runs are in the data, and the
+ * hero chart and the proof's bars show them, but a dot for each of its ten seeds stretches the axis the tie is read on (its extra
+ * cost alone is several times the others') and adds forty dots to a chart that has eighty.
+ */
+export const TIE_SYSTEMS: readonly string[] = ["swarm", "durable-max", "durable"];
+
+/** `systems` null draws every system of the data; the default is the ones the tie is about. */
+export function dotModel(data: HeadlineSlice, systems: readonly string[] | null = TIE_SYSTEMS): DotModel {
+  const cells = systems === null ? data.cells : data.cells.filter((c) => systems.includes(c.workflow));
   const byProfile = new Map<string, HeadlineCell[]>();
   for (const c of cells) byProfile.set(c.profile, [...(byProfile.get(c.profile) ?? []), c]);
   const groups: DotGroup[] = [...byProfile.entries()]
@@ -132,6 +140,9 @@ const GAP_Y = 14;
 const MIN_ROW = 22;
 const MAX_ROW = 52;
 const LABEL_GAP = 18;
+/** The header over each mean column ends at the column's edge, so a panel's own header has to stop short of it. */
+const MEAN_HEAD = "mean";
+const HEAD_GAP = 12;
 
 export interface DotPlace {
   runIndex: number;
@@ -163,8 +174,9 @@ export interface DotPanel {
   meanX: number;
   headY: number;
   axisY: number;
-  gridTop: number;
-  gridBottom: number;
+  /** Where the vertical grid is drawn: the rows of each group, never the band that carries the group's title. */
+  spans: { top: number; bottom: number }[];
+  /** A tick whose label is empty keeps its line and gives its label to a neighbour: on a narrow plot every other one is named. */
   ticks: { x: number; label: string; zero: boolean }[];
   xAt: Scale;
   groups: { group: number; y: number; title: string; rule: number }[];
@@ -189,9 +201,10 @@ export interface DotLayout {
   key: { kind: "dot" | "mean" | "range" | "ring"; x: number; label: string }[];
 }
 
-const METRIC_INFO: Record<DotMetric, { title: string; sub: string; subShort: string }> = {
-  stall: { title: "Stall time", sub: "seconds with no agent working", subShort: "seconds" },
-  extra: { title: "Extra cost", sub: "% against the run with no failures", subShort: "% extra" },
+/** What a panel's header says after its title, longest first: the first that fits before the mean column is written, and the last always is. */
+const METRIC_INFO: Record<DotMetric, { title: string; subs: readonly string[] }> = {
+  stall: { title: "Stall time", subs: ["seconds with no agent working", "seconds"] },
+  extra: { title: "Extra cost", subs: ["% against the run with no failures, pre-registered basis", "pre-registered basis", "% extra"] },
 };
 
 function domainOf(model: DotModel, metric: DotMetric, groups: number): { min: number; max: number; step: number; values: number[] } {
@@ -208,6 +221,15 @@ function domainOf(model: DotModel, metric: DotMetric, groups: number): { min: nu
     }
   });
   return niceTicks(lo, hi, 4);
+}
+
+/** The ticks of an axis, each named unless the names would touch: then every second, third… one is, counting from the zero. */
+function thinned(domain: { step: number; values: number[] }, xAt: Scale): DotPanel["ticks"] {
+  const names = domain.values.map((v) => tickLabel(v, domain.step));
+  const room = Math.abs(xAt(domain.values[1] ?? 1) - xAt(domain.values[0] ?? 0));
+  const every = Math.max(1, Math.ceil((Math.max(...names.map((n) => textWidth(n))) + 8) / Math.max(1, room)));
+  const origin = Math.max(0, domain.values.indexOf(0));
+  return domain.values.map((v, i) => ({ x: xAt(v), label: (i - origin) % every === 0 ? names[i]! : "", zero: v === 0 }));
 }
 
 function keyFor(model: DotModel, short: boolean): DotLayout["key"] {
@@ -277,12 +299,15 @@ export function dotLayout(model: DotModel, width: number, height: number, captio
     const domain = domainOf(model, metric, shown);
     const xAt = linear(domain.min, domain.max, left, right);
     const info = METRIC_INFO[metric];
+    const headRoom = right + MEAN_W - textWidth(MEAN_HEAD) - HEAD_GAP - left;
+    const sub = info.subs.find((s) => textWidth(info.title, 13) + 8 + textWidth(s) <= headRoom) ?? info.subs[info.subs.length - 1] ?? "";
 
     // the groups and their rows, from the top
     let y = top + HEAD_H;
     const rows: RowPlace[] = [];
     const groups: DotPanel["groups"] = [];
     const notes: DotPanel["notes"] = [];
+    const spans: DotPanel["spans"] = [];
     model.groups.slice(0, shown).forEach((g, gi) => {
       if (gi > 0) y += GROUP_GAP;
       groups.push({ group: gi, y: y + GROUP_H / 2 + 2, title: groupTitle(g, short), rule: y });
@@ -311,15 +336,14 @@ export function dotLayout(model: DotModel, width: number, height: number, captio
         });
         y += rowH;
       });
+      spans.push({ top: first, bottom: y });
       if (metric === "extra" && g.reference) notes.push({ group: gi, x: (left + right) / 2, y: first + (g.rows.length * rowH) / 2, text: "0 by definition: the reference" });
     });
 
-    const gridTop = top + HEAD_H;
-    const gridBottom = y;
     return {
       metric,
       title: info.title,
-      sub: textWidth(info.title, 13) + 8 + textWidth(info.sub) <= right - left + MEAN_W ? info.sub : info.subShort,
+      sub,
       labels: stacked || index === 0,
       labelX: PAD,
       left,
@@ -327,9 +351,8 @@ export function dotLayout(model: DotModel, width: number, height: number, captio
       meanX: right + MEAN_W,
       headY: top + 14,
       axisY: y + 2,
-      gridTop,
-      gridBottom,
-      ticks: domain.values.map((v) => ({ x: xAt(v), label: tickLabel(v, domain.step), zero: v === 0 })),
+      spans,
+      ticks: thinned(domain, xAt),
       xAt,
       groups,
       rows,
@@ -416,7 +439,7 @@ export function paintDots(rig: DotRig, p: number): void {
   const f = dotFrame(p);
   for (const pen of rig.axes) pen.set("opacity", f.axes);
   for (const pen of rig.means) pen.set("opacity", f.means);
-  for (const row of rig.rows) row.pen.set("opacity", f.row(row.index, rig.rowCount));
+  for (const row of rig.rows) row.pen.set("opacity", smoothstep(f.row(row.index, rig.rowCount)));
   for (const dot of rig.dots) {
     const t = easeOutCubic(f.row(dot.row, rig.rowCount));
     const scale = 0.4 + 0.6 * t;

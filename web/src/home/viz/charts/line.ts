@@ -34,7 +34,7 @@ export interface Metric {
 /** What each panel measures, in the words of bench/REPORT.md §2. */
 export const METRICS: readonly Metric[] = [
   { key: "stall", title: "Stall time", sub: "seconds with no agent working", subShort: "no agent working", unit: "s" },
-  { key: "extra", title: "Extra cost", sub: "against its own run with no failures", subShort: "against no failures", unit: "%" },
+  { key: "extra", title: "Extra cost", sub: "pre-registered basis: against its own run with no failures", subShort: "pre-registered basis", unit: "%" },
 ];
 
 export interface LinePoint {

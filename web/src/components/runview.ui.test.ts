@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { RunEvent } from "../lib/types";
-import { REPO_ROOT, renderCurrent } from "../lib/testing";
+import { loadJsonl, REPO_ROOT, renderCurrent } from "../lib/testing";
 import { EventsPage } from "../pages/EventsPage";
 import { PanelsPage } from "../pages/PanelsPage";
 import { PlanPage } from "../pages/PlanPage";
@@ -16,9 +16,10 @@ import { ResultsPage } from "../pages/ResultsPage";
 import { RunPage } from "../pages/RunPage";
 import { SecurityPage } from "../pages/SecurityPage";
 import { createRunStore, RunStoreProvider, type RunApi, type RunStoreApi } from "../store";
-import { PStat, Pill } from "./PanelParts";
+import { Meter, PStat, Pill } from "./PanelParts";
 import { RunFrame, RunGate } from "./RunFrame";
-import { GuideButton, GuideStrip, useGuide, type Guide } from "./RunGuide";
+import { Guide, GuideButton, useGuide, type GuideState } from "./shell/Guide";
+import { VerifyBadge } from "./VerifyBadge";
 
 const events = (): RunEvent[] =>
   readFileSync(REPO_ROOT + "demo/toy/events.jsonl", "utf-8")
@@ -143,6 +144,21 @@ describe("the five views of a run", () => {
     expect(out).toContain('class="sr-only"');
   });
 
+  it("folds the budget shock and the kill switch away on a recording, the way the plan's approval is, and shows them on a live run", async () => {
+    const store = await opened();
+    const recorded = render(store, createElement(PanelsPage));
+    expect(recorded).toMatch(/<details id="controls" class="disclosure disclosure--inline controls__fold">/);
+    expect(text(recorded)).toContain("Budget shock and kill switch only on a live run");
+    // what the fold says is still in view: the page is a recording
+    expect(text(recorded)).toContain("recorded run: controls available on live runs");
+    store.setState({ runStatus: "running" });
+    const live = render(store, createElement(PanelsPage));
+    expect(live).not.toContain('id="controls"');
+    expect(text(live)).toContain("Apply cap");
+    expect(text(live)).toContain("Kill switch");
+    expect(text(live)).toContain("live run: these act on it");
+  });
+
   it("explains the jargon of the panels in place", async () => {
     const out = render(await opened(), createElement(PanelsPage));
     expect(out).toContain('<span class="term">Breakers</span>');
@@ -161,14 +177,19 @@ describe("the five views of a run", () => {
 });
 
 describe("the run page", () => {
-  it("opens with the guide the first time, with the playhead in plain words", async () => {
+  it("opens with the state of the run and one main action beside it, and no title or lead of its own to repeat the sub-nav", async () => {
     const out = render(await opened(), createElement(RunPage));
-    const t = text(out);
-    expect(t).toContain("The tree is the swarm");
-    expect(t).toContain("The playhead is the marker on the bar at the bottom");
-    expect(out).toContain('id="runguide"');
-    expect(out).toContain('aria-expanded="true"');
-    expect(out).toContain('aria-label="How to read this page"');
+    expect(out).toContain('<h1 class="sr-only">Run</h1>');
+    expect(out).not.toContain("pagehead");
+    expect(text(out)).not.toContain("A recorded run.");
+    // no coordinator is killed in this run, so there is no first crash to watch: playing it from its start is the main action
+    expect(out).toContain('<div class="runstate__actions"><button type="button" class="btn btn--on">Play from the start</button></div>');
+    expect(text(out)).not.toContain("Watch the first crash");
+    expect(out.indexOf("runstate__line")).toBeLessThan(out.indexOf("runstate__actions"));
+    expect(out.indexOf("runstate__actions")).toBeLessThan(out.indexOf("counters--headline"));
+    // the guide is the app's, in the shell: the page has no second one, and no tab stop for every orchestrator to skip
+    expect(out).not.toContain('id="guide"');
+    expect(out).not.toContain("Skip the tree");
   });
 
   it("is not behind a gate that hides the page from a screen reader while it loads", async () => {
@@ -182,9 +203,74 @@ describe("the run page", () => {
   it("holds its own shape, the counters and the tree, from the first paint, before the list of runs has answered", () => {
     const out = render(renderCurrent(createRunStore({ api: apiOf() })), createElement(RunPage));
     expect(out).toContain("Loading the runs");
-    expect(out).toContain('class="counters"');
+    expect(out).toContain('class="counters counters--headline"');
     expect(out).toContain("run__tree");
     expect(text(out)).not.toContain("No run selected");
+  });
+
+  it("opens with the state of the run in a line of words and the three numbers that are its claim, the rest folded away", async () => {
+    const store = await opened();
+    const out = render(store, createElement(RunPage));
+    expect(text(out)).toContain("At the start: nothing has happened yet.");
+    expect(out).toContain('class="counters counters--headline"');
+    // every other counter, the schedule, the chaos list and the event log are one click away, and the address can open them
+    expect(out).toMatch(/<details id="more" class="disclosure run__more">/);
+    expect(render(store, createElement(RunPage, { unfold: true }))).toMatch(/<details id="more" class="disclosure run__more" open="">/);
+  });
+
+  it("says in the hand-overs' hint why they can outnumber the crashes", async () => {
+    const store = await opened();
+    expect(text(render(store, createElement(RunPage)))).toMatch(/root duties and its subtree are two hand-overs, so there can be more of them than crashes/);
+  });
+
+  it("offers to watch the first crash where a coordinator is killed, in the row of the state and in the empty tree, with the whole run beside it", async () => {
+    const store = await opened({ loadAllEvents: async () => loadJsonl("demo/final/events.jsonl") });
+    const out = render(store, createElement(RunPage));
+    expect(out).toContain(
+      '<div class="runstate__actions"><button type="button" class="btn btn--on">Watch the first crash</button><button type="button" class="btn">Play from the start</button></div>',
+    );
+    expect(out.match(/Watch the first crash/g)).toHaveLength(2); // the empty tree says the same, so the page has one main action
+    // once it is under way the action is the one it always was
+    store.getState().seek(10);
+    expect(render(store, createElement(RunPage))).toContain('<div class="runstate__actions"><button type="button" class="btn btn--on">Carry on</button></div>');
+    store.setState({ playing: true });
+    expect(render(store, createElement(RunPage))).toContain('<div class="runstate__actions"><button type="button" class="btn btn--on">Pause</button></div>');
+    // at the end of the run, as at its start
+    store.setState({ playing: false });
+    store.getState().seek(store.getState().events.length);
+    expect(render(store, createElement(RunPage))).toContain("Watch the first crash</button><button");
+  });
+
+  it("opens the Details fold into view, not behind the replay bar pinned over the foot of the page", () => {
+    const run = readFileSync(REPO_ROOT + "web/src/pages/RunPage.tsx", "utf-8");
+    expect(run).toMatch(/<Details id="more"[^>]*\breveal\b/);
+    const fold = readFileSync(REPO_ROOT + "web/src/components/ui/Details.tsx", "utf-8");
+    expect(fold).toMatch(/scrollIntoView\(\{ block: "start"/);
+    // only a person's click does it: not a prop, not an address
+    expect(fold).toMatch(/opening\.current = reveal && !root\.current\?\.open/);
+  });
+
+  it("does not say a finished run has no actors alive: it says the run is finished", async () => {
+    const store = await opened();
+    expect(text(render(store, createElement(RunPage)))).toContain("actors alive");
+    store.getState().seek(store.getState().events.length);
+    const t = text(render(store, createElement(RunPage)));
+    expect(t).toContain("Finished: no coordinator crashed.");
+    expect(t).not.toContain("actors alive");
+    expect(t).toMatch(/finished actors/);
+  });
+
+  it("says what the one main action will do now: play from the start, pause while it plays, carry on from where it stopped", async () => {
+    const store = await opened();
+    const label = () => /<button type="button" class="btn btn--on">([^<]+)<\/button>/.exec(render(store, createElement(RunPage)))?.[1];
+    expect(label()).toBe("Play from the start");
+    store.getState().seek(10);
+    expect(label()).toBe("Carry on");
+    store.setState({ playing: true });
+    expect(label()).toBe("Pause");
+    expect(text(render(store, createElement(RunPage)))).toContain("Replaying: at ");
+    store.setState({ playing: false });
+    expect(text(render(store, createElement(RunPage)))).toContain("Paused: at ");
   });
 
   it("says a recorded run is at its start, where it opens, and offers to play it or to jump to its end", async () => {
@@ -213,7 +299,7 @@ describe("the run page", () => {
     expect(t).toContain("This run created no orchestrator");
     expect(t).toContain("Its log ends without one");
     expect(t).not.toContain("Waiting for the first actor");
-    expect(t).not.toContain("Play from the start");
+    expect(t).not.toContain("The run is at its start");
   });
 
   it("names the schedule with a defined T2", async () => {
@@ -223,10 +309,10 @@ describe("the run page", () => {
 });
 
 describe("the guide", () => {
-  const guide = (open: boolean): Guide => ({ open, toggle: () => undefined, dismiss: () => undefined });
+  const guide = (open: boolean): GuideState => ({ open, toggle: () => undefined, dismiss: () => undefined });
 
   it("is nothing when closed, and the button that opens it says whether it is open", () => {
-    expect(renderToStaticMarkup(createElement(GuideStrip, { guide: guide(false) }))).toBe("");
+    expect(renderToStaticMarkup(createElement(Guide, { guide: guide(false) }))).toBe("");
     expect(renderToStaticMarkup(createElement(GuideButton, { guide: guide(false) }))).toContain('aria-expanded="false"');
     expect(renderToStaticMarkup(createElement(GuideButton, { guide: guide(true) }))).toContain('aria-expanded="true"');
   });
@@ -263,6 +349,16 @@ describe("the guide", () => {
   });
 });
 
+describe("a meter of a panel", () => {
+  it("is a plain block of a head and a track: not the Muse meter's flex row, which left the bar no width", () => {
+    const out = renderToStaticMarkup(createElement(Meter, { share: 0.4, label: "requests left", detail: "2,999 of 3,000" }));
+    expect(out).not.toMatch(/class="meter"/);
+    expect(out).toContain('class="meter__head"');
+    expect(out).toContain('class="meter__track"');
+    expect(out).toContain("width:40%");
+  });
+});
+
 describe("a number with a hint", () => {
   it("shows the hint in the shared tooltip and to a screen reader, and nothing when there is none", () => {
     const hinted = renderToStaticMarkup(createElement(PStat, { label: "reserved", value: "$0.10", title: "open reservations" }));
@@ -288,25 +384,93 @@ describe("the frame", () => {
 });
 
 describe("the keyboard on the run page", () => {
-  it("offers a way past the tree to the replay bar, and the bar's slider has the id it goes to", async () => {
+  it("has no tab stop to skip: the tree is one, and the replay bar's slider has the id the keyboard goes to", async () => {
     const store = await opened();
     store.getState().seek(store.getState().events.length); // at the start of the run there is no orchestrator yet
     const out = render(store, createElement(RunPage));
-    expect(out).toContain('<button type="button" class="skip"');
-    expect(text(out)).toContain("Skip the tree and go to the replay bar");
+    expect(out).not.toContain('class="skip"');
     expect(out).toContain('id="replay-position"');
   });
 
-  it("offers none while there is no tree to skip", async () => {
-    const store = renderCurrent(createRunStore({ api: apiOf({ loadAllEvents: async () => [] }) }));
-    await store.getState().openRun("toy");
-    expect(render(store, createElement(RunPage))).not.toContain('class="skip"');
-  });
-
-  it("makes each orchestrator one tab stop, the card's own: not the library's wrapper around it, and not every edge", () => {
+  it("makes the orchestrators one tab stop together, each the card's own: not the library's wrapper around it, and not every edge", () => {
     const source = readFileSync(REPO_ROOT + "web/src/components/TreeGraph.tsx", "utf-8");
     expect(source).toMatch(/nodesFocusable=\{false\}/);
     expect(source).toMatch(/edgesFocusable=\{false\}/);
-    expect(source).toMatch(/role="button"\s+tabIndex=\{0\}/);
+    // the card Tab lands on is one, and the arrow keys, Home and End move between the cards
+    expect(source).toMatch(/role="button"\s+tabIndex=\{tabbable \? 0 : -1\}/);
+    expect(source).toMatch(/onKeyDown=\{moveBetweenCards\}/);
+  });
+
+  it("leaves a plain wheel over the tree to the page: the tree is most of it, and a stranger's first scroll lands on it", () => {
+    const source = readFileSync(REPO_ROOT + "web/src/components/TreeGraph.tsx", "utf-8");
+    expect(source).toMatch(/preventScrolling=\{false\}/);
+  });
+
+  it("lets a replay that is playing carry on from a mark that is clicked: the click moves the playhead and nothing else", () => {
+    const source = readFileSync(REPO_ROOT + "web/src/components/Timeline.tsx", "utf-8");
+    expect(source).toMatch(/onClick=\{\(\) => seekTime\(m\.ts\)\}/);
+  });
+
+  it("has the marks of the bar as one tab stop, and the speeds as one select", async () => {
+    const out = render(await opened(), createElement(RunPage));
+    expect(out).toContain('<select aria-label="replay speed">');
+    expect(out).not.toContain("btn--seg");
+    const source = readFileSync(REPO_ROOT + "web/src/components/Timeline.tsx", "utf-8");
+    expect(source).toMatch(/\{\.\.\.roving\.stop\(index, marks\.length\)\}/);
+    expect(source).toMatch(/onKeyDown=\{roving\.onKeyDown\}/);
+  });
+});
+
+describe("what the views of a run keep out of their first view", () => {
+  it("has the approval of a recording as a fold, not a row of buttons that cannot be pressed", async () => {
+    const out = render(await opened(), createElement(PlanPage));
+    expect(out).toContain('<details id="approval" class="disclosure disclosure--inline plan__fold">');
+    expect(text(out)).toContain("Approve or reject the plan only while a run waits for a person");
+    expect(out.indexOf('<details id="approval"')).toBeLessThan(out.indexOf("Approve plan"));
+  });
+
+  it("has the events filter as one fold: the search, the noise switch and the groups", async () => {
+    const out = render(await opened(), createElement(EventsPage));
+    expect(out).toContain('<details id="filter" class="disclosure disclosure--inline">');
+    expect(out.indexOf('<details id="filter"')).toBeLessThan(out.indexOf('aria-label="search events"'));
+    expect(out.indexOf('<details id="filter"')).toBeLessThan(out.indexOf('aria-label="event groups"'));
+    expect(out.indexOf('aria-label="event groups"')).toBeLessThan(out.indexOf('<ol class="evlist__rows">'));
+  });
+
+  it("says the words of a view's line with their definitions on hover, not as tab stops", async () => {
+    const store = await opened();
+    for (const page of [ResultsPage, EventsPage, PanelsPage]) {
+      const out = render(store, createElement(page));
+      expect(out).toMatch(/<span class="tip"(?![^>]*tabindex)[^>]*><span class="term">playhead<\/span>/);
+    }
+  });
+
+  it("has the two proofs of the strip as text with their hint, and no tab stop", async () => {
+    const out = render(await opened(), createElement(RunPage));
+    expect(out).not.toMatch(/<span class="tip"[^>]*tabindex="0"[^>]*><span class="badge/);
+  });
+});
+
+describe("the replay check on the run strip", () => {
+  const verified = async (over: Record<string, unknown>) => {
+    const store = await opened();
+    const report = { ok: false, chain_ok: true, recorded_events: 14047, replayed_events: 42, recorded_head: "aa", replayed_head: "bb", first_divergence: 9, detail: "effect.started differs in payload", bundle_head: null, bundle_head_ok: false, ...over };
+    store.setState({ live: false, verify: { state: "done", report } } as never);
+    return render(store, createElement(VerifyBadge));
+  };
+
+  it("says an intact log that this code does not reproduce in amber, in exact words, with the server's detail as the hint", async () => {
+    const out = await verified({});
+    expect(out).toContain('<span class="badge badge--warn badge--big">Log intact. This code does not reproduce this recording: first difference at seq 9.</span>');
+    expect(out).toContain("effect.started differs in payload");
+    expect(out).not.toContain("badge--bad");
+    expect(out).not.toContain("MISMATCH");
+    expect(out).not.toMatch(/older|version/i);
+  });
+
+  it("keeps red for a broken chain", async () => {
+    const out = await verified({ chain_ok: false });
+    expect(out).toContain('<span class="badge badge--bad badge--big">✕ Replay MISMATCH at seq 9</span>');
+    expect(out).not.toContain("badge--warn");
   });
 });

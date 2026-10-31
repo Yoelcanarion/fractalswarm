@@ -2,8 +2,10 @@
 // build that has no server. The static showcase (W8) is built with Vite mode "static"; its doors that
 // need the local server say so instead of leading to a dead page.
 
+import type { DoorId } from "./viz/doors/doors";
+
 export interface Door {
-  id: string;
+  id: DoorId;
   title: string;
   /** One line: what is behind the door. */
   purpose: string;
@@ -14,11 +16,16 @@ export interface Door {
   closedNote?: string;
 }
 
+// The purposes are a few words: the card has a drawing and a title, and the page is held to about 200 words (words.test.ts).
+//
+// Four doors, and each opens a page that stands on its own. Two are not on the menu, and their routes stay: the Director's
+// (`#/director`, a page of scenes for the video, with no way back and most scenes needing a run in the address) and the ablation's
+// (`#/ablation`, which says that none has been recorded; its door comes back when one is). Their thumbnails stay in `viz/doors`.
 export const DOORS: readonly Door[] = [
   {
     id: "arena",
     title: "The arena",
-    purpose: "Two systems, the same failures, side by side.",
+    purpose: "Rival systems, compared.",
     href: "#/arena",
     needsServer: false,
   },
@@ -26,7 +33,7 @@ export const DOORS: readonly Door[] = [
     // One door: the page behind "#/new" is where you paste your own text and launch the run on it.
     id: "live",
     title: "A live run",
-    purpose: "Paste your own messy text, launch a run, and kill its coordinators yourself.",
+    purpose: "Your own text.",
     href: "#/new",
     needsServer: true,
     closedNote: "Needs the local server: it launches a run and calls the model.",
@@ -34,31 +41,17 @@ export const DOORS: readonly Door[] = [
   {
     id: "replays",
     title: "Replays",
-    purpose: "Every recorded run, with its verification.",
+    purpose: "Every recorded run.",
     href: "#/runs",
     needsServer: false,
   },
   {
-    id: "director",
-    title: "Director",
-    purpose: "The video's scenes, played on real logs.",
-    href: "#/director",
-    needsServer: false,
-  },
-  {
+    // The evidence page: the charts, the fair fight, where it ties and where it does worse.
     id: "numbers",
     title: "The numbers",
-    purpose: "Charts, and where it helps.",
-    href: "#/charts",
+    purpose: "All the evidence.",
+    href: "#/evidence",
     needsServer: false,
-  },
-  {
-    id: "ablation",
-    title: "Model against parser",
-    purpose: "A hand-written parser against Muse, on the same notes.",
-    href: "#/ablation",
-    needsServer: true,
-    closedNote: "Needs the local server: it runs the comparison.",
   },
 ];
 

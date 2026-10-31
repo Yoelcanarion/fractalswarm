@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 
-import { PageHeader } from "../../components/ui";
+import { Details, PageHeader } from "../../components/ui";
 import { systemName } from "../assumptions";
 import "./helps.css";
 import { CLAIMS, claimsToShow, type Claim, type Claims } from "./claims";
@@ -76,21 +76,19 @@ function Rules({ honesty }: { honesty: Honesty }) {
   const { conditions } = honesty.outcome;
   return (
     <div className="rules">
-      <details>
-        <summary>How a result is decided</summary>
+      <Details inline id="rules" summary="How a result is decided">
         {lines.map((line) => (
           <p key={line}>{line}</p>
         ))}
-      </details>
+      </Details>
       {conditions.length > 0 && (
-        <details>
-          <summary>Conditions the decision rule names</summary>
+        <Details inline summary="Conditions the decision rule names">
           <ul>
             {conditions.map((condition) => (
               <li key={condition}>{condition}</li>
             ))}
           </ul>
-        </details>
+        </Details>
       )}
     </div>
   );
@@ -101,10 +99,22 @@ export function HelpsHead({ actions }: { actions?: ReactNode }) {
   return (
     <PageHeader
       className="helps__head"
-      title="Where it helps"
+      title="Trade-offs"
       lead="The swarm against each rival, at every setting the bench ran. Wins, ties and losses, as the bench counted them."
       actions={actions}
     />
+  );
+}
+
+/** What every count on the page was made on, in view before the first of them: the file is the $0 evidence (docs/claims.md), so a win or a tie
+ * in it is a check of the design and not a result on real runs. The real-model reading is on the evidence page. */
+function SettingLine() {
+  return (
+    <p className="helps__setting" data-helps="setting">
+      <span className="helps__setting-tag">Fake model, simulated clock</span>
+      The $0 runs: they check the design and do not measure the real model, so a win or a tie here is not a real-run result. The real-model reading is on the{" "}
+      <a href="#/evidence">evidence page</a>.
+    </p>
   );
 }
 
@@ -112,19 +122,22 @@ export interface WhereItHelpsProps {
   honesty: Honesty;
   /** The rival the map and the per-process view start on: the one the outcome is read against by default. */
   rival?: string;
-  /** A cell of the table to start with open, for a director's scene. */
+  /** A cell of the table to start with open, for a director's scene. The table is under Details, and this opens it. */
   open?: OpenList | null;
+  /** Show the full count open from the start, for a director's scene that points at the table without opening a cell. The address
+   * does the same with `?details=table`. */
+  unfold?: boolean;
   /** The claims it may quote: docs/claims.md as the build has it. A test passes others. */
   claims?: Claims;
 }
 
-/** The "where it helps" panel: where the swarm's recovery is local, where it ties, where it loses, and under which failure model. */
-export function WhereItHelps({ honesty, rival: start, open: startOpen = null, claims = CLAIMS }: WhereItHelpsProps) {
+/** The trade-offs panel: where the swarm's recovery is local, where it ties, where it loses, and under which failure model. */
+export function WhereItHelps({ honesty, rival: start, open: startOpen = null, unfold = false, claims = CLAIMS }: WhereItHelpsProps) {
   const rivals = useMemo(() => rivalOrder(honesty), [honesty]);
   const [rival, setRival] = useState(start !== undefined && rivals.includes(start) ? start : honesty.outcome.against);
   const [open, setOpen] = useState<OpenList | null>(startOpen);
   return (
-    <section className="helps" aria-label="Where it helps">
+    <section className="helps" aria-label="Trade-offs">
       <HelpsHead
         actions={
           <label className="helps__field">
@@ -139,10 +152,13 @@ export function WhereItHelps({ honesty, rival: start, open: startOpen = null, cl
           </label>
         }
       />
+      <SettingLine />
       <OutcomeStrip honesty={honesty} claims={claims} />
       <div className="helps__body">
         <RegimeMap honesty={honesty} rival={rival} />
-        <TallyTable honesty={honesty} rivals={rivals} against={honesty.outcome.against} open={open} onOpen={setOpen} />
+        <Details id="table" summary="The full count" hint="every setting against every rival, and each list of results" open={unfold || open !== null}>
+          <TallyTable honesty={honesty} rivals={rivals} against={honesty.outcome.against} open={open} onOpen={setOpen} />
+        </Details>
       </div>
       <PerProcess honesty={honesty} rival={rival} />
       <footer className="helps__foot">

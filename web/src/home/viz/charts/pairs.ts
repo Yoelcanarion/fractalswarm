@@ -28,11 +28,11 @@ export interface PairRow {
   /** The swarm's value as a part of the rival's: the length of its bar. */
   fraction: number;
   verdict: VerdictRow["verdict"];
-  /** The seeds disagree: the verdict is marked with a star, as the report marks it. */
+  /** The seeds disagree: the verdict says so in words, or is marked with a star where the words do not fit. */
   mixed: boolean;
   seeds: string[];
   /** The same measure against the other rival, for the table and the text alternative. */
-  other: { rival: string; value: number | null; ratio: number | null; verdict: VerdictRow["verdict"] } | null;
+  other: { rival: string; value: number | null; ratio: number | null; verdict: VerdictRow["verdict"]; mixed: boolean } | null;
 }
 
 export interface PairModel {
@@ -45,6 +45,8 @@ export interface PairModel {
   real: boolean | null;
   /** How far the axis runs, as a part of the rival's value: 1, or more if the swarm's bar is the longer. */
   domainMax: number;
+  /** The pre-registered rule for a tie, in the data's own words; null when the data has none. */
+  rule: string | null;
 }
 
 export function pairModel(data: VerdictsSlice, rival = "durable-max", other = rival === "durable" ? "durable-max" : "durable"): PairModel {
@@ -67,7 +69,7 @@ export function pairModel(data: VerdictsSlice, rival = "durable-max", other = ri
       verdict: c.verdict,
       mixed: c.mixed,
       seeds: c.seeds,
-      other: o ? { rival: other, value: o.rivalValue, ratio: o.ratio, verdict: o.verdict } : null,
+      other: o ? { rival: other, value: o.rivalValue, ratio: o.ratio, verdict: o.verdict, mixed: o.mixed } : null,
     });
   }
   const first = rows.length ? pick(rival, rows[0]!.hypothesis) : undefined;
@@ -80,12 +82,19 @@ export function pairModel(data: VerdictsSlice, rival = "durable-max", other = ri
     task: data.task ?? null,
     real: data.real ?? (data.model ? data.model === "real" : null),
     domainMax: Math.max(1, Math.ceil(Math.max(0, ...rows.map((r) => r.fraction)) * 2) / 2),
+    rule: typeof data.rules["tie"] === "string" ? data.rules["tie"] : null,
   };
 }
 
 export const valueText = (row: PairRow, v: number): string => `${v.toFixed(1)}${row.unit}`;
 
-export const verdictText = (row: PairRow): string => `${row.verdict}${row.mixed ? "*" : ""}`;
+const SEEDS_DISAGREE = "the seeds disagree";
+
+/** A verdict in a sentence: as the rule gave it, and where the seeds disagree, that too. */
+export const verdictWords = (verdict: VerdictRow["verdict"], mixed: boolean): string => (mixed ? `${verdict}, ${SEEDS_DISAGREE}` : verdict);
+
+/** What the verdict's pill says: the words where they fit, and a star (with its meaning under the chart) where they do not. */
+const pillText = (row: PairRow, star: boolean): string => (!row.mixed ? row.verdict : star ? `${row.verdict}*` : `${row.verdict} · ${SEEDS_DISAGREE}`);
 
 export function pairCaptions(model: PairModel): string[] {
   const kind = model.real === null ? null : model.real ? "real model" : "fake model";
@@ -103,10 +112,14 @@ export function pairSummary(model: PairModel): string {
   const kind = model.real === null ? "" : model.real ? " on the real model" : " on the fake model";
   const where = model.task ? `${taskText(model.task)}${kind}, ` : "";
   const rows = model.rows.map((r) => {
-    const other = r.other && r.other.value !== null ? `; against the ${labelOf(r.other.rival).toLowerCase()} the rival's value is ${valueText(r, r.other.value)}, verdict ${r.other.verdict}` : "";
-    return `${r.name}: ${labelOf("swarm")} ${valueText(r, r.swarm)} against ${model.rivalLabel} ${valueText(r, r.rival)}, ${Math.round(r.fraction * 100)}% of it, verdict ${verdictText(r)}${other}`;
+    const other =
+      r.other && r.other.value !== null
+        ? `; against the ${labelOf(r.other.rival).toLowerCase()} the rival's value is ${valueText(r, r.other.value)}, verdict ${verdictWords(r.other.verdict, r.other.mixed)}`
+        : "";
+    return `${r.name}: ${labelOf("swarm")} ${valueText(r, r.swarm)} against ${model.rivalLabel} ${valueText(r, r.rival)}, ${Math.round(r.fraction * 100)}% of it, verdict ${verdictWords(r.verdict, r.mixed)}${other}`;
   });
-  return `${where}${seedsText(model.seeds.length)}, failure profile ${model.profile}: locality, as paired bars, the swarm's mean against the mean of the ${model.rivalLabel.toLowerCase()}. ${rows.join(". ")}.`;
+  const rule = model.rule && model.rows.some((r) => r.mixed) ? ` The rule: ${model.rule}.` : "";
+  return `${where}${seedsText(model.seeds.length)}, failure profile ${model.profile}: locality, as paired bars, the swarm's mean against the mean of the ${model.rivalLabel.toLowerCase()}. ${rows.join(". ")}.${rule}`;
 }
 
 // -- layout -------------------------------------------------------------------------------------
@@ -133,6 +146,8 @@ export interface BarBox {
 export interface PairGroup {
   index: number;
   titleY: number;
+  /** The measure's unit after its name: dropped where it would run into the verdict. */
+  sub: boolean;
   swarm: BarBox;
   rival: BarBox;
   pill: { x: number; y: number; w: number; text: string };
@@ -142,6 +157,8 @@ export interface PairLayout {
   width: number;
   height: number;
   names: Names;
+  /** The size the measures' names are written at, in px, where the usual one would run them into the verdicts; null for the usual. */
+  titleSize: number | null;
   labelX: number;
   x0: number;
   x1: number;
@@ -155,6 +172,10 @@ export interface PairLayout {
   halfX: number;
   guideTop: number;
   keyY: number;
+  /** What the verdicts whose seeds disagree mean, on a row of its own under the key; empty when nothing needs saying. */
+  note: string;
+  noteX: number;
+  noteY: number;
   captionY: number;
   caption: string;
   key: string;
@@ -170,12 +191,35 @@ export function barPath(x: number, y: number, w: number, h: number, r = 4): stri
 
 export function pairLayout(model: PairModel, width: number, height: number, captions: readonly string[] = []): PairLayout {
   const caption = captions.find((c) => textWidth(c) <= width - 2 * PAD) ?? captions[captions.length - 1] ?? "";
-  const foot = KEY_H + (caption ? CAP_H : 0);
+
+  // The words of a verdict whose seeds disagree go in its pill where the whole row fits; elsewhere a star stands for them.
+  const titleEnd = (row: PairRow): number => PAD + textWidth(row.name, 13) + 8 + textWidth(row.sub);
+  const star = !model.rows.every((row) => titleEnd(row) + 6 + textWidth(pillText(row, false)) + 18 <= width - PAD);
+
+  // A measure's name is the longest thing in a title: on a phone it is written smaller, down to 10.5, before a verdict may run into it.
+  const pillRoom = width - 2 * PAD - 6 - Math.max(0, ...model.rows.map((r) => textWidth(pillText(r, star)) + 18));
+  const longest = Math.max(1, ...model.rows.map((r) => textWidth(r.name, 13)));
+  const small = longest <= pillRoom ? 13 : Math.max(10.5, Math.floor(((13 * pillRoom) / longest) * 2) / 2);
+  const titleSize = small < 13 ? Math.round(((small * 13.5) / 13) * 10) / 10 : null;
 
   const labelWidth = (names: Names): number =>
     Math.ceil(Math.max(textWidth(systemName("swarm", labelOf("swarm"), names)), textWidth(systemName(model.rival, model.rivalLabel, names)))) + 10;
   const names: Names = width - 2 * PAD - labelWidth("full") - VALUE_W >= 260 ? "full" : "short";
   const labelW = labelWidth(names);
+
+  const x0 = PAD + labelW;
+  // What the verdicts whose seeds disagree mean goes on a row of its own, where it fits: the words of the data's own rule.
+  const notes = !model.rows.some((r) => r.mixed)
+    ? []
+    : star
+      ? [...(model.rule ? [`* ${SEEDS_DISAGREE} · the rule: ${model.rule}`] : []), `* ${SEEDS_DISAGREE}`]
+      : model.rule
+        ? [`The rule: ${model.rule}`]
+        : [];
+  // under the plot, in line with the key, or from the left edge where that is not wide enough
+  const noteLeft = (t: string): number => (x0 + textWidth(t) <= width - PAD ? x0 : PAD);
+  const note = notes.find((t) => noteLeft(t) + textWidth(t) <= width - PAD) ?? "";
+  const foot = KEY_H + (note ? KEY_H : 0) + (caption ? CAP_H : 0);
 
   const n = Math.max(1, model.rows.length);
   const room = height - 2 * PAD - foot;
@@ -186,7 +230,6 @@ export function pairLayout(model: PairModel, width: number, height: number, capt
   // What the groups do not use is shared above and below them, so the chart sits in the frame instead of hugging its top.
   const spare = Math.max(0, (room - (n * block + (n - 1) * gap + AXIS_H)) / 2);
 
-  const x0 = PAD + labelW;
   const x1 = width - PAD - VALUE_W;
   const longKey = `half of the ${model.rivalLabel.toLowerCase()}'s value`;
   const axisTitles = [`% of the ${model.rivalLabel.toLowerCase()}'s value`, "% of the rival's value"];
@@ -197,11 +240,12 @@ export function pairLayout(model: PairModel, width: number, height: number, capt
   const groups: PairGroup[] = model.rows.map((row, index) => {
     const swarmY = top + TITLE_H;
     const rivalY = swarmY + barH + ROW_GAP;
-    const text = verdictText(row);
+    const text = pillText(row, star);
     const w = textWidth(text) + 18;
     const g: PairGroup = {
       index,
       titleY: top + TITLE_H / 2 - 2,
+      sub: PAD + textWidth(row.name, small) + 8 + textWidth(row.sub) + 6 + w <= width - PAD,
       swarm: { x: x0, y: swarmY, w: xAt(row.fraction) - x0, h: barH },
       rival: { x: x0, y: rivalY, w: xAt(1) - x0, h: barH },
       pill: { x: width - PAD - w, y: top + TITLE_H / 2 - 2 - PILL_H / 2, w, text },
@@ -217,6 +261,7 @@ export function pairLayout(model: PairModel, width: number, height: number, capt
     width,
     height,
     names,
+    titleSize,
     labelX: PAD,
     x0,
     x1,
@@ -228,7 +273,10 @@ export function pairLayout(model: PairModel, width: number, height: number, capt
     axisTitle: { x: x0, y: lastBottom + 8 + 34, text: axisTitle },
     halfX: xAt(0.5),
     guideTop: PAD + TITLE_H,
-    keyY: height - PAD - (caption ? CAP_H : 0) - 2,
+    keyY: height - PAD - (caption ? CAP_H : 0) - (note ? KEY_H : 0) - 2,
+    note,
+    noteX: note ? noteLeft(note) : x0,
+    noteY: height - PAD - (caption ? CAP_H : 0) - 2,
     captionY: height - PAD - 2,
     caption,
     key: x0 + 30 + textWidth(longKey) <= width - PAD ? longKey : "half",

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
 import type { IntakeApi } from "./api";
-import { chaosLabel, DEFAULT_CHOICE, launchBody, PAIR_CHAOS, requestFor, RIVALS, RUN_CHAOS, RUN_SCENARIOS, scenarioLabel, watchHash, type Choice } from "./launch";
+import { chaosLabel, DEFAULT_CHOICE, launchBody, PAIR_CHAOS, requestFor, RIVALS, RUN_CHAOS, RUN_SCENARIOS, scenarioLabel, startedRuns, untilRunsListed, watchHash, type Choice } from "./launch";
 import { SpendPanel } from "./SpendPanel";
 import { useSpend } from "./useSpend";
 
@@ -53,8 +53,10 @@ export function RunPanel({ api, intakeId, realAllowed, canStart, onStarted, init
     setLaunching(true);
     setError(null);
     const outcome = await (choice.mode === "pair" ? api.launchArena(request.send) : api.launchTask(request.send));
-    setLaunching(false);
     if (billed) spend.spent(); // the token is used up, whatever came of it
+    // accepted is not started: the page that watches it finds no run until the server has made it, so it is not opened before
+    if (outcome.ok) await untilRunsListed(api.listedRuns, startedRuns(outcome.body));
+    setLaunching(false);
     if (outcome.ok) onStarted(watchHash(outcome.body));
     else setError(outcome.error);
   };

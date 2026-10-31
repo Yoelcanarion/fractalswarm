@@ -5,6 +5,7 @@ import { SPEEDS } from "../lib/playback";
 import { fraction, MARK_TONE, marksOf } from "../lib/timeline";
 import { useRunStoreApi, useRunStoreShallow } from "../store";
 import { Tooltip } from "./ui";
+import { useRoving } from "./useRoving";
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
 
@@ -30,6 +31,8 @@ export function Timeline() {
   });
 
   const marks = useMemo(() => marksOf(events), [events]);
+  // the marks are one tab stop (the bar has a few dozen of them): Tab lands on one, the arrow keys move along them
+  const roving = useRoving(".mark");
 
   return (
     <div className="timeline">
@@ -51,19 +54,18 @@ export function Timeline() {
           }}
           aria-label="replay position"
         />
-        <div className="timeline__marks">
-          {marks.map((m) => (
+        <div className="timeline__marks" role="group" aria-label="Kills and takeovers on the bar" onKeyDown={roving.onKeyDown}>
+          {marks.map((m, index) => (
             <button
               key={m.seq}
               type="button"
+              {...roving.stop(index, marks.length)}
               className={`mark mark--${m.kind} mark--${MARK_TONE[m.kind]}`}
               style={{ left: `${fraction(m.ts, end) * 100}%` }}
               title={m.label}
               aria-label={`${m.label}: jump here`}
-              onClick={() => {
-                setPlaying(false);
-                seekTime(m.ts);
-              }}
+              // a replay that is playing carries on from the mark; one that is stopped stays stopped
+              onClick={() => seekTime(m.ts)}
             />
           ))}
         </div>
@@ -74,13 +76,16 @@ export function Timeline() {
           event {cursor} / {events.length}
         </div>
       </div>
-      <div className="speeds" role="group" aria-label="replay speed">
-        {SPEEDS.map((s) => (
-          <button key={s} className={`btn btn--seg ${s === speed ? "btn--on" : ""}`} onClick={() => setSpeed(s)}>
-            {s}×
-          </button>
-        ))}
-      </div>
+      <label className="speedpick">
+        <span className="speedpick__label">Speed</span>
+        <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="replay speed">
+          {SPEEDS.map((s) => (
+            <option key={s} value={s}>
+              {s}×
+            </option>
+          ))}
+        </select>
+      </label>
       {live ? (
         <button className={`btn ${following ? "btn--on" : ""}`} onClick={() => seek(events.length)}>
           ● LIVE

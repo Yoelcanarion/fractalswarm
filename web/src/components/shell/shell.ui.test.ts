@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
+
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { occurrences, plainText } from "../../arena/helps/testing";
 import type { Where } from "../../lib/shell";
+import { REPO_ROOT } from "../../lib/testing";
 import { TopBar, type TopBarProps } from "./TopBar";
 
 const base: Omit<TopBarProps, "where"> = {
@@ -61,10 +64,30 @@ describe("a run's own views", () => {
     expect(markup).toContain('<option value="other">other</option>');
     expect(plainText(markup)).toContain("swarm-seed1");
     const views = nav(markup, "Views of this run");
-    expect(labels(views)).toEqual(["Run", "Plan", "Panels", "Security", "Results", "Events"]);
+    // the row keeps two views and the one the person is on; the three others are in the menu after them
+    expect(labels(views)).toEqual(["Run", "Plan", "Results", "Panels", "Security", "Events"]);
     expect(views).toContain('<a class="tab tab--on" href="#/run/demo/plan" aria-current="page">Plan</a>');
     expect(views).toContain('<a class="tab" href="#/run/demo">Run</a>');
     expect(occurrences(views, "aria-current")).toBe(1);
+  });
+
+  it("show two views and a menu with the rest, which is a fold of its own, and a view that is open is shown whichever it is", () => {
+    const menu = (markup: string) => /<details id="views"[\s\S]*?<\/details>/.exec(markup)?.[0] ?? "";
+    const onRun = bar({ page: "run", runId: "demo", view: "overview" });
+    expect(labels(menu(onRun))).toEqual(["Plan", "Panels", "Security", "Events"]);
+    expect(menu(onRun)).toContain("More views");
+    expect(labels(nav(onRun, "Views of this run")).slice(0, 2)).toEqual(["Run", "Results"]);
+    const onEvents = bar({ page: "run", runId: "demo", view: "events" });
+    expect(labels(menu(onEvents))).toEqual(["Plan", "Panels", "Security"]);
+    expect(onEvents).toContain('<a class="tab tab--on" href="#/run/demo/events" aria-current="page">Events</a>');
+  });
+
+  it("have the guide's button at the end of the bar when the page has a guide, and not otherwise", () => {
+    const guide = { open: true, toggle: () => undefined, dismiss: () => undefined };
+    expect(bar({ page: "arena" }, { guide })).toContain('aria-controls="guide"');
+    expect(bar({ page: "arena" }, { guide })).toContain('aria-expanded="true"');
+    expect(bar({ page: "arena" }, { guide: { ...guide, open: false } })).toContain('aria-expanded="false"');
+    expect(bar({ page: "arena" })).not.toContain("aria-controls=\"guide\"");
   });
 
   it("count what the run blocked on Security, with its meaning in a hint, and show nothing at zero", () => {
@@ -82,6 +105,14 @@ describe("a run's own views", () => {
     expect(nav(markup, "Views of this run")).toContain('href="#/run//plan"');
   });
 
+  it("hold the status badge's place while a run opens, and show none when there is no run to wait for", () => {
+    const where: Where = { page: "run", runId: null, view: "overview" };
+    const none = { runId: null, runs: [], runStatus: null, scenario: null };
+    expect(bar(where, none)).not.toContain('class="badge');
+    expect(bar(where, { ...none, opening: true })).toContain('class="badge');
+    expect(bar(inRun)).toContain('class="badge');
+  });
+
   it("are not in the other places", () => {
     for (const where of [{ page: "arena" }, { page: "runs" }, { page: "intake" }] as Where[]) {
       expect(bar(where)).not.toContain("subnav");
@@ -90,14 +121,27 @@ describe("a run's own views", () => {
 });
 
 describe("the evidence's pages", () => {
-  it("are a second row on each of the three, the open one marked as the page", () => {
-    const markup = bar({ page: "helps" });
+  it("are a second row on each of the three (once an ablation is on record), the open one marked as the page", () => {
+    const markup = bar({ page: "helps" }, { runs: [{ id: "demo" }, { id: "ablation-1" }] });
     expect(markup).toContain('class="subnav"');
     const pages = nav(markup, "Evidence");
-    expect(labels(pages)).toEqual(["Charts", "Where it helps", "Ablation"]);
-    expect(pages).toContain('<a class="tab tab--on" href="#/helps" aria-current="page">Where it helps</a>');
+    expect(labels(pages)).toEqual(["Charts", "Trade-offs", "Ablation"]);
+    expect(pages).toContain('<a class="tab tab--on" href="#/helps" aria-current="page">Trade-offs</a>');
     expect(pages).toContain('href="#/ablation"');
     expect(occurrences(pages, "aria-current")).toBe(1);
+  });
+
+  it("show the ablation's tab only once an ablation is on record, or while the person is on its page", () => {
+    // base has two runs and no ablation: the two pages that have something to read
+    expect(labels(nav(bar({ page: "helps" }), "Evidence"))).toEqual(["Charts", "Trade-offs"]);
+    expect(nav(bar({ page: "charts" }), "Evidence")).not.toContain("#/ablation");
+    // an ablation run is one the listing names by its id or its scenario
+    expect(labels(nav(bar({ page: "helps" }, { runs: [{ id: "demo" }, { id: "ablation-1" }] }), "Evidence"))).toEqual(["Charts", "Trade-offs", "Ablation"]);
+    expect(labels(nav(bar({ page: "helps" }, { runs: [{ id: "x", scenario: "t2:ablation-notes" }] }), "Evidence"))).toContain("Ablation");
+    // the page is still there by its address, and its tab is the open one
+    const open = nav(bar({ page: "ablation" }), "Evidence");
+    expect(labels(open)).toEqual(["Charts", "Trade-offs", "Ablation"]);
+    expect(open).toContain('<a class="tab tab--on" href="#/ablation" aria-current="page">Ablation</a>');
   });
 
   it("are not on a run's page", () => {
@@ -105,10 +149,27 @@ describe("the evidence's pages", () => {
   });
 });
 
+describe("the bars on a phone", () => {
+  // The four places, the guide and the theme once ran 246 px past a 390 px screen on every page. This reads the sheet: the bars wrap there.
+  const sheet = readFileSync(`${REPO_ROOT}web/src/components/shell/shell.css`, "utf-8").replace(/\r\n/g, "\n");
+  const phone = /@media \(max-width: 760px\) \{([\s\S]*?)\n\}\n/.exec(sheet)?.[1] ?? "";
+  const rule = (selector: string): string => new RegExp(`${selector.replace(/[.>]/g, "\\$&")} \\{([^}]*)\\}`).exec(phone)?.[1] ?? "";
+
+  it("wrap: the top bar, the rows of tabs and the run's sub-bar", () => {
+    expect(phone).not.toBe("");
+    for (const selector of [".shell .topbar", ".shell .tabs", ".shell .subnav"]) expect(rule(selector), selector).toContain("flex-wrap: wrap");
+  });
+
+  it("let the four places have a row of their own, and the run picker the width of the screen", () => {
+    expect(rule(".shell .topbar > .tabs")).toMatch(/flex: 1 1 100%/);
+    expect(rule(".shell .subnav select")).toMatch(/width: 100%/);
+  });
+});
+
 describe("the announcement", () => {
   it("says which page opened, and which run for a run's view", () => {
     expect(bar(inRun)).toContain('<p class="sr-only" role="status">Plan · demo</p>');
-    expect(bar({ page: "helps" })).toContain('<p class="sr-only" role="status">Where it helps</p>');
+    expect(bar({ page: "helps" })).toContain('<p class="sr-only" role="status">Trade-offs</p>');
   });
 
   it("names the run that is open when the address names none", () => {

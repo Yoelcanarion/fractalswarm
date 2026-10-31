@@ -10,7 +10,7 @@ const told = treePlayer(story.tree, "story");
 
 describe("the effective tree", () => {
   it("has one epoch for the start and one for each takeover time", () => {
-    expect(model.epochs.map((e) => e.startMs)).toEqual([0, 49640, 59781, 60797, 61750, 70859, 80952]);
+    expect(model.epochs.map((e) => e.startMs)).toEqual([0, 58780, 68905, 69921, 70921, 79984, 96171]);
     expect(model.groups.map((g) => g.atMs)).toEqual(model.epochs.slice(1).map((e) => e.startMs));
   });
 
@@ -39,7 +39,7 @@ describe("the effective tree", () => {
   });
 
   it("buries each dead brain when its last duty has been handed over", () => {
-    expect(burialTimes(story.tree)).toEqual({ o0: 49640, "o2.1": 59781, o1: 61750, "o3.2": 70859, o2: 80952 });
+    expect(burialTimes(story.tree)).toEqual({ o0: 58780, "o2.1": 68905, o1: 70921, "o3.2": 79984, o2: 96171 });
   });
 
   it("gives every node in an epoch a place, with no two nodes on top of each other", () => {
@@ -80,7 +80,7 @@ describe("the timeline", () => {
       expect(holds.map((s) => s.t0)).toEqual(model.groups.map((g) => g.atMs));
       const mid = player.timeline.at(((holds[0]?.s0 ?? 0) + (holds[0]?.s1 ?? 0)) / 2 / player.timeline.totalS);
       expect(mid.hold?.group).toBe(0);
-      expect(mid.tMs).toBe(49640);
+      expect(mid.tMs).toBe(58780);
       expect(mid.hold?.c).toBeCloseTo(0.5, 3);
     });
 

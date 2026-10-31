@@ -1,15 +1,18 @@
 // The arena's components drawn on the server (react-dom/server) over synthetic runs: no browser, but
 // every render path runs. The look is checked on screenshots.
 
+import { readFileSync } from "node:fs";
+
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { FrameScheduler } from "../lib/clock";
-import { renderCurrent } from "../lib/testing";
+import { REPO_ROOT, renderCurrent } from "../lib/testing";
 import type { RunEvent, RunListing } from "../lib/types";
 import { RunStoreProvider, type RunApi } from "../store";
 import type { PairListing } from "./api";
+import { ArenaView } from "./ArenaPage";
 import { ArenaBoard } from "./ArenaBoard";
 import { ArenaSide } from "./ArenaSide";
 import { ArenaTimeline } from "./ArenaTimeline";
@@ -216,6 +219,14 @@ describe("the shared timeline", () => {
     for (const speed of ["1×", "2×", "5×", "10×", "20×"]) expect(html).toContain(speed);
   });
 
+  it("has each lane as one tab stop, whatever the number of its bands and marks, and the speeds as one select", async () => {
+    const html = timeline(await opened(0));
+    expect(count(html, /<button[^>]*class="(?:band|mark)[^"]*"[^>]*tabindex="0"/g)).toBe(2);
+    expect(count(html, /<button[^>]*class="(?:band|mark)[^"]*"[^>]*tabindex="-1"/g)).toBeGreaterThan(2);
+    expect(html).toContain('<select aria-label="replay speed">');
+    expect(html).not.toContain("btn--seg");
+  });
+
   it("draws a band for each side's outage and marks the crashes and the recoveries", async () => {
     const html = timeline(await opened(0));
     expect(count(html, /class="band band--chaos/)).toBe(1);
@@ -264,6 +275,14 @@ describe("the picker", () => {
     expect(picker({ left: "demo-1-swarm", right: "demo-1-durable-max" })).toMatch(/<option value="demo-1" selected/);
   });
 
+  it("has the pair on record in view, and the two runs of one's own choosing in a menu", () => {
+    const html = picker();
+    expect(html).toContain('<details id="runs" class="disclosure disclosure--menu">');
+    expect(html).toContain("Choose the two runs yourself");
+    expect(html.indexOf("pair on record")).toBeLessThan(html.indexOf('<details id="runs"'));
+    expect(html.indexOf('aria-label="swarm run"')).toBeGreaterThan(html.indexOf('<details id="runs"'));
+  });
+
   it("marks a private or billed pair, so it is never taken for a bundled one", () => {
     const html = picker({ pairs: [pair({ private: true }), pair({ pairId: "p2", billed: true })] });
     expect(html).toContain("· private");
@@ -273,5 +292,69 @@ describe("the picker", () => {
   it("says when there is nothing on record, and while it loads", () => {
     expect(picker({ pairs: [] })).toContain("No pairs on record");
     expect(picker({ pairs: null })).toContain("Loading pairs…");
+  });
+
+  it("shows the whole name of the pair that is open beside the select, which a phone cuts: the marks included", () => {
+    const html = picker({ left: "demo-1-swarm", right: "demo-1-durable-max", pairs: [pair({ private: true, billed: true })] });
+    expect(html).toContain('<span class="picker__shown" aria-hidden="true">swarm vs durable-max, half-the-brains, seed 1 · private · billed</span>');
+    expect(picker()).toContain('<span class="picker__shown" aria-hidden="true">Choose a pair…</span>');
+  });
+});
+
+describe("the arena on a phone", () => {
+  // At 390 px the first card clipped its "Replay verified" badge at its edge and the pair's select cut its name. This reads the sheet.
+  const sheet = readFileSync(`${REPO_ROOT}web/src/arena/arena.css`, "utf-8").replace(/\r\n/g, "\n");
+  const phone = /@media \(max-width: 760px\) \{([\s\S]*?)\n\}\n?$/.exec(sheet)?.[1] ?? "";
+  const rule = (selector: string): string => new RegExp(`${selector.replace(/[.>]/g, "\\$&")} \\{([^}]*)\\}`).exec(phone)?.[1] ?? "";
+
+  it("lets the head's badge go under the title, from the left", () => {
+    expect(phone).not.toBe("");
+    expect(rule(".side__top")).toContain("flex-wrap: wrap");
+    expect(rule(".side__verify")).toContain("margin-left: 0");
+  });
+
+  it("gives the pair a row, with its whole name shown over the select, which takes the tap unseen", () => {
+    expect(rule(".picker__shown")).toContain("display: block");
+    expect(rule(".picker__control select")).toMatch(/position: absolute/);
+    expect(rule(".picker__control select")).toMatch(/opacity: 0/);
+    // off a phone the select is the control, as before
+    expect(/\.picker__shown \{\s*display: none;/.test(sheet)).toBe(true);
+  });
+});
+
+describe("the page", () => {
+  const view = async (over: Partial<Parameters<typeof ArenaView>[0]> = {}) =>
+    renderToStaticMarkup(
+      createElement(
+        RunStoreProvider,
+        { store: (await opened(0)).left as never },
+        createElement(ArenaView, { session: await opened(0), pairs: [], runs: [], official: { left: null, right: null }, left: null, right: null, ...over }),
+      ),
+    );
+
+  it("says what it is for, and has one main action once a pair is open: play both from the start", async () => {
+    const session = await opened(0);
+    const html = await view({ session, left: "s", right: "r" });
+    expect(text(html)).toContain("The swarm and a rival run the same job under the same failures");
+    expect(html).toContain('<button type="button" class="btn btn--on">Play both from the start</button>');
+  });
+
+  it("says what to do next when there is no pair, instead of a bare page", async () => {
+    const html = await view();
+    expect(text(html)).toContain("No pair to watch yet");
+    expect(html).toContain('<a class="btn btn--on" href="#/new">Start a pair</a>');
+    expect(html).not.toContain("Play both from the start");
+    expect(text(html)).not.toContain("POST /api/arena");
+  });
+
+  it("waits, with the page's own skeleton, for `#/arena` alone to open the newest public pair", async () => {
+    const html = await view({ pairs: [{ pairId: "p", left: "a", right: "b", label: "x", seed: "1", state: "completed", private: false, billed: false, createdAt: null } as never] });
+    expect(html).toContain('<span class="sr-only">Loading the pair…</span>');
+    expect(text(html)).not.toContain("No pair to watch yet");
+  });
+
+  it("has no header of its own in a director's frame, which is the page and nothing around it", async () => {
+    const html = await view({ bare: true });
+    expect(html).not.toContain("pagehead");
   });
 });

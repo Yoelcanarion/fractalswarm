@@ -4,8 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { story } from "../../data/story";
 import { Pen } from "../tree/paint";
-import { READOUT_W, layoutFor, keepApart, textWidth, type LanesLayout } from "./layout";
-import { barState, drawnMs, lanesModel, lifeTracks, linearStallMs, spentMicro, stallElapsedMs, timeMap } from "./model";
+import { BOTTOM_PLAIN, MOMENT_EM, MOMENT_GAP, READOUT_W, layoutFor, keepApart, ledgerColumns, ledgerNeed, momentsLayout, textWidth, type LanesLayout } from "./layout";
+import { MOMENT_FADE, barState, drawnMs, lanesModel, lifeTracks, linearStallMs, momentOpacity, momentStarts, spentMicro, stallElapsedMs, timeMap } from "./model";
 import { paintLanes, usd, type LanesRig } from "./paint";
 import { WorkLanes, captionsFor, summaryFor } from "./WorkLanes";
 
@@ -174,7 +174,8 @@ describe("the layout", () => {
 
     it(`${label}: sets the ledger and the setting inside the width, the setting in the longest form that fits`, () => {
       expect(layout.ledger).toHaveLength(4);
-      for (const cell of layout.ledger) expect(cell.x + textWidth("no agent working") + 16 + 8 + textWidth("$0.000")).toBeLessThanOrEqual(layout.width + 40);
+      const need = ledgerNeed(new Set(layout.ledger.map((cell) => cell.x)).size);
+      layout.ledger.forEach((cell, i) => expect(cell.x + need[i % need.length]!).toBeLessThanOrEqual(layout.width - 8 + 0.001));
       expect(textWidth(layout.caption)).toBeLessThanOrEqual(width - 16);
       expect(layout.captionY).toBeLessThanOrEqual(layout.height + 40);
     });
@@ -219,6 +220,7 @@ describe("paintLanes", () => {
     notes: fake(log),
     clock: fake(log),
     readout: fake(log),
+    moments: [fake<SVGTextElement>(log), fake<SVGTextElement>(log), fake<SVGTextElement>(log)],
     value: { counted: fake(log), cut: fake(log), again: fake(log), idle: fake(log) },
   };
   const at = (pen: Pen<Element> | null | undefined): Record<string, string> => log.get(pen!.el) ?? {};
@@ -327,5 +329,145 @@ describe("WorkLanes markup", () => {
     expect(text).toContain("6 agents are killed");
     expect(text).toContain("101.8 s");
     expect(text).not.toMatch(/\b(simpler|cheaper|more reliable|first)\b/i);
+  });
+});
+
+describe("the key under the lanes", () => {
+  it("fits every width from a small phone to a wide screen: no cell clipped by the box, none over its neighbour", () => {
+    for (let width = 210; width <= 1700; width += 3) {
+      const xs = ledgerColumns(width);
+      const need = ledgerNeed(xs.length);
+      expect([1, 2, 4], `columns at ${width}`).toContain(xs.length);
+      expect(xs[0]!, `first column at ${width}`).toBeGreaterThanOrEqual(8);
+      xs.forEach((x, k) => {
+        expect(x + need[k]!, `column ${k} at ${width}`).toBeLessThanOrEqual(width - 8 + 0.001);
+        if (k > 0) expect(x - (xs[k - 1]! + need[k - 1]!), `gap before column ${k} at ${width}`).toBeGreaterThanOrEqual(11.99);
+      });
+    }
+  });
+
+  it("uses as many columns as fit: four on a screen, two on a phone's width, one below that", () => {
+    expect(ledgerColumns(1280)).toHaveLength(4);
+    expect(ledgerColumns(640)).toHaveLength(4);
+    expect(ledgerColumns(600)).toHaveLength(2);
+    expect(ledgerColumns(358)).toHaveLength(2);
+    expect(ledgerColumns(340)).toHaveLength(1);
+  });
+
+  it("gives the lanes the room the extra rows take, and the setting stays under the key", () => {
+    const model = lanesModel(story.lanes.central);
+    const narrow = layoutFor(model, 300, 420, 24);
+    const wide = layoutFor(model, 1200, 420, 24);
+    expect(narrow.ledger[3]!.y).toBeGreaterThan(narrow.ledger[0]!.y);
+    expect(narrow.captionY).toBeGreaterThan(narrow.ledger[3]!.y);
+    expect(narrow.captionY).toBeLessThanOrEqual(420);
+    expect(wide.captionY).toBeLessThanOrEqual(420);
+  });
+});
+
+describe("the film's captions", () => {
+  const TEXTS = ["It crashes.", "The work waits.", "The work is paid for again."];
+  const kf = model.keyframes;
+
+  it("begin one after the other: the first as the crash is about to strike, the second while the work waits, the third as the damage is shown", () => {
+    const [a, b, c] = momentStarts(kf) as [number, number, number];
+    expect(a).toBeLessThan(b);
+    expect(b).toBeLessThan(c);
+    expect(a + MOMENT_FADE).toBeLessThanOrEqual(kf.crash);
+    expect(b).toBeGreaterThan(kf.crash);
+    expect(b).toBeLessThan(kf.restart);
+    expect(c).toBe(kf.restart);
+  });
+
+  it("fade in once and stay: nothing at the start, all three at the end, never fainter as the film goes on", () => {
+    for (let i = 0; i < 3; i++) {
+      expect(momentOpacity(kf, i, 0), `caption ${i} at the start`).toBe(0);
+      expect(momentOpacity(kf, i, 1), `caption ${i} at the end`).toBe(1);
+      let before = 0;
+      for (let k = 0; k <= 1000; k++) {
+        const now = momentOpacity(kf, i, k / 1000);
+        expect(now, `caption ${i} at ${k / 1000}`).toBeGreaterThanOrEqual(before - 1e-12);
+        before = now;
+      }
+    }
+    expect(momentOpacity(kf, 3, 1)).toBe(0);
+  });
+
+  it("are all there from the moment the damage is shown, and a later one is never ahead of an earlier one", () => {
+    for (let k = 0; k <= 1000; k++) {
+      const p = k / 1000;
+      for (let i = 0; i < 2; i++) expect(momentOpacity(kf, i, p)).toBeGreaterThanOrEqual(momentOpacity(kf, i + 1, p));
+    }
+    for (let i = 0; i < 3; i++) expect(momentOpacity(kf, i, kf.restart + MOMENT_FADE)).toBe(1);
+  });
+
+  it("are written onto the pens of the captions by paintLanes, and nothing else", () => {
+    const log = new Map<object, Record<string, string>>();
+    const rig = {
+      bars: [],
+      tracks: [],
+      stalls: [],
+      crashes: [],
+      kills: [],
+      cursor: null,
+      counted: null,
+      notes: null,
+      clock: null,
+      readout: null,
+      moments: TEXTS.map(() => fake<SVGTextElement>(log)),
+      value: { counted: null, cut: null, again: null, idle: null },
+    } as LanesRig;
+    const lay = layoutFor(model, 820, 460, 0, [], { moments: TEXTS });
+    paintLanes(rig, model, lay, map, 0);
+    expect(rig.moments.map((pen) => Number(log.get(pen!.el)?.opacity))).toEqual([0, 0, 0]);
+    paintLanes(rig, model, lay, map, 1);
+    expect(rig.moments.map((pen) => Number(log.get(pen!.el)?.opacity))).toEqual([1, 1, 1]);
+  });
+
+  it("are laid out in a row when the box is wide, at 24 px or more, and one under the other when it is not", () => {
+    expect(momentsLayout(TEXTS, 1480, 8)).toMatchObject({ row: true, size: 32 });
+    expect(momentsLayout(TEXTS, 1000, 8).row).toBe(true);
+    expect(momentsLayout(TEXTS, 1000, 8).size).toBeGreaterThanOrEqual(24);
+    expect(momentsLayout(TEXTS, 700, 8).row).toBe(false);
+    expect(momentsLayout(TEXTS, 292, 8).row).toBe(false);
+  });
+
+  it("stay inside the box and apart, at every width from 224 to 1700 px", () => {
+    for (let width = 224; width <= 1700; width += 4) {
+      const m = momentsLayout(TEXTS, width, 8);
+      const right = (i: number): number => m.at[i]!.x + TEXTS[i]!.length * MOMENT_EM * m.size;
+      expect(m.size, `size at ${width}`).toBeGreaterThanOrEqual(12);
+      expect(m.size, `size at ${width}`).toBeLessThanOrEqual(32);
+      for (let i = 0; i < TEXTS.length; i++) {
+        expect(m.at[i]!.x, `left of ${i} at ${width}`).toBeGreaterThanOrEqual(8);
+        expect(right(i), `right of ${i} at ${width}`).toBeLessThanOrEqual(width - 8 + 0.001);
+        expect(m.at[i]!.y, `baseline of ${i} at ${width}`).toBeLessThan(m.height);
+        if (i > 0 && m.row) expect(m.at[i]!.x - right(i - 1), `gap before ${i} at ${width}`).toBeGreaterThanOrEqual(MOMENT_GAP - 0.001);
+        if (i > 0 && !m.row) expect(m.at[i]!.y - m.at[i - 1]!.y, `step before ${i} at ${width}`).toBe(m.lead);
+      }
+    }
+  });
+
+  it("leave the lanes below their band, the key of two inside the box, no names and no setting, in the film's two heights and at any width", () => {
+    for (const height of [400, 460]) {
+      for (let width = 224; width <= 1700; width += 12) {
+        const lay = layoutFor(model, width, height, 0, ["a setting"], { moments: TEXTS });
+        const where = `${width} x ${height}`;
+        expect(lay.moments, where).not.toBeNull();
+        expect(lay.caption, where).toBe("");
+        expect(lay.x0, where).toBe(8);
+        expect(lay.crashMarks.length, where).toBe(model.crashes.length);
+        expect(lay.yTop, where).toBeGreaterThanOrEqual(lay.moments!.height + 20);
+        expect(lay.ledger, where).toHaveLength(2);
+        const columns = new Set(lay.ledger.map((cell) => cell.x)).size;
+        const need = ledgerNeed(columns, [16 + 7 * 7.2 + 8 + 6 * 7.2, 16 + 10 * 7.2 + 8 + 6 * 7.2]);
+        lay.ledger.forEach((cell, i) => expect(cell.x + need[i % need.length]!, `key cell ${i} at ${where}`).toBeLessThanOrEqual(width - 8 + 0.001));
+        if (columns === 2) expect(lay.ledger[1]!.x - lay.ledger[0]!.x, `the two cells of the key stand together at ${where}`).toBeLessThan(200);
+        const lowest = Math.max(...lay.ledger.map((cell) => cell.y));
+        expect(lowest + 10, `the key's bottom at ${where}`).toBeLessThanOrEqual(height);
+        expect(lay.yBottom - lay.yTop, `the lanes' height at ${where}`).toBeGreaterThanOrEqual(model.lanes.length * 12);
+      }
+    }
+    expect(BOTTOM_PLAIN).toBeLessThan(126);
   });
 });

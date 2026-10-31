@@ -39,15 +39,8 @@ body:has(.home) {
   line-height: var(--lh-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* clip, not hidden: hidden would make the page a scroll container and stop every sticky stage from sticking */
+  /* clip, not hidden: hidden would make the page a scroll container of its own */
   overflow-x: clip;
-}
-
-@media (min-width: 1100px) {
-  /* room on the right for the chapter rail and its label */
-  .home {
-    --home-pad-end: max(var(--home-pad), 148px);
-  }
 }
 
 .home *,
@@ -125,7 +118,7 @@ body:has(.home) {
   padding-inline: var(--home-pad) var(--home-pad-end);
 }
 
-/* ---- the fixed bar and the rail ---- */
+/* ---- the fixed bar ---- */
 .home-bar {
   position: fixed;
   inset: 0 0 auto 0;
@@ -150,7 +143,9 @@ body:has(.home) {
 /* every link names its own colour: the app shell's `a { color }` stays in the page once that chunk has loaded */
 .home-bar__brand {
   display: inline-flex;
+  flex: none;
   align-items: center;
+  white-space: nowrap;
   gap: var(--space-2);
   color: var(--text-primary);
   font-weight: 650;
@@ -187,88 +182,18 @@ body:has(.home) {
   }
 }
 
-.home-rail {
-  position: fixed;
-  top: 50%;
-  right: clamp(10px, 1.5vw, 28px);
-  z-index: var(--z-sticky);
-  transform: translateY(-50%);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--dur-slow) var(--ease-out);
-}
+/* the brand keeps its width (above), so on the smallest phones the way in gives up its arrow and some padding instead:
+   the pill must never reach the brand */
+@media (max-width: 359px) {
+  .home-bar__right {
+    gap: var(--space-2);
+  }
 
-.home-rail[data-visible] {
-  opacity: 1;
-  pointer-events: auto;
-}
+  .home-bar .home-button {
+    padding-inline: var(--space-3);
+  }
 
-.home-rail__list {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
-.home-rail__item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 7px 0;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--fs-label);
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-}
-
-.home-rail__label {
-  display: inline-flex;
-  gap: var(--space-2);
-  opacity: 0;
-  transform: translateX(6px);
-  transition:
-    opacity var(--dur-base) var(--ease-out),
-    transform var(--dur-base) var(--ease-out);
-}
-
-.home-rail__number {
-  color: var(--text-muted);
-}
-
-.home-rail:hover .home-rail__label,
-.home-rail__item[aria-current="true"] .home-rail__label,
-.home-rail__item:focus-visible .home-rail__label {
-  opacity: 1;
-  transform: none;
-}
-
-.home-rail__item[aria-current="true"] {
-  color: var(--text-primary);
-}
-
-.home-rail__tick {
-  width: 14px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--border-strong);
-  transition:
-    transform var(--dur-slow) var(--ease-out),
-    background-color var(--dur-slow) var(--ease-out);
-  transform-origin: right;
-}
-
-.home-rail__item:hover .home-rail__tick {
-  background: var(--text-secondary);
-}
-
-.home-rail__item[aria-current="true"] .home-rail__tick {
-  background: var(--accent);
-  transform: scaleX(2);
-}
-
-@media (max-width: 899px) {
-  .home-rail {
+  .home-bar .home-button svg {
     display: none;
   }
 }
@@ -397,7 +322,7 @@ body:has(.home) {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: clamp(16px, 2.6svh, 30px);
+  gap: clamp(14px, 2.2svh, 26px);
   justify-items: start;
 }
 
@@ -417,15 +342,9 @@ body:has(.home) {
   text-wrap: balance;
 }
 
-.home-hero__proof {
-  display: grid;
-  gap: var(--space-3);
-  justify-items: start;
-  max-width: 640px;
-}
-
-/* the subtitle is claim R6 in its own words, one sentence to a line, with the way to R2 and R3 right under it */
+/* the one sentence under the tagline */
 .home-hero__line {
+  max-width: 600px;
   font-size: var(--fs-lead-l);
   line-height: 1.45;
   color: var(--text-secondary);
@@ -459,6 +378,7 @@ body:has(.home) {
     grid-template-columns: minmax(0, 1fr);
     align-content: start;
     gap: var(--space-6);
+    min-height: 0;
     padding-top: calc(var(--home-bar) + var(--space-6));
   }
 
@@ -472,26 +392,226 @@ body:has(.home) {
   }
 }
 
-/* ---- chapters ---- */
-.home-chapter {
+/* ---- the sections: a title, one sentence, and one thing to look at ---- */
+.home-section {
   position: relative;
+  padding-block: clamp(48px, 8svh, 104px);
+  scroll-margin-top: calc(var(--home-bar) - 8px);
 }
 
-.home-chapter--calm,
-.home-chapter--enter {
-  padding-block: 9svh;
-}
-
-.home-chapter__head {
+.home-section__head {
   display: grid;
   gap: var(--space-4);
   justify-items: start;
+  margin-bottom: var(--space-6);
 }
 
-.home-eyebrow {
+.home-section__title {
+  max-width: 22ch;
+  font-family: var(--font-display);
+  font-weight: 650;
+  font-size: var(--fs-display-l);
+  line-height: 1.04;
+  letter-spacing: var(--track-display);
+  text-wrap: balance;
+}
+
+.home-section__line {
+  max-width: 680px;
+  font-size: var(--fs-lead-l);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.home-section__tools {
   display: flex;
+  margin-top: var(--space-4);
+}
+
+/* what is folded under "See more": the nuance, which the visitor asks for */
+.home-fold {
+  margin-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.home-fold__summary {
+  display: inline-flex;
   align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding-block: var(--space-2);
+  list-style: none;
+  color: var(--text-secondary);
+  font-weight: 560;
+  letter-spacing: var(--track-tight);
+  cursor: pointer;
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+.home-fold__summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-fold__summary:hover {
+  color: var(--text-primary);
+}
+
+.home-fold__chevron {
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.home-fold[open] .home-fold__chevron {
+  transform: rotate(180deg);
+}
+
+/* One column as wide as the fold: an implicit `auto` column grows to the longest line of the terminal's output (the head hash),
+   and the whole fold, text and all, ran past the edge of a phone. The terminal scrolls its own lines instead. */
+.home-fold__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  justify-items: start;
+  max-width: 760px;
+  padding-block: var(--space-4) var(--space-2);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-fold[open] .home-fold__body {
+    animation: home-fold-in var(--dur-slow) var(--ease-out) both;
+  }
+}
+
+@keyframes home-fold-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.home-fold__text {
+  max-width: 640px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.home-fold__figure {
+  width: min(100%, 520px);
+}
+
+/* Repeat: plays an animation again from its start */
+.home-repeat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  font-weight: 560;
+  cursor: pointer;
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.home-repeat:hover {
+  background: var(--hover-wash);
+  color: var(--text-primary);
+}
+
+.home-repeat:active {
+  transform: scale(0.97);
+}
+
+/* text for a screen reader that a drawing already says to the eye */
+.home-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- the problem: the film of the work lanes ---- */
+/* The film sets its own height (W7's .hv-film: 44vw between 400 and 460 px), so the section's title, film and button show together
+   on one screen; the figure only wraps it. */
+.home-film {
+  position: relative;
+  width: 100%;
+}
+
+/* ---- the solution: three cards that play on hover, then the click demo ---- */
+.home-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.home-step {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-4);
+  background: var(--surface-1);
+  transition:
+    border-color var(--dur-slow) var(--ease-out),
+    background-color var(--dur-slow) var(--ease-out);
+}
+
+.home-step[data-active] {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.home-step__drawing {
+  position: relative;
+  height: clamp(120px, 16svh, 176px);
+}
+
+/* the drawing is 2:1 and fits the box, so it never grows over the title under it */
+.home-step__drawing > .hv-step {
+  height: 100%;
+}
+
+.home-step__title {
+  font-family: var(--font-display);
+  font-weight: 560;
+  font-size: var(--fs-title);
+  line-height: 1.25;
+  letter-spacing: var(--track-tight);
+  text-wrap: balance;
+}
+
+.home-demo {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  margin-top: var(--space-8);
+  scroll-margin-top: calc(var(--home-bar) + var(--space-4));
+}
+
+/* The label and the demo share one box, as wide as the demo's own line and buttons are laid out for, so the label starts where its line does. */
+.home-demo > * {
+  width: 100%;
+  max-width: 1080px;
+  justify-self: center;
+}
+
+.home-demo__label {
   font-family: var(--font-mono);
   font-size: var(--fs-label);
   letter-spacing: var(--track-label);
@@ -499,202 +619,100 @@ body:has(.home) {
   color: var(--text-muted);
 }
 
-.home-eyebrow__number {
-  color: var(--accent-text);
+@media (max-width: 899px) {
+  .home-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-.home-chapter__title {
-  font-family: var(--font-display);
-  font-weight: 650;
-  font-size: var(--fs-display-l);
-  line-height: 1.04;
-  letter-spacing: var(--track-display);
-  text-wrap: balance;
-  max-width: 18ch;
-}
-
-.home-step .home-chapter__title {
-  font-size: var(--fs-h2);
-  line-height: 1.08;
-}
-
-.home-chapter__lede {
-  max-width: 544px;
-  font-size: var(--fs-lead-l);
-  line-height: 1.5;
-  color: var(--text-secondary);
-  text-wrap: pretty;
-}
-
-/* a statement alone on the screen, between two parts of the story */
-.home-closer {
-  display: grid;
-  place-items: center;
-  min-height: 50svh;
-  padding: 8svh var(--home-pad);
-  text-align: center;
-}
-
-.home-closer__text {
-  max-width: 16ch;
-  font-family: var(--font-display);
-  font-weight: 650;
-  font-size: var(--fs-display-l);
-  line-height: 1.04;
-  letter-spacing: var(--track-display);
-  text-wrap: balance;
-}
-
-/* ---- a pinned stage: the steps on one side scroll, the visual on the other stays ---- */
-.home-stage {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  column-gap: clamp(24px, 4vw, 80px);
-  max-width: calc(var(--home-max) + var(--home-pad) + var(--home-pad-end));
-  margin-inline: auto;
-  padding-inline: var(--home-pad) var(--home-pad-end);
-}
-
-.home-stage__steps {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.home-stage__visual {
-  grid-column: 2;
-  grid-row: 1;
-  position: sticky;
-  top: 0;
-  align-self: start;
-  height: 100svh;
-  display: flex;
-  align-items: center;
-  padding-top: var(--home-bar);
-}
-
-.home-stage--left .home-stage__steps {
-  grid-column: 2;
-}
-
-.home-stage--left .home-stage__visual {
-  grid-column: 1;
-}
-
-.home-stage__frame {
+/* ---- the proof: bars and numbers that grow once, the way to R2 and R3, the command that checks it ---- */
+/* The chart is one svg that sets its own width and height from this box: one column of panels up to 840 px, two columns from a box of
+   1000 px, and it is drawn for at most 1480 px (the page's own width). */
+.home-proof__chart {
   position: relative;
   width: 100%;
-  height: min(76svh, 780px);
+  max-width: 1480px;
 }
 
-/* the visual's layers sit on top of each other */
-.home-problem,
-.home-solution {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.home-problem > *,
-.home-solution > * {
-  position: absolute;
-  inset: 0;
-}
-
-/* A layer takes its opacity from the step (scroll/Stage.tsx writes it when the step changes) and fades there on its own
-   clock: it is a transition, so a step change in the middle of a fade turns it round from where it is. A layer that is
-   not shown at all is also `visibility: hidden` once its fade is over (and from the first instant when it comes back):
-   it is not painted, not hit and not read out while nobody can see it. */
-.home-layer {
-  transition:
-    opacity var(--dur-step) var(--ease-out),
-    visibility 0s;
-}
-
-.home-layer[data-off] {
-  visibility: hidden;
-  transition:
-    opacity var(--dur-step) var(--ease-out),
-    visibility 0s linear var(--dur-step);
-}
-
-.home-problem__parts {
+/* Under the chart: why the in-process supervisor's numbers are so far apart, and the way on. */
+.home-proof__under {
   display: grid;
-  place-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
 }
 
-.home-problem__counter {
+/* Where the chart has its panels side by side (a box of 1000 px: a window of about 1140 px, with a scrollbar), the reason stands under
+   the in-process panel it explains and the way on under the durable one, in the chart's own two columns and 48 px gap. */
+@media (min-width: 1140px) {
+  .home-proof__under {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 48px;
+  }
+}
+
+.home-proof__after {
   display: grid;
-  align-content: start;
+  gap: var(--space-4);
   justify-items: start;
-  gap: var(--space-1);
-  inset: 0 auto auto 0;
-  padding: var(--space-4) var(--space-5);
-  pointer-events: none;
 }
 
-.home-counter__number {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-figure);
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: -0.03em;
+.home-proof__reason {
+  max-width: 640px;
+}
+
+.home-proof__after > p {
+  margin-top: 0;
+}
+
+.home-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
   color: var(--text-secondary);
 }
 
-.home-counter__label {
-  font-size: var(--fs-body);
+.home-check code::before {
+  content: "$ ";
   color: var(--text-muted);
 }
 
-.home-solution__tree {
-  inset: 0 0 18% 0;
-}
-
-.home-solution__hrw {
-  inset: 0 0 18% 0;
-  pointer-events: none;
-}
-
-.home-solution__strip {
-  inset: auto 0 0 0;
-  height: 14%;
-}
-
-/* A step is a block at least `--w` screens tall (a card taller than that makes it taller) with its card in the middle.
-   The card of the step that is current is at full strength and the others stay legible, a little back: which one is
-   current is an attribute the stage writes when the reading line crosses into the block, never a function of the scroll. */
-.home-step {
-  display: flex;
-  align-items: center;
-  min-height: calc(var(--w, 0.5) * 100svh);
-}
-
-.home-step__card {
-  max-width: 544px;
-  padding-block: var(--space-5);
-  opacity: 0.38;
-  transition: opacity var(--dur-step) var(--ease-out);
-}
-
-.home-step[data-active] .home-step__card {
-  opacity: 1;
-}
-
-/* a stage that has just been put on its step (a page opened half way down, a jump from the rail) does not fade there */
-.home-stage[data-snap] .home-layer,
-.home-stage[data-snap] .home-step__card {
-  transition: none;
-}
-
-.home-step__count {
-  display: block;
-  margin-bottom: var(--space-4);
-  font-family: var(--font-mono);
+.home-grow {
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-label);
-  letter-spacing: var(--track-label);
-  color: var(--text-muted);
+}
+
+/* ---- the evidence page: a plain document ---- */
+.home-evidence {
+  padding-top: calc(var(--home-bar) + var(--space-6));
+}
+
+.home-evidence__head {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  margin-bottom: var(--space-6);
+}
+
+.home-evidence__title {
+  font-family: var(--font-display);
+  font-weight: 650;
+  font-size: var(--fs-display-l);
+  line-height: 1.04;
+  letter-spacing: var(--track-display);
+}
+
+.home-chapter {
+  position: relative;
+}
+
+.home-chapter--calm {
+  padding-block: 6svh;
+}
+
+.home-evidence .home-beat,
+.home-evidence .home-chapter {
+  scroll-margin-top: calc(var(--home-bar) + var(--space-4));
 }
 
 .home-step__lead {
@@ -712,82 +730,6 @@ body:has(.home) {
   line-height: 1.5;
   color: var(--text-secondary);
   text-wrap: pretty;
-}
-
-.home-step .home-claim + .home-claim,
-.home-step .home-step__more + .home-claim,
-.home-step .home-step__more + .home-limit {
-  margin-top: var(--space-4);
-}
-
-/* the stage with reduced motion: ordinary flow, the visual in its final state, then the steps */
-.home-stage--still {
-  row-gap: var(--space-8);
-  padding-block: var(--space-9);
-}
-
-.home-stage--still .home-stage__visual {
-  position: static;
-  height: auto;
-  padding-top: 0;
-}
-
-.home-stage--still .home-stage__frame {
-  height: min(70svh, 640px);
-}
-
-.home-stage--still .home-stage__steps {
-  grid-row: 2;
-  grid-column: 1 / -1;
-  display: grid;
-  gap: var(--space-8);
-}
-
-.home-stage--still .home-stage__visual {
-  grid-column: 1 / -1;
-}
-
-.home-stage--still .home-step {
-  min-height: 0;
-}
-
-.home-stage--still .home-step__card {
-  opacity: 1;
-}
-
-@media (max-width: 899px) {
-  .home-stage {
-    display: block;
-    padding-inline: var(--home-pad);
-  }
-
-  .home-stage__visual {
-    position: sticky;
-    top: var(--home-bar);
-    z-index: 2;
-    height: 44svh;
-    padding: 0;
-    background: var(--bg);
-  }
-
-  .home-stage__frame {
-    height: 100%;
-  }
-
-  /* below the pinned visual there is about half a screen for the text: a block is its card and no more, so that one is
-     always in view */
-  .home-step {
-    min-height: calc(var(--w, 0.5) * 50svh);
-  }
-
-  .home-stage--still .home-stage__visual {
-    position: static;
-    height: auto;
-  }
-
-  .home-stage--still .home-stage__frame {
-    height: 56svh;
-  }
 }
 
 /* ---- claims, captions, figures ---- */
@@ -867,6 +809,14 @@ body:has(.home) {
   background: var(--surface-2);
   color: var(--text-primary);
   overflow-wrap: anywhere;
+}
+
+/* a command in a sentence is not broken at its hyphens ("--" and "verify" on two lines); a phone's column is too narrow
+   for that, and there it may wrap */
+@media (min-width: 900px) {
+  .home-claim .home-code {
+    white-space: nowrap;
+  }
 }
 
 .home-figures {
@@ -1026,8 +976,10 @@ body:has(.home) {
   transition: background-color var(--dur-base) var(--ease-out);
 }
 
+/* the lit word is the strong accent fill with the inverse text: --accent under it reads 4.3:1 in the light theme, --accent-text
+   6.5:1 there and 7.5:1 in the dark one */
 .home-extract__mark[data-lit] {
-  background: var(--accent);
+  background: var(--accent-text);
   color: var(--text-inverse);
 }
 
@@ -1058,6 +1010,20 @@ body:has(.home) {
 .home-ablation,
 .home-muse {
   max-width: 896px;
+}
+
+/* the question and the answer's parts: one above the other, and on a wide screen side by side */
+.home-models-pair {
+  display: grid;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .home-models-pair {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: clamp(32px, 4vw, 72px);
+  }
 }
 
 .home-roles {
@@ -1129,8 +1095,8 @@ body:has(.home) {
 }
 
 /* ---- the evidence chapter ---- */
-.home-chapter:has(.home-beat) .home-chapter__head {
-  padding-top: 8svh;
+.home-chapter:has(.home-beat) .home-section__head {
+  padding-top: 5svh;
 }
 
 .home-beat {
@@ -1138,7 +1104,53 @@ body:has(.home) {
   gap: var(--space-5);
   align-content: center;
   justify-items: start;
-  padding-block: 7svh;
+  padding-block: 5svh;
+}
+
+/* The words of a beat and what they speak of: one above the other, and on a wide screen
+   split: the words beside the chart;
+   over:  the lead, the words and an aside in one row, over a chart that is drawn for the whole width;
+   wide:  one column, for a chart or a row of figures that wants the whole width. */
+/* One column as wide as the cell, never as wide as its content: without it the track of the hash strip (61 cards in a row) made the
+   column 11,500 px wide, and the strip was cut by the edge of the page instead of fading at its own. */
+.home-beat__text,
+.home-beat__aside,
+.home-beat__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-content: start;
+  justify-items: start;
+  min-width: 0;
+}
+
+.home-beat__body {
+  width: 100%;
+}
+
+@media (min-width: 1280px) {
+  .home-beat--split {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: var(--space-8);
+    align-items: start;
+    justify-items: stretch;
+  }
+
+  .home-beat--over {
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--space-7);
+    align-items: start;
+    justify-items: stretch;
+  }
+
+  /* the lead and the words are two cells of the row, not one cell holding both */
+  .home-beat--over .home-beat__text {
+    display: contents;
+  }
+
+  .home-beat--over .home-beat__body {
+    grid-column: 1 / -1;
+  }
 }
 
 .home-beat__lead {
@@ -1223,6 +1235,57 @@ body:has(.home) {
   color: var(--text-muted);
 }
 
+/* the terms past the first few: in the page, and out of sight until the control under the table opens them */
+.home-table tr[hidden] {
+  display: none;
+}
+
+.home-more {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-more:hover {
+    background: var(--surface-2);
+    border-color: var(--text-muted);
+  }
+}
+
+.home-more:active {
+  transform: scale(0.97);
+}
+
+.home-more__chevron {
+  flex: none;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.home-more[aria-expanded="true"] .home-more__chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-more,
+  .home-more__chevron {
+    transition: none;
+  }
+}
+
 @media (max-width: 899px) {
   /* one block per term: what, its value, why; the column heads stay for screen readers */
   .home-table,
@@ -1268,6 +1331,10 @@ body:has(.home) {
   height: clamp(110px, 16svh, 170px);
 }
 
+.home-chart--regime {
+  height: clamp(240px, 32svh, 350px);
+}
+
 .home-fails {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1291,6 +1358,21 @@ body:has(.home) {
 
 .home-fail .home-figures {
   margin-top: var(--space-2);
+}
+
+/* four groups in a row when the screen has the room */
+@media (min-width: 1280px) {
+  .home-fails {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-6);
+    max-width: none;
+  }
+}
+
+@media (min-width: 1600px) {
+  .home-fails {
+    column-gap: var(--space-7);
+  }
 }
 
 @media (max-width: 899px) {
@@ -1330,34 +1412,28 @@ body:has(.home) {
   color: var(--danger);
 }
 
-/* ---- the menu ---- */
+/* ---- the menu: a card per door, each with a small drawing that loops softly while the section is on screen ---- */
+/* Four doors: a row of four, two rows of two and a column all fill their grid, so no width leaves a hole in the last row. */
 .home-doors {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-4);
-  margin-top: var(--space-8);
 }
 
-/* Two wide doors, the ones you do something in, then four narrow ones, the ones you read. */
 .home-door-slot {
-  grid-column: span 3;
   display: flex;
 }
 
-.home-door-slot--arena,
-.home-door-slot--live {
-  grid-column: span 6;
-}
-
+/* A column from the top: the thumbnail box has one height, so the title of every door starts at the same distance from the top
+   of its card and the titles of a row line up, however many lines each purpose takes. */
 .home-door {
   position: relative;
-  display: grid;
-  grid-template-rows: 1fr auto auto;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
   color: var(--text-primary);
   width: 100%;
-  min-height: 240px;
-  padding: var(--space-5);
+  padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-4);
   background: var(--surface-1);
@@ -1367,10 +1443,12 @@ body:has(.home) {
     background-color var(--dur-slow) var(--ease-out);
 }
 
-a.home-door:hover {
-  transform: translateY(-3px);
-  border-color: var(--border-strong);
-  background: var(--surface-2);
+@media (hover: hover) and (pointer: fine) {
+  a.home-door:hover {
+    transform: translateY(-3px);
+    border-color: var(--border-strong);
+    background: var(--surface-2);
+  }
 }
 
 a.home-door:active {
@@ -1382,9 +1460,13 @@ a.home-door:active {
   cursor: not-allowed;
 }
 
-.home-door__glyph {
+/* The thumbnail is drawn to fit this box, left-aligned and never cropped; --door-glyph-h is the number its svg reads too. */
+.home-door__thumb {
+  --door-glyph-h: 110px;
   position: relative;
-  min-height: 110px;
+  flex: none;
+  height: var(--door-glyph-h);
+  margin-bottom: var(--space-2);
 }
 
 .home-door__title {
@@ -1402,20 +1484,25 @@ a.home-door:active {
 
 .home-door__go {
   position: absolute;
-  top: var(--space-5);
-  right: var(--space-5);
+  top: var(--space-4);
+  right: var(--space-4);
   color: var(--text-muted);
   transition:
     transform var(--dur-slow) var(--ease-out),
     color var(--dur-slow) var(--ease-out);
 }
 
-a.home-door:hover .home-door__go {
-  transform: translate(2px, -2px);
-  color: var(--text-primary);
+@media (hover: hover) and (pointer: fine) {
+  a.home-door:hover .home-door__go {
+    transform: translate(2px, -2px);
+    color: var(--text-primary);
+  }
 }
 
+/* what a closed door says sits on the bottom edge of its card, so that it lines up along the row too */
 .home-door__note {
+  margin-top: auto;
+  padding-top: var(--space-2);
   font-family: var(--font-mono);
   font-size: var(--fs-label);
   letter-spacing: var(--track-label);
@@ -1424,25 +1511,19 @@ a.home-door:hover .home-door__go {
 }
 
 @media (max-width: 1199px) {
-  .home-door-slot {
-    grid-column: span 6;
+  .home-doors {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 899px) {
+@media (max-width: 599px) {
   .home-doors {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .home-door-slot,
-  .home-door-slot--arena,
-  .home-door-slot--live {
-    grid-column: auto;
   }
 }
 
 .home-footer {
-  padding: var(--space-9) var(--home-pad);
+  padding: var(--space-8) var(--home-pad);
   text-align: center;
   font-family: var(--font-mono);
   font-size: var(--fs-body);
@@ -1512,3 +1593,4 @@ a.home-door:hover .home-door__go {
   transform-origin: left;
   transform: scaleX(0);
 }
+

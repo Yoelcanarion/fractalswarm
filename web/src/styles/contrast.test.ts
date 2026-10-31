@@ -148,9 +148,7 @@ function sheets(dir: string): string[] {
 
 /** Findings in files that are not this worker's to change, reported to their owner through the coordinator. Each is listed under the
  * name the first test prints for it; remove it once it is fixed (the second test fails until then). */
-const REPORTED: Record<string, string> = {
-  "home/home.css  .home-extract__mark[data-lit]: --text-inverse on --accent (light)": "W6, Oct 30: 4.30:1, the lit word of the extract visual",
-};
+const REPORTED: Record<string, string> = {};
 
 const all = sheets(SRC).flatMap((path) => pairsOf(readFileSync(path, "utf-8"), path.slice(SRC.length + 1)));
 
@@ -160,6 +158,33 @@ describe("the button modifiers", () => {
       .filter((rule) => /^\.btn--[\w-]+$/.test(rule.selector) && rule.decls.has("background") && !rule.decls.has("color"))
       .map((rule) => rule.selector);
     expect(bare).toEqual([]);
+  });
+});
+
+describe("the text on a dead, a restarting and a finished tree card", () => {
+  // These cards were once faded by `opacity`, which composites the text over the tint: the meta on a dead card read at 2:1 and its id at
+  // 4:1 (3:1 in the light theme). Now their text has colours of its own, and they are what is checked here.
+  const CARDS: [string, string][] = [
+    ["actor--down", "--danger-bg"],
+    ["actor--restarting", "--warn-bg"],
+    ["actor--stopped", "--surface-2"],
+  ];
+  const rules = readRules(withoutComments(readFileSync(`${SRC}/styles.css`, "utf-8")));
+  const colourOf = (selector: string): string | undefined => {
+    const own = rules.filter((rule) => rule.selector.split(",").some((one) => one.trim() === selector)).map((rule) => token(rule.decls.get("color")));
+    return own.filter(Boolean).at(-1);
+  };
+
+  it.each(CARDS)("%s: nothing on it is faded by opacity", (card) => {
+    const faded = rules.filter((rule) => rule.selector.includes(card) && rule.decls.has("opacity")).map((rule) => rule.selector);
+    expect(faded).toEqual([]);
+  });
+
+  describe.each(Object.entries(themes()))("%s theme", (theme, tokens) => {
+    it.each(CARDS)("%s: its id is at AA on the card", (card, background) => {
+      const id = colourOf(`.${card} .actor__id`) ?? colourOf(".actor__id") ?? "--text-primary";
+      expect(contrast(tokens[id], tokens[background]), `${id} on ${background} (${theme})`).toBeGreaterThanOrEqual(4.5);
+    });
   });
 });
 

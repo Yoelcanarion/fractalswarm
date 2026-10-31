@@ -143,20 +143,19 @@ def test_claims_are_copied_by_row_id_in_the_rows_wording(committed: dict):
 
 def test_the_numbers_the_claims_quote_are_the_claims_numbers(committed: dict):
     quoted = committed["claims"]["R5"]["text"]
-    n = committed["numbers"]["r5"]
+    n = committed["numbers"]["r5"]["t2"]
     for key in ("swarmStallS", "centralStallS"):
-        assert (
-            f"{n['t1'][key]} s" in quoted
-            or f"{n['t1'][key]} " in quoted
-            or f" {n['t1'][key]}" in quoted
-        )
-        assert f"{n['t2'][key]}" in quoted
+        assert f"{n[key]} s" in quoted
     for key in ("swarmExtraPct", "centralExtraPct"):
-        assert f"{n['t1'][key]}%" in quoted and f"{n['t2'][key]}%" in quoted
+        assert f"{n[key]}%" in quoted
+    short = committed["claims"]["R6"]["text"]
+    assert f"{n['swarmStallS']} s against {n['centralStallS']} s" in short
     r2 = committed["claims"]["R2"]["text"]
     assert "ideal durable supervisor" in r2
-    assert committed["numbers"]["s4"] == {"coordinationTokens": 0, "runs": 114}
+    assert committed["numbers"]["s4"] == {"coordinationTokens": 0, "runs": 176}
     assert committed["numbers"]["s7"]["allCompleted"] == committed["numbers"]["s7"]["allRuns"]
+    assert committed["numbers"]["s7"]["swarmC3Runs"] == 14
+    assert committed["numbers"]["s7"]["swarmC3Completed"] == 14
     assert committed["numbers"]["structure"] == {
         "agents": 12,
         "orchestrators": 10,
@@ -241,13 +240,6 @@ def test_the_page_stays_offline_and_small(committed_text: str):
     assert not re.search(r"#[0-9a-fA-F]{6}\b", committed_text), "colours live in tokens.css only"
 
 
-def test_the_optional_ten_seed_reading_is_shown_next_to_the_three_seed_one(committed: dict):
-    path = REPO / "bench" / "results" / "headline-10" / "results.json"
-    assert committed["sources"]["headline10"]["present"] is path.exists()
-    assert (committed["headline10"] is not None) is path.exists()
-    assert committed["headline"] is not None, "the 3-seed reading is never replaced"
-
-
 def test_the_tree_slice_holds_everything_the_tree_draws(committed: dict):
     tree = committed["tree"]
     for key in ("nodes", "goals", "root", "counts", "kills", "adoptions", "rounds", "heartbeat"):
@@ -278,14 +270,14 @@ def test_the_page_finds_what_it_reads(committed: dict):
         "agents": 12,
     }
     hero = committed["hero"]
-    assert hero["task"] == "t2_conference" and "real" in hero["title"]
+    assert hero["task"] == "t2_conference" and hero["model"] == "real"
     for workflow, series in hero["series"].items():
         assert workflow in hero["order"]
         for point in series["points"]:
             assert {"profile", "x", "stall_s", "extra_cost_pct", "seeds"} <= set(point)
     swarm, central = (hero["series"][w]["points"][-1] for w in ("swarm", "central"))
     assert (swarm["profile"], swarm["x"], central["x"]) == ("C3", 5, 5)
-    assert committed["headline"]["real"] is True and committed["headline"]["seedCount"] == 3
+    assert committed["headline"]["real"] is True and committed["headline"]["seedCount"] == 10
     finish = committed["finish"]
     assert finish["talksPlaced"] == finish["talksTotal"] == 48
     assert (finish["task"], finish["real"], finish["seeds"]) == ("t2_conference", True, 1)
@@ -308,7 +300,7 @@ def test_the_page_finds_what_it_reads(committed: dict):
     assert committed["tokens"] == {"coordination": 0, "recovery": 0}
     proof = committed["proof"]
     assert proof["lines"] == [
-        f"MATCH  backup: {committed['hashes']['count']} events, head {committed['hashes']['head']}"
+        f"MATCH  final: {committed['hashes']['count']} events, head {committed['hashes']['head']}"
     ]
     assert proof["takeover"]["line"] == committed["takeover"]["okLine"]
 
@@ -318,12 +310,16 @@ def test_validity_is_counted_from_the_rows_and_never_assumed(
 ):
     rows = [{"cell": "a__C0__s1", "valid": True}, {"cell": "a__C0__s10", "valid": False}]
     assert generator.validity(rows) == {"runs": 2, "valid": 1, "invalid": ["a__C0__s10"]}
-    for name, directory in (("v1", generator.V1), ("headline", generator.HEADLINE)):
+    for name, directory in (
+        ("v1", generator.V1),
+        ("headline", generator.HEADLINE),
+        ("headline10", generator.HEADLINE_10),
+    ):
         on_disk = json.loads((REPO / directory / "results.json").read_text(encoding="utf-8"))
         assert committed["numbers"]["validity"][name] == generator.validity(on_disk)
-    assert (committed["numbers"]["validity"]["headline10"] is not None) is (
-        REPO / generator.HEADLINE_10 / "results.json"
-    ).exists()
+    assert committed["numbers"]["validity"]["headline10"]["invalid"] == [
+        "swarm__t2_conference__C0__s5"
+    ]
 
 
 def test_no_key_of_the_data_says_that_every_run_was_valid(committed: dict):
@@ -350,16 +346,13 @@ def test_the_lanes_name_their_setting(committed: dict):
     assert setting["real"] is True and setting["label"] == "In-process supervisor"
 
 
-def test_the_hero_names_its_set_and_the_ten_seed_reading_takes_over_only_when_it_exists(
-    generator: ModuleType, committed: dict
-):
-    assert committed["hero"]["set"] == "v1"
-    assert committed["hero"]["source"].startswith("bench/results/v1/")
+def test_everything_the_claims_quote_is_read_from_the_ten_seeds(committed: dict):
+    assert committed["hero"]["set"] == "headline-10"
+    assert committed["hero"]["source"].startswith("bench/results/headline-10/")
     assert committed["sources"]["hero"]["path"] == committed["hero"]["source"]
-    ten = REPO / generator.HEADLINE_10 / "hero-t2_conference.json"
-    if not ten.exists():
-        with pytest.raises(SystemExit, match="cannot be the hero yet"):
-            generator.build(generator.DEFAULT_BUNDLE, None, committed, "headline-10")
+    for slice_ in (committed["headline"], committed["verdicts"]):
+        assert slice_["source"] == "bench/results/headline-10/results.json"
+    assert committed["numbers"]["r5"]["t2"]["seeds"] == 10 == committed["numbers"]["r2"]["seeds"]
 
 
 def test_the_verdicts_name_their_setting(committed: dict):
@@ -416,7 +409,7 @@ def test_the_extraction_is_the_email_as_a_recorded_call_read_it(
     assert example["email"] == recorded["email"]["body"]
     first_seq, first_effect, model, args = recorded["readings"][0]
     assert committed["sources"]["extraction"] == {
-        "path": "demo/backup/events.jsonl",
+        "path": "demo/final/events.jsonl",
         "runId": committed["sources"]["bundle"]["runId"],
         "head": committed["hashes"]["head"],
         "effect": first_effect,

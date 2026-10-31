@@ -1,5 +1,5 @@
 import type { MotionValue } from "motion/react";
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, type Ref } from "react";
 import { prefersReducedMotion } from "../../../lib/motion";
 import type { TreeSlice } from "../../data/types";
 import { fx, useProgress, type VizProps } from "../shared";
@@ -19,6 +19,8 @@ export interface SwarmTreeProps extends VizProps<TreeSlice> {
   /** "story" (the default, the one TREE_KEYFRAMES describe): slow enough to read, for a scroll.
    * "hero": about nine seconds when driven by time. */
   pacing?: Pacing;
+  /** Draw the tree to this shape, width over height, where its own picture (about 1.5 to 1) is too wide for the room it has: see `fitted`. */
+  aspect?: number;
   /** Under each node: its id; its id and name; nothing. */
   labels?: "ids" | "names" | "none";
   /** The run clock in the corner. */
@@ -41,7 +43,19 @@ const crack = (R: number): string => {
   return `M${p(0.42, -0.93)}L${p(0.57, -0.68)}L${p(0.34, -0.5)}L${p(0.5, -0.22)}`;
 };
 
-function BrainNode({ info, kill, labels, glow }: { info: NodeInfo; kill: KillInfo | undefined; labels: SwarmTreeProps["labels"]; glow: string | null }) {
+function BrainNode({
+  info,
+  kill,
+  labels,
+  glow,
+  scoreText,
+}: {
+  info: NodeInfo;
+  kill: KillInfo | undefined;
+  labels: SwarmTreeProps["labels"];
+  glow: string | null;
+  scoreText: boolean;
+}) {
   const R = info.size * U;
   const names = labels === "names";
   return (
@@ -80,7 +94,7 @@ function BrainNode({ info, kill, labels, glow }: { info: NodeInfo; kill: KillInf
       <g className="hv-score" transform={`translate(${fx(R + 10)} -9)`} opacity="0">
         <rect className="hv-score-track" y="9" width={SCORE_WIDTH} height="3" rx="1.5" />
         <rect className="hv-score-bar" y="9" width="1" height="3" rx="1.5" />
-        <text className="hv-score-text" y="0" />
+        {scoreText && <text className="hv-score-text" y="0" />}
       </g>
       {labels !== "none" && (
         <text className="hv-id" y={fx(R + 16)} textAnchor="middle">
@@ -127,15 +141,112 @@ function describe(model: TreeModel): string {
   );
 }
 
-export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", labels = "ids", clock = true, ambient = false, appear }: SwarmTreeProps) {
-  const player = useMemo(() => treePlayer(data, pacing), [data, pacing]);
+export interface TreeSvgProps {
+  svgRef: Ref<SVGSVGElement>;
+  model: TreeModel;
+  labels: NonNullable<SwarmTreeProps["labels"]>;
+  clock: boolean;
+  ambient: boolean;
+  className?: string | undefined;
+  /** What a screen reader is told about the picture; the recorded run's own title and description when absent. */
+  title?: string | undefined;
+  description?: string | undefined;
+  /** The number beside a candidate's score bar: the hero prints it, the click demo draws the bar alone. */
+  scoreText?: boolean | undefined;
+  /** The click demo can fill the whole memorial row, so its "KILLED" sits on the rule, where no grave covers it; the hero's is beside its row. */
+  labelOnRule?: boolean | undefined;
+}
+
+/**
+ * The tree's markup, with nothing in it moving: the parts a painter (paint.ts) finds by their data attributes and writes a frame
+ * onto. The hero's tree and the click demo are two drivers of the same drawing.
+ */
+export function TreeSvg({ svgRef, model, labels, clock, ambient, className, title = "The swarm tree", description, scoreText = true, labelOnRule = false }: TreeSvgProps) {
+  const uid = useId();
+  const glow = ambient ? `${uid.replace(/:/g, "")}-glow` : null;
+  const b = model.bounds;
+  const memorialY = Math.max(...Object.values(model.memorial).map((s) => s.y));
+  const brains = model.ids.filter((id) => model.node[id]?.kind === "brain");
+  const agents = model.ids.filter((id) => model.node[id]?.kind === "agent");
+
+  return (
+    <svg
+      ref={svgRef}
+      className={className ? `hv hv-tree ${className}` : "hv hv-tree"}
+      viewBox={`${fx(b.x0 * U)} ${fx(b.y0 * U)} ${fx((b.x1 - b.x0) * U)} ${fx((b.y1 - b.y0) * U)}`}
+      role="img"
+      aria-labelledby={`${uid}-t ${uid}-d`}
+    >
+      <title id={`${uid}-t`}>{title}</title>
+      <desc id={`${uid}-d`}>{description ?? describe(model)}</desc>
+      {glow && (
+        <defs>
+          <radialGradient id={glow}>
+            <stop className="hv-amb-stop" offset="0.5" />
+            <stop className="hv-amb-stop hv-amb-stop--peak" offset="0.66" />
+            <stop className="hv-amb-stop" offset="1" />
+          </radialGradient>
+        </defs>
+      )}
+      <g className="hv-memorial" opacity="0">
+        <line className="hv-memorial-rule" x1={fx((b.x0 + 0.2) * U)} x2={fx((b.x1 - 0.2) * U)} y1={fx((memorialY - 0.95) * U)} y2={fx((memorialY - 0.95) * U)} />
+        {labels !== "none" && (
+          <text className="hv-memorial-label" x={fx((b.x0 + 0.2) * U)} y={fx(labelOnRule ? (memorialY - 0.95) * U - 8 : memorialY * U + 4)}>
+            KILLED
+          </text>
+        )}
+      </g>
+      <g>
+        {model.ids.map((id) => (
+          <path key={id} className="hv-edge" data-edge={id} opacity="0" />
+        ))}
+      </g>
+      <g>
+        {Array.from({ length: MAX_DASHES }, (_, i) => (
+          <line key={i} className="hv-dash" data-dash={i} x1="-7" x2="7" y1="0" y2="0" opacity="0" />
+        ))}
+      </g>
+      {ambient && (
+        <g className="hv-amb" aria-hidden="true">
+          {model.ids.map((id) => (
+            <g key={id} className="hv-amb-dot" data-amb-dot={id} opacity="0">
+              <circle className="hv-amb-glow" r="8" />
+              <circle className="hv-amb-tail hv-amb-tail--far" r="1.5" />
+              <circle className="hv-amb-tail hv-amb-tail--near" r="2.1" />
+              <circle className="hv-amb-head" r="2.7" />
+            </g>
+          ))}
+        </g>
+      )}
+      <g>
+        {brains.map((id) => (
+          <BrainNode key={id} info={model.node[id] as NodeInfo} kill={model.killOf[id]} labels={labels} glow={glow} scoreText={scoreText} />
+        ))}
+        {agents.map((id) => (
+          <AgentNode key={id} info={model.node[id] as NodeInfo} labels={labels} ping={ambient} />
+        ))}
+      </g>
+      {clock && (
+        <g>
+          <text className="hv-clock-label" x={fx((b.x0 + 0.2) * U)} y={fx((b.y0 + 0.6) * U)}>
+            RUN
+          </text>
+          <text className="hv-clock" x={fx((b.x0 + 0.2) * U)} y={fx((b.y0 + 0.6) * U + 20)}>
+            0.0 s
+          </text>
+        </g>
+      )}
+    </svg>
+  );
+}
+
+export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", aspect, labels = "ids", clock = true, ambient = false, appear }: SwarmTreeProps) {
+  const player = useMemo(() => treePlayer(data, pacing, aspect), [data, pacing, aspect]);
   const { model } = player;
   const svg = useRef<SVGSVGElement>(null);
   const rig = useRef<TreeRig | null>(null);
   /** The frame the recorded layer shows now, for the ambient layer to read. */
   const shown = useRef<TreeFrame | null>(null);
-  const uid = useId();
-  const glow = ambient ? `${uid.replace(/:/g, "")}-glow` : null;
 
   const sizes = useMemo(
     () => Object.fromEntries(model.ids.map((id) => [id, { size: model.node[id]?.size ?? 0.2, brain: model.node[id]?.kind === "brain" }])),
@@ -174,78 +285,5 @@ export function SwarmTree({ progress, data, still, stillAt, className, pacing = 
     );
   }, [ambient, still, model]);
 
-  const b = model.bounds;
-  const memorialY = Math.max(...Object.values(model.memorial).map((s) => s.y));
-  const brains = model.ids.filter((id) => model.node[id]?.kind === "brain");
-  const agents = model.ids.filter((id) => model.node[id]?.kind === "agent");
-
-  return (
-    <svg
-      ref={svg}
-      className={className ? `hv hv-tree ${className}` : "hv hv-tree"}
-      viewBox={`${fx(b.x0 * U)} ${fx(b.y0 * U)} ${fx((b.x1 - b.x0) * U)} ${fx((b.y1 - b.y0) * U)}`}
-      role="img"
-      aria-labelledby={`${uid}-t ${uid}-d`}
-    >
-      <title id={`${uid}-t`}>The swarm tree</title>
-      <desc id={`${uid}-d`}>{describe(model)}</desc>
-      {glow && (
-        <defs>
-          <radialGradient id={glow}>
-            <stop className="hv-amb-stop" offset="0.5" />
-            <stop className="hv-amb-stop hv-amb-stop--peak" offset="0.66" />
-            <stop className="hv-amb-stop" offset="1" />
-          </radialGradient>
-        </defs>
-      )}
-      <g className="hv-memorial" opacity="0">
-        <line className="hv-memorial-rule" x1={fx((b.x0 + 0.2) * U)} x2={fx((b.x1 - 0.2) * U)} y1={fx((memorialY - 0.95) * U)} y2={fx((memorialY - 0.95) * U)} />
-        {labels !== "none" && (
-          <text className="hv-memorial-label" x={fx((b.x0 + 0.2) * U)} y={fx(memorialY * U + 4)}>
-            KILLED
-          </text>
-        )}
-      </g>
-      <g>
-        {model.ids.map((id) => (
-          <path key={id} className="hv-edge" data-edge={id} opacity="0" />
-        ))}
-      </g>
-      <g>
-        {Array.from({ length: MAX_DASHES }, (_, i) => (
-          <line key={i} className="hv-dash" data-dash={i} x1="-7" x2="7" y1="0" y2="0" opacity="0" />
-        ))}
-      </g>
-      {ambient && (
-        <g className="hv-amb" aria-hidden="true">
-          {model.ids.map((id) => (
-            <g key={id} className="hv-amb-dot" data-amb-dot={id} opacity="0">
-              <circle className="hv-amb-glow" r="8" />
-              <circle className="hv-amb-tail hv-amb-tail--far" r="1.5" />
-              <circle className="hv-amb-tail hv-amb-tail--near" r="2.1" />
-              <circle className="hv-amb-head" r="2.7" />
-            </g>
-          ))}
-        </g>
-      )}
-      <g>
-        {brains.map((id) => (
-          <BrainNode key={id} info={model.node[id] as NodeInfo} kill={model.killOf[id]} labels={labels} glow={glow} />
-        ))}
-        {agents.map((id) => (
-          <AgentNode key={id} info={model.node[id] as NodeInfo} labels={labels} ping={ambient} />
-        ))}
-      </g>
-      {clock && (
-        <g>
-          <text className="hv-clock-label" x={fx((b.x0 + 0.2) * U)} y={fx((b.y0 + 0.6) * U)}>
-            RUN
-          </text>
-          <text className="hv-clock" x={fx((b.x0 + 0.2) * U)} y={fx((b.y0 + 0.6) * U + 20)}>
-            0.0 s
-          </text>
-        </g>
-      )}
-    </svg>
-  );
+  return <TreeSvg svgRef={svg} model={model} labels={labels} clock={clock} ambient={ambient} className={className} />;
 }

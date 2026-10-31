@@ -18,7 +18,7 @@ export function PanelsPage() {
       title="Panels"
       lead={
         <>
-          Money, rate limits, <Term id="breaker">breakers</Term>, memory, booking conflicts and escalations, as they stood at the <Term id="playhead">playhead</Term>.
+          Money, rate limits, <Term id="breaker" focusable={false}>breakers</Term>, memory, booking conflicts and escalations, as they stood at the <Term id="playhead" focusable={false}>playhead</Term>.
         </>
       }
     >

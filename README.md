@@ -2,7 +2,7 @@
 
 > **Kill half the brains. It still finishes.**
 
-FractalSwarm is a runtime for teams of LLM agents. Its coordinators form a tree, any of them can die mid-run, the root included, and the survivors take over the work with no election and no extra tokens. Every run replays bit for bit from a hash-verified log.
+FractalSwarm is a runtime for teams of LLM agents. Its coordinators form a tree, any of them can die mid-run, the root included, and the survivors take over the work with no election. Zero LLM tokens spent on coordination. Every run this repository ships replays bit for bit from a hash-verified log.
 
 Built on Muse Spark, Muse Wonder and Llama PromptGuard 2 for the Meta Global AI Developer Hackathon.
 
@@ -14,7 +14,7 @@ uv run fractalswarm demo --verify    # no API key needed
 
 A team of LLM agents often depends on one coordinator: it plans, assigns and checks the work. When it crashes, the team waits, or does the work again.
 
-In the simplest setup the workers run inside the coordinator's process and die with it, so their calls are paid for twice. A durable supervisor fixes that: its workers survive and a standby takes over. But then you run a supervisor, a standby and something to watch them, and even an ideal one has to stop to recover.
+In the simplest setup the workers run inside the coordinator's process and die with it, so their calls are paid for twice. A durable supervisor fixes that: its workers survive and a standby takes over. But then you run a supervisor, a standby and something to watch them.
 
 **Can a team recover without one?**
 
@@ -48,11 +48,11 @@ flowchart TB
 When a coordinator stops sending heartbeats:
 
 1. **Every survivor sees the same thing.** Membership lives in the log, so all of them agree on who is dead.
-2. **Every survivor computes the same heir.** For each piece of work, the heir is the live member with the highest `hash(goal, member)`, a rule known as highest random weight (HRW). Nobody votes and nobody sends a message about it.
+2. **Every survivor computes the same heir.** For each piece of work, the heir is the live member with the highest `hash(goal, member)`, a rule known as highest random weight (HRW).
 3. **The heir adopts the work,** and every result already in the log. The dead coordinator's children re-attach to it.
 4. **The root is not special.** When the root dies, its duties move by the same rule.
 
-"No separate recovery mechanism: every survivor computes the same heir from the log with one rule (HRW), so there is no election." Takeover uses no LLM call, so coordination costs zero tokens.
+"No separate recovery mechanism: every survivor computes the same heir from the log with one rule (HRW), so there is no election." Takeover makes no LLM call.
 
 The log is still a central component. We remove the coordinator as a single point of decision, not every single point of failure.
 
@@ -61,10 +61,10 @@ The log is still a central component. We remove the coordinator as a single poin
 The hard part of the demo task, planning a conference from messy emails, is reading people.
 
 - **Muse Spark** turns human language into constraints, each linked to its source sentence. It reads the emails, places the talks, checks the work and writes the blurbs.
-- **Muse Wonder** writes the root plan and arbitrates when two agents disagree.
+- **Muse Wonder** writes the root plan. Arbitration between agents is built and tested on the fake model; the real runs we checked had no dispute to settle.
 - **Llama PromptGuard 2** runs locally and screens every email and pasted input before an agent reads it.
 
-Every Muse token goes to the problem. "Zero LLM tokens spent on coordination" is a property of the design, measured in every real run, and the rivals in this benchmark spend none either, because their supervisors are code too.
+Every Muse token goes to the problem. "Zero LLM tokens spent on coordination" is a property of the design, measured in every real run of the swarm. The rivals we built spend none either, because their supervisors are code too; the LangGraph rows do, because that pattern routes through the model (about 3% of its tokens).
 
 ## The evidence
 
@@ -72,12 +72,12 @@ We built the strongest rival we could implement fairly, and ran everything under
 
 **The headline, outcome B of the preregistration:** "Resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism."
 
-- **Against the ideal durable supervisor (`durable-max`):** a tie on preserved work, extra cost, time to recover, duplicated spend and stall time. All 18 headline runs completed and are valid (T2, C0 and C3, seeds 1–3, recorded after the handler freeze).
-- **Where it helps:** "On the real model, at the headline point (T2, C3: five coordinator crashes, half the agents killed), recovery stayed local: the swarm's coordinator-dependency time, blast radius and idle agent-seconds were below half of `durable-max`'s on every seed." At the $0 gate, on the fake model, locality tied at C2 and C3, so this is a result at one point, not a general claim.
+- **Against the ideal durable supervisor (`durable-max`):** a tie on preserved work, extra cost, time to recover, duplicated spend and stall time, and a loss on false deaths (1.90 per run against none), over ten seeds. All 80 runs completed and 79 are valid (T2, C0 and C3, seeds 1–10, recorded after the handler freeze); the exception is the swarm at C0 on seed 5, one wrong model reading with no crash.
+- **Locality:** "On the real model, at the headline point (T2, C3: five coordinator crashes, half the agents killed), locality against `durable-max` tied over ten seeds: the swarm's coordinator-dependency time, blast radius and idle agent-seconds were 0.57, 0.43 and 0.70 of its values, and at or below half on 4, 7 and 6 of the ten seeds." At the $0 gate, on the fake model, locality tied at C2 and C3 too.
 - **Where it does not:** against an external supervisor that detects and restarts within 0.5–1 s while the swarm keeps its 5 s detection, locality fails, at 13.2 and 5.7 times the supervisor's dependency time. Per process, with each coordinator process failing at the same rate, the two are comparable, and the supervisor recovers sooner. The swarm's failure detector also produces false deaths; the supervisors have none.
-- **Against an in-process supervisor (`central`), whose workers die with it,** the swarm at C3 stalled 8.2 s (T1) and 14.6 s (T2) against 62.6 and 92.6 s, with +2.6% and +6.6% extra cost against +37.7% and +75.6% (real model, 2 seeds). Most of that gap comes from the rival's design, so it is no evidence against a well-built supervisor.
+- **Against an in-process supervisor (`central`), whose workers die with it,** the swarm at C3 stalled 11.2 s against 42.8 s, with +2.4% extra cost against +67.0% on the pre-registered basis (which estimates the cost of cancelled calls), or −1.1% against +29.2% on completed calls only (real model, T2, 10 seeds). Most of that gap comes from the rival's design, so it is no evidence against a well-built supervisor.
 
-![Stall time and extra cost against coordinators killed, on the real model](bench/results/v1/hero-t2_conference.png)
+![Stall time and extra cost against coordinators killed, on the real model](bench/results/headline-10/hero-t2_conference.png)
 
 **What we do not claim:** "simpler", "cheaper" or "more reliable". Having no supervisor is not, by itself, evidence for any of them.
 
@@ -87,8 +87,8 @@ Replay proves that this code produces the recorded run from the recorded model o
 
 ```sh
 uv run fractalswarm demo --verify                 # replays a real recorded run, opens the UI
-uv run fractalswarm replay demo/backup --verify   # MATCH or MISMATCH, with the head hash
-uv run fractalswarm takeover demo/backup          # recomputes every heir from the log
+uv run fractalswarm replay demo/final --verify    # MATCH or MISMATCH, with the head hash
+uv run fractalswarm takeover demo/final           # recomputes every heir from the log
 ```
 
 ## Run it

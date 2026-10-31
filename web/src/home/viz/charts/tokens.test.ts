@@ -30,10 +30,10 @@ const model = tokenModel(data);
 describe("the token bar's model", () => {
   it("cuts the run's tokens by model, the larger first, and counts what was read and what was written", () => {
     expect(model.rows.map((r) => [r.model, r.tokens, r.input, r.output, r.reasoning, r.calls])).toEqual([
-      ["muse-spark-1.3", 274797, 196682, 78115, 50816, 78],
-      ["muse-wonder-1.0", 4370, 2037, 2333, 1685, 1],
+      ["muse-spark-1.3", 285430, 211773, 73657, 48878, 76],
+      ["muse-wonder-1.0", 4590, 2037, 2553, 1866, 1],
     ]);
-    expect(model.total).toBe(279167);
+    expect(model.total).toBe(290020);
     expect(model.rows.reduce((a, r) => a + r.share, 0)).toBeCloseTo(1, 12);
     expect(model.rows.map((r) => percent(r.share))).toEqual(["98%", "1.6%"]);
   });
@@ -75,9 +75,9 @@ describe("the token bar's model", () => {
 
   it("tells it all in its text alternative, reasoning as part of what was written, and the guard as spending nothing", () => {
     const text = tokenSummary(model);
-    expect(text).toContain("279,167 in all");
-    expect(text).toContain("Muse Spark 1.3 274,797 tokens, 98% (196,682 read and 78,115 written, 50,816 of those written while reasoning; 78 calls)");
-    expect(text).toContain("Muse Wonder 1.0 4,370 tokens, 1.6% (2,037 read and 2,333 written, 1,685 of those written while reasoning; 1 call)");
+    expect(text).toContain("290,020 in all");
+    expect(text).toContain("Muse Spark 1.3 285,430 tokens, 98% (211,773 read and 73,657 written, 48,878 of those written while reasoning; 76 calls)");
+    expect(text).toContain("Muse Wonder 1.0 4,590 tokens, 1.6% (2,037 read and 2,553 written, 1,866 of those written while reasoning; 1 call)");
     expect(text).toContain("Llama PromptGuard 2 (22M) read the inputs before any model did: 32 scans, 32 allowed, and spent no tokens.");
     expect(text).toContain("Coordination tokens 0, recovery tokens 0.");
     expect(text).not.toMatch(/\b(simpler|cheaper|more reliable|better|worse)\b/i);
@@ -140,15 +140,15 @@ describe("the token bar's layout", () => {
     const wide = tokenLayout(model, 1480, 56);
     expect([wide.tier, wide.legendRows, wide.barH]).toEqual(["full", 1, 22]);
     expect(wide.legend.map((l) => l.text)).toEqual([
-      "Muse Spark 1.3 · 274,797 tokens, 98%",
-      "Muse Wonder 1.0 · 4,370 tokens, 1.6%",
+      "Muse Spark 1.3 · 285,430 tokens, 98%",
+      "Muse Wonder 1.0 · 4,590 tokens, 1.6%",
       "Llama PromptGuard 2 (22M) · 32 scans, 32 allowed",
     ]);
     const mid = tokenLayout(model, 900, 56);
     expect([mid.tier, mid.legendRows, mid.barH]).toEqual(["full", 2, 16]);
     const phone = tokenLayout(model, 390, 56);
     expect([phone.tier, phone.legendRows]).toEqual(["short", 2]);
-    expect(phone.legend.map((l) => l.text)).toEqual(["Muse Spark 275k", "Muse Wonder 4.4k", "PromptGuard 2 32 scans"]);
+    expect(phone.legend.map((l) => l.text)).toEqual(["Muse Spark 285k", "Muse Wonder 4.6k", "PromptGuard 2 32 scans"]);
   });
 
   it("gives the guard a mark of its own and no part of the bar", () => {
@@ -235,15 +235,15 @@ describe("TokenBar markup", () => {
 
   it("draws a segment for each model, with the model's numbers in its tooltip, and a legend with the guard in it", () => {
     expect(html.match(/class="hv-tk-seg hv-tk-seg--/g)).toHaveLength(2);
-    expect(html).toContain("Muse Spark 1.3: 274,797 tokens, 98% of the run&#x27;s tokens. 196,682 read, 78,115 written, 50,816 of those written while reasoning; 78 calls.");
-    expect(html).toContain(">Muse Wonder 1.0 · 4,370 tokens, 1.6%<");
+    expect(html).toContain("Muse Spark 1.3: 285,430 tokens, 98% of the run&#x27;s tokens. 211,773 read, 73,657 written, 48,878 of those written while reasoning; 76 calls.");
+    expect(html).toContain(">Muse Wonder 1.0 · 4,590 tokens, 1.6%<");
     expect(html).toContain(">Llama PromptGuard 2 (22M) · 32 scans, 32 allowed<");
     expect(html.match(/class="hv-tk-dot hv-tk-dot--guard"/g)).toHaveLength(1);
   });
 
   it("is an image with a text alternative, and the same numbers as a table", () => {
     expect(html).toContain('role="img"');
-    expect(html).toContain("Tokens by model in the recorded run, 279,167 in all");
+    expect(html).toContain("Tokens by model in the recorded run, 290,020 in all");
     expect(html.match(/<table/g)).toHaveLength(1);
     expect(html).toContain('<th scope="row">Muse Spark 1.3</th>');
     expect(html).toContain("<td>32 scans, 32 allowed</td>");

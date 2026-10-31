@@ -6,7 +6,7 @@ import { MetricChart } from "../components/charts/MetricChart";
 import { ResultsTable } from "../components/charts/ResultsTable";
 import { SeriesKey } from "../components/charts/SeriesKey";
 import { SetCaption, SetPicker } from "../components/charts/SetHeader";
-import { Card, EmptyState, PageHeader, Skeleton, SkeletonGroup } from "../components/ui";
+import { Card, Details, EmptyState, PageHeader, Skeleton, SkeletonGroup } from "../components/ui";
 import { benchResults, listRuns } from "../lib/api";
 import { heroSets, runCount, type HeroSet } from "../lib/hero";
 import { drawsInProcess, IN_PROCESS_REASON, isFlat } from "../lib/heroText";
@@ -100,13 +100,7 @@ function ChartsBody({ sets, runs }: { sets: HeroSet[]; runs: ReadonlySet<string>
         }}
       />
       <SetCaption set={set} />
-      <div className="charts__controls">
-        <SeriesKey series={hero.series} colors={colors} hidden={hidden} onToggle={toggle} />
-        <label className="checkline">
-          <input type="checkbox" checked={showBand} onChange={(event) => setShowBand(event.target.checked)} />
-          Show the lowest to highest seed
-        </label>
-      </div>
+      <SeriesKey series={hero.series} colors={colors} hidden={hidden} />
       <div className="charts__hero">
         <MetricChart {...chart} metric="stallS" height={340} />
         <MetricChart {...chart} metric="extraCostPct" height={340} />
@@ -138,11 +132,17 @@ function ChartsBody({ sets, runs }: { sets: HeroSet[]; runs: ReadonlySet<string>
           <MetricChart {...chart} metric="coordinationTokens" height={220} />
         )}
       </div>
-      <details className="panel charts__table">
-        <summary>Table view: every number of the charts</summary>
+      <Details id="more" summary="Hide a workflow, show the band of seeds, or read every number" hint="the table of the charts is here">
+        <div className="charts__controls">
+          <SeriesKey series={hero.series} colors={colors} hidden={hidden} onToggle={toggle} />
+          <label className="checkline">
+            <input type="checkbox" checked={showBand} onChange={(event) => setShowBand(event.target.checked)} />
+            Show the lowest to highest seed
+          </label>
+        </div>
         <ResultsTable hero={hero} knownRuns={runs} />
         <p className="muted charts__tablenote">A run is a link when this server has it; open it to replay and verify it.</p>
-      </details>
+      </Details>
       {hero.note && <p className="muted">{hero.note}</p>}
     </div>
   );

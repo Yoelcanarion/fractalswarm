@@ -10,6 +10,7 @@ import { readCallDetail, readCalls, readMeter, type CallDetail } from "../../lib
 import { loadFixture, renderCurrent, Stream } from "../../lib/testing";
 import type { RunEvent } from "../../lib/types";
 import { createRunStore, RunStoreProvider, type RunApi, type RunStoreApi } from "../../store";
+import { RunStrip } from "../RunStrip";
 import { TakeoverChip } from "../TakeoverChip";
 import { CallView } from "./CallView";
 import { LensDock } from "./LensDock";
@@ -120,6 +121,30 @@ describe("the Muse meter", () => {
     const t = text(render(run, MuseMeter));
     expect(t).toContain("27 calls lost · $0.1458");
     expect(t).toContain("coordination tokens 0 · recovery tokens 0");
+  });
+
+  it("says one call lost in the singular", async () => {
+    const calls = readCalls(central.calls);
+    // every call settles but one that was lost, and the playhead is past them all
+    const lost = calls.calls.find((call) => call.status === "cancelled" && call.ended_ts !== null)!;
+    calls.calls = calls.calls.map((call) => (call === lost ? call : { ...call, status: "ok" as const }));
+    const { run } = await opened(central, { calls: async () => calls, meter: async () => null });
+    run.getState().seek(3);
+    run.setState({ playhead: Number.MAX_SAFE_INTEGER });
+    const t = text(render(run, MuseMeter));
+    expect(t).toMatch(/ 1 call lost · \$/);
+    expect(t).not.toContain("1 calls lost");
+  });
+
+  it("is a fold in the run strip, under words a first view can read, so the strip is one row of the two proofs", async () => {
+    const { run } = await opened(demo);
+    run.getState().seek(3);
+    const html = render(run, RunStrip);
+    expect(html).toMatch(/<details id="meter" class="disclosure disclosure--menu meter-fold">/);
+    expect(text(html)).toContain("What the models cost");
+    expect(html).toContain("runstrip__proof");
+    // inside it the meter is what it was
+    expect(text(html)).toContain("Muse meter");
   });
 
   it("warns when a run spent tokens on coordination", async () => {
@@ -384,12 +409,29 @@ describe("the takeover chip", () => {
     expect(await chip(undefined)).toBe("");
   });
 
-  it("opens the detail from the keyboard: the chip is a tab stop with the server's words in its hint", async () => {
+  it("does not ask for the check of a supervisor's log: its server answers 501, which is a red line in the console", async () => {
+    const supervisor = new Stream().at(0).emit("run.started", "@kernel", { seed: "0", scenario: "t", params: {}, clock: "sim" });
+    supervisor.at(900).emit("baseline.crashed", "@env", { actor: "central" }).at(2000).emit("run.completed", "@kernel");
+    let asked = 0;
+    const takeover: RunApi["takeover"] = async () => {
+      asked += 1;
+      return counted;
+    };
+    expect(await chip(takeover, supervisor.events)).toBe("");
+    expect(asked).toBe(0);
+    // a swarm's log is asked, as before
+    expect(await chip(takeover, handedOver())).not.toBe("");
+    expect(asked).toBe(1);
+  });
+
+  it("says the server's words in its hint, as a hover and as text for a screen reader, and is not a tab stop", async () => {
     const { run } = await opened(demo, {}, { takeover: async () => ({ ...counted, heirs: 6, adoptions: 5, kills: 5 }), loadAllEvents: async () => log() });
     await run.getState().runTakeover();
     const html = render(run, TakeoverChip);
-    expect(html).toMatch(/<span class="tip"[^>]* tabindex="0"[^>]*><span class="badge badge--good badge--big">Takeover OK/);
+    expect(html).toMatch(/<span class="tip"[^>]*><span class="badge badge--good badge--big">Takeover OK/);
+    expect(html).not.toContain("tabindex");
     expect(html).toContain('role="tooltip"');
+    expect(html).toContain('class="sr-only"');
     expect(html).not.toContain("title=");
   });
 

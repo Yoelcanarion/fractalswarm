@@ -214,7 +214,7 @@ export function caller(fetcher: Fetcher = (input, init) => fetch(input, init)) {
   };
 }
 
-export function createIntakeApi(fetcher?: Fetcher) {
+export function createIntakeApi(fetcher: Fetcher = (input, init) => fetch(input, init)) {
   const call = caller(fetcher);
   const id = encodeURIComponent;
   return {
@@ -226,6 +226,17 @@ export function createIntakeApi(fetcher?: Fetcher) {
     preflight: (kind: Kind, body: Record<string, unknown>): Promise<Outcome<Preflight>> => call("POST", PREFLIGHT_PATHS[kind], body, readPreflight),
     launchTask: (body: Record<string, unknown>) => call("POST", "api/tasks", body, readTaskLaunch),
     launchArena: (body: Record<string, unknown>) => call("POST", "api/arena", body, readArenaLaunch),
+    /** The ids of the runs the server lists, none when it cannot be reached: a launch is accepted before its runs are on the list. Never throws. */
+    listedRuns: async (): Promise<Set<string>> => {
+      try {
+        const response = await fetcher("api/runs", undefined);
+        const raw: unknown = response.ok ? await response.json().catch(() => null) : null;
+        const ids = Array.isArray(raw) ? raw.map((row: unknown) => (row as { id?: unknown } | null)?.id) : [];
+        return new Set(ids.filter((value): value is string => typeof value === "string"));
+      } catch {
+        return new Set();
+      }
+    },
   };
 }
 

@@ -1,3 +1,4 @@
+import { notReproduced, notReproducedWords } from "../lib/catalogue";
 import { BuildVerified } from "../static/BuildVerified";
 import { useRunStore } from "../store";
 import { Hint } from "./ui";
@@ -29,15 +30,23 @@ export function VerifyBadge() {
         // The static showcase has no server to replay on: its report was made when the page was built.
         if (import.meta.env.MODE === "static") return <BuildVerified report={report} />;
         return (
-          <Hint focusable label={`${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head}`}>
+          <Hint label={`${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head}`}>
             <span className="badge badge--good badge--big">
               Replay verified ✓ hash match <span className="mono verify__head">{report.replayed_head.slice(0, 12)}</span>
             </span>
           </Hint>
         );
       }
+      // an intact log that this code does not reproduce is not a broken product: amber, in words that say only that; red stays for a broken chain
+      if (notReproduced(report)) {
+        return (
+          <Hint label={report.detail}>
+            <span className="badge badge--warn badge--big">{notReproducedWords(report)}</span>
+          </Hint>
+        );
+      }
       return (
-        <Hint focusable label={report.detail}>
+        <Hint label={report.detail}>
           <span className="badge badge--bad badge--big">✕ Replay MISMATCH at seq {report.first_divergence ?? "?"}</span>
         </Hint>
       );

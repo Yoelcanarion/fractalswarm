@@ -43,9 +43,10 @@ from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, JSONResponse
+from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
+from starlette.types import Scope
 
 from fractalswarm.api import arena, jobs
 from fractalswarm.api.catalog import Catalog, RunEntry
@@ -80,15 +81,28 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 # The first file found wins; bench/charts.py writes one of these.
 HERO_FILES = ("hero_chart.json", "hero.json", "charts.json")
 # The recorded results as committed, one hero chart per matrix (bench/results/<set>/). Every one
-# that exists is offered as a set, so the Charts page can show the 2-seed rivals matrix, the 3-seed
-# headline and the $0 gate (fake LLM) apart. Which of them is real is for the page to say.
+# that exists is offered as a set, so the Charts page can show the ten seeds the claims quote, the
+# 2-seed rivals matrix, the 3-seed headline and the $0 gate (fake LLM) apart. Which of them is real
+# is for the page to say.
 HERO_SETS = {
+    "headline-10": "headline-10/hero-t2_conference.json",
     "v1": "v1/hero-t2_conference.json",
     "headline": "headline/hero-t2_conference.json",
     "rivals-gate": "rivals-gate/hero-t2_conference.json",
 }
 BUDGET_LEVELS = ("contract", "squad", "run", "project")
 MAX_PAGE = 5000
+
+
+class BuiltPage(StaticFiles):
+    """The built app. Its assets carry a hash in their names and may be cached, but ``index.html``
+    names them, so a browser must ask for it each time or a new build stays hidden."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        if path in (".", "index.html"):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
 
 
 def create_app(
@@ -476,11 +490,16 @@ def create_app(
         return JSONResponse(started, status_code=202)
 
     async def list_pairs(request: Request) -> JSONResponse:
-        return JSONResponse(arena.list_pairs(need_private()[1]))
+        recorded = arena.list_pairs(manager) if manager is not None else []
+        return JSONResponse(arena.bundled_pairs(demo_dir) + recorded)
 
     async def get_pair(request: Request) -> JSONResponse:
+        pair_id = request.path_params["pair_id"]
+        for pair in arena.bundled_pairs(demo_dir):
+            if pair["pair_id"] == pair_id:
+                return JSONResponse(pair)
         try:
-            return JSONResponse(arena.get_pair(need_private()[1], request.path_params["pair_id"]))
+            return JSONResponse(arena.get_pair(need_private()[1], pair_id))
         except JobError as exc:
             raise job_error(exc) from None
 
@@ -681,7 +700,7 @@ def create_app(
         Route("/api/runs/{run_id}/escalations/{eid}", answer_escalation, methods=["POST"]),
     ]
     if (static_dir / "index.html").is_file():
-        routes.append(Mount("/", StaticFiles(directory=static_dir, html=True)))
+        routes.append(Mount("/", BuiltPage(directory=static_dir, html=True)))
     else:
         routes.append(Route("/", ui))
     return Starlette(

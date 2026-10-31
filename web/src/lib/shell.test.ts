@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EVIDENCE_HASHES, EVIDENCE_VIEWS, isEvidence, pageName, pageTitle, pickedRunHash, PLACES, placeOf, RUN_VIEWS, RUN_VIEW_TITLES, runViewHash, type Where } from "./shell";
+import { EVIDENCE_HASHES, EVIDENCE_VIEWS, evidenceViewsShown, isEvidence, pageName, pageTitle, pickedRunHash, PLACES, placeOf, RUN_VIEWS, RUN_VIEW_TITLES, runViewHash, runViewsShown, type Where } from "./shell";
 
 describe("the places", () => {
   it("are the four the brief names, in order, each with a link of its own", () => {
@@ -29,6 +29,20 @@ describe("the places", () => {
   });
 });
 
+describe("the evidence's row", () => {
+  it("waits for an ablation to be on record before it shows that tab, and keeps the page's own address", () => {
+    expect(evidenceViewsShown("charts", false)).toEqual(["charts", "helps"]);
+    expect(evidenceViewsShown("helps", false)).toEqual(["charts", "helps"]);
+    expect(evidenceViewsShown("charts", true)).toEqual([...EVIDENCE_VIEWS]);
+    expect(EVIDENCE_HASHES.ablation).toBe("#/ablation");
+  });
+
+  it("shows the tab of the page the person is on, recorded or not", () => {
+    expect(evidenceViewsShown("ablation", false)).toEqual([...EVIDENCE_VIEWS]);
+    expect(evidenceViewsShown("ablation", true)).toEqual([...EVIDENCE_VIEWS]);
+  });
+});
+
 describe("a run's views", () => {
   it("are six, named, and link to the run with the overview at the bare path", () => {
     expect(RUN_VIEWS.map((view) => RUN_VIEW_TITLES[view])).toEqual(["Run", "Plan", "Panels", "Security", "Results", "Events"]);
@@ -47,13 +61,30 @@ describe("a run's views", () => {
   });
 });
 
+describe("which of a run's views the row shows", () => {
+  it("are two, Run and Results, and the one the person is on, with the rest in the menu, each in the order of the six", () => {
+    expect(runViewsShown("overview")).toEqual({ shown: ["overview", "results"], more: ["plan", "panels", "security", "events"] });
+    expect(runViewsShown("results")).toEqual({ shown: ["overview", "results"], more: ["plan", "panels", "security", "events"] });
+    expect(runViewsShown("plan")).toEqual({ shown: ["overview", "plan", "results"], more: ["panels", "security", "events"] });
+    expect(runViewsShown("events")).toEqual({ shown: ["overview", "results", "events"], more: ["plan", "panels", "security"] });
+  });
+
+  it("lose none of the six between the row and the menu", () => {
+    for (const view of RUN_VIEWS) {
+      const { shown, more } = runViewsShown(view);
+      expect([...shown, ...more].sort()).toEqual([...RUN_VIEWS].sort());
+      expect(shown).toContain(view);
+    }
+  });
+});
+
 describe("the page's name and the tab's title", () => {
   const cases: [Where, string | null, string, string][] = [
     [{ page: "arena" }, null, "Arena", "Arena · FractalSwarm"],
     [{ page: "intake" }, null, "New task", "New task · FractalSwarm"],
     [{ page: "runs" }, null, "Runs", "Runs · FractalSwarm"],
     [{ page: "charts" }, null, "Charts", "Charts · FractalSwarm"],
-    [{ page: "helps" }, null, "Where it helps", "Where it helps · FractalSwarm"],
+    [{ page: "helps" }, null, "Trade-offs", "Trade-offs · FractalSwarm"],
     [{ page: "ablation" }, null, "Ablation", "Ablation · FractalSwarm"],
     [{ page: "run", runId: "demo-backup", view: "plan" }, "other", "Plan · demo-backup", "Plan · demo-backup · FractalSwarm"],
   ];

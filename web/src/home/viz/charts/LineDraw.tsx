@@ -74,7 +74,7 @@ export function LineDraw({ progress, data, still, stillAt, className, setting = 
           {L.panels.flatMap((panel, pi) =>
             GROUPS.map((group) => (
               <clipPath key={`${pi}-${group}`} id={clip(pi, group)}>
-                <rect data-wipe={group} data-panel={pi} x={fx(panel.left)} y={fx(panel.top - 10)} width={fx(panel.right - panel.left + 14)} height={fx(panel.bottom - panel.top + 20)} />
+                <rect data-wipe={group} data-panel={pi} x={fx(panel.left)} y={fx(panel.top - 10)} width={fx(Math.max(0, panel.right - panel.left + 14))} height={fx(Math.max(0, panel.bottom - panel.top + 20))} />
               </clipPath>
             )),
           )}

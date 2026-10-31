@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { Details } from "../components/ui";
+
 import { BOX_LIMIT, formProblems, roomsOf, type Backend, type ReadingForm } from "./launch";
 import { LIMITS } from "./validate";
 
@@ -61,6 +63,8 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, busy
   const problems = formProblems(form);
   const roomProblems = roomsOf(form.rooms).problems;
   const real = backend === "real";
+  // what the optional fields hold is shown, never folded away: the sample text fills them
+  const moreFilled = form.notes !== "" || form.conference !== "" || form.rooms.length > 0;
   return (
     <div className="intake__form">
       <div className="intake__fields">
@@ -71,70 +75,81 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, busy
           <textarea className="field__box" rows={14} value={form.talks} onChange={(event) => set("talks", event.target.value)} spellCheck={false} autoComplete="off" placeholder="Submission 1&#10;Title: …&#10;Speaker: …&#10;Abstract: …" />
           <span className="field__count mono">{count(form.talks)}</span>
         </label>
-        <label className="field">
-          <span className="field__label">
-            Emails or notes <span className="field__hint">availability, preferences, how many are expected. Optional.</span>
-          </span>
-          <textarea className="field__box" rows={10} value={form.notes} onChange={(event) => set("notes", event.target.value)} spellCheck={false} autoComplete="off" />
-          <span className="field__count mono">{count(form.notes)}</span>
-        </label>
-        <label className="field field--line">
-          <span className="field__label">
-            Conference <span className="field__hint">a name or a line about it. Optional.</span>
-          </span>
-          <input value={form.conference} onChange={(event) => set("conference", event.target.value)} autoComplete="off" />
-        </label>
-        <fieldset className="rooms">
-          <legend className="field__label">
-            Rooms <span className="field__hint">optional: none means the program&rsquo;s default rooms.</span>
-          </legend>
-          {form.rooms.map((room, i) => (
-            <div key={i} className="rooms__row">
-              <input aria-label={`Room ${i + 1} name`} placeholder="Name" value={room.name} onChange={(event) => set("rooms", form.rooms.map((r, j) => (j === i ? { ...r, name: event.target.value } : r)))} />
-              <input
-                aria-label={`Room ${i + 1} capacity`}
-                className="rooms__capacity"
-                inputMode="numeric"
-                placeholder="Seats"
-                value={room.capacity}
-                onChange={(event) => set("rooms", form.rooms.map((r, j) => (j === i ? { ...r, capacity: event.target.value } : r)))}
-              />
-              <button type="button" className="btn" aria-label={`Remove room ${i + 1}`} onClick={() => set("rooms", form.rooms.filter((_, j) => j !== i))}>
-                Remove
+        <Details id="more" summary="Add emails, notes, rooms or a conference name" hint="all optional" open={moreFilled}>
+          <div className="intake__fields">
+            <label className="field">
+              <span className="field__label">
+                Emails or notes <span className="field__hint">availability, preferences, how many are expected. Optional.</span>
+              </span>
+              <textarea className="field__box" rows={10} value={form.notes} onChange={(event) => set("notes", event.target.value)} spellCheck={false} autoComplete="off" />
+              <span className="field__count mono">{count(form.notes)}</span>
+            </label>
+            <label className="field field--line">
+              <span className="field__label">
+                Conference <span className="field__hint">a name or a line about it. Optional.</span>
+              </span>
+              <input value={form.conference} onChange={(event) => set("conference", event.target.value)} autoComplete="off" />
+            </label>
+            <fieldset className="rooms">
+              <legend className="field__label">
+                Rooms <span className="field__hint">optional: none means the program&rsquo;s default rooms.</span>
+              </legend>
+              {form.rooms.map((room, i) => (
+                <div key={i} className="rooms__row">
+                  <input aria-label={`Room ${i + 1} name`} placeholder="Name" value={room.name} onChange={(event) => set("rooms", form.rooms.map((r, j) => (j === i ? { ...r, name: event.target.value } : r)))} />
+                  <input
+                    aria-label={`Room ${i + 1} capacity`}
+                    className="rooms__capacity"
+                    inputMode="numeric"
+                    placeholder="Seats"
+                    value={room.capacity}
+                    onChange={(event) => set("rooms", form.rooms.map((r, j) => (j === i ? { ...r, capacity: event.target.value } : r)))}
+                  />
+                  <button type="button" className="btn" aria-label={`Remove room ${i + 1}`} onClick={() => set("rooms", form.rooms.filter((_, j) => j !== i))}>
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button type="button" className="btn" onClick={() => set("rooms", [...form.rooms, { name: "", capacity: "" }])}>
+                Add a room
+              </button>
+              {roomProblems.length > 0 && <p className="field__problem">{roomProblems.join("; ")}.</p>}
+            </fieldset>
+            <label className="check">
+              <input type="checkbox" checked={form.names} onChange={(event) => set("names", event.target.checked)} />
+              Also replace the speakers&rsquo; names with &ldquo;Speaker NN&rdquo; in what the agents read
+            </label>
+            <div>
+              <button type="button" className="btn" disabled={busy || (form.talks === "" && form.notes === "" && form.conference === "" && form.rooms.length === 0)} onClick={onClear}>
+                Clear everything
               </button>
             </div>
-          ))}
-          <button type="button" className="btn" onClick={() => set("rooms", [...form.rooms, { name: "", capacity: "" }])}>
-            Add a room
-          </button>
-          {roomProblems.length > 0 && <p className="field__problem">{roomProblems.join("; ")}.</p>}
-        </fieldset>
-        <label className="check">
-          <input type="checkbox" checked={form.names} onChange={(event) => set("names", event.target.checked)} />
-          Also replace the speakers&rsquo; names with &ldquo;Speaker NN&rdquo; in what the agents read
-        </label>
+          </div>
+        </Details>
       </div>
 
       <div className="intake__side">
         <ShapeCard />
         <PrivacyNotice backend={backend} />
-        <fieldset className="reader">
-          <legend className="panel__title">Reader</legend>
-          <label className="reader__choice">
-            <input type="radio" name="reader" checked={!real} onChange={() => onBackend("fake")} />
-            <span>
-              <b>Practice reader</b> · free
-              <span className="reader__says">Runs on this machine. It understands only the sample&rsquo;s wording.</span>
-            </span>
-          </label>
-          <label className={`reader__choice${realAllowed ? "" : " reader__choice--off"}`}>
-            <input type="radio" name="reader" checked={real} disabled={!realAllowed} onChange={() => onBackend("real")} />
-            <span>
-              <b>Muse</b> · billed
-              <span className="reader__says">{realAllowed ? "Reads any wording. The cost is checked first." : "Billed launches are off on this server."}</span>
-            </span>
-          </label>
-        </fieldset>
+        <Details id="reader" summary="Reader" hint={real ? "Muse · billed" : "the practice reader · free"} open={real}>
+          <fieldset className="reader">
+            <legend className="sr-only">Reader</legend>
+            <label className="reader__choice">
+              <input type="radio" name="reader" checked={!real} onChange={() => onBackend("fake")} />
+              <span>
+                <b>Practice reader</b> · free
+                <span className="reader__says">Runs on this machine. It understands only the sample&rsquo;s wording.</span>
+              </span>
+            </label>
+            <label className={`reader__choice${realAllowed ? "" : " reader__choice--off"}`}>
+              <input type="radio" name="reader" checked={real} disabled={!realAllowed} onChange={() => onBackend("real")} />
+              <span>
+                <b>Muse</b> · billed
+                <span className="reader__says">{realAllowed ? "Reads any wording. The cost is checked first." : "Billed launches are off on this server."}</span>
+              </span>
+            </label>
+          </fieldset>
+        </Details>
         <div className="intake__actions">
           {!real && (
             <button type="button" className="btn btn--big btn--on" disabled={busy || problems.length > 0} onClick={onRead}>
@@ -143,9 +158,6 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, busy
           )}
           <button type="button" className="btn" disabled={sampling || busy} onClick={onSample}>
             {sampling ? "Loading…" : "Use the sample text"}
-          </button>
-          <button type="button" className="btn" disabled={busy || (form.talks === "" && form.notes === "" && form.conference === "" && form.rooms.length === 0)} onClick={onClear}>
-            Clear
           </button>
         </div>
         {real && problems.length === 0 && spend}

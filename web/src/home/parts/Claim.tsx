@@ -15,16 +15,27 @@ export function PendingTag({ children = "PENDING" }: { children?: ReactNode }) {
 export const sentences = (text: string): string[] => text.split(/(?<=[.!?])\s+/);
 
 /** A claim, in the words of its row of docs/claims.md. A row that is still pending wears a PENDING tag; a row that is
- * not claimed is never drawn. With no data yet it shows the row's id and says so. `lines` sets each sentence on its own line. */
-export function Claim({ id, className = "", lines = false }: { id: ClaimId; className?: string; lines?: boolean }) {
+ * not claimed is never drawn. With no data yet it shows the row's id and says so. `lines` sets each sentence on its own line.
+ * `part` draws one sentence of it (0 is the first), unchanged: the home page opens with the first sentence of R6 and folds the second. */
+export function Claim({ id, className = "", lines = false, part }: { id: ClaimId; className?: string; lines?: boolean; part?: number }) {
   const story = useStory();
   const claim = resolveClaim(story, id);
   if (claim?.state === "refused") return null;
+  const all = claim ? sentences(claim.text) : [];
+  const only = part === undefined ? null : (all[part] ?? null);
+  if (claim && part !== undefined && only === null) return null; // the row has no such sentence: nothing, never the whole claim
   return (
-    <p className={`home-claim ${className}`.trim()} data-claim={id} data-state={claim?.state ?? "missing"}>
+    <p
+      className={`home-claim ${className}`.trim()}
+      data-claim={id}
+      data-state={claim?.state ?? "missing"}
+      data-part={part === undefined ? undefined : `${part + 1}/${all.length}`}
+    >
       {claim ? (
-        lines ? (
-          sentences(claim.text).map((sentence, i) => (
+        only !== null ? (
+          <Inline text={only} />
+        ) : lines ? (
+          all.map((sentence, i) => (
             <span key={i} className="home-claim__line">
               <Inline text={sentence} />{" "}
             </span>

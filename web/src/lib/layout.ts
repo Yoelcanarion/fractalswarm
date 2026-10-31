@@ -14,18 +14,45 @@ export interface Placed {
   depth: number;
   x: number;
   y: number;
+  /** What it hangs from in the picture: the nearest ancestor still standing in the tree (see ``forestOf``), or null for a root and for the fallen. */
+  parent: string | null;
+  /** A dead brain that handed over everything it held: it has left the tree for the row of the fallen under it. */
+  fallen: boolean;
+  /** The box of the card as it is drawn (the camera frames these): the layout's own, which the card's size in styles.css has to match. */
+  width: number;
+  height: number;
 }
 
-export const LEVEL_GAP = 150;
-export const NODE_WIDTH = 150; // keep in sync with .actor in styles.css
-export const LEAF_WIDTH = 112; // .actor--leaf
-const GAP = 22;
+// A card is its id and, where it applies, one short line. Keep the three widths in sync with .actor in styles.css. The whole tree has to
+// fit a page with its labels at a size a person can read, so the cards are small and the camera (components/useTreeMotion.ts) zooms in.
+export const LEVEL_GAP = 80;
+export const NODE_WIDTH = 100;
+export const LEAF_WIDTH = 84; // .actor--leaf
+export const FALLEN_WIDTH = 76; // .actor--fallen
+const GAP = 16;
 
 export const nodeWidth = (kind: string): number => (isLeafKind(kind) ? LEAF_WIDTH : NODE_WIDTH);
+/** The width a card has where it is drawn: the fallen are narrower than the brains still standing. */
+export const placedWidth = (_state: ViewState, placed: Placed): number => placed.width;
+
+/** The tree turned on its side, for a phone: the levels are columns and the siblings are stacked, so the whole of it is drawn at a scale of one,
+ * in screen pixels, and its ids are as large as the type scale's floor. A row of a dozen agents is wider than the screen at any size a person can
+ * read, and a column of them is only taller (the page scrolls). Keep the widths in sync with `.actor--across` in styles.css. */
+export const ACROSS = {
+  node: 54,
+  leaf: 62,
+  fallen: 58,
+  height: 27,
+  /** between the cards of a column, and between two columns (where the lines run) */
+  gap: 4,
+  level: 12,
+  /** the camera's margin round the tree, in pixels */
+  pad: 8,
+} as const;
 
 // Roughly the height of a card; the camera only needs the extent of the tree to within a few
 // pixels, and fits it with padding.
-export const NODE_HEIGHT = 64;
+export const NODE_HEIGHT = 44;
 
 // The blackboard, the chaos network and the chaos monkey are actors of the run, not of its
 // orchestrator tree. Laid out as roots they sit far to either side and shrink the tree to fit.
@@ -36,20 +63,80 @@ export function childrenOf(state: ViewState, parent: string | null): string[] {
   return state.order.filter((id) => state.actors[id].parent === parent);
 }
 
-/** Roots first (spawn order), each subtree given the width of its widest level, parents
- * centred over their children. ``x`` is the node's left edge. Pure: the same view always
- * gives the same layout. */
-export function layoutTree(state: ViewState): Placed[] {
-  const kids = new Map<string, string[]>();
-  const width = new Map<string, number>();
-  const seen = new Set<string>();
+export interface Forest {
+  /** The dead brains that have nothing left to hand over, in the order they died. */
+  fallen: string[];
+  /** Every actor of the tree and what it hangs from: the nearest ancestor that has not fallen, or null. */
+  parent: Map<string, string | null>;
+}
 
-  const measure = (id: string): number => {
+/** The tree as it is drawn. A brain that has died stays where it was, with its children hanging from it, for as long as it still holds
+ * something (the log's ownership says so, until a takeover moves the last key): that is the picture of a death. When its last duty is
+ * handed over it leaves for the row of the fallen, and what hung from it hangs from whoever took it over; so after the root has died
+ * three times the tree is not three rows deeper, and its root is the brain that holds the root duty. A run that logs no ownership
+ * (a baseline) has nothing to hand over: its dead stay where they fell. Pure: the same view always gives the same picture. */
+export function forestOf(state: ViewState): Forest {
+  const known = forests.get(state);
+  if (known) return known;
+  const forest = buildForest(state);
+  forests.set(state, forest);
+  return forest;
+}
+
+const forests = new WeakMap<ViewState, Forest>();
+
+function buildForest(state: ViewState): Forest {
+  const holders = new Set(Object.values(state.ownership));
+  const inTree = state.order.filter((id) => !isInfraKind(state.actors[id].kind));
+  const fallen = (id: string): boolean => {
+    const actor = state.actors[id];
+    return holders.size > 0 && !isLeafKind(actor.kind) && (actor.status === "killed" || actor.status === "dead") && !holders.has(id);
+  };
+  const gone = inTree.filter(fallen);
+  const down = new Set(gone);
+  const parent = new Map<string, string | null>();
+  for (const id of inTree) {
+    if (down.has(id)) {
+      parent.set(id, null);
+      continue;
+    }
+    let up = state.actors[id].parent;
+    for (const seen = new Set<string>(); up !== null && state.actors[up] !== undefined && down.has(up) && !seen.has(up); ) {
+      seen.add(up);
+      up = state.actors[up].parent;
+    }
+    parent.set(id, up !== null && state.actors[up] !== undefined && !isInfraKind(state.actors[up].kind) ? up : null);
+  }
+  const diedAt = (id: string): number => state.actors[id].statusSeq ?? state.actors[id].spawnedSeq;
+  gone.sort((a, b) => diedAt(a) - diedAt(b) || state.order.indexOf(a) - state.order.indexOf(b));
+  return { fallen: gone, parent };
+}
+
+/** Roots first (spawn order), each subtree given the width of its widest level, parents
+ * centred over their children. ``x`` is the node's left edge. The fallen (``forestOf``) are a row of their own under the tree, in
+ * the order they died, centred under it. ``across`` turns it on its side (``ACROSS``): the levels are columns left to right, the fallen the
+ * last of them, and the same things are centred on each other. Pure: the same view always gives the same layout. */
+export function layoutTree(state: ViewState, across = false): Placed[] {
+  const forest = forestOf(state);
+  const down = new Set(forest.fallen);
+  const standing = state.order.filter((id) => forest.parent.has(id) && !down.has(id));
+  const kids = new Map<string, string[]>();
+  const width = new Map<string, number>(); // along the line the siblings are spaced on: a row, or across, a column
+  const seen = new Set<string>();
+  const widest: number[] = []; // across: how wide the cards of each level are, which is how far apart the columns are
+
+  const box = (kind: string): { w: number; h: number } =>
+    across ? { w: isLeafKind(kind) ? ACROSS.leaf : ACROSS.node, h: ACROSS.height } : { w: nodeWidth(kind), h: NODE_HEIGHT };
+  const column = (depth: number): number => widest.slice(0, depth).reduce((left, w) => left + w + ACROSS.level, 0);
+
+  const measure = (id: string, depth: number): number => {
     seen.add(id);
-    const children = childrenOf(state, id).filter((kid) => !seen.has(kid));
+    const children = standing.filter((kid) => forest.parent.get(kid) === id && !seen.has(kid));
     kids.set(id, children);
-    const own = nodeWidth(state.actors[id].kind) + GAP;
-    const total = children.reduce((sum, kid) => sum + measure(kid), 0);
+    const { w, h } = box(state.actors[id].kind);
+    widest[depth] = Math.max(widest[depth] ?? 0, w);
+    const own = across ? h + ACROSS.gap : w + GAP;
+    const total = children.reduce((sum, kid) => sum + measure(kid, depth + 1), 0);
     width.set(id, Math.max(own, total));
     return width.get(id)!;
   };
@@ -65,20 +152,43 @@ export function layoutTree(state: ViewState): Placed[] {
       cursor += width.get(kid)!;
     }
     const center = left + span / 2;
-    placed.push({ id, depth, x: center - nodeWidth(state.actors[id].kind) / 2, y: depth * LEVEL_GAP });
+    const { w, h } = box(state.actors[id].kind);
+    const parent = forest.parent.get(id) ?? null;
+    placed.push(
+      across
+        ? { id, depth, x: column(depth), y: center - h / 2, parent, fallen: false, width: w, height: h }
+        : { id, depth, x: center - w / 2, y: depth * LEVEL_GAP, parent, fallen: false, width: w, height: h },
+    );
   };
 
-  // An actor whose parent is unknown (or missing from the stream) is treated as a root.
-  const roots = state.order.filter((id) => {
-    if (isInfraKind(state.actors[id].kind)) return false;
-    const parent = state.actors[id].parent;
-    return parent === null || !state.actors[parent];
-  });
+  // An actor whose parent is unknown (or missing from the stream) is treated as a root. Every root is measured before any is placed: the
+  // columns of a tree on its side are as wide as the widest card of their level in all of them.
+  const roots = standing.filter((id) => forest.parent.get(id) === null);
+  for (const root of roots) measure(root, 0);
   let left = 0;
   for (const root of roots) {
-    measure(root);
     place(root, left, 0);
-    left += width.get(root)! + GAP * 2;
+    left += width.get(root)! + (across ? ACROSS.gap : GAP) * 2;
+  }
+
+  // The fallen, one level under the deepest, centred on what stands: a row under it, or across, a column after it.
+  if (forest.fallen.length > 0) {
+    const depth = placed.reduce((deepest, p) => Math.max(deepest, p.depth + 1), 0);
+    const { w, h } = across ? { w: ACROSS.fallen, h: ACROSS.height } : { w: FALLEN_WIDTH, h: NODE_HEIGHT };
+    const gap = across ? ACROSS.gap : GAP;
+    const along = across ? h : w;
+    const run = forest.fallen.length * (along + gap) - gap;
+    const [from, to] = across ? [(p: Placed) => p.y, (p: Placed) => p.y + p.height] : [(p: Placed) => p.x, (p: Placed) => p.x + p.width];
+    const middle = placed.length === 0 ? 0 : (Math.min(...placed.map(from)) + Math.max(...placed.map(to))) / 2;
+    let cursor = middle - run / 2;
+    for (const id of forest.fallen) {
+      placed.push(
+        across
+          ? { id, depth, x: column(depth), y: cursor, parent: null, fallen: true, width: w, height: h }
+          : { id, depth, x: cursor, y: depth * LEVEL_GAP, parent: null, fallen: true, width: w, height: h },
+      );
+      cursor += along + gap;
+    }
   }
   return placed.sort((a, b) => state.order.indexOf(a.id) - state.order.indexOf(b.id));
 }
@@ -93,41 +203,41 @@ export interface Bounds {
 }
 
 /** The box that holds every placed node, or null for an empty tree. */
-export function boundsOf(state: ViewState, placed: Placed[]): Bounds | null {
+export function boundsOf(_state: ViewState, placed: Placed[]): Bounds | null {
   if (placed.length === 0) return null;
   let left = Infinity;
   let top = Infinity;
   let right = -Infinity;
   let bottom = -Infinity;
-  for (const { id, x, y } of placed) {
-    left = Math.min(left, x);
-    top = Math.min(top, y);
-    right = Math.max(right, x + nodeWidth(state.actors[id].kind));
-    bottom = Math.max(bottom, y + NODE_HEIGHT);
+  for (const p of placed) {
+    left = Math.min(left, p.x);
+    top = Math.min(top, p.y);
+    right = Math.max(right, p.x + p.width);
+    bottom = Math.max(bottom, p.y + p.height);
   }
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-/** What the camera should re-fit on: which nodes exist and who each hangs from. Statuses, calls
+/** What the camera should re-fit on: which nodes exist, who each hangs from and who has fallen. Statuses, calls
  * and messages are not part of it, and neither is where the layout puts a node, so a node dying
- * or siblings re-centring does not move the camera, while a node arriving, leaving or being
- * adopted does. */
-export function structureKey(state: ViewState, placed: Placed[]): string {
-  return placed.map(({ id }) => `${id}>${state.actors[id].parent ?? ""}`).join("|");
+ * or siblings re-centring does not move the camera, while a node arriving, leaving, being
+ * adopted or falling does. */
+export function structureKey(_state: ViewState, placed: Placed[]): string {
+  return placed.map(({ id, parent, fallen }) => `${id}>${parent ?? ""}${fallen ? "!" : ""}`).join("|");
 }
 
-/** The colour key of an actor: its level-1 ancestor in the *current* tree. So when a subtree
+/** The colour key of an actor: its level-1 ancestor in the *current* tree (the one drawn, ``forestOf``). So when a subtree
  * is adopted, it takes its new owner's colour. Roots are neutral. */
 export function ownerOf(state: ViewState, id: string): string | null {
+  // the tree as drawn: a root that died and handed over is not the root of what it handed over
+  const up = (actor: string): string | null => forestOf(state).parent.get(actor) ?? null;
   let current = id;
   const guard = new Set<string>();
   while (!guard.has(current)) {
     guard.add(current);
-    const parent = state.actors[current]?.parent ?? null;
-    if (parent === null || !state.actors[parent]) return current === id ? null : current;
-    if (state.actors[parent].parent === null || !state.actors[state.actors[parent].parent!]) {
-      return current;
-    }
+    const parent = up(current);
+    if (parent === null) return current === id ? null : current;
+    if (up(parent) === null) return current;
     current = parent;
   }
   return null;

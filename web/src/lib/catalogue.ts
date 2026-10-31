@@ -4,6 +4,7 @@
 
 import { systemKind } from "../arena/assumptions";
 import { verifiedAtBuild } from "../static/BuildVerified";
+import { FINAL_RUN } from "./address";
 import { asRunStatus, type RunStatus } from "./controls";
 import { profileTerm, type TermId } from "./glossary";
 import { workflowLabel } from "./hero";
@@ -121,6 +122,13 @@ export interface CatalogueRow {
   workflow: { id: string; label: string };
   /** Null until the first and last event have been read. */
   facts: RunFacts | null;
+}
+
+/** The runs a page that cannot list them all opens with: the final run, then the other finished runs in the server's order (newest
+ * first). A live run has its own strip and an empty one has nothing to open. */
+export function featuredRows(rows: readonly CatalogueRow[], limit = 4): CatalogueRow[] {
+  const finished = rows.filter((row) => row.state !== "live" && row.state !== "empty");
+  return [...finished.filter((row) => row.listing.id === FINAL_RUN), ...finished.filter((row) => row.listing.id !== FINAL_RUN)].slice(0, limit);
 }
 
 export const rowOf = (listing: RunListing, facts: RunFacts | null = null, index = 0): CatalogueRow => ({
@@ -257,6 +265,14 @@ export interface VerifyWords {
   detail: string;
 }
 
+/** A replay that does not match while the log's own hash chain holds is not a broken log: this code does not reproduce that recording
+ * (the chain is intact, so what was recorded is what is there). The words say exactly that and no more: whether the recording came from an
+ * older version is not something the check can know. */
+export const notReproduced = (report: VerifyReport): boolean => !report.ok && report.chain_ok;
+
+export const notReproducedWords = (report: VerifyReport): string =>
+  `Log intact. This code does not reproduce this recording${report.first_divergence === null ? "" : `: first difference at seq ${report.first_divergence}`}.`;
+
 /** The same verdict the run page gives (components/VerifyBadge.tsx): verified only when the replay and the bundle's head both match. */
 export function verifyWords(view: VerifyView): VerifyWords {
   switch (view.state) {
@@ -277,6 +293,7 @@ export function verifyWords(view: VerifyView): VerifyWords {
           detail: `${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head.slice(0, 12)}.`,
         };
       }
+      if (notReproduced(report)) return { label: notReproducedWords(report), tone: "warn", detail: report.detail };
       return { label: `Replay mismatch at seq ${report.first_divergence ?? "?"}`, tone: "bad", detail: report.detail };
     }
   }

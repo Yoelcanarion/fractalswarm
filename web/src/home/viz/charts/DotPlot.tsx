@@ -12,6 +12,7 @@ import {
   groupTitle,
   paintDots,
   runTip,
+  TIE_SYSTEMS,
   type DotMetric,
   type DotRig,
 } from "./dots";
@@ -21,13 +22,17 @@ import { ChartTable, SystemMark, useBox } from "./parts";
 export type DotPlotProps = VizProps<HeadlineSlice> & {
   /** Print the setting (task, model, seeds) under the chart. A page that prints it itself turns it off. */
   setting?: boolean;
+  /** The systems to draw, by their ids in the data: the swarm and the two durable supervisors unless told otherwise, and null for all of them. */
+  systems?: readonly string[] | null;
 };
 
 /** What the box is before it is measured (and on the server): the page's chart frame at 1920 wide. */
 const DEFAULT_BOX = { width: 1100, height: 460 };
 
-export function DotPlot({ progress, data, still, stillAt, className, setting = true }: DotPlotProps) {
-  const model = useMemo(() => dotModel(data), [data]);
+export function DotPlot({ progress, data, still, stillAt, className, setting = true, systems = TIE_SYSTEMS }: DotPlotProps) {
+  // the content of `systems` is the dependency: a page may pass a new array each render
+  const which = systems === null ? null : systems.join(",");
+  const model = useMemo(() => dotModel(data, systems), [data, which]);
   const captions = useMemo(() => dotCaptions(model), [model]);
   const summary = useMemo(() => dotSummary(model), [model]);
 
@@ -67,15 +72,17 @@ export function DotPlot({ progress, data, still, stillAt, className, setting = t
                 mean
               </text>
 
-              {panel.ticks.map((t) => (
-                <line key={t.x} className={t.zero ? "hv-ch-zero" : "hv-ch-grid"} x1={fx(t.x)} x2={fx(t.x)} y1={fx(panel.gridTop)} y2={fx(panel.gridBottom)} />
-              ))}
+              {panel.ticks.flatMap((t) =>
+                panel.spans.map((s, si) => (
+                  <line key={`${t.x}:${si}`} className={t.zero ? "hv-ch-zero" : "hv-ch-grid"} x1={fx(t.x)} x2={fx(t.x)} y1={fx(s.top)} y2={fx(s.bottom)} />
+                )),
+              )}
               {panel.groups.map((g) => (
                 <g key={g.group}>
                   <line className="hv-dp-rule" x1={fx(panel.labels ? panel.labelX : panel.left)} x2={fx(panel.meanX)} y1={fx(g.rule)} y2={fx(g.rule)} />
                   {panel.labels && (
                     <text className="hv-dp-group" x={fx(panel.labelX)} y={fx(g.y)}>
-                      {groupTitle(shownGroups[g.group]!, L.short)}
+                      {g.title}
                     </text>
                   )}
                 </g>
@@ -102,9 +109,11 @@ export function DotPlot({ progress, data, still, stillAt, className, setting = t
               {panel.ticks.map((t) => (
                 <g key={`t${t.x}`}>
                   <line className="hv-ch-axis" x1={fx(t.x)} x2={fx(t.x)} y1={fx(panel.axisY)} y2={fx(panel.axisY + 4)} />
-                  <text className="hv-ch-tick hv-ch-tick--x" x={fx(t.x)} y={fx(panel.axisY + 17)}>
-                    {t.label}
-                  </text>
+                  {t.label && (
+                    <text className="hv-ch-tick hv-ch-tick--x" x={fx(t.x)} y={fx(panel.axisY + 17)}>
+                      {t.label}
+                    </text>
+                  )}
                 </g>
               ))}
             </g>

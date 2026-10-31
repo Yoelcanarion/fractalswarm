@@ -295,46 +295,11 @@ textarea {
   font-size: var(--fs-body);
 }
 
-/* The counters take the row; the button that opens the guide sits at its end and costs no height. */
-.run__top {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-
-.run__top > .counters {
-  flex: 1;
-  min-width: 0;
-}
-
 /* The body of a run view while it loads, so the page keeps its size. */
 .run__sk-body {
   flex: 1;
   min-height: 0;
   height: auto;
-}
-
-.runguide {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-5);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-3);
-  background: var(--accent-bg);
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
-}
-
-.runguide p {
-  flex: 1 1 320px;
-  max-width: 70ch;
-  margin: 0;
-}
-
-.runguide__done {
-  flex: none;
 }
 
 .run__main {
@@ -359,6 +324,155 @@ textarea {
   min-height: 300px;
   border-radius: var(--radius-2);
   overflow: hidden;
+}
+
+/* The run page: the tree is the page. It takes the width and the height the page has left, so that its labels can be read; the fold of
+   the counters, the schedule and the logs sits under it, and the replay bar stays at the foot of the window however far the page is
+   scrolled (the page is as tall as its content, and no taller than it needs to be). */
+.run--overview {
+  height: auto;
+  min-height: 100%;
+  /* the Muse lens is as tall as the window leaves it, under the bars above the page and over the replay bar, not as tall as the page */
+  --lens-max-h: max(320px, calc(100vh - 163px - var(--timeline-h) - 36px));
+}
+
+/* A short window: the rows sit closer, so that the Details bar under the tree is not behind the replay bar pinned over the foot of the page. */
+@media (max-height: 700px) {
+  .run--overview {
+    gap: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
+
+.run--overview .run__tree {
+  flex: 1 0 auto;
+  min-height: clamp(280px, 44vh, 680px);
+  padding: 0;
+  overflow: hidden;
+}
+
+/* The page is as tall as its content, so the canvas has no definite height for the pane's 100% to be a share of: the pane sits in a box
+   that fills the canvas by position, which has one. (React Flow sets its own width, height and position inline.) */
+.run--overview .run__canvas {
+  position: relative;
+  min-height: 0;
+  border-radius: 0;
+}
+
+.run__fill {
+  position: absolute;
+  inset: 0;
+}
+
+/* On a phone the tree is as tall as it is (components/TreeGraph.tsx sets the height), so its box is in the page's flow and the page scrolls
+   past it: a touch on the picture is a touch of the page, not a pan of the picture. */
+.run__fill--across {
+  position: relative;
+  inset: auto;
+}
+
+.run__fill--across .react-flow__pane {
+  touch-action: pan-y;
+}
+
+.run__fill--across .run__legend {
+  display: none;
+}
+
+.run--overview > .timeline {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  box-shadow: 0 12px 0 0 var(--bg);
+}
+
+.run__more {
+  margin-top: 0;
+  /* opened by a person, it is scrolled to the top of the page (components/ui/Details.tsx): not flush against the bars above */
+  scroll-margin-top: var(--space-3);
+}
+
+/* The key of the tree, in its corner. */
+.run__legend {
+  margin: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+  color: var(--text-muted);
+  font-size: var(--fs-body);
+}
+
+/* The line a run page opens with: the state of the run in words, and the three numbers that are its claim. */
+.runstate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+
+.runstate__line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 1 1 360px;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-lead);
+  line-height: var(--lh-body);
+  color: var(--text-primary);
+}
+
+.runstate__head {
+  font-weight: 700;
+}
+
+.runstate__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 0.5em;
+  border-radius: var(--radius-pill);
+  background: var(--text-muted);
+}
+
+.runstate__line--live .runstate__dot {
+  background: var(--accent);
+}
+
+.runstate__line--good .runstate__dot {
+  background: var(--ok);
+}
+
+.runstate__line--warn .runstate__dot {
+  background: var(--warn);
+}
+
+/* "Watch the first crash" and "Play from the start": the page's one main action, on the state's row between the line and the numbers. */
+.runstate__actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.counters--headline {
+  flex: none;
+  flex-wrap: nowrap;
+}
+
+.counters--headline .stat {
+  min-width: 0;
+  padding: 4px 14px;
+}
+
+.counters--headline .stat__value {
+  font-size: var(--fs-title);
+}
+
+.counters--headline .stat--hero .stat__value {
+  font-size: var(--fs-stat);
 }
 
 .run__grid {
@@ -483,9 +597,9 @@ textarea {
 
 .actor {
   position: relative;
-  width: 150px;
-  padding: 10px 12px;
-  border-radius: var(--radius-3);
+  width: 100px; /* keep in sync with lib/layout.ts */
+  padding: 6px 8px;
+  border-radius: var(--radius-2);
   background: var(--surface-2);
   border: 2px solid var(--owner);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--owner) 14%, transparent);
@@ -497,28 +611,64 @@ textarea {
 }
 
 .actor--leaf {
-  width: 112px;
-  padding: 7px 8px;
+  width: 84px;
+  padding: 4px 6px;
+}
+
+/* A dead brain that handed over everything it held, in the row under the tree. */
+.actor--fallen {
+  width: 76px;
+  padding: 3px 6px;
+  box-shadow: none;
 }
 
 .actor__id {
   font-weight: 700;
-  font-size: var(--fs-base);
+  font-size: var(--fs-lead);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .actor--leaf .actor__id {
+  font-size: var(--fs-base);
+}
+
+.actor--fallen .actor__id {
   font-size: var(--fs-body);
 }
 
-.actor__meta {
-  font-size: var(--fs-label);
-  color: var(--text-muted);
-  display: flex;
-  gap: 4px;
-  justify-content: center;
+/* The card of a tree on its side (a phone): the type scale's floor for its id, a box as wide as lib/layout.ts ACROSS says, and nothing
+   hanging off it that would run into the card above or below. */
+.actor--across {
+  width: 54px;
+  padding: 3px 1px;
+  box-shadow: none;
+}
+
+.actor--across.actor--leaf {
+  width: 62px;
+}
+
+.actor--across.actor--fallen {
+  width: 58px;
+}
+
+.actor--across .actor__id {
+  font-size: var(--fs-body);
+  line-height: 1.2;
+}
+
+.actor--across .actor__duty {
+  top: -14px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.actor--across .actor__adopted,
+.actor--across .actor__state {
+  display: none;
 }
 
 .actor__duty {
@@ -534,15 +684,29 @@ textarea {
 }
 
 .actor__adopted {
-  margin-top: 4px;
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  white-space: nowrap;
   font-size: var(--fs-label);
   /* the owner's track colour, pulled toward the text colour: the colour itself is 4.4:1 on the card for some tracks */
   color: color-mix(in srgb, var(--owner) 60%, var(--text-primary));
   font-weight: 600;
 }
 
+/* Finished, dead and restarting cards are quieter by colour, not by `opacity`: a fade took the text down with it, to 2:1 for the
+   meta on a dead card, and no token can account for it (the contrast guard reads these three states). */
 .actor--stopped {
-  opacity: 0.55;
+  border-color: color-mix(in srgb, var(--owner) 45%, var(--surface-2));
+  box-shadow: none;
+}
+
+.actor--stopped .actor__id {
+  color: var(--text-secondary);
 }
 
 .actor--suspected {
@@ -564,9 +728,8 @@ textarea {
   box-shadow: none;
 }
 
-.actor--restarting .actor__id,
-.actor--restarting .actor__meta {
-  opacity: 0.6;
+.actor--restarting .actor__id {
+  color: var(--text-secondary);
 }
 
 .actor__state {
@@ -597,22 +760,14 @@ textarea {
   box-shadow: none;
 }
 
-.actor--down .actor__id,
-.actor--down .actor__meta {
-  opacity: 0.45;
+.actor--down .actor__id {
+  color: var(--text-secondary);
 }
 
 .actor__x {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: var(--fs-display);
+  margin-right: 0.3em;
   font-weight: 800;
   color: var(--danger);
-  text-shadow: var(--text-halo);
-  animation: pop 400ms cubic-bezier(0.2, 1.6, 0.4, 1);
-  pointer-events: none;
 }
 
 .actor__handle {
@@ -741,6 +896,13 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.chaos__note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
 }
 
 .chaos__row {
@@ -970,9 +1132,12 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
-.speeds {
+.speedpick {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
 }
 
 /* ---- charts ---- */
@@ -1148,6 +1313,54 @@ textarea {
 @media (max-height: 820px) {
   .topbar {
     height: 52px;
+  }
+}
+
+/* A phone: the replay bar wraps (the track beside the play button, the readout and the speed under it, so that none of them is off the
+   screen), and the three numbers of a run's line share the width instead of running off it. */
+@media (max-width: 760px) {
+  .timeline {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 8px 12px;
+  }
+  .timeline__track {
+    flex: 1 1 0;
+    min-width: 120px;
+  }
+  .timeline__readout {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--fs-body);
+  }
+  .speedpick__label {
+    display: none;
+  }
+  .runstate__actions {
+    flex: 1 1 100%;
+  }
+  .runstate__actions .btn {
+    flex: 1 1 auto;
+  }
+  /* the three numbers are one row, their labels wrapping, so that the tree comes up the page */
+  .counters--headline {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+  }
+  .counters--headline .stat {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 4px 8px;
+  }
+  .counters--headline .stat__value {
+    font-size: var(--fs-lead);
+  }
+  .counters--headline .stat--hero .stat__value {
+    font-size: var(--fs-title);
+  }
+  /* the tree is as tall as its cards need (components/TreeGraph.tsx), not a share of the window */
+  .run--overview .run__tree {
+    min-height: 0;
   }
 }
 
@@ -1712,6 +1925,14 @@ textarea {
   font-weight: 700;
 }
 
+/* the controls themselves: the cap and the kill switch, side by side, in the strip or in its fold */
+.controls__body {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+}
+
 .controls__shock {
   display: flex;
   align-items: center;
@@ -1962,11 +2183,6 @@ textarea {
   margin: 6px 0 0;
 }
 
-.results__raw summary {
-  cursor: pointer;
-  color: var(--text-secondary);
-}
-
 /* a payload as a table (the feasibility report) */
 .kv__key {
   width: 36%;
@@ -2021,6 +2237,15 @@ textarea {
   margin-left: auto;
   display: flex;
   gap: 8px;
+}
+
+/* the approval of a recording, folded: it sits at the end of the row and opens under its words */
+.plan__fold {
+  margin-left: auto;
+}
+
+.plan__fold .plan__buttons {
+  margin-left: 0;
 }
 
 .plan__cols {

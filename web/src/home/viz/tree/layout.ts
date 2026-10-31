@@ -76,7 +76,7 @@ export function buildEpochs(tree: TreeSlice): Epoch[] {
   return epochs;
 }
 
-function layoutForest(present: string[], parent: Record<string, string | null>, root: string): Record<string, Slot> {
+export function layoutForest(present: string[], parent: Record<string, string | null>, root: string): Record<string, Slot> {
   const kids = new Map<string, string[]>();
   for (const id of present) {
     const p = parent[id];
@@ -140,7 +140,7 @@ export interface Bounds {
   y1: number;
 }
 
-/** The memorial row: where the dead go, in the order they leave the tree, centred under it. */
+/** The memorial row lies one row under the deepest row of the tree: room for its rule and its label between them, and no more. */
 export function memorialSlots(tree: TreeSlice, epochs: Epoch[]): Record<string, Slot> {
   const buried = burialTimes(tree);
   const order = Object.keys(buried).sort((a, b) => (buried[a] ?? 0) - (buried[b] ?? 0) || naturalCompare(a, b));
@@ -148,7 +148,7 @@ export function memorialSlots(tree: TreeSlice, epochs: Epoch[]): Record<string, 
   const width = Math.max(...epochs.flatMap((e) => e.present.map((id) => e.pos[id]?.x ?? 0)));
   const step = 1.5;
   const first = width / 2 - ((order.length - 1) * step) / 2;
-  return Object.fromEntries(order.map((id, i) => [id, { x: first + i * step, y: (depth + 1) * ROW + 0.5 }]));
+  return Object.fromEntries(order.map((id, i) => [id, { x: first + i * step, y: (depth + 1) * ROW }]));
 }
 
 export function boundsOf(epochs: Epoch[], memorial: Record<string, Slot>): Bounds {
@@ -160,6 +160,7 @@ export function boundsOf(epochs: Epoch[], memorial: Record<string, Slot>): Bound
     x0: Math.min(...slots.map((s) => s.x)) - margin,
     x1: Math.max(...slots.map((s) => s.x)) + margin,
     y0: Math.min(...slots.map((s) => s.y)) - margin - 0.3,
-    y1: Math.max(...slots.map((s) => s.y)) + margin + 0.5,
+    // a dead brain's name hangs under its glyph, which is as far down as the picture goes
+    y1: Math.max(...slots.map((s) => s.y)) + margin + 0.25,
   };
 }

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { allCopy, COPY, TAGLINE, word } from "./copy";
+import { bundledStory } from "./story";
 import { sources, UNIVERSAL } from "./testing";
 
 // The words docs/claims.md forbids ("Rules", "Not claimed") and the second half of the old tagline.
@@ -14,6 +15,15 @@ const BANNED: [RegExp, string][] = [
   // Claims about the world or absolutes that nothing on the page backs (the coordinator's copy notes, Oct 30).
   [/\busual(ly)?\b/i, "usual"],
   [/\bevery advantage\b/i, "every advantage"],
+  // Words that went beyond a claim (the coordinator's review, Oct 30, night). S1 says the survivors compute the same heir by one rule
+  // and there is no election: it does not say that no message passes. The swarm stalls too (11.2 s), so it is not the one that need not stop.
+  [/no message passes/i, "no message passes"],
+  [/has to stop to recover/i, "has to stop to recover"],
+  [/something to watch them/i, "something to watch them"],
+  // R4 at ten seeds is a tie, not a help, and its three-seed wording is withdrawn.
+  [/where it helps/i, "where it helps"],
+  [/below half/i, "below half"],
+  [/on every seed/i, "on every seed"],
 ];
 
 describe("the page's own words", () => {
@@ -49,6 +59,12 @@ describe("the page's own words", () => {
     for (const text of ["result not valid", "1 of the runs has a result that is not valid and is ringed.", "the result is not valid", "an invalid result"]) {
       expect(flagged(text), text).toBe(false);
     }
+  });
+
+  it("say of the heir's drawing what S1 says, in its words, and no more", () => {
+    const row = bundledStory.claims["S1"]?.text.toLowerCase() ?? "";
+    const drawing = COPY.solution.cards.heir.drawing.toLowerCase().replace(/\.$/, "");
+    expect(row).toContain(drawing);
   });
 
   it("hold no number of their own: a sentence that needs one is written from the data", () => {

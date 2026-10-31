@@ -1103,7 +1103,7 @@ def serve(
 def _demo_bundle(bundle: str | None) -> Path:
     from fractalswarm.api.app import DEMO_DIR
 
-    names = [bundle] if bundle else ["backup", "toy"]
+    names = [bundle] if bundle else ["final", "backup", "toy"]
     for name in names:
         path = DEMO_DIR / name
         if (path / "events.jsonl").exists() or (path / "events.sqlite").exists():

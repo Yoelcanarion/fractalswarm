@@ -7,8 +7,14 @@ import { LineDraw } from "../charts/LineDraw";
 import { PairedBars } from "../charts/PairedBars";
 import { RegimeStrip } from "../charts/RegimeStrip";
 import { TokenBar } from "../charts/TokenBar";
+import { ProofBars } from "../charts/ProofBars";
+import { KillDemo } from "../demo/KillDemo";
 import { DOOR_IDS } from "../doors/doors";
 import { DoorGlyph } from "../doors/DoorGlyph";
+import { DoorThumb } from "../doors/DoorThumb";
+import { ProblemFilm } from "../film/ProblemFilm";
+import { GrowNumber } from "../parts/GrowNumber";
+import { STEP_IDS, StepDrawing } from "../steps/StepDrawing";
 import { HashStrip } from "../hash/HashStrip";
 import { HrwPanels } from "../hrw/HrwPanels";
 import { WorkLanes } from "../lanes/WorkLanes";
@@ -302,7 +308,7 @@ function HeroSection({ still, setting }: { still: boolean; setting: boolean }) {
 
 function DotsSection({ still, setting }: { still: boolean; setting: boolean }) {
   return (
-    <FrameSection id="dots" title="DotPlot" note="One dot for each run: stall time and extra cost, three seeds, the swarm beside the rivals." seconds={5} height={460}>
+    <FrameSection id="dots" title="DotPlot" note="One dot for each run: stall time and extra cost, the swarm beside the two durable supervisors." seconds={5} height={460}>
       {(progress) => (story.headline ? <DotPlot progress={progress} data={story.headline} still={still} setting={setting} /> : NONE)}
     </FrameSection>
   );
@@ -367,6 +373,123 @@ function DoorsSection({ still }: { still: boolean }) {
   );
 }
 
+function DemoSection({ still }: { still: boolean }) {
+  return (
+    <Section
+      id="demo"
+      title="KillDemo"
+      note="The click demo: crash a coordinator and the survivors pick an heir by the run's own rule, computed in the browser. An illustration, not a run."
+    >
+      <div className="lab-stage">
+        <KillDemo key={String(still)} still={still} note />
+      </div>
+    </Section>
+  );
+}
+
+/** The play counter of the redesigned visuals: 0 is not yet, and each press plays from the start. */
+function Plays({ play, set }: { play: number; set: (n: number) => void }) {
+  return (
+    <div className="lab-controls">
+      <button type="button" onClick={() => set(play + 1)}>
+        {play === 0 ? "Play" : "Repeat"}
+      </button>
+      <button type="button" onClick={() => set(0)}>
+        Back to not yet (0)
+      </button>
+      <output>play {play}</output>
+    </div>
+  );
+}
+
+function FilmSection({ still }: { still: boolean }) {
+  const [play, setPlay] = useState(0);
+  return (
+    <Section id="film" title="ProblemFilm" note="The in-process supervisor's recorded run as work lanes, played once by itself in about seven seconds, in the page's one ease.">
+      <Plays play={play} set={setPlay} />
+      <div className="lab-stage">
+        <ProblemFilm play={play} still={still} />
+      </div>
+    </Section>
+  );
+}
+
+function StepsSection({ still }: { still: boolean }) {
+  const [on, setOn] = useState<Record<string, boolean>>({});
+  const set = (id: string, value: boolean): void => setOn((prev) => ({ ...prev, [id]: value }));
+  return (
+    <Section id="steps" title="StepDrawing" note="The three drawings of the Solution's cards. Hover, focus or tap a card: it plays in under a second, and eases back from where it is when left.">
+      <div className="lab-doors">
+        {STEP_IDS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            className="lab-door"
+            onPointerEnter={() => set(id, true)}
+            onPointerLeave={() => set(id, false)}
+            onFocus={() => set(id, true)}
+            onBlur={() => set(id, false)}
+          >
+            <div className="lab-door__glyph">
+              <StepDrawing step={id} active={on[id] ?? false} still={still} />
+            </div>
+            <code>{id}</code>
+          </button>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function ProofSection({ still }: { still: boolean }) {
+  const [play, setPlay] = useState(0);
+  return (
+    <Section id="proof" title="ProofBars" note="The swarm against each rival, from the home data only. Against the ideal durable supervisor the data's verdict is printed as it is.">
+      <Plays play={play} set={setPlay} />
+      <div className="lab-stage">
+        <ProofBars play={play} still={still} />
+      </div>
+    </Section>
+  );
+}
+
+function GrowSection({ still }: { still: boolean }) {
+  const [play, setPlay] = useState(0);
+  const { r5 } = story.numbers;
+  return (
+    <Section id="grow" title="GrowNumber" note="A number that grows by itself to the number it is, once for each press: tabular, its end width kept from the first frame.">
+      <Plays play={play} set={setPlay} />
+      <div className="lab-counts">
+        <div className="lab-count">
+          <GrowNumber className="lab-count__number" value={r5.t2.swarmStallS} format={(v) => `${v.toFixed(1)} s`} play={play} still={still} />
+          <span>swarm stall</span>
+        </div>
+        <div className="lab-count">
+          <GrowNumber className="lab-count__number" value={r5.t2.centralStallS} format={(v) => `${v.toFixed(1)} s`} play={play} still={still} />
+          <span>in-process supervisor stall</span>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function ThumbsSection({ still }: { still: boolean }) {
+  return (
+    <Section id="thumbs" title="DoorThumb" note="The six doors' pictures, going there and back by themselves, softly: a triangle wave in the page's one ease, only while on screen.">
+      <div className="lab-doors">
+        {DOOR_IDS.map((id) => (
+          <div key={id} className="lab-door">
+            <div className="lab-door__glyph">
+              <DoorThumb door={id} still={still} />
+            </div>
+            <code>{id}</code>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 function CountSection({ still }: { still: boolean }) {
   const progress = useMotionValue(0);
   const { r2 } = story.numbers;
@@ -424,6 +547,12 @@ export function HomeLab() {
           </button>
         </div>
       </header>
+      <DemoSection still={still} />
+      <FilmSection still={still} />
+      <StepsSection still={still} />
+      <ProofSection still={still} />
+      <GrowSection still={still} />
+      <ThumbsSection still={still} />
       <TreeSection still={still} />
       <LanesSection still={still} />
       <HrwSection still={still} />

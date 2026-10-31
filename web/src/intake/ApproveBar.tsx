@@ -1,3 +1,4 @@
+import { Details } from "../components/ui";
 import { editWords } from "./format";
 import { canApprove, type Issue } from "./validate";
 
@@ -25,16 +26,13 @@ export function ApproveBar({ issues, edits, busy, error, onApprove }: ApproveBar
         </ul>
       )}
       {advice.length > 0 && (
-        <details className="approve__advice">
-          <summary>
-            {advice.length} {advice.length === 1 ? "thing" : "things"} to know
-          </summary>
+        <Details inline summary={`${advice.length} ${advice.length === 1 ? "thing" : "things"} to know`} className="approve__advice">
           <ul>
             {advice.map((issue) => (
               <li key={`${issue.where}:${issue.message}`}>{issue.message}</li>
             ))}
           </ul>
-        </details>
+        </Details>
       )}
       <p className="approve__edits">
         {edits.length === 0 ? (

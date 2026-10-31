@@ -28,7 +28,12 @@ def _strict(node: Any, defs: dict[str, Any]) -> Any:
         return _strict(defs[name], defs)
     if "allOf" in node and len(node["allOf"]) == 1:
         return _strict(node["allOf"][0], defs)
-    out = {key: _strict(value, defs) for key, value in node.items() if key not in DROP}
+    out: dict[str, Any] = {}
+    for key, value in node.items():
+        if key == "properties":  # field names, which may match a keyword: a talk has a title
+            out[key] = {name: _strict(field, defs) for name, field in value.items()}
+        elif key not in DROP:
+            out[key] = _strict(value, defs)
     if out.get("type") == "object" or "properties" in out:
         out["type"] = "object"
         out["properties"] = out.get("properties", {})

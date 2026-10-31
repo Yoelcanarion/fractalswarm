@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { story } from "../../data/story";
 import type { HeroSlice } from "../../data/types";
-import { textWidth } from "./chart";
+import { textWidth, withSign } from "./chart";
 import { fakePen, lcg, seen, type Log } from "./fakes";
 import {
   LEAD,
@@ -18,6 +18,7 @@ import {
   shapeOf,
   type Emphasis,
   type LineLayout,
+  type LinePoint,
   type LineRig,
 } from "./line";
 import { LineDraw } from "./LineDraw";
@@ -26,57 +27,96 @@ const data = story.hero;
 const model = lineModel(data);
 const captions = lineCaptions(model);
 
+// What the tests below read comes from the data and none of it is typed here: a new reading changes the data and these follow it.
+const EMPHASIS: Record<string, Emphasis> = { swarm: "swarm", central: "rival", "durable-max": "rival", durable: "quiet", pipeline: "quiet", single: "quiet" };
+const pointsOf = (id: string) => data.series[id]!.points.slice().sort((a, b) => a.x - b.x);
+const endOf = (id: string) => pointsOf(id)[pointsOf(id).length - 1]!;
+const stallText = (id: string): string => `${endOf(id).stall_s.toFixed(1)} s`;
+const extraText = (id: string): string => `${withSign(endOf(id).extra_cost_pct, 1)}%`;
+
 describe("the hero chart's model", () => {
   it("keeps the series in the order of the slice, with the swarm the accent and the two rivals the claims name the strong ones", () => {
     expect(model.series.map((s) => s.id)).toEqual(data.order);
     const emphasis = Object.fromEntries(model.series.map((s) => [s.id, s.emphasis]));
-    expect(emphasis).toEqual({ swarm: "swarm", central: "rival", "durable-max": "rival", durable: "quiet", pipeline: "quiet", single: "quiet" });
+    expect(emphasis).toEqual(Object.fromEntries(data.order.map((id) => [id, EMPHASIS[id]])));
+    expect(emphasis["central"]).toBe("rival");
+    expect(emphasis["durable-max"]).toBe("rival");
   });
 
-  it("reads the numbers of the file as they are", () => {
-    expect(model.xs).toEqual([0, 1, 3, 5]);
-    expect(model.profiles).toEqual(["C0", "C1", "C2", "C3"]);
-    const swarm = model.series[0]!;
-    expect(swarm.stall[3]).toMatchObject({ x: 5, profile: "C3", mean: 14.578, min: 5.64, max: 23.516 });
-    expect(swarm.extra[3]).toMatchObject({ mean: 6.56, min: -6.01, max: 19.12 });
-    const central = model.series.find((s) => s.id === "central")!;
-    expect(central.stall[3]!.mean).toBe(92.585);
-    expect(central.extra[3]!.mean).toBe(75.62);
-    expect(model.seedCount).toBe(2);
-    expect(model.real).toBe(true);
-    expect(model.task).toBe("t2_conference");
+  it("reads the numbers of the file as they are, at the points it has", () => {
+    const xs = [...new Set(Object.values(data.series).flatMap((s) => s.points.map((p) => p.x)))].sort((a, b) => a - b);
+    expect(model.xs).toEqual(xs);
+    expect(model.profiles).toEqual(xs.map((x) => Object.values(data.series)[0]!.points.find((p) => p.x === x)!.profile));
+    for (const s of model.series) {
+      const points = pointsOf(s.id);
+      expect(s.stall.map((p) => [p.x, p.profile, p.mean, p.min, p.max])).toEqual(points.map((p) => [p.x, p.profile, p.stall_s, p.stall_s_min, p.stall_s_max]));
+      expect(s.extra.map((p) => [p.mean, p.min, p.max])).toEqual(points.map((p) => [p.extra_cost_pct, p.extra_cost_pct_min, p.extra_cost_pct_max]));
+    }
+    expect(model.seedCount).toBe(data.seedCount);
+    expect(model.real).toBe(data.model === "real");
+    expect(model.task).toBe(data.task);
   });
 
   it("draws the figures R5 quotes: the generator recomputes them from the same file, and the two agree", () => {
     const t2 = story.numbers.r5.t2;
     const swarm = model.series.find((s) => s.id === "swarm")!;
     const central = model.series.find((s) => s.id === "central")!;
-    expect([swarm.stall[3]!.mean.toFixed(1), central.stall[3]!.mean.toFixed(1)]).toEqual([String(t2.swarmStallS), String(t2.centralStallS)]);
-    expect([swarm.extra[3]!.mean.toFixed(1), central.extra[3]!.mean.toFixed(1)]).toEqual([String(t2.swarmExtraPct), String(t2.centralExtraPct)]);
+    const end = (s: typeof swarm, key: "stall" | "extra"): number => Number(s[key][s[key].length - 1]!.mean.toFixed(1));
+    expect([end(swarm, "stall"), end(central, "stall")]).toEqual([t2.swarmStallS, t2.centralStallS]);
+    expect([end(swarm, "extra"), end(central, "extra")]).toEqual([t2.swarmExtraPct, t2.centralExtraPct]);
     expect(data.seedCount).toBe(t2.seeds);
   });
 
   it("names its setting, in the long form when it fits and shorter when it does not", () => {
-    expect(captions[0]).toBe("T2 conference · real model · 2 seeds · lines: the mean of the seeds · band: their range, FractalSwarm only");
-    expect(captions[2]).toBe("T2 · real model · 2 seeds");
+    expect(captions[0]).toBe(`T2 conference · real model · ${data.seedCount} seeds · lines: the mean of the seeds · band: their range, FractalSwarm only`);
+    expect(captions[2]).toBe(`T2 · real model · ${data.seedCount} seeds`);
   });
 
   it("tells the numbers in its text alternative, with the rival named as the in-process supervisor", () => {
     const text = lineSummary(model);
-    expect(text).toContain("FractalSwarm 14.6 s");
-    expect(text).toContain("In-process supervisor 92.6 s");
-    expect(text).toContain("In-process supervisor +75.6%");
-    expect(text).toContain("Ideal durable supervisor −6.8%");
-    expect(text).toContain("T2 conference on the real model, 2 seeds");
+    expect(text).toContain(`FractalSwarm ${stallText("swarm")}`);
+    expect(text).toContain(`In-process supervisor ${stallText("central")}`);
+    expect(text).toContain(`In-process supervisor ${extraText("central")}`);
+    expect(text).toContain(`Ideal durable supervisor ${extraText("durable-max")}`);
+    expect(text).toContain(`T2 conference on the real model, ${data.seedCount} seeds`);
     expect(text).not.toMatch(/\b(simpler|cheaper|more reliable|first|better|worse)\b/i);
   });
 
   it("copes with a slice whose order lists a series that is not there", () => {
     const odd: HeroSlice = { ...data, order: ["swarm", "ghost", "central"] };
     // the series the order names come first, then the others by name
-    expect(lineModel(odd).series.map((s) => s.id)).toEqual(["swarm", "central", "durable", "durable-max", "pipeline", "single"]);
+    const rest = Object.keys(data.series).filter((id) => id !== "swarm" && id !== "central").sort();
+    expect(lineModel(odd).series.map((s) => s.id)).toEqual(["swarm", "central", ...rest]);
   });
 });
+
+/** A slice with a point at each of the slice's x (the four failure profiles of an older reading), with numbers made up. */
+function synthetic(next: () => number): HeroSlice {
+  const series: HeroSlice["series"] = {};
+  for (const id of data.order) {
+    series[id] = {
+      label: data.series[id]!.label,
+      points: data.x.map((x, i) => {
+        const stall = next() * 300;
+        const extra = (next() - 0.35) * 150;
+        return {
+          x,
+          profile: `C${i}`,
+          stall_s: stall,
+          stall_s_min: stall * 0.6,
+          stall_s_max: stall * 1.4,
+          extra_cost_pct: extra,
+          extra_cost_pct_min: extra - 10,
+          extra_cost_pct_max: extra + 10,
+          cost_usd: 0.3,
+          completion_rate: 100,
+          seeds: ["1", "2"],
+        };
+      }),
+    };
+  }
+  return { ...data, series };
+}
 
 const SIZES: [number, number][] = [
   [1480, 520],
@@ -147,56 +187,56 @@ describe("the hero chart's layout", () => {
 
   it("scales the axes to the data: stall from zero, extra cost across zero, both on whole steps", () => {
     const [stall, extra] = lineLayout(model, 1480, 520, captions).panels;
-    expect(stall!.yTicks.map((t) => t.label)).toEqual(["0", "50", "100", "150", "200 s"]);
-    expect(extra!.yTicks.map((t) => t.label)).toEqual(["−20", "0", "20", "40", "60", "80%"]);
-    expect(extra!.zeroY).not.toBeNull();
+    // the highest and the lowest value drawn: a mean, and the swarm's range too
+    const spread = (key: "stall" | "extra", pick: (p: LinePoint) => number, best: typeof Math.max): number =>
+      best(...model.series.flatMap((s) => s[key].map((p) => (s.emphasis === "swarm" ? pick(p) : p.mean))));
     expect(stall!.yTicks[0]!.zero).toBe(true);
-    expect(stall!.xTicks.map((t) => [t.count, t.profile])).toEqual([["0", "C0"], ["1", "C1"], ["3", "C2"], ["5", "C3"]]);
-    // the x axis is a true scale: 1 to 3 killed is twice the distance of 0 to 1
-    const xs = stall!.xTicks.map((t) => t.x);
+    expect(stall!.yAt(0)).toBeCloseTo(stall!.bottom, 6);
+    expect(stall!.yAt(spread("stall", (p) => p.max, Math.max))).toBeGreaterThanOrEqual(stall!.top - 0.001);
+    expect(extra!.zeroY).not.toBeNull();
+    expect(extra!.yAt(spread("extra", (p) => p.max, Math.max))).toBeGreaterThanOrEqual(extra!.top - 0.001);
+    expect(extra!.yAt(spread("extra", (p) => p.min, Math.min))).toBeLessThanOrEqual(extra!.bottom + 0.001);
+    for (const panel of [stall!, extra!]) for (const t of panel.yTicks) expect(t.label, `${panel.metric.key} tick`).toMatch(/^−?\d+( s|%)?$/);
+    // the x axis has a tick for each place the data has a point
+    expect(stall!.xTicks.map((t) => [t.count, t.profile])).toEqual(model.xs.map((x, i) => [String(x), model.profiles[i]]));
+  });
+
+  it("names the basis of the extra cost in its header, in the long form where the header fits the panel and in the short one where it does not", () => {
+    for (let width = 292; width <= 1700; width += 4) {
+      const [stall, extra] = lineLayout(model, width, 456, captions).panels;
+      expect(extra!.sub, `${width}`).toContain("pre-registered basis");
+      // a header never runs out of its panel
+      for (const panel of [stall!, extra!]) {
+        expect(textWidth(panel.metric.title, 13) + 8 + textWidth(panel.sub), `${width} ${panel.metric.key}`).toBeLessThanOrEqual(panel.w + 0.001);
+      }
+    }
+    expect(lineLayout(model, 1480, 520, captions).panels[1]!.sub).toBe("pre-registered basis: against its own run with no failures");
+    expect(lineLayout(model, 390, 456, captions).panels[1]!.sub).toBe("pre-registered basis");
+  });
+
+  it("is a true scale in x when the data has points between: 1 to 3 killed is twice the distance of 0 to 1", () => {
+    const four = lineModel(synthetic(lcg(7)));
+    expect(four.xs).toEqual(data.x);
+    const xs = lineLayout(four, 1480, 520, lineCaptions(four)).panels[0]!.xTicks.map((t) => t.x);
     expect((xs[2]! - xs[1]!) / (xs[1]! - xs[0]!)).toBeCloseTo(2, 9);
   });
 
   it("labels each system at the end of its line with the value at C3 for the three the claims name", () => {
     const [stall, extra] = lineLayout(model, 1480, 520, captions).panels;
     const text = (panel: typeof stall, id: string): string[] => panel!.labels[model.series.findIndex((s) => s.id === id)]!.lines;
-    expect(text(stall, "swarm")).toEqual(["FractalSwarm", "14.6 s"]);
-    expect(text(stall, "central")).toEqual(["In-process supervisor", "92.6 s"]);
-    expect(text(stall, "durable-max")).toEqual(["Ideal durable supervisor", "9.8 s"]);
-    expect(text(extra, "swarm")).toEqual(["FractalSwarm", "+6.6%"]);
-    expect(text(extra, "central")).toEqual(["In-process supervisor", "+75.6%"]);
-    expect(text(extra, "durable-max")).toEqual(["Ideal durable supervisor", "−6.8%"]);
-    expect(text(stall, "single")).toEqual(["Single agent"]);
+    expect(text(stall, "swarm")).toEqual(["FractalSwarm", stallText("swarm")]);
+    expect(text(stall, "central")).toEqual(["In-process supervisor", stallText("central")]);
+    expect(text(stall, "durable-max")).toEqual(["Ideal durable supervisor", stallText("durable-max")]);
+    expect(text(extra, "swarm")).toEqual(["FractalSwarm", extraText("swarm")]);
+    expect(text(extra, "central")).toEqual(["In-process supervisor", extraText("central")]);
+    expect(text(extra, "durable-max")).toEqual(["Ideal durable supervisor", extraText("durable-max")]);
     expect(text(stall, "durable")).toEqual(["Realistic durable"]);
   });
 
   it("holds for any numbers, not only these", () => {
     const next = lcg(3);
     for (let round = 0; round < 60; round++) {
-      const series: HeroSlice["series"] = {};
-      for (const id of data.order) {
-        series[id] = {
-          label: data.series[id]!.label,
-          points: data.x.map((x, i) => {
-            const stall = next() * 300;
-            const extra = (next() - 0.35) * 150;
-            return {
-              x,
-              profile: `C${i}`,
-              stall_s: stall,
-              stall_s_min: stall * 0.6,
-              stall_s_max: stall * 1.4,
-              extra_cost_pct: extra,
-              extra_cost_pct_min: extra - 10,
-              extra_cost_pct_max: extra + 10,
-              cost_usd: 0.3,
-              completion_rate: 100,
-              seeds: ["1", "2"],
-            };
-          }),
-        };
-      }
-      const odd = lineModel({ ...data, series });
+      const odd = lineModel(synthetic(next));
       const [width, height] = SIZES[round % SIZES.length]!;
       checkLayout(lineLayout(odd, width, height, lineCaptions(odd)), `random ${round} ${width}x${height}`, odd);
     }
@@ -274,27 +314,32 @@ describe("LineDraw markup", () => {
   const html = renderToStaticMarkup(createElement(LineDraw, { progress: motionValue(0), data, still: true }));
 
   it("draws every system in both panels, a mark for each point, and a tooltip on each", () => {
-    expect(html.match(/class="hv-ld-series"/g)).toHaveLength(12);
-    expect(html.match(/class="hv-ld-mark"/g)).toHaveLength(48);
-    expect(html.match(/<title>/g)).toHaveLength(48);
+    const marks = model.series.reduce((n, s) => n + s.stall.length, 0) * 2;
+    expect(html.match(/class="hv-ld-series"/g)).toHaveLength(model.series.length * 2);
+    expect(html.match(/class="hv-ld-mark"/g)).toHaveLength(marks);
+    expect(html.match(/<title>/g)).toHaveLength(marks);
     expect(html.match(/data-wipe="/g)).toHaveLength(6);
-    expect(html).toContain("FractalSwarm, 5 coordinators killed (C3): 14.6 s, range 5.6 to 23.5 over 2 seeds");
-    expect(html).toContain("In-process supervisor, 5 coordinators killed (C3): +75.6%");
+    const swarm = endOf("swarm");
+    expect(html).toContain(
+      `FractalSwarm, ${swarm.x} coordinators killed (${swarm.profile}): ${stallText("swarm")}, range ${swarm.stall_s_min.toFixed(1)} to ${swarm.stall_s_max.toFixed(1)} over ${data.seedCount} seeds`,
+    );
+    expect(html).toContain(`In-process supervisor, ${swarm.x} coordinators killed (${swarm.profile}): ${extraText("central")}`);
   });
 
   it("is an image with a text alternative, and the same numbers as two tables", () => {
+    const central = endOf("central");
     expect(html).toContain('role="img"');
     expect(html).toContain("two charts, one of stall time in seconds and one of extra cost in percent");
     expect(html.match(/<table/g)).toHaveLength(2);
-    expect(html).toContain("<caption>Stall time, in seconds: the mean over 2 seeds, with the lowest and highest seed</caption>");
-    expect(html).toContain("92.6 s (83.4 to 101.8)");
+    expect(html).toContain(`<caption>Stall time, in seconds: the mean over ${data.seedCount} seeds, with the lowest and highest seed</caption>`);
+    expect(html).toContain(`${stallText("central")} (${central.stall_s_min.toFixed(1)} to ${central.stall_s_max.toFixed(1)})`);
     expect(html).toContain("0 killed (C0)");
   });
 
   it("names its setting under the chart, unless the page prints it itself", () => {
     expect(html).toContain("T2 conference");
     expect(html).toContain("real model");
-    expect(html).toContain("2 seeds");
+    expect(html).toContain(`${data.seedCount} seeds`);
     const quiet = renderToStaticMarkup(createElement(LineDraw, { progress: motionValue(0), data, still: true, setting: false }));
     expect(quiet).not.toContain("hv-ch-caption");
   });

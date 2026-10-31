@@ -422,3 +422,98 @@ textarea:focus-visible {
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
+
+/* ---- Details: the one fold of the app ----
+   A page shows its essentials and one main action; whatever else it has is in one of these, one click away. */
+.disclosure {
+  margin-top: var(--space-3);
+}
+
+.disclosure__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure__summary::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+.disclosure[open] > .disclosure__summary::before {
+  transform: rotate(45deg);
+}
+
+.disclosure__label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.disclosure__body {
+  padding-top: var(--space-3);
+}
+
+/* inside a card: no bar, the card is the frame */
+.disclosure--inline {
+  margin-top: var(--space-2);
+}
+
+.disclosure--inline > .disclosure__summary {
+  padding-inline: 0;
+  border-color: transparent;
+}
+
+/* in a bar: the list floats under its summary */
+.disclosure--menu {
+  position: relative;
+  margin-top: 0;
+}
+
+.disclosure--menu > .disclosure__body {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: var(--z-dropdown);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 180px;
+  padding: var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-overlay);
+}
+
+@media (hover: hover) {
+  .disclosure__summary:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosure__summary::before {
+    transition: none;
+  }
+}

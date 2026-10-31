@@ -102,4 +102,57 @@ describe("paintTree", () => {
     expect(log.get(rig.clock!.el)?.["#text"]).toBe(`${(story.tree.durationMs / 1000).toFixed(1)} s`);
     expect(log.get(rig.memorial!.el)?.opacity).toBe("1.00");
   });
+
+  it("shows the KILLED label once a dead brain has set off for the memorial, never over an empty row", () => {
+    let shownEmpty = 0;
+    let firstSetOff = Infinity;
+    for (let i = 0; i <= 3000; i++) {
+      const frame = player.frame(i / 3000);
+      paintTree(rig, frame);
+      const opacity = Number(log.get(rig.memorial!.el)?.opacity);
+      const someoneThere = frame.nodes.some((n) => n.state === "dead" && n.buried > 0);
+      if (someoneThere) firstSetOff = Math.min(firstSetOff, i);
+      if (!someoneThere && opacity > 0) shownEmpty++;
+      expect(opacity, `label at ${i}`).toBeGreaterThanOrEqual(0);
+      expect(opacity, `label at ${i}`).toBeLessThanOrEqual(1);
+    }
+    expect(firstSetOff).toBeLessThan(Infinity);
+    expect(shownEmpty).toBe(0);
+  });
+});
+
+describe("Pen", () => {
+  type Text = { nodeType: number; nodeValue: string };
+  const stand = (text: string | null) => {
+    const node: Text | null = text === null ? null : { nodeType: 3, nodeValue: text };
+    const el = { firstChild: node, lastChild: node, sets: 0 };
+    Object.defineProperty(el, "textContent", {
+      get: () => el.firstChild?.nodeValue ?? "",
+      set: (v: string) => {
+        el.sets++;
+        el.firstChild = el.lastChild = { nodeType: 3, nodeValue: v };
+      },
+    });
+    return { el: el as typeof el & { textContent: string }, node };
+  };
+
+  it("changes the one text node where it stands, writes the text of an empty element once, and writes nothing for the same text", () => {
+    const { el, node } = stand("a");
+    const pen = new Pen(el as unknown as Element);
+    pen.text("b");
+    expect(node!.nodeValue).toBe("b");
+    expect(el.sets).toBe(0);
+    pen.text("b");
+    pen.text("c");
+    expect(node!.nodeValue).toBe("c");
+    expect(el.sets).toBe(0);
+    const empty = stand(null);
+    const fresh = new Pen(empty.el as unknown as Element);
+    fresh.text("x");
+    expect(empty.el.sets).toBe(1);
+    expect(empty.el.textContent).toBe("x");
+    fresh.text("y");
+    expect(empty.el.sets).toBe(1);
+    expect(empty.el.textContent).toBe("y");
+  });
 });

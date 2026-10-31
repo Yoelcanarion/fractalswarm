@@ -1,4 +1,4 @@
-/* The "where it helps" panel. Colours are tokens only (lib/tokens.test.ts), and there are no container
+/* The trade-offs panel (#/helps). Colours are tokens only (lib/tokens.test.ts), and there are no container
    queries: the Chromium that records the video crashes on them. A verdict is never colour alone: a locality
    is a shape (filled, hollow, cross), a count is a number in a fixed place. */
 
@@ -28,11 +28,38 @@
   color: var(--text-muted);
 }
 
+/* what the counts were made on: one line in view, before the first of them */
+.helps__setting {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+}
+
+.helps__setting-tag {
+  display: inline-block;
+  margin-right: var(--space-2);
+  padding: 1px 8px;
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-pill);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* the map, and under it the full count in its fold */
 .helps__body {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   align-items: start;
+}
+
+.helps__body > .disclosure {
+  margin-top: 0;
 }
 
 .map,
@@ -708,19 +735,6 @@
   gap: var(--space-2);
 }
 
-.rules details {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2);
-  background: var(--surface-1);
-}
-
-.rules summary {
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
 .rules p,
 .rules ul {
   margin: var(--space-2) 0 0;
@@ -737,12 +751,6 @@
 
 .helps__prov code {
   font-family: var(--font-mono);
-}
-
-@media (max-width: 1280px) {
-  .helps__body {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 1100px) {

@@ -828,11 +828,6 @@
   font-size: var(--fs-body);
 }
 
-.approve__advice summary {
-  cursor: pointer;
-  color: var(--warn-text);
-}
-
 .approve__edits {
   margin: 0;
   color: var(--text-secondary);

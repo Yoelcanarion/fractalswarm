@@ -214,10 +214,11 @@ export function runCount(hero: HeroData): number {
 export type Backend = "real" | "fake";
 
 /** What each recorded set was run with. The files do not say, so this does, from docs/claims.md: the
- * real-model rows are `bench/results/v1` (2 seeds) and `bench/results/headline` (3 seeds, after the handler
- * freeze); `bench/results/rivals-gate` is the $0 gate (fake LLM, simulated clock). A set that is not here
- * is shown with its setting "not recorded", never guessed. */
+ * real-model rows are `bench/results/headline-10` (10 seeds, what the claims quote), `bench/results/v1` (2 seeds)
+ * and `bench/results/headline` (3 seeds, after the handler freeze); `bench/results/rivals-gate` is the $0 gate
+ * (fake LLM, simulated clock). A set that is not here is shown with its setting "not recorded", never guessed. */
 const SET_FACTS: Record<string, { backend: Backend; heading: string }> = {
+  "headline-10": { backend: "real", heading: "Ten seeds" },
   v1: { backend: "real", heading: "Rivals matrix" },
   headline: { backend: "real", heading: "Headline" },
   "rivals-gate": { backend: "fake", heading: "The $0 gate" },

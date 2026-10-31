@@ -122,7 +122,7 @@ describe("the table of runs", () => {
     const out = table(body, {
       b: { state: "pending" },
       c: { state: "done", report: report() },
-      d: { state: "done", report: report({ ok: false, first_divergence: 812 }) },
+      d: { state: "done", report: report({ ok: false, chain_ok: false, first_divergence: 812 }) },
     });
     expect(out).toContain("Verify the replay of a");
     expect(out).toContain("Replaying…");
@@ -254,7 +254,7 @@ describe("the page", () => {
     expect(text(out)).toContain("Could not refresh the list: timeout");
   });
 
-  it("lists live runs apart from the recorded ones, with the key and the form to start one", () => {
+  it("lists live runs apart from the recorded ones, with the key and the form to start one, each folded", () => {
     const out = page({ runsLoaded: true, runs: [listing("now", "running"), listing("old-1"), listing("old-2", "interrupted")] });
     const t = text(out);
     expect(out.match(/<h1/g)).toHaveLength(1);
@@ -266,9 +266,26 @@ describe("the page", () => {
     expect(t).toContain("1 live · 1 recorded · 1 interrupted");
     expect(out).toContain('href="#/run/old-1?at=end"');
     expect(t).toContain("How to read this table");
-    expect(t).toContain("Start a run on the fake model, so it costs nothing");
+    expect(t).toContain("Start a run of your own");
+    expect(t).toContain("on the practice model, so it costs nothing");
     expect(t).toContain("Describe the job and start it");
     // The live run is in its own strip, not in the table of recorded ones.
     expect(out.split("runstable")[1]).not.toContain("#/run/now");
+  });
+
+  it("opens with one main action and the runs to start from, with the whole list and the form under Details", () => {
+    const out = page({ runsLoaded: true, runs: [listing("old-1"), listing("demo-final"), listing("old-2", "interrupted")] });
+    // the main action is the final run, wherever the server lists it
+    expect(out).toContain('<a class="btn btn--on" href="#/run/demo-final?at=end">Open the final run</a>');
+    // the short list leads with it
+    const featured = /<ul class="featured"[\s\S]*?<\/ul>/.exec(out)?.[0] ?? "";
+    expect([...featured.matchAll(/class="mono featured__id" href="([^"]+)"/g)].map((m) => m[1])).toEqual(["#/run/demo-final?at=end", "#/run/old-1?at=end", "#/run/old-2?at=end"]);
+    // the search, the filters and the table are in the fold with the id the address opens
+    const fold = /<details id="all"[\s\S]*?<\/details>\s*<details id="start"/.exec(out)?.[0] ?? "";
+    expect(fold).toContain("All 3 runs");
+    expect(fold).toContain("runstool");
+    expect(fold).toContain("runstable");
+    expect(featured).not.toContain("runstable");
+    expect(out).toContain('<details id="start"');
   });
 });
