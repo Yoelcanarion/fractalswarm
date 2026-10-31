@@ -1,13 +1,13 @@
 // Drive the built static site in headless Chromium and report anything that is not clean.
 //   node arena-static-browser-check.mjs <base url, ending in /> <out dir> [left right]
-// Not run in a browser yet when this was written (W8 was stopped before RELEASE). It imports playwright-core, which is
-// not a dependency of the repo: `npm i playwright-core@1.48.2` in a scratch folder OUTSIDE the repo, copy this file there
+// It imports playwright-core, which is not a dependency of the repo: `npm i playwright-core@1.48.2` in a scratch folder OUTSIDE the repo, copy this file there
 // and run it from there. CHROMIUM_EXE is the Chromium that Playwright installed on this machine (Chromium 130 crashes on
 // CSS container queries, so the styles use media queries). Serve the built site first, with no FractalSwarm server:
 // `python -m http.server 8770 --directory <site>`, then use http://127.0.0.1:8770/ as the base url. To check a sub-path,
 // copy the site into <tmp>/fractalswarm/ and serve <tmp>, then pass http://127.0.0.1:8770/fractalswarm/ as the base url.
 // Put <out dir> (screenshots, requests.txt, summary.json) outside the repo. RUNS (comma separated, default
-// demo-toy,demo-backup) names the runs whose pages are visited; left and right name the arena pair ("-" for none).
+// the site's five logs) names the runs whose pages are visited; left and right name the arena pair ("-" for none, default the
+// pair against durable-max).
 //
 // PROBLEM (exit 1): a failed request, an HTTP status >= 400, a request to another origin, a console message of any kind,
 // a page error, a page with `undefined`, `NaN` or `[object Object]` in its text, a missing banner (or one on the home page),
@@ -17,13 +17,14 @@
 import { chromium } from "playwright-core";
 import { mkdirSync, writeFileSync } from "node:fs";
 
-const [baseUrl, outDir, left = "t2-swarm-killhalf", right = "t2-central-killhalf"] = process.argv.slice(2);
+const [baseUrl, outDir, left = "demo-same-second-durable-max-swarm", right = "demo-same-second-durable-max-rival"] = process.argv.slice(2);
 if (!baseUrl || !outDir) throw new Error("usage: node arena-static-browser-check.mjs <base url> <out dir> [left right]");
 mkdirSync(outDir, { recursive: true });
 
 const EXE = process.env.CHROMIUM_EXE ?? "C:/Users/yogar/AppData/Local/ms-playwright/chromium-1140/chrome-win/chrome.exe";
-const BANNER = "Static showcase: recorded runs only. Run it yourself: uv run fractalswarm demo --verify";
-const RUNS = (process.env.RUNS ?? "demo-final").split(",");
+const BANNER = "Static showcase: recorded runs only. Run it yourself: get the code, then uv run fractalswarm demo --verify";
+const FIVE_LOGS = ["demo-final", "demo-same-second-durable-max-swarm", "demo-same-second-durable-max-rival", "demo-same-second-central-swarm", "demo-same-second-central-rival"];
+const RUNS = process.env.RUNS?.split(",") ?? FIVE_LOGS;
 // The doors of the home page that lead somewhere on a site with no server (web/src/home/doors.ts); "A live run" (#/new) is the closed one.
 const OPEN_DOORS = ["#/arena", "#/runs", "#/evidence"];
 const BIG = process.env.BIG_RUN ?? RUNS[0]; // the biggest log the site holds: the final run, 8,771 events
@@ -90,7 +91,8 @@ async function visit(name, hash, { banner = true, needles = [], badge = false, w
     if (extra.length) problem(name, `the page asked for data files it should not need: ${extra.join(", ")}`);
   }
   const shown = await bannerOf(page);
-  if (banner && !shown?.startsWith(BANNER)) problem(name, `banner is ${JSON.stringify(shown)}`);
+  // a phone keeps the first sentence (static.css): the rest would take a quarter of its window
+  if (banner && !shown?.startsWith(viewport ? BANNER.split(" Run it")[0] : BANNER)) problem(name, `banner is ${JSON.stringify(shown)}`);
   if (banner && shown && !hash.startsWith("#/director/")) {
     // present is not seen: something fixed to the window (a page's own bar) can sit over it. The director's scenes are the
     // exception: a frame as big as the window with none of the app around it (director.css), the banner sits under it by design
@@ -105,11 +107,12 @@ async function visit(name, hash, { banner = true, needles = [], badge = false, w
   }
   if (!banner && shown !== null) problem(name, `the banner is on this page: ${JSON.stringify(shown)}`);
   if (badge) {
+    // one short line: the commit, the hash and where it was checked are in its tooltip
     const label = (await verifyBadge(page).innerText()).replace(/\s+/g, " ");
-    const title = (await verifyBadge(page).getAttribute("title")) ?? "";
+    const tip = (await page.locator(".tip", { has: verifyBadge(page) }).first().locator(".tip__bubble").textContent()) ?? "";
     console.log(`  badge: ${label}`);
-    if (!/Replay verified at build, commit [0-9a-f]{7}\+? ✓ hash match [0-9a-f]{12}/.test(label)) problem(name, `badge text: ${label}`);
-    if (!title.includes("not in your browser")) problem(name, "badge tooltip does not say it was not checked in the browser");
+    if (label !== "Replay verified at build ✓") problem(name, `badge text: ${label}`);
+    if (!/at commit [0-9a-f]{7}\+? on \d{4}-\d{2}-\d{2}, not in your browser/.test(tip)) problem(name, `badge tooltip does not say where it was checked: ${tip.slice(0, 120)}`);
   }
   const body = await text(page);
   // innerText applies text-transform: a heading written "Run the ablation" reads RUN THE ABLATION
@@ -216,8 +219,8 @@ const pages = [
   ["director-list", "#/director", ["Director", "s1-arena-open"]],
   ["director-no-runs", "#/director/s1-arena-open", []], // sources.json names no run until W5 fills it: read what a visitor sees
   ["arena-picker", "#/arena", left === "-" ? [] : [left]],
-  ["new-run", "#/new", ["fractalswarm serve", "Use the sample text"]],
-  ["ablation", "#/ablation", ["Run the ablation"]],
+  ["new-run", "#/new", ["uv run fractalswarm serve", "Get the code", "Watch a recorded pair"]], // no form on the site: only where the real one is
+  ["ablation", "#/ablation", ["Model vs parser", "Run at no cost"]],
   ["unknown-run", "#/run/nope", ["nope"]],
 ];
 if (left !== "-") pages.push(["arena-pair", `#/arena/${left}/${right}?at=end`, []]);
@@ -251,15 +254,16 @@ if (left !== "-") {
   }
 }
 
-// ---- the Runs page (W4): "Verify N listed runs" gives the verdict of the build, and never says a replay ran in the browser
+// ---- the Runs page (W4): "Recompute N logs here" recomputes every hash in the browser, beside the verdict of the build, and never
+// says a replay ran here. "Change one digit" breaks the page's own copy of a log, and "Back to the real log" restores it.
 {
   const name = "runs-verify";
   const page = await visit(name, "#/runs", { needles: RUNS, shoot: false });
   // since the redesign the table, its filters and its verify buttons sit in a fold ("All N runs"), closed on a first visit
   const fold = page.locator("summary", { hasText: /^All \d+ runs/ });
   if ((await fold.count()) > 0) await fold.first().click();
-  const verifyAll = page.getByRole("button", { name: /^Verify \d+ listed runs?$/ });
-  if ((await verifyAll.count()) === 0) warn(name, "no 'Verify N listed runs' button on the Runs page: is W4's page merged?");
+  const verifyAll = page.getByRole("button", { name: /^Recompute \d+ logs? here$/ });
+  if ((await verifyAll.count()) === 0) problem(name, "no 'Recompute N logs here' button on the Runs page");
   else {
     await verifyAll.first().click();
     await page.waitForFunction(
@@ -276,17 +280,26 @@ if (left !== "-") {
     if (cells.length < 2) problem(name, `only ${cells.length} row(s) in the table of runs`);
     const bad = cells.filter((c) => !/^Replay verified at build/.test(c));
     if (bad.length) problem(name, `${bad.length} of ${cells.length} cells do not say "Replay verified at build": ${JSON.stringify(bad[0])}`);
+    const recomputed = cells.filter((c) => /[\d,]+ hashes recomputed here in [\d.]+ s/.test(c));
+    if (recomputed.length !== cells.length) problem(name, `${recomputed.length} of ${cells.length} cells say how many hashes were recomputed`);
     if (/re-run from run\.started/.test(await page.content())) problem(name, "the page says events were re-run from run.started: a replay ran in the browser");
     await shot(page, name);
+    await page.getByRole("button", { name: /^Change one digit of / }).first().click();
+    const broken = page.getByText(/^One digit changed: hash chain broken at event [\d,]+$/);
+    await broken.first().waitFor({ timeout: 60000 });
+    console.log(`  ${await broken.first().innerText()}`);
+    await shot(page, `${name}-broken`);
+    await page.getByRole("button", { name: /^Recompute the real log of / }).first().click();
+    await broken.first().waitFor({ state: "detached", timeout: 60000 });
+    await page
+      .waitForFunction(() => [...document.querySelectorAll("tbody tr td:last-child")].every((td) => /hashes recomputed here/.test(td.innerText)), null, { timeout: 60000 })
+      .catch(() => problem(name, 'not every cell holds again after "Back to the real log"'));
   }
   await page.close();
 }
 
 // ---- the doors that need the server say why when used (the shim answers 503 with its reason in the page's own error box)
-for (const [name, hash, button] of [
-  ["new-run-sample", "#/new", "Use the sample text"],
-  ["ablation-start", "#/ablation", "Run at no cost"],
-]) {
+for (const [name, hash, button] of [["ablation-start", "#/ablation", "Run at no cost"]]) {
   const page = await visit(name, hash, { shoot: false });
   await page.getByRole("button", { name: button }).click();
   await page.waitForTimeout(800);
@@ -297,7 +310,7 @@ for (const [name, hash, button] of [
 }
 
 // ---- a narrow screen: the banner wraps, nothing overflows sideways
-for (const [name, hash] of [["phone-run", `#/run/${RUNS[0]}?at=end`], ["phone-helps", "#/helps"]]) {
+for (const [name, hash] of [["phone-run", `#/run/${RUNS[0]}?at=end`], ["phone-helps", "#/helps"], ["phone-runs", "#/runs"]]) {
   const page = await visit(name, hash, { viewport: { width: 390, height: 800 }, scroll: false });
   await page.close();
 }
