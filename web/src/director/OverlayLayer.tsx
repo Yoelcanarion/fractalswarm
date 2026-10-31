@@ -43,7 +43,7 @@ export function OverlayLayer({ take, note }: { take: Take; note: string | null }
         if (opacity <= 0) return null;
         const rise = `translateY(${((1 - opacity) * 14).toFixed(2)}px)`;
         return caption.style === "lower" ? (
-          <div key={caption.id} className="dir__lower" style={{ opacity, transform: rise }}>
+          <div key={caption.id} className={caption.align === "right" ? "dir__lower dir__lower--right" : "dir__lower"} style={{ opacity, transform: rise }}>
             {caption.kicker !== null && <span className="dir__kicker">{caption.kicker}</span>}
             <p className="dir__text">{caption.text}</p>
           </div>

@@ -171,7 +171,7 @@ export function createTake(scene: Scene, replay: ReplayClock | null, surface: Su
             tips = [...tips, { id: ++ids, target: step.target, from: clockMs(), to: clockMs() + step.ms }];
             return;
           case "caption":
-            captions = addCaption(captions, { id: ++ids, text: step.text, kicker: step.kicker, style: step.style, from: clockMs(), to: clockMs() + step.ms });
+            captions = addCaption(captions, { id: ++ids, text: step.text, kicker: step.kicker, style: step.style, align: step.align, from: clockMs(), to: clockMs() + step.ms });
             return;
           case "lens": {
             const why = surface.lens(step.open);

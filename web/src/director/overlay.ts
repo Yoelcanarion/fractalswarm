@@ -24,6 +24,8 @@ export interface Caption {
   text: string;
   kicker: string | null;
   style: "lower" | "overlay";
+  /** The edge of the frame a lower third sits against (an overlay is centred and has none). */
+  align: "left" | "right";
   from: number;
   to: number;
 }

@@ -9,7 +9,7 @@
 //   camera                     fit a node, a subtree or a panel, zoom, pan; or go home. Eased, and it does not stop the program
 //   highlight                  a ring around a node, a counter or a panel, for some milliseconds
 //   tooltip                    the hover text an element carries (its `title`), drawn next to it for some milliseconds
-//   caption                    a lower third, or a brief overlay, for some milliseconds
+//   caption                    a lower third (at the left, or the right when the left covers what the voice points at), or a brief overlay, for some milliseconds
 //   lens                       open a call of the Muse lens, or close it
 //   panel                      show or hide a part of the page
 //
@@ -61,7 +61,7 @@ export type Step =
   | { do: "camera"; fit: Target | null; zoom: number | null; pan: { x: number; y: number } | null; pad: number; ms: number; ease: Ease }
   | { do: "highlight"; target: Target; ms: number }
   | { do: "tooltip"; target: Target; ms: number }
-  | { do: "caption"; text: string; kicker: string | null; ms: number; style: "lower" | "overlay" }
+  | { do: "caption"; text: string; kicker: string | null; ms: number; style: "lower" | "overlay"; align: "left" | "right" }
   | { do: "lens"; open: string | null }
   | { do: "panel"; name: PanelName; show: boolean };
 
@@ -184,18 +184,15 @@ function readStep(raw: unknown, where: string): Step {
       known(r, ["do", "target", "ms"], where);
       return { do: kind, target: readTarget(r.target, `${where}.target`), ms: milliseconds(r.ms, `${where}.ms`, 200, 60_000) };
     case "caption": {
-      known(r, ["do", "text", "kicker", "ms", "style"], where);
+      known(r, ["do", "text", "kicker", "ms", "style", "align"], where);
       const words = text(r.text, `${where}.text`);
       if (words.trim() === "" || words.length > 200) return bad(`${where}.text`, "a caption of 1 to 200 characters");
       const kicker = optional(r.kicker, (value) => text(value, `${where}.kicker`));
       if (kicker !== null && kicker.length > 60) return bad(`${where}.kicker`, "a kicker of up to 60 characters");
-      return {
-        do: "caption",
-        text: words,
-        kicker,
-        ms: milliseconds(r.ms, `${where}.ms`, 500, 60_000),
-        style: r.style === undefined ? "lower" : oneOf(r.style, ["lower", "overlay"] as const, `${where}.style`),
-      };
+      const style = r.style === undefined ? "lower" : oneOf(r.style, ["lower", "overlay"] as const, `${where}.style`);
+      const align = r.align === undefined ? "left" : oneOf(r.align, ["left", "right"] as const, `${where}.align`);
+      if (style === "overlay" && align === "right") return bad(`${where}.align`, "only a lower third sits on a side: an overlay is centred");
+      return { do: "caption", text: words, kicker, ms: milliseconds(r.ms, `${where}.ms`, 500, 60_000), style, align };
     }
     case "lens": {
       known(r, ["do", "open", "close"], where);

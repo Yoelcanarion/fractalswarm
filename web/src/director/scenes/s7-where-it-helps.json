@@ -7,7 +7,7 @@
     { "do": "wait", "ms": 300 },
     { "do": "highlight", "target": { "region": "restart-row" }, "ms": 2700 },
     { "do": "wait", "ms": 2700 },
-    { "do": "caption", "kicker": "Realistic durable supervisor · 5 crashes · 10 seeds", "text": "Real model: a crash held up 9.0% of sessions, against 37.3%", "ms": 4800 },
+    { "do": "caption", "kicker": "Realistic durable supervisor · 5 crashes · 10 seeds", "text": "Real model: a crash held up 9.0% of sessions, against 37.3%", "align": "right", "ms": 4800 },
     { "do": "wait", "ms": 2200 },
     { "do": "highlight", "target": { "region": "gate-row" }, "ms": 2100 },
     { "do": "wait", "ms": 2100 },
