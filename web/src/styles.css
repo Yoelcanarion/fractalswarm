@@ -336,9 +336,18 @@ textarea {
   --lens-max-h: max(320px, calc(100vh - 163px - var(--timeline-h) - 36px));
 }
 
+/* A short window: the rows sit closer, so that the Details bar under the tree is not behind the replay bar pinned over the foot of the page. */
+@media (max-height: 700px) {
+  .run--overview {
+    gap: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
+
 .run--overview .run__tree {
   flex: 1 0 auto;
-  min-height: clamp(300px, 44vh, 680px);
+  min-height: clamp(280px, 44vh, 680px);
   padding: 0;
   overflow: hidden;
 }
