@@ -367,6 +367,30 @@ describe("the end of a pair", () => {
     expect(await page(65_000)).not.toContain("pairend");
   });
 
+  it("says so when a run's log ends without the run completing", async () => {
+    const swarm = swarmStream();
+    kill(swarm, "o1", 10_000);
+    swarm.at(60_000).emit("run.completed", "@kernel");
+    const rival = rivalStream(undefined, 4, { recovery_ms: 5000 });
+    crash(rival, "o0", 10_000, 5000);
+    rival.at(70_000).emit("run.halted", "@kernel");
+    // the catalog says the rival's run was interrupted: its log just stops, and it is no longer live
+    const stopped: RunApi = { ...api({ s: swarm.events, r: rival.events }), listRuns: async () => [{ id: "r", status: "interrupted" } as RunListing] };
+    const session = createPairSession({ api: stopped, clock: { scheduler: idle } });
+    await session.open("s", "r", { atMs: 75_000, speed: null, play: false });
+    renderCurrent(session.left);
+    renderCurrent(session.right);
+    const html = renderToStaticMarkup(
+      createElement(
+        RunStoreProvider,
+        { store: session.left as never },
+        createElement(ArenaView, { session, pairs: [], runs: [], official: { left: null, right: null }, left: "s", right: "r" }),
+      ),
+    );
+    expect(text(html)).toContain("Only one of the two runs finished.");
+    expect(text(html)).toContain("It did not finish: 0 talks placed.");
+  });
+
   it("is not in a director's frame, which is the arena and nothing around it", async () => {
     expect(await page(75_000, { bare: true })).not.toContain("pairend");
   });
