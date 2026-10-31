@@ -532,6 +532,13 @@ describe("the keyboard on the run page", () => {
     expect(css.slice(0, phone)).not.toMatch(/\.runstrip__proof \.badge \{[^}]*white-space: normal/);
   });
 
+  it("makes the page's scroller the holder of what is placed inside it, so that a hidden label far down a page does not give the window a scrollbar of its own", () => {
+    const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
+    expect(css).toMatch(/\n\.content \{\s*position: relative;\s*flex: 1;\s*min-height: 0;\s*overflow: auto;/);
+    const ui = readFileSync(REPO_ROOT + "web/src/styles/ui.css", "utf-8").replace(/\r\n/g, "\n");
+    expect(ui).toMatch(/\.disclosure--menu > \.disclosure__body \{[^}]*z-index: var\(--z-dropdown\);/); // a menu above it still falls over it
+  });
+
   it("keeps the height of each block of the results where the page is as tall as the screen, so that the program is not squeezed under the cards after it", () => {
     const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
     expect(css).toMatch(/\.results \{\s*flex: 1;\s*min-height: 0;\s*overflow: auto;/);

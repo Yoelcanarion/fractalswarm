@@ -215,7 +215,10 @@ textarea {
 }
 
 /* ---- layout ---- */
+/* It holds what is placed inside it: a box out of the flow that it did not hold was not clipped by it either, so one hidden label at the foot of
+   the review stretched the window by 864 px, and the page had two scrollbars and a wheel that took the whole app up off the screen. */
 .content {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: auto;
