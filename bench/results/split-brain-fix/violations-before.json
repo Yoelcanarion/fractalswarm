@@ -1,0 +1,40 @@
+{
+ "swarm__t2_conference__C0__s1": {},
+ "swarm__t2_conference__C3__s1": {},
+ "swarm__t2_conference__C0__s2": {},
+ "swarm__t2_conference__C3__s2": {
+  "split-brain": 1
+ },
+ "swarm__t2_conference__C0__s3": {},
+ "swarm__t2_conference__C3__s3": {},
+ "swarm__t2_conference__C0__s4": {},
+ "swarm__t2_conference__C3__s4": {
+  "duplicate-call": 1
+ },
+ "swarm__t2_conference__C0__s5": {
+  "contract-failed": 1,
+  "contract-unfinished": 1,
+  "goal-not-ok": 3,
+  "task-result": 3
+ },
+ "swarm__t2_conference__C3__s5": {},
+ "swarm__t2_conference__C0__s6": {},
+ "swarm__t2_conference__C3__s6": {
+  "split-brain": 1
+ },
+ "swarm__t2_conference__C0__s7": {},
+ "swarm__t2_conference__C3__s7": {
+  "split-brain": 3
+ },
+ "swarm__t2_conference__C0__s8": {},
+ "swarm__t2_conference__C3__s8": {},
+ "swarm__t2_conference__C0__s9": {},
+ "swarm__t2_conference__C3__s9": {},
+ "swarm__t2_conference__C0__s10": {},
+ "swarm__t2_conference__C3__s10": {
+  "duplicate-call": 1
+ },
+ "final": {},
+ "pair-central-swarm": {},
+ "pair-durable-max-swarm": {}
+}

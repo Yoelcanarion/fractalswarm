@@ -541,20 +541,25 @@ def _takeover_issues(succession: Succession, basis: _Decision) -> list[tuple[str
 
 
 def _split_brain(successions: list[Succession], found: list[Violation]) -> None:
-    owners: dict[tuple[str, str], list[Succession]] = defaultdict(list)
+    """A goal has one holder at each point of the log, so a remap must start from that holder.
+
+    Two takeovers of one tenure break that rule: the second one's ``previous`` no longer holds
+    the goal. A member that held a goal twice (falsely dead, the goal back, really dead later)
+    has two tenures, each with its own remap, and breaks nothing. ``successions`` is in log order.
+    """
+    holder: dict[str, str] = {}
     for s in successions:
-        owners[(s.goal, s.previous)].append(s)
-    for (goal, previous), group in sorted(owners.items()):
-        names = sorted({s.owner for s in group})
-        if len(names) > 1:
-            where = ", ".join(f"{s.owner} at seq {s.seq}" for s in group)
+        current = holder.setdefault(s.goal, s.previous)
+        if current != s.previous:
             _violation(
                 found,
                 "succession",
                 "split-brain",
-                group[1].seq,
-                f"{goal} from {previous} was taken by {len(names)} owners: {where}",
+                s.seq,
+                f"{s.goal} was taken from {s.previous} by {s.owner} at seq {s.seq}, "
+                f"but {current} held it by then",
             )
+        holder[s.goal] = s.owner
 
 
 def _chains(successions: list[Succession]) -> dict[str, list[str]]:

@@ -1,0 +1,430 @@
+{
+ "totals": {
+  "runs": 20,
+  "remaps": 113,
+  "old_flags": 5,
+  "runs_old_flags": 3,
+  "new_flags": 0,
+  "chain_checked": 110,
+  "chain_breaks": 0,
+  "chain_no_assignment": 3,
+  "twins_injected": 105,
+  "twins_caught_old": 105,
+  "twins_caught_new": 105
+ },
+ "rows": [
+  {
+   "run": "swarm__t2_conference__C0__s1",
+   "events": 16243,
+   "head": "e741e73e4b1276c39d4b66ec576627b5",
+   "remaps": 0,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 0,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 0,
+    "caught_old": 0,
+    "caught_new": 0
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C3__s1",
+   "events": 29710,
+   "head": "be801f091da413514528a592d779fd6b",
+   "remaps": 11,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 10,
+    "breaks": 0,
+    "no_assignment": 1,
+    "second_tenures": [
+     "track-hci held twice by o3"
+    ]
+   },
+   "twins": {
+    "injected": 10,
+    "caught_old": 10,
+    "caught_new": 10
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C0__s2",
+   "events": 18203,
+   "head": "68ecabf9ca52b697599c4d9045223e79",
+   "remaps": 0,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 0,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 0,
+    "caught_old": 0,
+    "caught_new": 0
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C3__s2",
+   "events": 26257,
+   "head": "a23780356e51f7f9614c617249825981",
+   "remaps": 12,
+   "old_flags": [
+    "track-data/d2 from o1.2 was taken by 2 owners: o1.1 at seq 6935, o1.3 at seq 13821"
+   ],
+   "new_flags": [],
+   "chain": {
+    "checked": 12,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": [
+     "track-data/d1 held twice by o1.3",
+     "track-data/d2 held twice by o1.2",
+     "track-data/d2 held twice by o1.3"
+    ]
+   },
+   "twins": {
+    "injected": 12,
+    "caught_old": 12,
+    "caught_new": 12
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C0__s3",
+   "events": 21625,
+   "head": "c8ecf670cb7e49be20e6a5bba3b32f96",
+   "remaps": 0,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 0,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 0,
+    "caught_old": 0,
+    "caught_new": 0
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C3__s3",
+   "events": 22448,
+   "head": "7c81a40fa10f35b0998343c5ed6da636",
+   "remaps": 11,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 11,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": [
+     "track-ai/d1 held twice by o2.1",
+     "track-hci held twice by o3"
+    ]
+   },
+   "twins": {
+    "injected": 10,
+    "caught_old": 10,
+    "caught_new": 10
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C0__s4",
+   "events": 15504,
+   "head": "1970e5f106ebb6777ba17fc91e54e655",
+   "remaps": 0,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 0,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 0,
+    "caught_old": 0,
+    "caught_new": 0
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C3__s4",
+   "events": 19258,
+   "head": "f1c9b78f1e7a89424ed5770fc162842d",
+   "remaps": 11,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 11,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": [
+     "track-ai held twice by o2",
+     "track-ai/d2 held twice by o2.2"
+    ]
+   },
+   "twins": {
+    "injected": 10,
+    "caught_old": 10,
+    "caught_new": 10
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C0__s5",
+   "events": 16333,
+   "head": "35c9628749a0902d18bf0f295242c910",
+   "remaps": 0,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 0,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 0,
+    "caught_old": 0,
+    "caught_new": 0
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C3__s5",
+   "events": 19338,
+   "head": "bb18d458a643f7a173658349cbf9c59e",
+   "remaps": 14,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 13,
+    "breaks": 0,
+    "no_assignment": 1,
+    "second_tenures": [
+     "track-hci held twice by o3"
+    ]
+   },
+   "twins": {
+    "injected": 14,
+    "caught_old": 14,
+    "caught_new": 14
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C0__s6",
+   "events": 15288,
+   "head": "83b0cf6bf9817c55ffa7fc58be14b571",
+   "remaps": 0,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 0,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 0,
+    "caught_old": 0,
+    "caught_new": 0
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C3__s6",
+   "events": 31079,
+   "head": "ca5bf50874e71c783825b2c12f914e7e",
+   "remaps": 10,
+   "old_flags": [
+    "track-ai/d1 from o2.3 was taken by 2 owners: o2.4 at seq 18277, o2.5 at seq 24103"
+   ],
+   "new_flags": [],
+   "chain": {
+    "checked": 10,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": [
+     "track-ai/d1 held twice by o2.3",
+     "track-ai/d2 held twice by o2.3"
+    ]
+   },
+   "twins": {
+    "injected": 10,
+    "caught_old": 10,
+    "caught_new": 10
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C0__s7",
+   "events": 18406,
+   "head": "ee08da9674f814bca3516751527cbebc",
+   "remaps": 0,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 0,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 0,
+    "caught_old": 0,
+    "caught_new": 0
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C3__s7",
+   "events": 18474,
+   "head": "b23fc5c1223be94b3d2fd5787e673e85",
+   "remaps": 12,
+   "old_flags": [
+    "track-ai/d1 from o2.1 was taken by 2 owners: o2.1 at seq 12041, o2.2 at seq 14996",
+    "track-data/d1 from o1.1 was taken by 3 owners: o1.2 at seq 9250, o1.1 at seq 11825, o1.3 at seq 12493",
+    "track-data/d2 from o1.1 was taken by 2 owners: o1.1 at seq 11827, o1.3 at seq 12495"
+   ],
+   "new_flags": [],
+   "chain": {
+    "checked": 12,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": [
+     "track-ai/d1 held twice by o2.1",
+     "track-data/d1 held twice by o1.1",
+     "track-data/d2 held twice by o1.1"
+    ]
+   },
+   "twins": {
+    "injected": 9,
+    "caught_old": 9,
+    "caught_new": 9
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C0__s8",
+   "events": 14541,
+   "head": "abbd1fc701662e9e619b59934a1134a4",
+   "remaps": 0,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 0,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 0,
+    "caught_old": 0,
+    "caught_new": 0
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C3__s8",
+   "events": 20478,
+   "head": "7f83e99cb67b5eb3f44e15ab428c39f8",
+   "remaps": 10,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 10,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": [
+     "track-hci/d1 held twice by o3.1"
+    ]
+   },
+   "twins": {
+    "injected": 10,
+    "caught_old": 10,
+    "caught_new": 10
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C0__s9",
+   "events": 7799,
+   "head": "c23fc0c9f9014dd8288e86bc04264eaf",
+   "remaps": 0,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 0,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 0,
+    "caught_old": 0,
+    "caught_new": 0
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C3__s9",
+   "events": 20026,
+   "head": "bbf14b91294a1d76c4866d08e17185ad",
+   "remaps": 11,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 10,
+    "breaks": 0,
+    "no_assignment": 1,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 10,
+    "caught_old": 10,
+    "caught_new": 10
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C0__s10",
+   "events": 9957,
+   "head": "c895c0e7ee11a697cf073416f60d7f00",
+   "remaps": 0,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 0,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 0,
+    "caught_old": 0,
+    "caught_new": 0
+   }
+  },
+  {
+   "run": "swarm__t2_conference__C3__s10",
+   "events": 15424,
+   "head": "b215d86a9b981d35b41720bf3f5db3cb",
+   "remaps": 11,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 11,
+    "breaks": 0,
+    "no_assignment": 0,
+    "second_tenures": [
+     "track-ai held twice by o2"
+    ]
+   },
+   "twins": {
+    "injected": 10,
+    "caught_old": 10,
+    "caught_new": 10
+   }
+  }
+ ]
+}

@@ -274,6 +274,18 @@ def test_two_owners_for_the_same_orphan_is_split_brain(log, base) -> None:
     assert flagged(report, "split-brain")
 
 
+def test_a_member_that_holds_a_goal_twice_in_turn_is_not_split_brain(log, base) -> None:
+    last = [e for e in log if e.type == "ownership.remapped" and e.payload["key"] == "root"][-1]
+    earlier, holder = last.payload["previous"], last.payload["owner"]
+    rival = next(m for m in ("o1", "o2", "o3") if m not in (earlier, holder))
+    back = last.payload | {"owner": earlier, "previous": holder}
+    again = last.payload | {"owner": rival, "previous": earlier}
+    twice = add(add(log, "ownership.remapped", earlier, back), "ownership.remapped", rival, again)
+    assert not flagged(analyze(twice), "split-brain")
+    twin = again | {"owner": holder}  # the same tenure taken a second time, by anyone
+    assert flagged(analyze(add(twice, "ownership.remapped", holder, twin)), "split-brain")
+
+
 def test_a_takeover_that_claims_other_works_than_the_log_holds_is_flagged(log, base) -> None:
     assert not flagged(base, "adopted-results-mismatch")
     remap = first(log, "ownership.remapped", key="track-ai/d1")
