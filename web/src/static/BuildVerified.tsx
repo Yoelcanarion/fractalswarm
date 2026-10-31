@@ -41,7 +41,7 @@ export function BuildVerified({ report }: { report: VerifyReport }) {
       title={`${whereChecked(stamp)} ${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head}. Check it yourself: ${COMMAND}`}
     >
       Replay verified at build{stamp === null ? "" : `, commit ${stamp.commit_short.slice(0, 7)}`} ✓ hash match{" "}
-      <span className="mono">{report.replayed_head.slice(0, 12)}</span>
+      <span className="mono verify__head">{report.replayed_head.slice(0, 12)}</span>
     </span>
   );
 }

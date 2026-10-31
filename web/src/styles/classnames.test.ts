@@ -47,6 +47,7 @@ const LENS_CLASSES_OUTSIDE = [
   ".runstrip__proof: components/RunStrip.tsx",
   ".timeline: components/Timeline.tsx",
   ".verify__head: components/VerifyBadge.tsx",
+  ".verify__head: static/BuildVerified.tsx",
 ];
 
 /** The class a rule starts its selector with, for every selector of every rule (`.crow:hover .x, .crow[a] {` gives `crow`). */
