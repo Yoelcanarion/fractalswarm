@@ -2,7 +2,7 @@
 // is a sample (windows around the kills and takeovers); a gap says how many events it skips.
 
 import type { HashEvent, HashesSlice } from "../../data/types";
-import { easeInOutCubic, smoothstep, span } from "../shared";
+import { smoothstep, span } from "../shared";
 
 export type StripItem =
   | { type: "event"; seq: number; tMs: number; kind: string; actor: string; hash: string; prev: string; mark: HashesSlice["marks"][string] | null; linked: boolean }
@@ -31,10 +31,17 @@ export interface StripState {
   stamp: number;
 }
 
-/** The strip moves along the log, then rests on its end while the stamp lands. */
+/** The strip moves along the log with the playhead it is given and no ease of its own, then rests on its end while the stamp lands. */
 export function stripState(p: number): StripState {
-  return { shift: easeInOutCubic(span(p, 0.03, 0.8)), stamp: smoothstep(span(p, 0.8, 0.93)) };
+  return { shift: span(p, 0.03, 0.8), stamp: smoothstep(span(p, 0.8, 0.93)) };
 }
 
-/** The pixel offset of the track for a shift, given the widths measured when the layout changed. */
-export const offsetFor = (shift: number, trackWidth: number, viewWidth: number): number => -Math.max(0, trackWidth - viewWidth) * shift;
+/**
+ * The pixel offset of the track for a shift, given the widths measured when the layout changed. It crosses the last ``travel`` pixels
+ * of the track, and the whole of it without one: all fifty cards in a few seconds would be a flicker, not a chain going by.
+ */
+export const offsetFor = (shift: number, trackWidth: number, viewWidth: number, travel = Infinity): number => {
+  const whole = Math.max(0, trackWidth - viewWidth);
+  const crossed = Math.min(whole, travel);
+  return -(whole - crossed) - crossed * shift;
+};

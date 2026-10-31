@@ -25,6 +25,10 @@ export const SECONDS = {
   hover: 0.8,
   /** A takeover in the click demo, from the coordinator going dark to the work hanging from the heir. */
   takeover: 2.6,
+  /** The takeover under See more: every survivor reads the log and picks the same heir. */
+  foldTakeover: 3.2,
+  /** The hash chain under See more, from the first event to the replay's verdict. */
+  foldChain: 4.5,
 } as const;
 
 /** The playhead of an animation `seconds` long, `elapsed` seconds after it started: 0..1, eased once. */

@@ -491,6 +491,87 @@ body:has(.home) {
   }
 }
 
+/* A row of a fold is one column, in the order of its markup, until there is room for two. */
+.home-fold__row,
+.home-fold__words,
+.home-fold__side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  justify-items: start;
+  align-content: start;
+  width: 100%;
+}
+
+.home-fold__row {
+  justify-items: stretch;
+}
+
+.home-fold__side > .home-pair {
+  width: 100%;
+}
+
+/* The right column has room at every width of two columns for the takeover's nine panels in three columns, each score on one line,
+   and for the head hash on one line of the terminal. The extra height of a side goes under the words. */
+@media (min-width: 1280px) {
+  .home-fold__body {
+    gap: var(--space-8);
+    max-width: none;
+  }
+
+  .home-fold__row {
+    grid-template-columns: minmax(0, 1fr) minmax(654px, 1.3fr);
+    grid-template-rows: auto 1fr;
+    gap: var(--space-4) clamp(48px, 5vw, 96px);
+  }
+
+  .home-fold__words {
+    grid-column: 1;
+  }
+
+  .home-fold__side {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .home-fold__row--middle > .home-fold__words {
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+
+  .home-fold__side > .home-pair {
+    margin: 0;
+  }
+
+  .home-fold__side > .home-fold__figure,
+  .home-fold__under {
+    justify-self: center;
+    text-align: center;
+  }
+
+  .home-fold__side > .home-fold__figure {
+    width: min(100%, 640px);
+  }
+}
+
+/* The height that gives the takeover the tier with each panel's three scores (viz/hrw/fit.ts), and the chain its cards on one line. */
+.home-fold__hrw {
+  width: 100%;
+  height: 420px;
+}
+
+.home-fold__hash {
+  width: 100%;
+  height: 176px;
+}
+
+/* a phone: three columns of the tier with the winning score alone, which two would leave a panel on a row of its own */
+@media (max-width: 699px) {
+  .home-fold__hrw {
+    height: 300px;
+  }
+}
+
 .home-fold__text {
   max-width: 640px;
   color: var(--text-secondary);
@@ -750,7 +831,8 @@ body:has(.home) {
   text-wrap: pretty;
 }
 
-.home-claim--lead {
+.home-claim--lead,
+.home-fold__text--lead {
   font-family: var(--font-display);
   font-weight: 560;
   font-size: var(--fs-step);
@@ -943,6 +1025,39 @@ body:has(.home) {
 
 .home-parts__workers rect {
   fill: var(--text-muted);
+}
+
+/* it draws itself as its fold opens: the links run from end to end while the parts come in, on one playhead */
+@media (prefers-reduced-motion: no-preference) {
+  .home:not([data-still]) .home-fold[open] .home-parts__links path {
+    stroke-dasharray: 1;
+    animation: home-parts-link 1.6s var(--ease-play) both;
+  }
+
+  .home:not([data-still]) .home-fold[open] .home-parts__box,
+  .home:not([data-still]) .home-fold[open] .home-parts__workers {
+    animation: home-parts-in 1.6s var(--ease-play) both;
+  }
+}
+
+@keyframes home-parts-link {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes home-parts-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* ---- the models chapter ---- */

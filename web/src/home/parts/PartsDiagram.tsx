@@ -11,15 +11,15 @@ export function PartsDiagram({ workers }: { workers: number | null }) {
   return (
     <svg
       className="home-parts"
-      viewBox="0 0 560 330"
+      viewBox="0 0 560 290"
       role="img"
       aria-label={`${labels.supervisor}, ${labels.standby} and ${labels.watcher}, above the ${labels.workers.toLowerCase()}.`}
     >
       <g className="home-parts__links">
-        <path d="M160 76 H210" />
-        <path d="M350 76 H400" />
-        <path d="M280 126 V176" />
-        <path d="M90 126 V176 H470 V126" />
+        <path pathLength={1} d="M160 76 H210" />
+        <path pathLength={1} d="M350 76 H400" />
+        <path pathLength={1} d="M280 126 V176" />
+        <path pathLength={1} d="M90 126 V176 H470 V126" />
       </g>
       {[
         { x: 20, label: labels.supervisor },

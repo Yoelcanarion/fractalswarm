@@ -4,8 +4,12 @@ import { COPY } from "../copy";
 import { useArrival, useCanHover, useStill } from "../hooks";
 import { SectionHead } from "../parts/Chapter";
 import { Claim } from "../parts/Claim";
-import { SeeMore } from "../parts/SeeMore";
+import { FoldDrawing } from "../parts/FoldDrawing";
+import { FoldRow, SeeMore } from "../parts/SeeMore";
+import { useStory } from "../story";
 import { KillDemo } from "../viz/demo/KillDemo";
+import { SECONDS } from "../viz/ease";
+import { HrwPanels } from "../viz/hrw/HrwPanels";
 import { StepDrawing, type StepId } from "../viz/steps/StepDrawing";
 import { createTurns, type Turns } from "../viz/steps/turns";
 
@@ -14,9 +18,10 @@ const STEPS: readonly StepId[] = ["log", "heir", "adopt"];
 /**
  * Three cards, each a few words and a drawing. Each plays once as it arrives, one after the other, and rests on its last frame; a
  * pointer on it, a key on it or a tap plays it again from its first frame. Under them, the click demo. The terms of the design are
- * folded.
+ * folded, beside the first takeover of the recorded run: each survivor reads the log and picks the same heir.
  */
 export function Solution() {
+  const story = useStory();
   const [turns] = useState(createTurns);
   return (
     <section id="solution" className="home-section home-solution" aria-labelledby="solution-title">
@@ -35,11 +40,25 @@ export function Solution() {
           <KillDemo />
         </div>
         <SeeMore>
-          <p className="home-fold__text">{COPY.solution.more.terms}</p>
-          <Claim id="S1" className="home-claim--lead" />
-          <Claim id="S3" />
-          <Claim id="S6" className="home-claim--small" />
-          <p className="home-limit">{COPY.solution.more.limit}</p>
+          <FoldRow
+            side={
+              story && (
+                <FoldDrawing seconds={SECONDS.foldTakeover} className="home-fold__hrw">
+                  {(progress, still) => <HrwPanels progress={progress} data={story.hrw} still={still} />}
+                </FoldDrawing>
+              )
+            }
+            after={
+              <>
+                <Claim id="S3" />
+                <Claim id="S6" className="home-claim--small" />
+                <p className="home-limit">{COPY.solution.more.limit}</p>
+              </>
+            }
+          >
+            <p className="home-fold__text">{COPY.solution.more.terms}</p>
+            <Claim id="S1" className="home-claim--lead" />
+          </FoldRow>
         </SeeMore>
       </div>
     </section>

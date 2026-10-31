@@ -47,15 +47,15 @@ export interface Stall {
   crash: number | null;
 }
 
+/** The moments the film's captions hang on, as shares of the run: where the playhead, which crosses the run at one speed, reaches each. */
 export interface Keyframes {
-  filled: number;
+  /** The first crash. */
   crash: number;
+  /** The start of the longest wait. */
+  wait: number;
+  /** The end of the last wait. */
   restart: number;
-  redone: number;
-  end: number;
 }
-
-export const DEFAULT_KEYFRAMES: Keyframes = { filled: 0.28, crash: 0.33, restart: 0.62, redone: 0.78, end: 1 };
 
 export interface LanesModel {
   lanes: LaneInfo[];
@@ -69,9 +69,6 @@ export interface LanesModel {
   counts: Record<BarKind, number>;
   stallMs: number;
   keyframes: Keyframes;
-  /** Calls of the first agent lane to work and the last to be given work before the first crash. */
-  workStartMs: number;
-  filledMs: number;
 }
 
 const CAUSES: BarCause[] = ["none", "crash", "kill", "other"];
@@ -165,10 +162,8 @@ export function lanesModel(data: LanesSlice): LanesModel {
   }
 
   const firstCrash = crashes[0]?.atMs ?? stalls[0]?.startMs ?? data.durationMs;
-  const agentStarts = raw.filter((b) => !lanes[b.lane]!.brain).map((b) => b.startMs);
-  const beforeCrash = agentStarts.filter((t) => t <= firstCrash - 250);
-  const workStartMs = data.stall.windowMs[0] > 0 ? data.stall.windowMs[0] : Math.min(...agentStarts, firstCrash);
-  const filledMs = beforeCrash.length ? Math.max(...beforeCrash) : Math.max(workStartMs, firstCrash - 1000);
+  const longest = stalls.reduce<Stall | null>((a, s) => (a && a.endMs - a.startMs >= s.endMs - s.startMs ? a : s), null);
+  const shareOfRun = (ms: number): number => (data.durationMs > 0 ? ms / data.durationMs : 0);
 
   return {
     lanes,
@@ -180,9 +175,11 @@ export function lanesModel(data: LanesSlice): LanesModel {
     micro,
     counts,
     stallMs: stalls.reduce((sum, s) => sum + (s.endMs - s.startMs), 0),
-    keyframes: { ...DEFAULT_KEYFRAMES, ...(data.keyframes ?? {}) },
-    workStartMs: Math.min(workStartMs, filledMs),
-    filledMs,
+    keyframes: {
+      crash: shareOfRun(firstCrash),
+      wait: shareOfRun(longest?.startMs ?? firstCrash),
+      restart: shareOfRun(stalls[stalls.length - 1]?.endMs ?? firstCrash),
+    },
   };
 }
 
@@ -222,107 +219,39 @@ export function stallElapsedMs(model: LanesModel, tMs: number): number {
 
 // -- the time map ------------------------------------------------------------------------------
 
-/** The share of the stretch from the crash to the restart that goes to the time nobody worked. */
-export const STALL_SHARE = 0.95;
-
-export interface Knot {
-  p: number;
-  t: number;
-}
-
-/**
- * The map from the visual's progress to a moment of the run, as a polyline of knots. Before the first
- * crash it runs at an even pace, slows to a crawl as the team starts, and sits just before the crash.
- * From the crash to the restart it gives every second nobody worked the same stretch of progress (so
- * the stall counted so far is a straight line of the progress, which is how the page counts the seconds
- * waited) and hurries through the work in between. From the restart to the redone mark the run stands
- * still while the damage is shown; then it plays out to the end.
- */
-export function buildKnots(model: LanesModel): Knot[] {
-  const kf = model.keyframes;
-  const first = model.crashes[0]?.atMs ?? model.stalls[0]?.startMs ?? model.filledMs;
-  const lastStall = model.stalls[model.stalls.length - 1];
-  const settled = lastStall ? lastStall.endMs : first;
-  const knots: Knot[] = [
-    { p: 0, t: 0 },
-    { p: kf.filled * 0.36, t: Math.min(model.workStartMs, model.filledMs) },
-    { p: kf.filled, t: model.filledMs },
-    { p: kf.crash, t: first },
-  ];
-
-  // From the first crash to the end of the last stall: stalls by their length, work by the root of its length.
-  const inside = model.stalls.filter((s) => s.endMs > first);
-  const stallTotal = inside.reduce((sum, s) => sum + (s.endMs - Math.max(s.startMs, first)), 0);
-  const pieces: { startMs: number; endMs: number; stall: boolean }[] = [];
-  let cursor = first;
-  for (const s of inside) {
-    const a = Math.max(s.startMs, first);
-    if (a > cursor) pieces.push({ startMs: cursor, endMs: a, stall: false });
-    pieces.push({ startMs: a, endMs: s.endMs, stall: true });
-    cursor = s.endMs;
-  }
-  const workRoots = pieces.filter((x) => !x.stall).reduce((sum, x) => sum + Math.sqrt(x.endMs - x.startMs), 0);
-  const stallShare = workRoots === 0 ? 1 : stallTotal === 0 ? 0 : STALL_SHARE;
-  const range = kf.restart - kf.crash;
-  let p = kf.crash;
-  for (const x of pieces) {
-    const length = x.endMs - x.startMs;
-    const share = x.stall ? (stallShare * length) / stallTotal : ((1 - stallShare) * Math.sqrt(length)) / workRoots;
-    p += range * share;
-    knots.push({ p, t: x.endMs });
-  }
-  if (!pieces.length) knots.push({ p: kf.restart, t: settled });
-  knots[knots.length - 1] = { p: kf.restart, t: settled };
-
-  knots.push({ p: kf.redone, t: settled }, { p: kf.end, t: model.durationMs });
-  return knots.filter((k, i, all) => i === 0 || k.p > all[i - 1]!.p || k.t > all[i - 1]!.t);
-}
-
 export interface TimeMap {
-  knots: Knot[];
   /** The moment of the run, in ms, shown at progress ``p``. */
   tAt(p: number): number;
-  /** 0 until the restart, then up to 1 while the damage is shown: the cut and repeated calls stand out. */
+  /** 0 until the last wait ends, then up to 1 at the end of the run: the cut and repeated calls stand out. */
   emphasisAt(p: number): number;
 }
 
+/**
+ * The map from the visual's progress to a moment of the run: a straight line, so the playhead crosses the run at one speed. A pace of
+ * its own (a crawl before the crash, a burst through the work, a stop to show the damage) stutters however well the frames hold, and
+ * it is what rule 3 of the redesign forbids. The damage is shown while the run plays out, and the axis stays true all the way.
+ */
 export function timeMap(model: LanesModel): TimeMap {
-  const knots = buildKnots(model);
   const kf = model.keyframes;
-  const tAt = (p: number): number => {
-    const x = clamp01(p);
-    if (x <= knots[0]!.p) return knots[0]!.t;
-    for (let i = 1; i < knots.length; i++) {
-      const a = knots[i - 1]!;
-      const b = knots[i]!;
-      if (x <= b.p) return b.p === a.p ? b.t : a.t + ((b.t - a.t) * (x - a.p)) / (b.p - a.p);
-    }
-    return knots[knots.length - 1]!.t;
-  };
-  const emphasisAt = (p: number): number => smoothstep(span(p, kf.restart, kf.restart + 0.7 * (kf.redone - kf.restart)));
-  return { knots, tAt, emphasisAt };
+  const tAt = (p: number): number => clamp01(p) * model.durationMs;
+  const emphasisAt = (p: number): number => smoothstep(span(p, kf.restart, 1));
+  return { tAt, emphasisAt };
 }
 
 /** How much of the progress the fade-in of a caption takes (about a third of a second of the film's seven). */
 export const MOMENT_FADE = 0.04;
 
 /**
- * The progress at which each of the film's three captions begins to appear, read from the keyframes of the run: the first as the team
- * has filled its lanes and the crash is about to strike, the second while the work waits, the third as the damage is shown. Each stays
- * once it is there, so the last picture of the film (and the still one) tells all three.
+ * The progress at which each of the film's three captions begins to appear, read from the run: the first so that it is there as the
+ * crash strikes, the second as the longest wait begins, the third as the last wait ends and the damage is shown. Each stays once it is
+ * there, so the last picture of the film (and the still one) tells all three.
  */
 export function momentStarts(kf: Keyframes): number[] {
-  return [kf.crash - 0.05, kf.crash + 0.45 * (kf.restart - kf.crash), kf.restart];
+  return [Math.max(0, kf.crash - MOMENT_FADE), kf.wait, kf.restart];
 }
 
 /** How visible caption ``index`` is at progress ``p``: 0 before its start, 1 once it has faded in. */
 export function momentOpacity(kf: Keyframes, index: number, p: number): number {
   const start = momentStarts(kf)[index];
   return start === undefined ? 0 : smoothstep((p - start) / MOMENT_FADE);
-}
-
-/** The seconds nobody worked counted from the crash to the restart as the page counts them: a straight line of the progress. */
-export function linearStallMs(model: LanesModel, p: number): number {
-  const kf = model.keyframes;
-  return model.stallMs * span(p, kf.crash, kf.restart);
 }
