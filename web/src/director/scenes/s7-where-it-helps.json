@@ -4,12 +4,17 @@
   "stage": "helps",
   "duration_ms": 12000,
   "steps": [
-    { "do": "wait", "ms": 1200 },
-    { "do": "highlight", "target": { "region": "map" }, "ms": 3000 },
-    { "do": "wait", "ms": 3200 },
-    { "do": "camera", "fit": { "region": "table" }, "pad": 0.04, "ms": 1200 },
-    { "do": "wait", "ms": 2400 },
-    { "do": "camera", "fit": { "region": "process" }, "pad": 0.04, "ms": 1200 },
-    { "do": "wait", "ms": 2400 }
+    { "do": "wait", "ms": 400 },
+    { "do": "highlight", "target": { "region": "map" }, "ms": 4000 },
+    { "do": "wait", "ms": 4300 },
+    { "do": "camera", "fit": { "region": "table" }, "pad": 0.04, "ms": 1000 },
+    { "do": "highlight", "target": { "region": "table" }, "ms": 2200 },
+    { "do": "wait", "ms": 2200 },
+    { "do": "camera", "fit": { "region": "process" }, "pad": 0.04, "ms": 1000 },
+    { "do": "highlight", "target": { "region": "process" }, "ms": 3000 },
+    { "do": "wait", "ms": 3000 },
+    { "do": "camera", "fit": { "region": "outcome" }, "pad": 0.04, "ms": 1000 },
+    { "do": "highlight", "target": { "region": "outcome" }, "ms": 2000 },
+    { "do": "wait", "ms": 2000 }
   ]
 }

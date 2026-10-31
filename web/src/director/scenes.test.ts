@@ -94,6 +94,14 @@ describe("the scenes of the video", () => {
     expect(read("./StageViews.tsx")).toContain("<RunStrip unfold={meterOpen} />");
   });
 
+  it("open the full count's fold for the scene that points at the table, and for no other", () => {
+    // the wins, ties and losses are under the helps page's "The full count", closed on the page: a camera on them needs it open
+    expect(scenes.filter((scene) => pointsAtRegion(scene, "table")).map((scene) => scene.id)).toEqual(["s7-where-it-helps"]);
+    const read = (name: string): string => readFileSync(new URL(name, import.meta.url), "utf-8");
+    expect(read("./DirectorPage.tsx")).toContain('<HelpsStageView tableOpen={pointsAtRegion(scene, "table")} />');
+    expect(read("./StageViews.tsx")).toContain("<HelpsPage unfold={tableOpen} />");
+  });
+
   it("need only what their stage needs", () => {
     const need = (id: string) => missingSources(scenes.find((scene) => scene.id === id)!.stage, { swarm: null, rival: null, run: null, ablation: null, real: false });
     expect(need("s1-arena-open")).toEqual(["swarm", "rival"]);

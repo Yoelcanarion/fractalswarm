@@ -200,7 +200,22 @@ for (const pair of PAIRS) {
       const trace = play(scene, context);
       expect(trace.state.warnings).toEqual([]);
       const ended = trace.frames.find((frame) => frame.at >= context.end)!;
-      expect(ended.ms).toBeLessThan(scene.durationMs - 5000); // room for the lower third to be read before the clip ends
+      expect(ended.ms).toBeLessThan(scene.durationMs - 3000); // room for the lower third to be read before the clip ends
+    });
+
+    it("s6 watches the rival's first outage and the takeovers after it at 1x for 11 s, then goes to the end at 10x, and the end of the clip is still for at most 6.5 s, on either pair", () => {
+      const scene = byId("s6-fair-fight");
+      const trace = play(scene, context);
+      // the clip goes 5 s to the outage and 11 s on at 1x: the replay is not 11.5 s past the outage until the clip's clock has passed 15.5 s
+      const late = trace.frames.find((frame) => frame.at > rivalCrashes[0].at + 11_500)!;
+      expect(late.ms).toBeGreaterThan(15_500);
+      // the scoreboard's ring is the last thing that moves: what follows it is the board and the lower third, still
+      const ended = trace.frames.find((frame) => frame.at >= context.end)!;
+      const ring = scene.steps.flatMap((step) => (step.do === "highlight" && step.target.kind === "region" && step.target.region === "scoreboard" ? [step.ms] : []));
+      expect(ring).toHaveLength(1);
+      const still = scene.durationMs - (ended.ms + ring[0]);
+      expect(still).toBeGreaterThanOrEqual(0);
+      expect(still).toBeLessThanOrEqual(6500);
     });
 
     it("s8 shows the proofs with both runs played out", () => {
@@ -311,5 +326,40 @@ describe("the final run, as s4 and s5 meet it", () => {
     // the last ring is on the root once its heir holds it
     const root = trace.rings.find((ring) => ring.target.kind === "actor" && ring.target.actor === "$root")!;
     expect(playheadAt(trace, root.from)).toBeGreaterThanOrEqual(crashes[0].until);
+  });
+
+  it("s5 runs the tree slowed until the first outage, which lands where the voice says the heartbeats stop, and gives the root's heir the last seconds", () => {
+    // voice at 140 wpm: "When one stops sending heartbeats" from 6.0 s, "each survivor computes the same heir" to 12.0 s, "Even the root can die" from 21.4 s
+    const scene = byId("s5-recovery");
+    const trace = play(scene, context(scene));
+    const first = trace.frames.find((frame) => frame.at >= crashes[1].at)!;
+    expect(first.ms).toBeGreaterThan(5500);
+    expect(first.ms).toBeLessThan(6500);
+    // the heir overlay is on when the first heir takes over, 5.4 s later, still at 1x
+    const overlay = trace.captions.find((caption) => caption.text.startsWith("heir ="))!;
+    expect(overlay.from).toBeGreaterThan(first.ms + 5000);
+    expect(overlay.from).toBeLessThan(first.ms + 6000);
+    // the root's heir takes over in the last two seconds, and the script is over before the scene is
+    const root = trace.rings.find((ring) => ring.target.kind === "actor" && ring.target.actor === "$root")!;
+    expect(root.from).toBeGreaterThan(scene.durationMs - 2500);
+    expect(trace.state.ms).toBeGreaterThanOrEqual(scene.durationMs - 100);
+  });
+});
+
+describe("s7, which meets no log", () => {
+  it("rings the map, the table, the per-process line and the outcome as the voice reaches each, and ends before its scene does", () => {
+    // voice at 140 wpm: "helps" from 0 s, "ties" from 4.7 s, "loses to a fast external restart" from 6.9 s, "false alarms" from 9.9 s
+    const scene = byId("s7-where-it-helps");
+    const trace = play(scene, { end: 0, crashes: [], calls: new Map() });
+    expect(trace.state.warnings).toEqual([]);
+    expect(trace.state.position).toBe(scene.steps.length);
+    const rings = trace.rings.map((ring) => (ring.target.kind === "region" ? ring.target.region : ring.target.kind));
+    expect(rings).toEqual(["map", "table", "process", "outcome"]);
+    const at = (region: string): number => ringOf(trace, region).from;
+    expect(at("map")).toBeLessThan(1000);
+    expect(Math.abs(at("table") - 4700)).toBeLessThan(150);
+    expect(Math.abs(at("process") - 6900)).toBeLessThan(150);
+    expect(Math.abs(at("outcome") - 9900)).toBeLessThan(150);
+    expect(at("outcome") + 2000).toBeLessThanOrEqual(scene.durationMs);
   });
 });

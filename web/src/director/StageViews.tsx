@@ -43,10 +43,11 @@ export function RunStageView({ stage, meterOpen = false }: { stage: RunStage; me
   );
 }
 
-export function HelpsStageView() {
+/** `tableOpen`: the full count (the wins, ties and losses) is a fold of the page, closed on it; a scene that points at the table opens it. */
+export function HelpsStageView({ tableOpen = false }: { tableOpen?: boolean }) {
   return (
     <main className="content">
-      <HelpsPage />
+      <HelpsPage unfold={tableOpen} />
     </main>
   );
 }

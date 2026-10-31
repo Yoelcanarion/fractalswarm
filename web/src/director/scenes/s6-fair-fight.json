@@ -9,7 +9,7 @@
     { "do": "wait", "until": "rival-crash:1", "timeout_ms": 10000 },
     { "do": "highlight", "target": { "region": "rival-status" }, "ms": 5000 },
     { "do": "highlight", "target": { "actor": "$crashed:1", "side": "left" }, "ms": 5000 },
-    { "do": "wait", "ms": 5000 },
+    { "do": "wait", "ms": 11000 },
     { "do": "speed", "x": 10, "ramp_ms": 800 },
     { "do": "wait", "until": "end", "timeout_ms": 14000 },
     { "do": "highlight", "target": { "region": "scoreboard" }, "ms": 3500 },

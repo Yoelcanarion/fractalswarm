@@ -87,7 +87,7 @@ function build(scene: Scene, sources: Sources): Built {
       return { controller: stage, view: <RunStageView stage={stage} meterOpen={pointsAtRegion(scene, "meter")} /> };
     }
     case "helps":
-      return { controller: null, view: <HelpsStageView /> };
+      return { controller: null, view: <HelpsStageView tableOpen={pointsAtRegion(scene, "table")} /> };
     case "ablation":
       return { controller: null, view: <AblationStageView runId={need(sources.ablation, "ablation run")} /> };
     case "title":

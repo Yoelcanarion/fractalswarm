@@ -346,6 +346,41 @@ s4 and s8 as in items 4 and 6.
 keeps the scored basis ($0.785, with $0.180 estimated for 27 cancelled calls). (b) The durable s6 ends in the long still stretch of item 3. (c) `tsc --noEmit` is clean and the whole web suite is
 151 files, 2511 tests, green on one worker; pytest and the $0 reference comparison were not run (web only, nothing under `src/` or `scripts/refs` changed).
 
+### s6's tail, and s5 and s7 watched against the voice (Oct 31, night)
+
+The coordinator's short slot, after merging `445ce36` (arena fast-forwarded onto `eae3f5c` first). No model was called. Takes in
+`C:\Users\yogar\.fractalswarm\takes\rehearsal-1031\`: `durable-b\` s5-recovery (22 s), s6-fair-fight (30 s), s7-where-it-helps (12 s) and `central-b\` s6-fair-fight (30 s, the
+in-process pair), each with mp4, PNG sequence, sidecar (`flags: []`, recorded with `--strict`) and a contact sheet in `sheets\`. My own earlier files of those scenes were replaced; the old takes were not touched.
+
+1. **s6's tail.** Step 6 (the wait after the two rings) went from 5000 to **11000 ms**, so the replay stays at 1x for about 15 s (durable: playhead 42.6 s to 57.7 s on the sheet, the rival's first band
+   and the swarm's first takeover in it) before the ramp to 10x. I picked the number from a probe that played the scene on both real pairs with the fake clock (a throwaway vitest file, deleted):
+   5000 ms ends the replay at 16.4 s (durable) and 20.7 s (in-process); 9000: 20.0 and 24.3; 10000: 20.9 and 25.2; **11000: 21.8 and 26.1, 11 of 11 steps on both**; 12000: 22.7 and 27.0, but the in-process
+   script then runs 10 of 11 steps (it is longer than its scene, which `--strict` flags). So 11000 is the largest round number where both pairs hold, with the closing ring and wait (3500 ms) untouched.
+   **Measured on the real takes:** durable, the lower third is on from 22.02 s to 30.00 s and the last change is at 25.32 s: **4.67 s still at the end** (the target was at most about 6.5 s). In-process: the replay ends
+   inside 30 s with no flag, the lower third is on from 26.30 s, the last change is at 29.60 s (0.38 s still), so its final board and lower third are on for 3.7 s. The tests now read: both logs have played out at least 3 s
+   before the clip ends, a frame later than the rival's first outage plus 11.5 s is at 10x, and what follows the closing ring (the still stretch) is 0 to 6.5 s, on either pair.
+2. **s5 (`s5-recovery.json`).** What it shows, seen on the sheet and the frames: it opens on the tree after the root fell (the video script says s5 opens on the tree s4 ends on: o0 as a dead node below the tree, o1 ROOT, o2 and o3
+   "adopted by o1"); o2.1 crashes and o2.2 takes it over (its two agents "adopted by o2.2"); the replay then goes back to just before the root's first death and shows it: the intact tree, "o0" ringed with its ROOT badge, dashed, then o1 takes the
+   badge, o0 drops below the tree as a dead node, and o2 and o3 hang under o1 ("adopted by o1", dotted lines). **The colours hold:** a subtree keeps its colour when it is adopted (blue o1, orange o2, green o3 under the blue root).
+   **What I changed** (voice at 140 wpm: "When one stops sending heartbeats" from 6.0 s, "computes the same heir" to 12.0 s, "Even the root can die" from 21.4 s): the first half runs at 0.5x until the first outage, so **the first ✕ lands at
+   6.0 s** (it was 3.0 s) and the tree is slowed, as the script says, instead of a frozen frame; back to 1x at the crash, so the heir takes over 5.4 s later (11.4 s) and "heir = highest hash(goal, member)" is on from there for 3.5 s,
+   through "with one rule, so there is no election" and across the jump back; the lower third comes on at 3.2 s with "Every coordinator reads the same log" (measured 3.18 s to 7.80 s); the ring on the first heir ends with the jump
+   (it used to outlast the seek by 0.7 s and sit on a node of the rewound tree); the jump is to 1 s before the root's first death (was 2 s). Now: the root's ✕ at about 14.6 s, its heir ringed from about 20.1 s to 21.9 s, the script ends at 21.6 s of 22 s
+   (before: 13.2 s, 18.7 s, 21.5 s). **Not matched, for you:** (a) the root's ✕ is 6.8 s before the voice says "Even the root can die"; its heir takes over 1.3 s before it. (b) The voice is about 23 to 24 s at 140 wpm for the 22 s scene.
+   (c) o1, the root at that moment, crashes 2 s after o2.1 in the real run, so the first half shows a second root ✕ (not ringed) and the layout in flux for about a second when o2 takes the root at replay 69.9 s
+   (nodes over each other under the overlay): that is the app's own re-layout, which I left alone. (d) The overlay sits over the right half of the status line for 3.5 s ("... 3 coordinators [overlay] crashed so far").
+   `scenes.real.test.ts` has a new s5 test for the moments above.
+3. **s7: the table was never open.** The scene pointed the camera at `table`, but the table (wins, ties and losses) is under "The full count", closed on the page, so the take never showed it and the `table` and `process` cameras
+   gave the same view (a 4.4 s still tail). `HelpsPage` already had an `unfold` prop for exactly this ("for a director's scene that points at the table"); the director did not use it. **Fix** (mine): `HelpsStageView` takes `tableOpen`, and
+   `DirectorPage` gives it `pointsAtRegion(scene, "table")`, the same way `meterOpen` works for s4; `scenes.test.ts` pins that for s7 and no other scene. **The scene now** follows the voice (140 wpm): a ring on the regime map at 0.4 s to 4.4 s
+   ("helps when a supervisor is slow to restart": the green dots in the restart rows); at 4.7 s the camera and a ring on the opened table to 6.9 s ("ties": the line "All H1 to H6" reads 42 / 141 / 33 against the ideal durable supervisor); at 6.9 s the
+   camera and a ring on the per-process line to 9.9 s ("loses": "Time to recover 47.3 s against 5 s, Supervisor lower", the one red card); at 9.9 s the camera back to the top and a ring on the outcome to 11.9 s ("false alarms": its last
+   sentence, "The swarm's failure detector also produces false deaths (1.25-2.25 per run at C2-C3), the supervisors none", is legible at 1080p). No still stretch of a second (last change at 11.88 s of 12), flags `[]`. **Not done:** "a fast external restart"
+   is the red row of the regime map, which has no region to ring (rows are not in the closed table), so the per-process line stands in for it; a region for the row would be one `data-helps` attribute in `RegimeMap.tsx` (not mine) and one entry in `targets.ts`.
+   `scenes.real.test.ts` has a new s7 test (the four rings at the voice's moments, the script inside the scene).
+
+**Tests:** `tsc --noEmit` clean; the whole web suite is 151 files, 2530 tests, green on one worker (the director's ten files: 232). pytest and the $0 reference comparison were not run (web only).
+
 ## Design
 
 The arena layout, the board and the director's design ran under `/hard-task`. The decisions that are not obvious
