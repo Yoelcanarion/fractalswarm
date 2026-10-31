@@ -88,6 +88,15 @@ describe("what a side says about itself", () => {
     expect(at(s, "swarm", 25_000).tone).toBe("ok");
   });
 
+  it("keeps the present tense until it can name the heir: the number still grows, and nobody restarted the coordinator", () => {
+    const s = swarmStream();
+    kill(s, "o1", 10_000);
+    s.at(14_000).emit("member.dead", "@detector", { member: "o1" });
+    expect(at(s, "swarm", 14_500)).toMatchObject({ tone: "warn", text: "o1 down 4.0 s · takeover under way" });
+    s.at(15_000).emit("tree.adopted", "o2", { dead: "o1", adopter: "o2", duties: [] });
+    expect(at(s, "swarm", 15_500).text).toBe("o1 was down 5.0 s · o2 took over");
+  });
+
   it("says what a down supervisor costs: the agents waiting for it, and a restart under way", () => {
     const s = rivalStream(undefined, 4);
     call(s, "o0.a1", "e1");

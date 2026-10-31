@@ -72,8 +72,10 @@ export function sideStatus(system: SystemKind, view: ViewState, windows: readonl
     if (lately.length > 0) {
       const last = lately[lately.length - 1];
       const heir = adopterOf(view, last.coordinator);
-      const took = heir ? `${heir.adopter} took over` : "takeover under way";
-      return { tone: "warn", text: `${last.coordinator} was down ${seconds((last.until ?? last.since) - last.since)} · ${took}`, restart: null };
+      const down = seconds((last.until ?? last.since) - last.since);
+      // The past tense only once a name follows: until then the outage has not ended, and its number still grows.
+      const text = heir ? `${last.coordinator} was down ${down} · ${heir.adopter} took over` : `${last.coordinator} down ${down} · takeover under way`;
+      return { tone: "warn", text, restart: null };
     }
     const { agents } = headcount(view);
     return { tone: "ok", text: `No coordinator down · ${plural(agents, "agent")}`, restart: null };
