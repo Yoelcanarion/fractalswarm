@@ -1,12 +1,14 @@
 // The arena's components drawn on the server (react-dom/server) over synthetic runs: no browser, but
 // every render path runs. The look is checked on screenshots.
 
+import { readFileSync } from "node:fs";
+
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { FrameScheduler } from "../lib/clock";
-import { renderCurrent } from "../lib/testing";
+import { REPO_ROOT, renderCurrent } from "../lib/testing";
 import type { RunEvent, RunListing } from "../lib/types";
 import { RunStoreProvider, type RunApi } from "../store";
 import type { PairListing } from "./api";
@@ -203,7 +205,7 @@ describe("the scoreboard", () => {
   it("says plainly that one pair is one run on one seed, and links to where the rest is", async () => {
     const html = score(await opened(0));
     expect(text(html)).toContain("One pair is one run on one seed under one failure plan");
-    expect(html).toContain('<a href="#/helps">Where it helps</a>');
+    expect(html).toContain('<a href="#/helps">Trade-offs</a>');
     expect(html).toContain('<a href="#/evidence">the Evidence page</a>');
   });
 });
@@ -294,6 +296,33 @@ describe("the picker", () => {
     expect(picker({ pairs: [] })).toContain("No pairs on record");
     expect(picker({ pairs: null })).toContain("Loading pairs…");
   });
+
+  it("shows the whole name of the pair that is open beside the select, which a phone cuts: the marks included", () => {
+    const html = picker({ left: "demo-1-swarm", right: "demo-1-durable-max", pairs: [pair({ private: true, billed: true })] });
+    expect(html).toContain('<span class="picker__shown" aria-hidden="true">swarm vs durable-max, half-the-brains, seed 1 · private · billed</span>');
+    expect(picker()).toContain('<span class="picker__shown" aria-hidden="true">Choose a pair…</span>');
+  });
+});
+
+describe("the arena on a phone", () => {
+  // At 390 px the first card clipped its "Replay verified" badge at its edge and the pair's select cut its name. This reads the sheet.
+  const sheet = readFileSync(`${REPO_ROOT}web/src/arena/arena.css`, "utf-8").replace(/\r\n/g, "\n");
+  const phone = /@media \(max-width: 760px\) \{([\s\S]*?)\n\}\n?$/.exec(sheet)?.[1] ?? "";
+  const rule = (selector: string): string => new RegExp(`${selector.replace(/[.>]/g, "\\$&")} \\{([^}]*)\\}`).exec(phone)?.[1] ?? "";
+
+  it("lets the head's badge go under the title, from the left", () => {
+    expect(phone).not.toBe("");
+    expect(rule(".side__top")).toContain("flex-wrap: wrap");
+    expect(rule(".side__verify")).toContain("margin-left: 0");
+  });
+
+  it("gives the pair a row, with its whole name shown over the select, which takes the tap unseen", () => {
+    expect(rule(".picker__shown")).toContain("display: block");
+    expect(rule(".picker__control select")).toMatch(/position: absolute/);
+    expect(rule(".picker__control select")).toMatch(/opacity: 0/);
+    // off a phone the select is the control, as before
+    expect(/\.picker__shown \{\s*display: none;/.test(sheet)).toBe(true);
+  });
 });
 
 describe("the page", () => {
@@ -358,7 +387,7 @@ describe("the end of a pair", () => {
     expect(t).toContain("FractalSwarm Lost 1 coordinator and still finished");
     expect(t).toContain("Ideal durable supervisor Its supervisor crashed 1 time; its workers kept going and the board paused 5 s each time.");
     expect(t).toContain("This is one run of each, on one seed, under one failure plan");
-    expect(html).toContain('<a href="#/helps">Where it helps</a>');
+    expect(html).toContain('<a href="#/helps">Trade-offs</a>');
     expect(html).toContain('<a href="#/evidence">the Evidence page</a>');
   });
 

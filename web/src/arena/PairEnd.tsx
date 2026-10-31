@@ -55,7 +55,7 @@ export function PairEnd({ left, right, leftSystem, assumptions }: PairEndProps) 
         ))}
       </dl>
       <p className="pairend__scope">
-        {text.scope} <a href="#/helps">Where it helps</a> shows when this holds, and <a href="#/evidence">the Evidence page</a> has the numbers over ten seeds.
+        {text.scope} <a href="#/helps">Trade-offs</a> shows when this holds, and <a href="#/evidence">the Evidence page</a> has the numbers over ten seeds.
       </p>
     </section>
   );

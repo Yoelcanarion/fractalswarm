@@ -99,10 +99,22 @@ export function HelpsHead({ actions }: { actions?: ReactNode }) {
   return (
     <PageHeader
       className="helps__head"
-      title="Where it helps"
+      title="Trade-offs"
       lead="The swarm against each rival, at every setting the bench ran. Wins, ties and losses, as the bench counted them."
       actions={actions}
     />
+  );
+}
+
+/** What every count on the page was made on, in view before the first of them: the file is the $0 evidence (docs/claims.md), so a win or a tie
+ * in it is a check of the design and not a result on real runs. The real-model reading is on the evidence page. */
+function SettingLine() {
+  return (
+    <p className="helps__setting" data-helps="setting">
+      <span className="helps__setting-tag">Fake model, simulated clock</span>
+      The $0 runs: they check the design and do not measure the real model, so a win or a tie here is not a real-run result. The real-model reading is on the{" "}
+      <a href="#/evidence">evidence page</a>.
+    </p>
   );
 }
 
@@ -119,13 +131,13 @@ export interface WhereItHelpsProps {
   claims?: Claims;
 }
 
-/** The "where it helps" panel: where the swarm's recovery is local, where it ties, where it loses, and under which failure model. */
+/** The trade-offs panel: where the swarm's recovery is local, where it ties, where it loses, and under which failure model. */
 export function WhereItHelps({ honesty, rival: start, open: startOpen = null, unfold = false, claims = CLAIMS }: WhereItHelpsProps) {
   const rivals = useMemo(() => rivalOrder(honesty), [honesty]);
   const [rival, setRival] = useState(start !== undefined && rivals.includes(start) ? start : honesty.outcome.against);
   const [open, setOpen] = useState<OpenList | null>(startOpen);
   return (
-    <section className="helps" aria-label="Where it helps">
+    <section className="helps" aria-label="Trade-offs">
       <HelpsHead
         actions={
           <label className="helps__field">
@@ -140,6 +152,7 @@ export function WhereItHelps({ honesty, rival: start, open: startOpen = null, un
           </label>
         }
       />
+      <SettingLine />
       <OutcomeStrip honesty={honesty} claims={claims} />
       <div className="helps__body">
         <RegimeMap honesty={honesty} rival={rival} />

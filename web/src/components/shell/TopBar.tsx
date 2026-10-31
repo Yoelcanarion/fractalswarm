@@ -1,9 +1,10 @@
+import { isAblationRun } from "../../ablation/view";
 import type { RunStatus } from "../../lib/controls";
 import { useDocumentTitle } from "../../lib/documentTitle";
 import {
   EVIDENCE_HASHES,
   EVIDENCE_TITLES,
-  EVIDENCE_VIEWS,
+  evidenceViewsShown,
   isEvidence,
   pageName,
   pageTitle,
@@ -25,7 +26,7 @@ export interface TopBarProps {
   where: Where;
   /** The run that is open, and the ones that can be opened. */
   runId: string | null;
-  runs: readonly { id: string }[];
+  runs: readonly { id: string; scenario?: string | null }[];
   runStatus: RunStatus | null;
   scenario: string | null;
   /** Quarantined emails and blocked subgoals: a count on the Security view. */
@@ -86,11 +87,11 @@ function RunBar({ view, runId, runs, runStatus, scenario, blocked, opening = fal
   );
 }
 
-function EvidenceBar({ current }: { current: EvidenceView }) {
+function EvidenceBar({ current, ablationRecorded }: { current: EvidenceView; ablationRecorded: boolean }) {
   return (
     <div className="subnav">
       <nav className="tabs" aria-label="Evidence">
-        {EVIDENCE_VIEWS.map((view) => (
+        {evidenceViewsShown(current, ablationRecorded).map((view) => (
           <a key={view} className={view === current ? "tab tab--on" : "tab"} href={EVIDENCE_HASHES[view]} aria-current={view === current ? "page" : undefined}>
             {EVIDENCE_TITLES[view]}
           </a>
@@ -134,7 +135,7 @@ export function TopBar({ where, guide, ...run }: TopBarProps) {
         </div>
       </header>
       {where.page === "run" && <RunBar view={where.view} {...run} />}
-      {isEvidence(where.page) && <EvidenceBar current={where.page} />}
+      {isEvidence(where.page) && <EvidenceBar current={where.page} ablationRecorded={run.runs.some(isAblationRun)} />}
       {/* a new page is announced: the address changes but the document does not reload */}
       <p className="sr-only" role="status">
         {pageName(where, run.runId)}

@@ -17,7 +17,7 @@ import { getViewportForBounds, useReactFlow, useStore, useStoreApi, type Node, t
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
 
 import { createGlide, type Glide, type Point } from "../lib/glide";
-import type { Bounds } from "../lib/layout";
+import { ACROSS, type Bounds } from "../lib/layout";
 import { EASE_OUT, GLIDE_MS, prefersReducedMotion } from "../lib/motion";
 import { useRunStore } from "../store";
 
@@ -25,6 +25,8 @@ import { useRunStore } from "../store";
 // small (lib/layout.ts), so a tree of a dozen agents is zoomed in to fill a page's width.
 export const FIT_PADDING = "24px";
 export const FIT_MAX_ZOOM = 1.5;
+// A tree on its side (a phone) is drawn at a scale of one, in the pixels its ids are sized in: it is never zoomed in, and its margin is small.
+export const FIT_MAX_ZOOM_ACROSS = 1;
 const FIT_RETRIES = 30; // frames to wait for React Flow to measure its pane
 
 export interface TreeShape {
@@ -33,6 +35,8 @@ export interface TreeShape {
   bounds: Bounds | null;
   /** Changes when a node arrives, leaves or is adopted (see ``structureKey``). */
   structure: string;
+  /** The tree is on its side, as on a phone (``ACROSS``). */
+  across: boolean;
 }
 
 export interface TreeMotion<N extends Node> {
@@ -47,15 +51,15 @@ type FlowStore = ReturnType<typeof useStoreApi>;
 
 /** Move the camera to show ``bounds()``. The pane may not have a size yet on the first call, so
  * ask again for a few frames. */
-function fitCamera(flow: ReactFlowInstance, store: FlowStore, bounds: () => Bounds | null, duration: number, attempt = 0): void {
-  const area = bounds();
+function fitCamera(flow: ReactFlowInstance, store: FlowStore, shape: () => TreeShape, duration: number, attempt = 0): void {
+  const { bounds: area, across } = shape();
   if (!area) return;
   const { width, height, minZoom } = store.getState();
   if (width <= 0 || height <= 0) {
-    if (attempt < FIT_RETRIES) requestAnimationFrame(() => fitCamera(flow, store, bounds, duration, attempt + 1));
+    if (attempt < FIT_RETRIES) requestAnimationFrame(() => fitCamera(flow, store, shape, duration, attempt + 1));
     return;
   }
-  const viewport = getViewportForBounds(area, width, height, minZoom, FIT_MAX_ZOOM, FIT_PADDING);
+  const viewport = getViewportForBounds(area, width, height, minZoom, across ? FIT_MAX_ZOOM_ACROSS : FIT_MAX_ZOOM, across ? `${ACROSS.pad}px` : FIT_PADDING);
   void flow.setViewport(viewport, { duration, ease: EASE_OUT, interpolate: "linear" });
 }
 
@@ -82,7 +86,7 @@ export function useTreeMotion<N extends Node>(nodes: N[], shape: TreeShape): Tre
 
   const moveCamera = useCallback((duration: number) => {
     const { flow, flowStore } = latest.current;
-    fitCamera(flow, flowStore, () => latest.current.shape.bounds, duration);
+    fitCamera(flow, flowStore, () => latest.current.shape, duration);
   }, []);
 
   const onInit = useCallback(() => {

@@ -1,7 +1,7 @@
 // The plain end of a pair: when both runs have played out, a few words on what each one did, and on what one pair is
 // worth. Only counts the logs hold, and the scope in the words of docs/claims.md: a result is stated with its setting
 // and never as a general claim, so this says one run of each, on one seed, under one failure plan, and nothing in it
-// says who is ahead. Where a result holds over many seeds is the job of "Where it helps" and of the Evidence page.
+// says who is ahead. Where a result holds over many seeds is the job of "Trade-offs" and of the Evidence page.
 
 import { secondsText, type Assumptions, type SystemKind } from "./assumptions";
 

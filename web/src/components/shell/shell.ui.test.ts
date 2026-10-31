@@ -121,14 +121,27 @@ describe("a run's own views", () => {
 });
 
 describe("the evidence's pages", () => {
-  it("are a second row on each of the three, the open one marked as the page", () => {
-    const markup = bar({ page: "helps" });
+  it("are a second row on each of the three (once an ablation is on record), the open one marked as the page", () => {
+    const markup = bar({ page: "helps" }, { runs: [{ id: "demo" }, { id: "ablation-1" }] });
     expect(markup).toContain('class="subnav"');
     const pages = nav(markup, "Evidence");
-    expect(labels(pages)).toEqual(["Charts", "Where it helps", "Ablation"]);
-    expect(pages).toContain('<a class="tab tab--on" href="#/helps" aria-current="page">Where it helps</a>');
+    expect(labels(pages)).toEqual(["Charts", "Trade-offs", "Ablation"]);
+    expect(pages).toContain('<a class="tab tab--on" href="#/helps" aria-current="page">Trade-offs</a>');
     expect(pages).toContain('href="#/ablation"');
     expect(occurrences(pages, "aria-current")).toBe(1);
+  });
+
+  it("show the ablation's tab only once an ablation is on record, or while the person is on its page", () => {
+    // base has two runs and no ablation: the two pages that have something to read
+    expect(labels(nav(bar({ page: "helps" }), "Evidence"))).toEqual(["Charts", "Trade-offs"]);
+    expect(nav(bar({ page: "charts" }), "Evidence")).not.toContain("#/ablation");
+    // an ablation run is one the listing names by its id or its scenario
+    expect(labels(nav(bar({ page: "helps" }, { runs: [{ id: "demo" }, { id: "ablation-1" }] }), "Evidence"))).toEqual(["Charts", "Trade-offs", "Ablation"]);
+    expect(labels(nav(bar({ page: "helps" }, { runs: [{ id: "x", scenario: "t2:ablation-notes" }] }), "Evidence"))).toContain("Ablation");
+    // the page is still there by its address, and its tab is the open one
+    const open = nav(bar({ page: "ablation" }), "Evidence");
+    expect(labels(open)).toEqual(["Charts", "Trade-offs", "Ablation"]);
+    expect(open).toContain('<a class="tab tab--on" href="#/ablation" aria-current="page">Ablation</a>');
   });
 
   it("are not on a run's page", () => {
@@ -156,7 +169,7 @@ describe("the bars on a phone", () => {
 describe("the announcement", () => {
   it("says which page opened, and which run for a run's view", () => {
     expect(bar(inRun)).toContain('<p class="sr-only" role="status">Plan · demo</p>');
-    expect(bar({ page: "helps" })).toContain('<p class="sr-only" role="status">Where it helps</p>');
+    expect(bar({ page: "helps" })).toContain('<p class="sr-only" role="status">Trade-offs</p>');
   });
 
   it("names the run that is open when the address names none", () => {
