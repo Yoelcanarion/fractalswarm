@@ -7,7 +7,7 @@ import { missingSources } from "./sources";
 import { SCENE_FILES, SOURCES } from "./scenes";
 import { createTake, tooltipTargets } from "./take";
 import { fakeReplay, fakeSurface } from "./testing";
-import type { Scene } from "./script";
+import { pointsAtRegion, type Scene } from "./script";
 import type { TimeContext } from "./time";
 
 const scenes: Scene[] = SCENE_FILES.map((file) => {
@@ -84,6 +84,14 @@ describe("the scenes of the video", () => {
     const first = (JSON.parse(readFileSync(`${REPO_ROOT}demo/pairs.json`, "utf-8")) as { left: { run_id: string }; right: { run_id: string } }[])[0];
     expect(SOURCES).toEqual({ swarm: first.left.run_id, rival: first.right.run_id, run: "demo-final", ablation: null, real: true });
     expect(JSON.stringify(scenes)).not.toMatch(/t2-real|bench-gate|seed1|demo-/);
+  });
+
+  it("open the Muse meter's fold for the scene that points at it, and for no other", () => {
+    // the meter is a fold of the run page's strip ("What the models cost"), closed on the page: a ring on it needs it open
+    expect(scenes.filter((scene) => pointsAtRegion(scene, "meter")).map((scene) => scene.id)).toEqual(["s4-lens"]);
+    const read = (name: string): string => readFileSync(new URL(name, import.meta.url), "utf-8");
+    expect(read("./DirectorPage.tsx")).toContain('<RunStageView stage={stage} meterOpen={pointsAtRegion(scene, "meter")} />');
+    expect(read("./StageViews.tsx")).toContain("<RunStrip unfold={meterOpen} />");
   });
 
   it("need only what their stage needs", () => {
