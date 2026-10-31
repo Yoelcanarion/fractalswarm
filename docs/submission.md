@@ -88,7 +88,8 @@ https://github.com/Yoelcanarion/fractalswarm (it becomes public on Nov 3, after 
   - the scanner hard-codes the 86M PromptGuard model;
   - `scan()` reloads the model and calls `asyncio.run` on every call;
   - llamafirewall 1.0.3 imports `HfFolder`, which huggingface-hub 1.0 removed;
-  - the PromptGuard 2 tokenizer logs an "incorrect regex pattern" warning.
+  - the PromptGuard 2 tokenizer logs an "incorrect regex pattern" warning;
+  - on some web pages the preprocessing logs `Error preprocessing text: substring not found` and scores the raw text instead.
 - **PromptGuard 2 scored a politely worded injection email at 0.0009,** so it did not flag it. Only an explicit "ignore your previous instructions" scored high. That is expected from a jailbreak classifier, but worth stating in the docs. Our scope check caught the polite version.
 
 ## Feedback on partner technologies
