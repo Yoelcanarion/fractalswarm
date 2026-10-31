@@ -178,6 +178,15 @@ export function failures(story: Story | null): Failures {
   };
 }
 
+const notClaimedWhy = (story: Story | null, about: RegExp): string | null => story?.notClaimed?.find((row) => about.test(row.claim))?.why ?? null;
+
+/** The two limits of the takeover itself, in the words of their rows under "Not claimed" in docs/claims.md: which sets of deaths
+ * it survives, and a track lead's death on the real model. The tagline and the recorded run say neither. */
+export const limits = (story: Story | null): { deaths: string | null; trackLead: string | null } => ({
+  deaths: notClaimedWhy(story, /any set of deaths/i),
+  trackLead: notClaimedWhy(story, /track lead/i),
+});
+
 /** What the swarm's failure detector did on the real runs of the headline point: unnecessary takeovers per run, over how many runs. */
 export function realFalseDeaths(story: Story | null): { perRun: number; runs: number } | null {
   const row = story?.verdicts?.falseDeaths?.find((item) => item.workflow === "swarm" && item.profile === "C3");

@@ -10,7 +10,7 @@ import { REPO_URL } from "../../lib/links";
 import { COPY } from "../copy";
 import type { Story } from "../data/types";
 import { figure } from "../format";
-import { assumptions, realFalseDeaths } from "../numbers";
+import { assumptions, limits, realFalseDeaths } from "../numbers";
 import { EVIDENCE_IDS } from "../sections";
 import { bundledStory } from "../story";
 import { countOf, drawnClaims, fixtureClaimText, FIXTURE_STORY, plain, UNIVERSAL } from "../testing";
@@ -136,6 +136,19 @@ describe("the evidence page, rendered with a story", () => {
     expect(text).toContain(COPY.evidence.fails.wins);
     expect(text).toContain(COPY.solution.more.limit);
     expect(text).toContain(COPY.proof.more.proves);
+  });
+
+  it("says where the takeover itself stops, in the words of the rows of docs/claims.md, with the sentence the tagline needs", () => {
+    const article = /<article[^>]*aria-labelledby="fails-lead"[\s\S]*?<\/article>/.exec(html)?.[0] ?? "";
+    const { deaths, trackLead } = limits(FIXTURE_STORY);
+    for (const why of [deaths, trackLead]) {
+      expect(why).toBeTruthy();
+      for (const piece of String(why).split("`")) expect(plain(article)).toContain(piece.trim());
+    }
+    expect(deaths).toContain('"Kill half" is true of the set the demo kills.');
+    expect(trackLead).toContain("PREREG §9");
+    // the path in a reason is drawn as code, the way a claim draws one
+    expect(article).toContain('<code class="home-code">docs/any-survivor.md</code>');
   });
 
   it("shows the run the home page replays: what it placed and what it cost, with S2 beside it", () => {

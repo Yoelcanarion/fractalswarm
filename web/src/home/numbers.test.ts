@@ -9,6 +9,7 @@ import {
   gateCrashes,
   heroReading,
   heroSetting,
+  limits,
   proofSteps,
   realFalseDeaths,
   runSetting,
@@ -48,6 +49,8 @@ describe("what the page reads from the story", () => {
     expect(heroSetting(null)).toEqual({ task: null, real: null, seeds: null, crashes: null, profile: null });
     expect(runSetting(null)).toEqual({ task: null, real: null, seeds: null, crashes: null, profile: null });
     expect(failures(null)).toEqual({ fastRestart: [], falseDeaths: [], perProcess: null });
+    expect(limits(null)).toEqual({ deaths: null, trackLead: null });
+    expect(limits({ ...FIXTURE_STORY, notClaimed: [] })).toEqual({ deaths: null, trackLead: null });
     expect(realFalseDeaths(null)).toBeNull();
     expect(takeover(null)).toEqual({ killed: null, rootChain: [] });
     expect(tokens(null)).toEqual({ coordination: null, recovery: null });

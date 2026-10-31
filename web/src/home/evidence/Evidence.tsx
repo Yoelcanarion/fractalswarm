@@ -4,7 +4,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { COPY, word } from "../copy";
 import { count, figure, MISSING, usd } from "../format";
 import { useEnterProgress, useStill } from "../hooks";
-import { assumptions, captionFor, failures, finish, gateCrashes, proofSteps, realFalseDeaths, runSetting, settingText, type FailureFigure } from "../numbers";
+import { assumptions, captionFor, failures, finish, gateCrashes, limits, proofSteps, realFalseDeaths, runSetting, settingText, type FailureFigure } from "../numbers";
 import { SectionHead, Setting } from "../parts/Chapter";
 import { Claim, PendingTag } from "../parts/Claim";
 import { Figure } from "../parts/Figure";
@@ -293,8 +293,25 @@ function FailGroup({ title, figures, suffix = "" }: { title: string; figures: Fa
   );
 }
 
+function LimitGroup({ title, why }: { title: string; why: string | null }) {
+  return (
+    <div className="home-fail">
+      <h4 className="home-fail__title">{title}</h4>
+      {why ? (
+        <p className="home-limit">
+          <Inline text={why} />
+        </p>
+      ) : (
+        <PendingTag>NO DATA YET</PendingTag>
+      )}
+    </div>
+  );
+}
+
 function Fails() {
-  const found = failures(useStory());
+  const story = useStory();
+  const found = failures(story);
+  const limit = limits(story);
   return (
     <Beat
       id="fails"
@@ -315,6 +332,8 @@ function Fails() {
           <Claim id="S6" className="home-claim--small" />
           <p className="home-limit">{COPY.solution.more.limit}</p>
         </div>
+        <LimitGroup title={COPY.evidence.fails.deaths} why={limit.deaths} />
+        <LimitGroup title={COPY.evidence.fails.trackLead} why={limit.trackLead} />
       </Reveal>
       <Chart name="RegimeStrip" path="regime" duration={1.6} className="home-chart--regime" />
     </Beat>

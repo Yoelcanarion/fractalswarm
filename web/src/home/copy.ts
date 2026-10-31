@@ -176,6 +176,9 @@ export const COPY = {
       falseDeaths: "False deaths",
       perProcess: "Per process",
       log: "The log as a central component",
+      // only the titles: what these two say is the reason their rows give in docs/claims.md (`limits` in numbers.ts)
+      deaths: "Not every set of deaths",
+      trackLead: "A track lead's death, on the real model",
     },
     proof: {
       lead: "You do not have to trust us.",

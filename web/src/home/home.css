@@ -1542,10 +1542,10 @@ body:has(.home) {
   margin-top: var(--space-2);
 }
 
-/* four groups in a row when the screen has the room */
+/* two rows of three groups when the screen has the room */
 @media (min-width: 1280px) {
   .home-fails {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-6);
     max-width: none;
   }
