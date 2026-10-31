@@ -1,0 +1,74 @@
+{
+ "totals": {
+  "runs": 3,
+  "remaps": 21,
+  "old_flags": 0,
+  "runs_old_flags": 0,
+  "new_flags": 0,
+  "chain_checked": 18,
+  "chain_breaks": 0,
+  "chain_no_assignment": 3,
+  "twins_injected": 21,
+  "twins_caught_old": 21,
+  "twins_caught_new": 21
+ },
+ "rows": [
+  {
+   "run": "final",
+   "events": 8771,
+   "head": "a199a768072b817c406b85822f3fe647",
+   "remaps": 7,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 6,
+    "breaks": 0,
+    "no_assignment": 1,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 7,
+    "caught_old": 7,
+    "caught_new": 7
+   }
+  },
+  {
+   "run": "pair-central-swarm",
+   "events": 8966,
+   "head": "1314a2c4e00cd2da1bfee89ecc9dc00f",
+   "remaps": 7,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 6,
+    "breaks": 0,
+    "no_assignment": 1,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 7,
+    "caught_old": 7,
+    "caught_new": 7
+   }
+  },
+  {
+   "run": "pair-durable-max-swarm",
+   "events": 7334,
+   "head": "c1f6c4d3d0f821d86d1b9cc8e2403d29",
+   "remaps": 7,
+   "old_flags": [],
+   "new_flags": [],
+   "chain": {
+    "checked": 6,
+    "breaks": 0,
+    "no_assignment": 1,
+    "second_tenures": []
+   },
+   "twins": {
+    "injected": 7,
+    "caught_old": 7,
+    "caught_new": 7
+   }
+  }
+ ]
+}

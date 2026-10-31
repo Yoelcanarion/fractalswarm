@@ -8,6 +8,7 @@ import { FINAL_RUN } from "./address";
 import { asRunStatus, type RunStatus } from "./controls";
 import { profileTerm, type TermId } from "./glossary";
 import { workflowLabel } from "./hero";
+import type { ViewState } from "./reducer";
 import type { RunEvent, RunListing, VerifyReport } from "./types";
 
 // ---- state: live, recorded and stopped runs are different things ----
@@ -90,6 +91,21 @@ export function readFacts(first: RunEvent | null | undefined, last: RunEvent | n
     spentUsd: last?.type === "run.completed" ? amount(last.payload.spent_usd) : null,
   };
 }
+
+/** Whether a run's plan has failures in it, read as `plan_from` reads it (comms/chaos.py): no plan is C0, a plan with actions is those
+ * actions, and a named profile is that profile. Null until the log's first event is here. */
+export function plansFailures(first: RunEvent | null | undefined): boolean | null {
+  if (first?.type !== "run.started") return null;
+  const params = isRecord(first.payload.params) ? first.payload.params : {};
+  const chaos = isRecord(params.chaos) ? params.chaos : {};
+  return Array.isArray(chaos.actions) ? chaos.actions.length > 0 : (text(chaos.profile) ?? "C0") !== "C0";
+}
+
+/** Whether a live run offers "Kill half the brains": only with no failures, neither planned nor so far. On top of a plan that already
+ * crashes coordinators the same five kills can leave no survivor able to start the recovery, and the run never ends: 18 of 30 on C2 and
+ * C3, 5 of 15 on a pair's default plan, none of 27 on C0 (practice model, Oct 31). */
+export const offersKillHalf = (first: RunEvent | null | undefined, view: Pick<ViewState, "chaos" | "netFaults">): boolean =>
+  plansFailures(first) === false && view.chaos.length === 0 && Object.keys(view.netFaults).length === 0;
 
 /** The coordinator kills each named profile makes (bench/profiles.py). */
 const KILLS: Record<string, number> = { C0: 0, C1: 1, C2: 3, C3: 5 };

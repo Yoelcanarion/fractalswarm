@@ -19,7 +19,10 @@ Two halves:
   ``member.dead`` after 5. A detector that hears none of its two or more peers assumes that
   it is the one cut off and issues no verdicts. A member learns that it was declared dead
   from a ``fenced`` notice, which the bus sends back when a peer drops its frame; it then
-  rejoins with the next incarnation.
+  rejoins with the next incarnation. In a run with ``any_survivor`` that assumption expires
+  after ``ISOLATION_LIMIT_MS`` of hearing nobody: every survivor's peers may be dead, and
+  without a first verdict nobody ever starts the recovery. A member that really was cut off was
+  declared dead long before, so its late verdicts are fenced, and ``sync`` withdraws them.
 """
 
 from dataclasses import dataclass, field
@@ -35,6 +38,7 @@ from fractalswarm.kernel.scheduler import Admission, Command, Emit, SetTimer, Vi
 
 TICK_TAG = "member.tick"
 MEMBERSHIP_EVENTS = ("member.joined", "member.suspected", "member.dead")
+ISOLATION_LIMIT_MS = 30_000  # longer than the 8 s partition of the bench's profiles
 
 
 @register("member.joined")
@@ -134,6 +138,15 @@ class MembersView:
             for record in self.records.values()
             if record.status != "dead"
             and (role is None or record.role == role)
+            and (group is None or record.group == group)
+        )
+
+    def dead(self, role: str, group: str | None = None) -> list[str]:
+        return sorted(
+            record.member
+            for record in self.records.values()
+            if record.status == "dead"
+            and record.role == role
             and (group is None or record.group == group)
         )
 
@@ -252,6 +265,8 @@ class Detector:
     load: dict[str, Any] = field(default_factory=dict)  # gossiped in heartbeats
     isolated: bool = False
     stopped: bool = False
+    isolation_limit_ms: int | None = None  # None: "I am the one cut off" never expires
+    last_contact: int = 0  # when it last heard a peer
 
 
 @dataclass
@@ -271,6 +286,7 @@ def token(det: Detector, epoch: int, resource: str | None = None) -> dict[str, A
 def join(det: Detector, view: View, peers: list[str] | tuple[str, ...] = ()) -> list[Command]:
     """Announce this member (``member.joined``) and start heartbeating."""
     watch(det, peers, view.now)
+    det.last_contact = view.now
     joined = {
         "member": det.member,
         "incarnation": det.incarnation,
@@ -341,6 +357,7 @@ def heard(det: Detector, delivery: Delivery, now: int) -> list[Change]:
         peer.status = "alive"
         changes.append(Change(delivery.sender, "alive", incarnation))
     peer.last_heard = now
+    det.last_contact = now
     peer.load = dict(delivery.payload.get("load") or {})
     if det.isolated:
         det.isolated = False
@@ -363,6 +380,9 @@ def tick(det: Detector, ep: Endpoint, view: View) -> MembershipOutcome:
     watched = [name for name, peer in det.peers.items() if peer.status != "dead"]
     missed = {name: (now - det.peers[name].last_heard) // det.interval_ms for name in watched}
     isolated = len(watched) >= 2 and all(missed[name] >= det.suspect_after for name in watched)
+    limit = det.isolation_limit_ms
+    if limit is not None and now - det.last_contact >= limit:
+        isolated = False
     if isolated != det.isolated:
         det.isolated = isolated
         status = "isolated" if isolated else "connected"
@@ -446,6 +466,7 @@ def rejoin(det: Detector, ep: Endpoint, view: View) -> MembershipOutcome:
     bus.reset(ep, det.incarnation)
     for peer in det.peers.values():
         peer.last_heard = view.now
+    det.last_contact = view.now
     det.isolated = False
     joined = {
         "member": det.member,

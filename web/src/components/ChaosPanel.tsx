@@ -1,8 +1,10 @@
 import { useState } from "react";
 
 import { postControl, type ControlResult } from "../lib/api";
+import { offersKillHalf } from "../lib/catalogue";
 import { isLeafKind } from "../lib/layout";
 import type { ViewState } from "../lib/reducer";
+import { useRunStore } from "../store";
 import { ControlButton, useControlState } from "./ControlButton";
 import { Details, Hint } from "./ui";
 
@@ -19,10 +21,12 @@ const NET_LABELS = [
   ["partition_drop", "cut"],
 ] as const;
 
-/** What can be broken, and what was. On a live run "Kill half the brains" is the one action and the other ways to break it are under
- * Details; a recorded run cannot be changed, so it says so and points to starting a run, and its controls wait, off, under Details. */
+/** What can be broken, and what was. On a live run with no failures "Kill half the brains" is the one action, and the other ways to break
+ * it are under Details. A live run with failures does not offer it (`offersKillHalf`) and says why. A recorded run cannot be changed, so
+ * it says so and points to starting a run, and its controls wait, off, under Details. */
 export function ChaosPanel({ runId, view }: Props) {
   const chaos = useControlState("chaos");
+  const first = useRunStore((s) => s.events[0]);
   const [result, setResult] = useState<ControlResult | null>(null);
   const [busy, setBusy] = useState(false);
   const agents = view.order.filter((id) => isLeafKind(view.actors[id].kind) && view.actors[id].status === "alive");
@@ -52,7 +56,15 @@ export function ChaosPanel({ runId, view }: Props) {
         <span className="panel__hint">{chaos.enabled ? "live run" : chaos.reason}</span>
       </header>
       {chaos.enabled ? (
-        killHalf
+        // An answered press is a failure on its way, before its event arrives, so the button does not take a second one.
+        offersKillHalf(first, view) && !result?.ok ? (
+          killHalf
+        ) : (
+          <p className="chaos__note">
+            This run has failures of its own, and Kill half the brains is only offered on a run with none: on top of other failures it can leave a run that never finishes.{" "}
+            <a href="#/new">Start one run</a> with No failures (C0) to press it.
+          </p>
+        )
       ) : (
         <p className="chaos__note">
           This run is recorded, so its failures are already in the log: the ✕ on the tree marks what was killed. <a href="#/new">Start a run</a> to kill some yourself.

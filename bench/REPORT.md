@@ -1379,7 +1379,8 @@ changes listed in §3.*
   what a crash of the root or of a track lead costs: all 86 crashes of the real swarm cells (36 in v1,
   50 in the ten-seed headline, which holds the headline's 15) hit a session coordinator (`level` 2 in the `outages` of each cell file), because
   by fairness rule 1 (§1) a crash takes the coordinator with the most remaining owned work. The $0
-  per-process probes (§4.7) crash the root, a track lead and a session coordinator one at a time. And
+  per-process probes (§4.7) crash the root, a track lead and a session coordinator one at a time, and
+  §4.10.9 adds six real crashes of a track lead. And
   they do not go beyond their setting: T2 at C3 for the headline, one crash plan per seed
   (20/35/50/65/80% of the contracts), failure detection of 5 s and supervisors that restart at once
   (§1), one model family on one API. The sweeps and the crash-time jitter are $0 runs only.
@@ -1632,6 +1633,48 @@ that difference belongs to this pattern and not to having a supervisor (`docs/cl
 routing call on this task has little to decide; a harder task might earn it back, and these runs do
 not measure that.
 
+#### 4.10.9 A track lead's death (PREREG §9, two seeds, descriptive)
+
+`bench/matrix-midlevel-swarm.yaml` and `bench/matrix-midlevel-rival.yaml`: 10 real cells in
+`bench/results/midlevel`, run on Oct 31 at `6516046` with `any_survivor` off, for **$2.87** against a
+worst case of $5.00. None of the 86 crashes above hit a track lead, and these six do. No verdict of
+§7 reads them, and PREREG §9 set their reading before they ran.
+
+**PREREG §9's refutation rule tripped.** One swarm cell of the six failed the takeover check, and
+the rule says that one such cell is enough. Its other two clauses held in all six: no branch the
+dead lead did not own had any coordinator-dependency time, and each cell remapped one goal, the
+track the lead owned. All ten cells replay, and none has a false death.
+
+| Cell | Crash (s) | Recovered in (s) | cdt, every branch (s) | Goal remapped | Span (s), C0 twin | Cost ($), C0 twin | Takeover check |
+|---|---|---|---|---|---|---|---|
+| `K-o1@0.04`, seed 1 | 35.86 | 4.70 | 0 | `track-data`, o1 to o3 | 161.3, 190.1 | 0.2733, 0.2903 | ok |
+| `K-o1@0.04`, seed 2 | 44.11 | 4.44 | 0 | `track-data`, o1 to o3 | 145.2, 215.1 | 0.3283, 0.2894 | ok |
+| `K-o2@0.04`, seed 1 | 31.44 | 5.08 | 0 | `track-ai`, o2 to o1 | 140.3, 190.1 | 0.2882, 0.2903 | ok |
+| `K-o2@0.04`, seed 2 | 26.69 | 4.72 | 0 | `track-ai`, o2 to o1 | 153.4, 215.1 | 0.3020, 0.2894 | ok |
+| `K-o3`, seed 1 | 42.26 | 4.28 | 0 | `track-hci`, o3 to o2 | 237.6, 190.1 | 0.2827, 0.2903 | **failed:** partial, 40 of 48 talks |
+| `K-o3`, seed 2 | 43.30 | 5.25 | 0 | `track-hci`, o3 to o2 | 262.7, 215.1 | 0.2911, 0.2894 | ok |
+
+*`bench/results/midlevel/reading.json`, from the logs (`scripts/midlevel_reading.py`). Span and cost
+are reported and not judged: the twin's real latencies differ.* The rival's four crashes of its one
+coordinator, at the same points on the same seeds, recovered in 5.0 s, with a cdt of 3.9 to 16.8 s,
+because everything waits for it; all four completed and are valid.
+
+**The cell that failed.** The takeover itself was clean: o2 took `track-hci` 4.3 s after the crash,
+nothing waited on the dead lead, and no write was lost. What failed was one `place` contract of the
+session `track-hci/d2`, whose coordinator, o3.2, never died. The first of its six attempts was
+dispatched 0.12 s after the crash. Two were rejected for rooms that other tracks had booked, two
+because the model's answer hit `max_output_tokens`, and two for a talk of 175 in a room of 120. The
+retries ran out, and the session's 8 talks stayed unplaced. No rejection names the crash, and the
+same rejections occur with no crash: `durable-max` at C0 on seed 2 was rejected five times on one
+contract. It is the way the swarm's C0 run on seed 5 lost a session (§4.10.7). But a crash moves the
+timing, and with it who books a room first, so these rows cannot say that the crash played no part.
+
+**What the rows miss.** The four cells at `at` 0.04 were aimed at a lead with its plan call in
+flight, the swarm's worst moment on the fake model, and PREREG §9 chose the points from C0 logs. The
+real latencies moved: each of the four leads had finished its plan 0.8 to 8.1 s before it crashed.
+So no real run has crashed a track lead with its plan in flight, and a cdt of 0 here says nothing
+about that moment. Two seeds and six crashes support no hypothesis of §4 and no ratio of §6.
+
 ## 5. Reading the chart honestly
 
 This reading covers the $0 runs of §4.1–§4.9; the real-model rows are read in §4.10.
@@ -1719,8 +1762,10 @@ This reading covers the $0 runs of §4.1–§4.9; the real-model rows are read i
   difference between the swarm and `durable-max` that is smaller than that is not read as one.
   Locality against `durable-max` moved when seven seeds were added to the three (§4.10.7), and a
   larger set may move it again. A new real run would not
-  repeat the numbers. All 86 coordinator crashes of the real swarm runs hit a session coordinator; a
-  crash of the root or of a track lead was run at $0 only (§4.7). The 29 cells of Oct 28 ran before the
+  repeat the numbers. All 86 coordinator crashes of the real swarm runs hit a session coordinator; in
+  the bench, a crash of the root was run at $0 only (§4.7), and a track lead's on two real seeds, where
+  one run of six ended partial (§4.10.9). Not every set of deaths recovers: some leave nobody who can
+  start the recovery, and the run hangs (`docs/any-survivor.md`). The 29 cells of Oct 28 ran before the
   handler freeze, 18 of them before the routing log existed (§3). The cost of a cancelled call is an
   estimate (above), and on the real model it is more than half of `central`'s extra cost (§4.10.2).
 

@@ -1,0 +1,439 @@
+{
+ "durable-max__t2_conference__K-o0@0.04__s1": {
+  "c0": {
+   "cost_usd": 0.27742093,
+   "makespan_s": 181.938
+  },
+  "completed": true,
+  "cost_usd": 0.265850352,
+  "crash": {
+   "at_s": 31.375,
+   "target": "o0"
+  },
+  "false_deaths": [],
+  "makespan_s": 254.25,
+  "outages": [
+   {
+    "branches_owned": [
+     "root",
+     "track-ai",
+     "track-data",
+     "track-hci"
+    ],
+    "cdt_by_branch_s": {
+     "track-data": 8.407,
+     "track-hci": 8.376
+    },
+    "cdt_s": 16.783,
+    "coordinator": "o0",
+    "goals": [
+     "root",
+     "track-ai",
+     "track-ai/d1",
+     "track-ai/d2",
+     "track-data",
+     "track-data/d1",
+     "track-data/d2",
+     "track-hci",
+     "track-hci/d1",
+     "track-hci/d2"
+    ],
+    "ttr_s": 4.985,
+    "verified_during_outage": {}
+   }
+  ],
+  "remapped": [],
+  "takeover_ok": null,
+  "violations": []
+ },
+ "durable-max__t2_conference__K-o0@0.04__s2": {
+  "c0": {
+   "cost_usd": 0.307240244,
+   "makespan_s": 315.563
+  },
+  "completed": true,
+  "cost_usd": 0.257071226,
+  "crash": {
+   "at_s": 23.812,
+   "target": "o0"
+  },
+  "false_deaths": [],
+  "makespan_s": 113.125,
+  "outages": [
+   {
+    "branches_owned": [
+     "root",
+     "track-ai",
+     "track-data",
+     "track-hci"
+    ],
+    "cdt_by_branch_s": {
+     "track-ai": 0.25,
+     "track-data": 0.702,
+     "track-hci": 4.406
+    },
+    "cdt_s": 5.358,
+    "coordinator": "o0",
+    "goals": [
+     "root",
+     "track-ai",
+     "track-ai/d1",
+     "track-ai/d2",
+     "track-data",
+     "track-hci"
+    ],
+    "ttr_s": 5.015,
+    "verified_during_outage": {}
+   }
+  ],
+  "remapped": [],
+  "takeover_ok": null,
+  "violations": []
+ },
+ "durable-max__t2_conference__K-o0__s1": {
+  "c0": {
+   "cost_usd": 0.27742093,
+   "makespan_s": 181.938
+  },
+  "completed": true,
+  "cost_usd": 0.254729074,
+  "crash": {
+   "at_s": 53.733,
+   "target": "o0"
+  },
+  "false_deaths": [],
+  "makespan_s": 127.952,
+  "outages": [
+   {
+    "branches_owned": [
+     "root",
+     "track-ai",
+     "track-data",
+     "track-hci"
+    ],
+    "cdt_by_branch_s": {
+     "track-data": 4.875
+    },
+    "cdt_s": 4.875,
+    "coordinator": "o0",
+    "goals": [
+     "root",
+     "track-ai",
+     "track-ai/d1",
+     "track-ai/d2",
+     "track-data",
+     "track-data/d1",
+     "track-data/d2",
+     "track-hci",
+     "track-hci/d1",
+     "track-hci/d2"
+    ],
+    "ttr_s": 5.017,
+    "verified_during_outage": {}
+   }
+  ],
+  "remapped": [],
+  "takeover_ok": null,
+  "violations": []
+ },
+ "durable-max__t2_conference__K-o0__s2": {
+  "c0": {
+   "cost_usd": 0.307240244,
+   "makespan_s": 315.563
+  },
+  "completed": true,
+  "cost_usd": 0.322534286,
+  "crash": {
+   "at_s": 63.78,
+   "target": "o0"
+  },
+  "false_deaths": [],
+  "makespan_s": 163.358,
+  "outages": [
+   {
+    "branches_owned": [
+     "root",
+     "track-ai",
+     "track-data",
+     "track-hci"
+    ],
+    "cdt_by_branch_s": {
+     "track-data": 2.905,
+     "track-hci": 1.0
+    },
+    "cdt_s": 3.905,
+    "coordinator": "o0",
+    "goals": [
+     "root",
+     "track-ai",
+     "track-ai/d1",
+     "track-ai/d2",
+     "track-data",
+     "track-data/d1",
+     "track-data/d2",
+     "track-hci",
+     "track-hci/d1",
+     "track-hci/d2"
+    ],
+    "ttr_s": 5.016,
+    "verified_during_outage": {
+     "track-data": 2,
+     "track-hci": 1
+    }
+   }
+  ],
+  "remapped": [],
+  "takeover_ok": null,
+  "violations": []
+ },
+ "swarm__t2_conference__K-o1@0.04__s1": {
+  "c0": {
+   "cost_usd": 0.290348704,
+   "makespan_s": 190.094
+  },
+  "completed": true,
+  "cost_usd": 0.27333377400000003,
+  "crash": {
+   "at_s": 35.86,
+   "target": "o1"
+  },
+  "false_deaths": [],
+  "makespan_s": 161.328,
+  "outages": [
+   {
+    "branches_owned": [
+     "track-data"
+    ],
+    "cdt_by_branch_s": {},
+    "cdt_s": 0.0,
+    "coordinator": "o1",
+    "goals": [
+     "track-data"
+    ],
+    "ttr_s": 4.703,
+    "verified_during_outage": {}
+   }
+  ],
+  "remapped": [
+   {
+    "from": "o1",
+    "goal": "track-data",
+    "to": "o3"
+   }
+  ],
+  "takeover_ok": true,
+  "violations": []
+ },
+ "swarm__t2_conference__K-o1@0.04__s2": {
+  "c0": {
+   "cost_usd": 0.289414342,
+   "makespan_s": 215.139
+  },
+  "completed": true,
+  "cost_usd": 0.32830106,
+  "crash": {
+   "at_s": 44.11,
+   "target": "o1"
+  },
+  "false_deaths": [],
+  "makespan_s": 145.203,
+  "outages": [
+   {
+    "branches_owned": [
+     "track-data"
+    ],
+    "cdt_by_branch_s": {},
+    "cdt_s": 0.0,
+    "coordinator": "o1",
+    "goals": [
+     "track-data"
+    ],
+    "ttr_s": 4.437,
+    "verified_during_outage": {}
+   }
+  ],
+  "remapped": [
+   {
+    "from": "o1",
+    "goal": "track-data",
+    "to": "o3"
+   }
+  ],
+  "takeover_ok": true,
+  "violations": []
+ },
+ "swarm__t2_conference__K-o2@0.04__s1": {
+  "c0": {
+   "cost_usd": 0.290348704,
+   "makespan_s": 190.094
+  },
+  "completed": true,
+  "cost_usd": 0.288244808,
+  "crash": {
+   "at_s": 31.437,
+   "target": "o2"
+  },
+  "false_deaths": [],
+  "makespan_s": 140.281,
+  "outages": [
+   {
+    "branches_owned": [
+     "track-ai"
+    ],
+    "cdt_by_branch_s": {},
+    "cdt_s": 0.0,
+    "coordinator": "o2",
+    "goals": [
+     "track-ai"
+    ],
+    "ttr_s": 5.077,
+    "verified_during_outage": {}
+   }
+  ],
+  "remapped": [
+   {
+    "from": "o2",
+    "goal": "track-ai",
+    "to": "o1"
+   }
+  ],
+  "takeover_ok": true,
+  "violations": []
+ },
+ "swarm__t2_conference__K-o2@0.04__s2": {
+  "c0": {
+   "cost_usd": 0.289414342,
+   "makespan_s": 215.139
+  },
+  "completed": true,
+  "cost_usd": 0.301978178,
+  "crash": {
+   "at_s": 26.688,
+   "target": "o2"
+  },
+  "false_deaths": [],
+  "makespan_s": 153.36,
+  "outages": [
+   {
+    "branches_owned": [
+     "track-ai"
+    ],
+    "cdt_by_branch_s": {},
+    "cdt_s": 0.0,
+    "coordinator": "o2",
+    "goals": [
+     "track-ai"
+    ],
+    "ttr_s": 4.719,
+    "verified_during_outage": {}
+   }
+  ],
+  "remapped": [
+   {
+    "from": "o2",
+    "goal": "track-ai",
+    "to": "o1"
+   }
+  ],
+  "takeover_ok": true,
+  "violations": []
+ },
+ "swarm__t2_conference__K-o3__s1": {
+  "c0": {
+   "cost_usd": 0.290348704,
+   "makespan_s": 190.094
+  },
+  "completed": true,
+  "cost_usd": 0.282727938,
+  "crash": {
+   "at_s": 42.264,
+   "target": "o3"
+  },
+  "false_deaths": [],
+  "makespan_s": 237.578,
+  "outages": [
+   {
+    "branches_owned": [
+     "track-hci"
+    ],
+    "cdt_by_branch_s": {},
+    "cdt_s": 0.0,
+    "coordinator": "o3",
+    "goals": [
+     "track-hci"
+    ],
+    "ttr_s": 4.283,
+    "verified_during_outage": {
+     "track-hci": 1
+    }
+   }
+  ],
+  "remapped": [
+   {
+    "from": "o3",
+    "goal": "track-hci",
+    "to": "o2"
+   }
+  ],
+  "takeover_ok": false,
+  "violations": [
+   [
+    "contract-failed",
+    1
+   ],
+   [
+    "contract-unfinished",
+    1
+   ],
+   [
+    "goal-not-ok",
+    3
+   ],
+   [
+    "task-result",
+    3
+   ]
+  ]
+ },
+ "swarm__t2_conference__K-o3__s2": {
+  "c0": {
+   "cost_usd": 0.289414342,
+   "makespan_s": 215.139
+  },
+  "completed": true,
+  "cost_usd": 0.29107583,
+  "crash": {
+   "at_s": 43.296,
+   "target": "o3"
+  },
+  "false_deaths": [],
+  "makespan_s": 262.686,
+  "outages": [
+   {
+    "branches_owned": [
+     "track-hci"
+    ],
+    "cdt_by_branch_s": {},
+    "cdt_s": 0.0,
+    "coordinator": "o3",
+    "goals": [
+     "track-hci"
+    ],
+    "ttr_s": 5.25,
+    "verified_during_outage": {
+     "track-data": 1,
+     "track-hci": 1
+    }
+   }
+  ],
+  "remapped": [
+   {
+    "from": "o3",
+    "goal": "track-hci",
+    "to": "o2"
+   }
+  ],
+  "takeover_ok": true,
+  "violations": []
+ }
+}

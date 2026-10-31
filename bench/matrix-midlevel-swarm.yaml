@@ -1,0 +1,28 @@
+# The real rows of a track lead's death (Yoel's decision 4 of Oct 31, PREREG §9), swarm side: one
+# coordinator crash on a named track lead, no other fault, under the conditions of
+# matrix-headline.yaml. None of the 86 real crashes before these hit a track lead.
+#   K-o1@0.04, K-o2@0.04: at the first contract dispatched. On seed 2 (o1) and seed 1 (o2) the real
+#     C0 logs have that lead's plan call in flight at that point, the swarm's worst moment; on the
+#     other seed of each they do not.
+#   K-o3@0.5: at half the contracts dispatched, as in the per-process probes of PREREG §6.
+# 3 profiles x 2 seeds = 6 paid cells. The C0 twins are headline's: copy their cell files in first,
+# so nothing else is paid for, and the pre-flight refuses to run if they were not copied.
+#   mkdir bench/results/midlevel/swarm/cells
+#   copy bench/results/headline/cells/swarm__t2_conference__C0__s{1,2}.json there
+#   fractalswarm bench run bench/matrix-midlevel-swarm.yaml --dry-run
+#   fractalswarm bench run bench/matrix-midlevel-swarm.yaml --confirm-real-spend
+# Its pair is matrix-midlevel-rival.yaml. The two together are capped at $5.00.
+name: midlevel-swarm
+workflows: [swarm]
+tasks: [t2_conference]
+profiles: [C0, K-o1@0.04, K-o2@0.04, K-o3@0.5]
+seeds: [1, 2]
+contributor: true
+out_dir: results/midlevel/swarm
+chart_task: t2_conference
+budget:
+  run_cap_usd: 0.50
+  matrix_cap_usd: 3.00  # the 6 cells to run x the run cap
+notes: >
+  A track lead dies alone. Fair failure semantics as in matrix-headline.yaml: detection 5 s,
+  completed work preserved, any_survivor off.

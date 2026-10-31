@@ -152,6 +152,7 @@ def test_the_known_knobs() -> None:
         "recovery_ms",
         "rival_recovery_ms",
         "rival_restart_ms",
+        "any_survivor",
         "agent_latency_scale",
         "crash_jitter_pct",
     }
@@ -170,6 +171,16 @@ def test_a_sweep_cell_gets_its_times_as_params_and_a_default_cell_gets_none() ->
     assert "agent_latency_scale" not in swept  # it changes the backend, not the run
     assert "rival_recovery_ms" not in swept
     assert {k: v for k, v in swept.items() if k not in ("recovery_ms", "rival_restart_ms")} == plain
+
+
+def test_a_default_cell_never_carries_any_survivor() -> None:
+    plain = t2_params(Cell("swarm", "t2_conference", profile("C3"), "1"), False)
+    assert "any_survivor" not in plain
+    on = t2_params(
+        Cell("swarm", "t2_conference", profile("C3"), "1", None, (("any_survivor", 1),)), False
+    )
+    assert on["any_survivor"] == 1
+    assert {k: v for k, v in on.items() if k != "any_survivor"} == plain
 
 
 def test_a_per_process_cell_carries_an_explicit_plan() -> None:

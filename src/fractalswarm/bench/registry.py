@@ -18,12 +18,12 @@ from fractalswarm.bench.scoring import Checker, default_checker
 from fractalswarm.llm.client import Backend
 from fractalswarm.market.ledger import ProjectLedger
 
-# The sweep knobs a matrix can set per cell (``Matrix.knobs``). The first three become run
-# params that only the scenarios read (``actors/swarm.py``: ``sweep_knobs``); the agents'
-# latency scale changes the fake LLM (``llm/calibrate.py``) and the crash jitter moves the
-# crashes of the chaos plan (``bench/profiles.py``: ``jittered_plan``), so neither reaches a
-# run's params as itself.
-PARAM_KNOBS = ("recovery_ms", "rival_recovery_ms", "rival_restart_ms")
+# The sweep knobs a matrix can set per cell (``Matrix.knobs``). The first four become run
+# params that only the scenarios read (``actors/swarm.py``: ``sweep_knobs`` and
+# ``any_survivor``, on at 1); the agents' latency scale changes the fake LLM
+# (``llm/calibrate.py``) and the crash jitter moves the crashes of the chaos plan
+# (``bench/profiles.py``: ``jittered_plan``), so neither reaches a run's params as itself.
+PARAM_KNOBS = ("recovery_ms", "rival_recovery_ms", "rival_restart_ms", "any_survivor")
 BACKEND_KNOBS = ("agent_latency_scale",)
 CHAOS_KNOBS = ("crash_jitter_pct",)
 KNOBS = (*PARAM_KNOBS, *BACKEND_KNOBS, *CHAOS_KNOBS)

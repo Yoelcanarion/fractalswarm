@@ -22,7 +22,7 @@ export const GUIDE_STEPS: readonly GuideStep[] = [
   {
     id: "kill",
     title: "Kill half the brains",
-    says: "In the final run half of the coordinators were killed on purpose: press Play and watch the rest take over. A recording cannot be changed; to kill some yourself, start a run.",
+    says: "In the final run half of the coordinators were killed on purpose: press Play and watch the rest take over. A recording cannot be changed; to kill some yourself, start one run with no failures.",
     action: { label: "Start a run", href: "#/new" },
   },
   {

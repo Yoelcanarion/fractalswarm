@@ -16,7 +16,9 @@
   only when the epoch auction or autoscale is on; a log without it replays as off;
 - ``"arbitration"``: Wonder rules a semantic dispute between two contracts' facts at the lowest
   common ancestor (``actors/arbitration.py``). Passed to the board and the root only when on,
-  so a run that never asked for it logs the spawn args it always did.
+  so a run that never asked for it logs the spawn args it always did;
+- ``"any_survivor"``: the run keeps going while any coordinator lives (``docs/any-survivor.md``).
+  Swarm only, passed to the root only when on, for the same reason.
 
 ``central`` is the central baseline (spec §15.1) on the same task, the same LLM calls and the
 same chaos: one orchestrator plans every level and leads every squad, under the best-case
@@ -177,6 +179,8 @@ class SwarmScenario:
             if spec["task"] not in TASK_HOOKS:
                 raise ValueError(f"arbitration needs a task with evidence: {sorted(TASK_HOOKS)}")
             args["arbitration"] = True
+        if self.mode == "swarm" and params.get("any_survivor"):
+            args["any_survivor"] = True
         market = params.get("market") if self.mode == "swarm" else None
         if market is not None:
             args["market"] = market

@@ -101,6 +101,8 @@ class TaskSpec(BaseModel):
     # (actors/arbitration.py). Left out of the recorded spec, which a default run keeps as it was;
     # a run that asks for it records ``params["arbitration"]`` instead (run_params).
     arbitration: bool = Field(default=False, exclude=True)
+    # The run keeps going while any coordinator lives (docs/any-survivor.md). Recorded the same way.
+    any_survivor: bool = Field(default=False, exclude=True)
 
     @classmethod
     def load(cls, path: Path) -> "TaskSpec":
@@ -239,7 +241,7 @@ def _live_params(spec: TaskSpec, private_dir: Path | None) -> dict[str, Any]:
 
 def _with_economy(spec: TaskSpec, params: dict[str, Any]) -> dict[str, Any]:
     """Leave the economy's defaults out of the recorded spec, so a default run's log stays as
-    it was, and add the economy's resolved numbers (and the arbitration flag) when they are on."""
+    it was, and add the economy's resolved numbers (and the opt-in flags) when they are on."""
     recorded = params["spec"]
     if spec.market == Market():  # opt-in settings stay out of a default run's log
         del recorded["market"]
@@ -251,6 +253,8 @@ def _with_economy(spec: TaskSpec, params: dict[str, Any]) -> dict[str, Any]:
         params["market"] = economy
     if spec.arbitration:  # opt-in: a run that never asked for it records nothing new
         params["arbitration"] = True
+    if spec.any_survivor:  # the same
+        params["any_survivor"] = True
     return params
 
 
