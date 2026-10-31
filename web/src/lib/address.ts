@@ -17,6 +17,9 @@ export function namedRunId(hash: string): string | null {
   }
 }
 
+/** Which screen an address shows: the query only moves the playhead on it (`?at=`, `?speed=`), so a new one has a new path. */
+export const screenOf = (hash: string): string => hash.replace(/^#\/?/, "").split("?")[0] ?? "";
+
 /** The query that opens a recorded run at its end: the whole picture at once, with "Play from the start" one click away. An address
  * without it opens a recorded run at its start, to be replayed; a live run opens at its head either way. */
 export const AT_END = "?at=end";

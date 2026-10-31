@@ -1,9 +1,11 @@
 import { motionValue } from "motion/react";
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { story } from "../../data/story";
 import type { Locality, RegimeSlice } from "../../data/types";
+import { HOME } from "../../testing";
 import { scaleAbout, textWidth } from "./chart";
 import { fakePen, lcg, seen, type Log } from "./fakes";
 import {
@@ -251,6 +253,18 @@ describe("the regime strip's layout", () => {
     expect(short.overflow).toBe(true);
     expect(short.needed).toBeGreaterThan(250);
     expect(short.lane).toBe(28);
+  });
+
+  it("fits the frame the page gives it where the headings go over the strips, at every width of a phone", () => {
+    const css = readFileSync(`${HOME}/home.css`, "utf-8");
+    const frame = /@media \(max-width: 899px\) \{\s*\.home-chart--regime \{\s*height: (\d+)px/.exec(css);
+    expect(frame, "the frame has a height of its own there").not.toBeNull();
+    const height = Number(frame?.[1]);
+    for (const width of [320, 350, 390, 430, 560, 700, 759]) {
+      const layout = regimeLayout(model, width, height, captions);
+      expect(layout.overflow, `${width} needs ${layout.needed}`).toBe(false);
+      checkLayout(layout, `${width}x${height}`, model, false);
+    }
   });
 
   it("holds for any strips, any settings and any size", () => {

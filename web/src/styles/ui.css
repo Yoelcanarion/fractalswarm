@@ -505,6 +505,14 @@ textarea:focus-visible {
   box-shadow: var(--shadow-overlay);
 }
 
+/* the run's views end near the edge of a phone: from there the menu opens back into the screen */
+@media (max-width: 760px) {
+  .disclosure--menu > .disclosure__body {
+    right: 0;
+    left: auto;
+  }
+}
+
 @media (hover: hover) {
   .disclosure__summary:hover {
     border-color: var(--border-strong);

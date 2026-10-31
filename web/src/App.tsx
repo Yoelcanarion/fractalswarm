@@ -6,7 +6,7 @@ import "./styles/ui.css";
 import "./styles/lens.css";
 import "./styles/lite.css";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 import { ArenaPage } from "./arena/ArenaPage";
 import { HelpsPage } from "./arena/helps/HelpsPage";
@@ -21,7 +21,7 @@ import { parseDirectorRoute, type DirectorRoute } from "./director/route";
 import { IntakePage } from "./intake/IntakePage";
 import { parseIntakeRoute, type IntakeRoute } from "./intake/route";
 import { TopBar } from "./components/shell/TopBar";
-import { defaultRunId, namedRunId, openingRun } from "./lib/address";
+import { defaultRunId, namedRunId, openingRun, screenOf } from "./lib/address";
 import { SPEEDS } from "./lib/playback";
 import { pickedRunHash, RUN_VIEWS, type RunView } from "./lib/shell";
 import { ChartsPage } from "./pages/ChartsPage";
@@ -107,6 +107,15 @@ export function App() {
     void loadCapabilities();
     return () => window.removeEventListener("hashchange", onHash);
   }, [loadRuns, loadCapabilities]);
+
+  // Every page shares one scroller (and the window, for a run on a phone), so a new screen would open where the last one was left: a press
+  // on Evidence at the foot of the arena landed on the last chart. Before the paint, so the new screen never shows at the old place.
+  const screen = screenOf(window.location.hash);
+  useLayoutEffect(() => {
+    const main = document.getElementById("main");
+    if (main) main.scrollTop = 0;
+    window.scrollTo(0, 0);
+  }, [screen]);
 
   // Open the run named in the URL, or else the final run, at its end: a bare #/run is what a newcomer lands on, and a page of zeros is
   // not a first sight.

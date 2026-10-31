@@ -773,4 +773,21 @@
   .map__row {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  /* the count of every rival is wider than a tablet: it scrolls in its own frame, and never takes the page with it */
+  .tally {
+    overflow-x: auto;
+  }
+}
+
+/* a phone: one card to a line, as two numbers with their units do not fit half its width, and the two share what there is */
+@media (max-width: 700px) {
+  .proc__lines {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .proc__value {
+    flex: 1 1 0;
+    min-width: 0;
+  }
 }

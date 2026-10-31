@@ -281,6 +281,78 @@ th[aria-sort="descending"] .sorthead svg {
   }
 }
 
+/* On a phone a run is a card: eight columns put the check off the screen and broke the names letter by letter. Each cell says what it is,
+   as there is no header to read it from, and the sort goes with the header. */
+@media (max-width: 700px) {
+  .runstable {
+    border: 0;
+    background: transparent;
+    overflow-x: visible;
+  }
+
+  .runstable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .runstable table,
+  .runstable tbody th,
+  .runstable tbody td {
+    display: block;
+  }
+
+  .runstable tbody {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .runstable tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-3);
+    background: var(--surface-1);
+  }
+
+  .runstable tbody th,
+  .runstable tbody td {
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .runstable tbody th,
+  .runstable tbody td:nth-of-type(1),
+  .runstable tbody td:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .runstable tbody td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text-muted);
+    font-size: var(--fs-label);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* a verdict is a sentence here, and the broken chain's ran off the card with its number */
+  .runcell__verify {
+    display: flex;
+  }
+
+  .runcell__verify .badge {
+    white-space: normal;
+    border-radius: var(--radius-2);
+  }
+}
+
 /* ---- the key under the table ---- */
 .runskey__list {
   display: grid;

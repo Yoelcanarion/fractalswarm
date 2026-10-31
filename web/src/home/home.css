@@ -1517,6 +1517,13 @@ body:has(.home) {
   height: clamp(240px, 32svh, 350px);
 }
 
+/* the headings go over the strips, not beside them, and a third of a phone's window does not hold that: the setting sat on the last strip */
+@media (max-width: 899px) {
+  .home-chart--regime {
+    height: 400px;
+  }
+}
+
 .home-fails {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1592,6 +1599,15 @@ body:has(.home) {
 
 .home-terminal__line--bad {
   color: var(--danger);
+}
+
+/* a phone: a line that ran off the side hid the head hash, which is the end of the line, and nothing showed it could be scrolled */
+@media (max-width: 699px) {
+  .home-terminal__body {
+    padding: var(--space-4);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
 }
 
 /* ---- the menu: a card per door, each with a small drawing that loops softly while the section is on screen ---- */

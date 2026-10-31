@@ -136,7 +136,7 @@ function RunRow({ row, view, onVerify, onChangeDigit }: { row: CatalogueRow; vie
         </a>
         {listing.source !== "runs" && <Sub>{listing.source === "demo" ? "demo bundle" : listing.source}</Sub>}
       </th>
-      <td className="runcell">
+      <td className="runcell" data-label="What ran">
         <span className="runcell__main">{row.workflow.label}</span>
         {facts ? (
           <Sub>
@@ -160,7 +160,7 @@ function RunRow({ row, view, onVerify, onChangeDigit }: { row: CatalogueRow; vie
           <Pending />
         )}
       </td>
-      <td className="runcell">
+      <td className="runcell" data-label="Failures">
         {!facts ? (
           <Pending />
         ) : chaos ? (
@@ -180,20 +180,20 @@ function RunRow({ row, view, onVerify, onChangeDigit }: { row: CatalogueRow; vie
           <span className="muted">None</span>
         )}
       </td>
-      <td className="runcell">
+      <td className="runcell" data-label="Billing">
         <BillingCell row={row} />
       </td>
-      <td className="runcell">
+      <td className="runcell" data-label="State">
         <StateCell state={row.state} />
       </td>
-      <td className="runcell">
+      <td className="runcell" data-label="Length">
         <span className="runcell__main">{formatDuration(listing.duration_ms)}</span>
         <Sub>
           {listing.events.toLocaleString("en-US")} events
           {facts?.clock === "sim" ? " · simulated clock" : facts?.clock === "live" ? " · live clock" : ""}
         </Sub>
       </td>
-      <td className="runcell">
+      <td className="runcell" data-label="Spent">
         {!facts ? (
           <Pending />
         ) : facts.spentUsd === null ? (
@@ -205,7 +205,7 @@ function RunRow({ row, view, onVerify, onChangeDigit }: { row: CatalogueRow; vie
           </>
         )}
       </td>
-      <td className="runcell">
+      <td className="runcell" data-label="Replay check">
         <VerifyCell row={row} view={view} onVerify={onVerify} onChangeDigit={onChangeDigit} />
       </td>
     </tr>

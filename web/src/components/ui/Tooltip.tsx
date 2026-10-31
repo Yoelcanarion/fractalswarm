@@ -18,13 +18,16 @@ export interface TooltipProps {
 // On the server there is no layout to measure (and nothing to place: the bubble starts closed).
 const useMeasure = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-/** A hint that opens on hover and on focus, stays open while the pointer is over it, and closes
- * with Escape (WCAG 1.4.13). The bubble is always in the DOM, so `aria-describedby` works. It is
+/** A hint that opens on hover and on keyboard focus, stays open while the pointer is over it, and
+ * closes with Escape (WCAG 1.4.13). A press on a button does not hold it open: the mouse or the thumb
+ * has moved on, and it would sit over the page. A `focusable` hint is one a touch screen opens with a
+ * tap, and a scroll closes it. The bubble is always in the DOM, so `aria-describedby` works. It is
  * `position: fixed` and placed when it opens, so no card or table around the trigger clips it. */
 export function Tooltip({ label, placement = "top", focusable = false, children }: TooltipProps) {
   const id = useId();
   const root = useRef<HTMLSpanElement>(null);
   const bubble = useRef<HTMLSpanElement>(null);
+  const touched = useRef(false);
   const [hover, setHover] = useState(false);
   const [focus, setFocus] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -53,12 +56,21 @@ export function Tooltip({ label, placement = "top", focusable = false, children 
   useMeasure(() => {
     if (!open) return;
     place();
-    // Scrolling any container under it moves the trigger; capture catches those scrolls too.
-    window.addEventListener("scroll", place, true);
+    // Scrolling any container under it moves the trigger; capture catches those scrolls too. A thumb scrolling has left the hint behind.
+    const scrolled = () => (touched.current ? setDismissed(true) : place());
+    // On the window, as a pointer resting on the trigger gives it no focus to hear the key with.
+    const key = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setDismissed(true);
+      event.stopPropagation();
+    };
+    window.addEventListener("scroll", scrolled, true);
     window.addEventListener("resize", place);
+    window.addEventListener("keydown", key, true);
     return () => {
-      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("scroll", scrolled, true);
       window.removeEventListener("resize", place);
+      window.removeEventListener("keydown", key, true);
     };
   }, [open, place]);
 
@@ -75,16 +87,14 @@ export function Tooltip({ label, placement = "top", focusable = false, children 
         setHover(false);
         setDismissed(false);
       }}
-      onFocus={() => setFocus(true)}
+      onPointerDown={(event) => {
+        touched.current = event.pointerType === "touch";
+        setDismissed(false);
+      }}
+      onFocus={(event) => setFocus(focusable || event.target.matches(":focus-visible"))}
       onBlur={() => {
         setFocus(false);
         setDismissed(false);
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && open) {
-          setDismissed(true);
-          event.stopPropagation();
-        }
       }}
     >
       {children}

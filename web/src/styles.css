@@ -1326,8 +1326,9 @@ textarea {
   }
 }
 
-/* A phone: the replay bar wraps (the track beside the play button, the readout and the speed under it, so that none of them is off the
-   screen), and the three numbers of a run's line share the width instead of running off it. */
+/* A phone: the replay bar is two lines (the play button, the track and the jump to the end, then the time and the speed, so that none of
+   them is off the screen and the bar leaves the page its room), and the three numbers of a run's line share the width instead of running
+   off it. */
 @media (max-width: 760px) {
   /* The run page on a phone is one page that scrolls, the bars above it (the top bar, the run's strip, the guide) going up off the screen with
      it, and only the replay bar stays (it is sticky). Else 370 px of the 844 of a phone are bars that stay, and the tree, which is what a
@@ -1345,20 +1346,55 @@ textarea {
   }
   .timeline {
     flex-wrap: wrap;
-    gap: 8px 12px;
-    padding: 8px 12px;
+    gap: 4px 10px;
+    padding: 6px 10px;
+  }
+  .timeline .btn--play {
+    width: 44px;
+    height: 40px;
   }
   .timeline__track {
     flex: 1 1 0;
     min-width: 120px;
   }
+  .timeline > .tip,
+  .timeline > .btn:not(.btn--play) {
+    order: 1;
+  }
+  /* a basis too wide for the first line, which is what sends the readout to the second */
   .timeline__readout {
-    flex: 1 1 auto;
+    order: 2;
+    flex: 1 1 calc(100% - 96px);
     min-width: 0;
     font-size: var(--fs-body);
   }
+  .timeline__readout > :last-child {
+    display: none;
+  }
+  .speedpick {
+    order: 3;
+  }
   .speedpick__label {
     display: none;
+  }
+  /* the approved plan's three columns, on a line each: its objective was cut and its data off the screen */
+  .security .ptable,
+  .security .ptable tbody,
+  .security .ptable tr,
+  .security .ptable td {
+    display: block;
+  }
+  .security .ptable tr {
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--divider);
+  }
+  .security .ptable td {
+    padding: 2px 6px;
+    border-bottom: 0;
+  }
+  .security .ptable .clip {
+    max-width: none;
+    white-space: normal;
   }
   .runstate__actions {
     flex: 1 1 100%;
@@ -2599,12 +2635,13 @@ textarea {
 }
 
 @media (max-width: 1100px) {
+  /* minmax, as a bare 1fr grows to the widest line in it: the plan's table took the Security page 190 px off a phone */
   .pgrid,
   .pcols,
   .security__cols,
   .plan__cols,
   .results__cols {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .evrow__line {
     grid-template-columns: 56px 60px minmax(0, 1fr);

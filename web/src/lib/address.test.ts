@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { AT_END, defaultRunId, FINAL_RUN, namedRunId, openedRunHash, openingRun } from "./address";
+import { AT_END, defaultRunId, FINAL_RUN, namedRunId, openedRunHash, openingRun, screenOf } from "./address";
+
+describe("the screen an address shows", () => {
+  it("is the same while the playhead moves on it", () => {
+    expect(screenOf("#/run/demo?at=end")).toBe(screenOf("#/run/demo?at=120&speed=5&play"));
+    expect(screenOf("#/arena/a/b?at=end")).toBe(screenOf("#/arena/a/b"));
+  });
+
+  it("changes with the page, with the view of a run and with the run", () => {
+    const screens = ["#/arena/a/b", "#/charts", "#/helps", "#/runs", "#/run/demo", "#/run/demo/results", "#/run/other", "#/new", "#/new/reading"];
+    expect(new Set(screens.map(screenOf)).size).toBe(screens.length);
+  });
+});
 
 describe("the run an address names", () => {
   it.each([
