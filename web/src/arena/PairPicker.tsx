@@ -1,6 +1,7 @@
 import { Details } from "../components/ui";
 import type { RunListing } from "../lib/types";
 import type { PairListing } from "./api";
+import { rivalLabel } from "./helps/labels";
 import { arenaHash } from "./route";
 
 export interface PairPickerProps {
@@ -16,8 +17,14 @@ const go = (left: string, right: string): void => {
   window.location.hash = arenaHash(left, right);
 };
 
-/** What a pair is called in the list: its label, and the marks that keep it from being taken for another (three of the pairs differ in nothing else). */
-const pairName = (pair: PairListing): string => `${pair.label}${pair.private ? " · private" : ""}${pair.billed ? " · billed" : ""}`;
+/** What a pair is called in the list: its label, and the marks that keep it from being taken for another (three of the pairs differ in nothing else).
+ * One a person started here goes by what they chose and when, for the server's label would name two of them alike. */
+export function pairName(pair: PairListing): string {
+  const billed = pair.billed ? " · billed" : "";
+  if (!pair.private) return `${pair.label}${billed}`;
+  const at = pair.createdAt?.slice(11, 16);
+  return `${["Your pair", rivalLabel(pair.rival), pair.chaos.replace(/-/g, " "), at && `${at} UTC`].filter(Boolean).join(" · ")}${billed}`;
+}
 
 /** Chooses the two runs the arena shows: a pair on record, or any swarm run and any rival run. */
 export function PairPicker({ left, right, pairs, runs }: PairPickerProps) {

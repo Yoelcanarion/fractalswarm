@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { readFacts } from "../lib/catalogue";
+import { BILLING, readFacts } from "../lib/catalogue";
 import { asNumber, asStrings, digest } from "../lib/generic";
 import { defineTerm } from "../lib/glossary";
 import { programOf, type Program, type ProgramTalk } from "../lib/program";
@@ -21,6 +21,9 @@ const OUTCOME: Record<Outcome, { label: string; tone: "good" | "warn" | "bad" | 
 const SHOWN = new Set(["expected", "placed", "gaps", "hard_violations", "soft_score", "schedule", "violations", "violation_counts", "markdown"]);
 
 const NO_REPORT: Record<string, unknown> = {};
+
+// The checker's hard rules (bench/tasks/t2_conference/checker.py), in a person's words.
+const HARD_RULES = "Rules the program breaks: a talk left out or placed twice, a room or a speaker booked twice at once, a talk outside its speaker's hours, more people than seats, or two talks of one track at once.";
 
 const clip = (text: string, max = 160): string => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
@@ -118,11 +121,13 @@ export function ResultsView({ view }: { view: ViewState }) {
           </div>
         </div>
         <div className="pstats">
-          {placed !== null && <PStat label="placed" value={expected === null ? placed : `${placed} / ${expected}`} tone={expected !== null && placed < expected ? "warn" : "good"} />}
-          {hard !== null && <PStat label="hard violations" value={hard} tone={hard === 0 ? "good" : "bad"} />}
-          {soft !== null && <PStat label="soft score" value={soft.toFixed(2)} />}
-          <PStat label="gaps" value={gaps.length} tone={gaps.length > 0 ? "warn" : ""} />
-          <PStat label={facts.billed === false ? "notional spend" : "spent"} value={money(economy.spentUsd)} />
+          {placed !== null && (
+            <PStat label="placed" title="The talks on the program, of those the run was given." value={expected === null ? placed : `${placed} / ${expected}`} tone={expected !== null && placed < expected ? "warn" : "good"} />
+          )}
+          {hard !== null && <PStat label="hard violations" title={HARD_RULES} value={hard} tone={hard === 0 ? "good" : "bad"} />}
+          {soft !== null && <PStat label="soft score" title="The share of speakers with a time preference whose talks all honor it." value={soft.toFixed(2)} />}
+          <PStat label="gaps" title="What the run reports it left undone." value={gaps.length} tone={gaps.length > 0 ? "warn" : ""} />
+          <PStat label={facts.billed === false ? "notional spend" : "spent"} title={facts.billed === false ? BILLING.notBilled.says : undefined} value={money(economy.spentUsd)} />
           <PStat label="coordination tokens" value={view.counters.coordinationTokens} tone="good" title={defineTerm("coordinationTokens")} />
         </div>
         {outcome === "pending" && (

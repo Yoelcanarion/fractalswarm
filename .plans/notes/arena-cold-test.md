@@ -24,3 +24,21 @@ What the tester would tell a friend: "A clever, candid demo of AI agents that ke
 - The stumbles with a dead end are the ones that count: task 4 first.
 
 The fixes and their commits are in `.plans/progress.md`, under Oct 31.
+
+## The second tester's report (59 actions)
+
+| Task | Result | Actions | Where it stopped |
+|---|---|---|---|
+| 1. Say what it does | done | 5 | "In-process supervisor" and "Ideal durable supervisor", unexplained at that point; "what I get, and where my text goes" |
+| 2. A result, start to finish | done | 30 | Landed on the arena at 0 / 12 with every number at zero; "Open the final run" opened a recorded run; its own run was under Runs, All 10 runs; a grid of T06, T12 under slots 0 1 5 6 |
+| 3. With a change of its own | done, another change | 18 | The driver could not type in Attendance; it removed a talk; only the count proved the change was used |
+| 4. Brains that died | done | from open screens | "Run 2 says 4 calls paid for again, yet Duplicated work 0 calls" |
+| 5. Against a rival | done | default pair | Idle 0.0 against 67.8: the number was false |
+| 6. Trust | partly | | "FAKE MODEL, SIMULATED CLOCK" on Trade-offs, nothing of the kind on the arena's results |
+
+What the tester would tell a friend: "A free 12-talk schedule plus a rival comparison took about ten clicks, which is neat. But it shows only talk numbers, my result was hard to find, and the site itself says free runs are not real evidence: a promising demo, not proof."
+
+## What the two tests teach
+
+- A test that starts its own run finds what recordings cannot: the false score only exists while a run records.
+- Ask of each screen what the person came for. Both testers reached the end of the job and neither was shown the product of it.

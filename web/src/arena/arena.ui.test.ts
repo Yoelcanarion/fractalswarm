@@ -325,14 +325,14 @@ describe("the picker", () => {
     expect(count(html, "<optgroup")).toBe(1);
     expect(html).toContain('<optgroup label="Private, made here">');
     expect(html.indexOf("a shipped pair")).toBeLessThan(html.indexOf("<optgroup"));
-    expect(html.indexOf("my own pair · private")).toBeGreaterThan(html.indexOf("<optgroup"));
+    expect(html.indexOf("Your pair · ")).toBeGreaterThan(html.indexOf("<optgroup"));
     expect(picker()).not.toContain("<optgroup"); // nothing private, no divider
     expect(picker({ pairs: [pair({ billed: true })] })).not.toContain("<optgroup"); // a billed pair that ships stays in the list
   });
 
   it("marks a private or billed pair, so it is never taken for a bundled one", () => {
     const html = picker({ pairs: [pair({ private: true }), pair({ pairId: "p2", billed: true })] });
-    expect(html).toContain("· private");
+    expect(html).toContain("Your pair · Ideal durable supervisor · half the brains");
     expect(html).toContain("· billed");
   });
 
@@ -342,8 +342,8 @@ describe("the picker", () => {
   });
 
   it("shows the whole name of the pair that is open beside the select, which a phone cuts: the marks included", () => {
-    const html = picker({ left: "demo-1-swarm", right: "demo-1-durable-max", pairs: [pair({ private: true, billed: true })] });
-    expect(html).toContain('<span class="picker__shown" aria-hidden="true">swarm vs durable-max, half-the-brains, seed 1 · private · billed</span>');
+    const html = picker({ left: "demo-1-swarm", right: "demo-1-durable-max", pairs: [pair({ private: true, billed: true, createdAt: "2026-10-31T13:25:58+00:00" })] });
+    expect(html).toContain('<span class="picker__shown" aria-hidden="true">Your pair · Ideal durable supervisor · half the brains · 13:25 UTC · billed</span>');
     expect(picker()).toContain('<span class="picker__shown" aria-hidden="true">Choose a pair…</span>');
   });
 });
