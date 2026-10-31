@@ -13,9 +13,12 @@ import {
   outagesNow,
   pad,
   PITCH,
+  TEAM_PAD,
   teamSize,
+  type BoardLayout,
   type Box,
 } from "./board";
+import { frameOf } from "./frame";
 import { rootHolder } from "../lib/reducer";
 import { call, CENTRAL_SCENARIO, crash, kill, remapRoot, restart, rivalStream, swarmStream, takeOver, withInfra } from "./testing";
 
@@ -61,7 +64,44 @@ describe("the board layout", () => {
     expect(new Set(leaves.map((n) => n.y)).size).toBe(2);
     expect(leaves.filter((n) => n.y === leaves[0].y)).toHaveLength(LEAF_ROW_MAX);
     for (const a of wide.nodes) for (const b of wide.nodes) if (a !== b) expect(overlaps(a, b), `${a.id} / ${b.id}`).toBe(false);
-    expect(teamSize(12)).toEqual({ w: LEAF_ROW_MAX * PITCH + 12, h: 2 * PITCH + 12 });
+    expect(teamSize(12)).toEqual({ w: LEAF_ROW_MAX * PITCH + 2 * TEAM_PAD, h: 2 * PITCH + 2 * TEAM_PAD });
+  });
+
+  it("keeps every coordinator on its row through a takeover of the root: what changes is who it answers to", () => {
+    const rows = (layout: BoardLayout) => layout.nodes.filter((n) => !n.leaf).map((n) => [n.id, n.y]);
+    const s = swarmStream();
+    const before = layoutBoard(foldEvents(s.events));
+    kill(s, "o0", 10_000);
+    takeOver(s, "o0", "o1", 12_000, 12_500);
+    const after = layoutBoard(foldEvents(s.events));
+    expect(rows(after)).toEqual(rows(before));
+    expect(after.nodes.find((n) => n.id === "o2")?.parent).toBe("o1");
+    expect(after.nodes.find((n) => n.id === "o1")?.y).toBe(after.nodes.find((n) => n.id === "o2")?.y);
+  });
+
+  it("frames a tree that lost its root and then its heir no taller than the tree it started with", () => {
+    const s = swarmStream();
+    const started = frameOf([...s.events]);
+    kill(s, "o0", 10_000);
+    takeOver(s, "o0", "o1", 12_000, 12_500);
+    kill(s, "o1", 20_000);
+    takeOver(s, "o1", "o2", 22_000, 22_500);
+    expect(frameOf([...s.events])?.h).toBe(started?.h);
+  });
+
+  it("moves an adopted team under its heir, beside the heir's own, and keeps them apart", () => {
+    const s = swarmStream();
+    kill(s, "o1", 10_000);
+    takeOver(s, "o1", "o2", 12_000, 12_500);
+    const adopted = layoutBoard(foldEvents(s.events));
+    expect(adopted.teams.find((t) => t.owner === "o2")?.leaves).toHaveLength(4);
+    for (const a of adopted.nodes) for (const b of adopted.nodes) if (a !== b) expect(overlaps(a, b), `${a.id} / ${b.id}`).toBe(false);
+  });
+
+  it("keeps a team under a coordinator clear of the row beneath it, as when a session's last agents fall to its track", () => {
+    const s = swarmStream().spawn("o1.1", "orchestrator", "o1").spawn("o1.2", "orchestrator", "o1");
+    const layout = layoutBoard(foldEvents(s.events));
+    for (const a of layout.nodes) for (const b of layout.nodes) if (a !== b) expect(overlaps(a, b), `${a.id} / ${b.id}`).toBe(false);
   });
 
   it("changes its structure key when a subtree is adopted, and for nothing else", () => {

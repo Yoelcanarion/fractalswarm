@@ -14,6 +14,7 @@ import { ArenaPlay } from "./ArenaPlay";
 import { ArenaSide } from "./ArenaSide";
 import { ArenaTimeline } from "./ArenaTimeline";
 import { assumptionsOf, rivalSentence, startedOf, systemKind } from "./assumptions";
+import { useBoardChrome } from "./chrome";
 import { frameOf, sharedFrames } from "./frame";
 import { keyAction } from "./keys";
 import type { Official } from "./official";
@@ -30,7 +31,7 @@ const NO_OFFICIAL: { left: Official | null; right: Official | null } = { left: n
 // on one side, 0.72 on the other).
 const LEAD = "FractalSwarm, on the left, and a rival, on the right, plan the same conference under the same failures, each at about the same point of the work.";
 // A pair whose plan is named same-moment takes its kills by hand, at fixed seconds of the shared clock: it is a film for the eye, not the benchmark's rule.
-const LEAD_SAME_MOMENT = "FractalSwarm, on the left, and a rival, on the right, plan the same conference, and a coordinator falls on each side at the same second. We set these kills by hand: the benchmark's rule hits each side at the same point of the work instead.";
+const LEAD_SAME_MOMENT = "FractalSwarm, on the left, and a rival, on the right, plan the same conference, and a coordinator falls on each side at the same second. We set these kills by hand, not by the benchmark's rule.";
 // True of every pair. It stands until the pair is known: one pair's rule is false of the other, and a log takes seconds to load.
 const LEAD_ANY_PAIR = "FractalSwarm, on the left, and a rival, on the right, plan the same conference.";
 const leadOf = (plan: string | null): string => (plan === "same-moment" ? LEAD_SAME_MOMENT : LEAD);
@@ -164,6 +165,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   // `#/arena` alone opens the first public pair: until it has, it is not an empty page
   const opening = !chosen && (pairs === null || pairs.some((pair) => !pair.private));
   const watching = chosen && !loading && !loadError;
+  useBoardChrome(root, watching && !bare);
   return (
     <div ref={root} className={["arena", finished && "arena--played-out", bare && "arena--bare"].filter(Boolean).join(" ")} tabIndex={-1} onKeyDown={onKeyDown}>
       {!bare && (

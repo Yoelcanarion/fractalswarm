@@ -4,6 +4,7 @@ import { useStore } from "zustand";
 import { Details } from "../components/ui";
 import { resultsHash } from "../lib/address";
 import { arenaCounters } from "../lib/arena";
+import { readFacts } from "../lib/catalogue";
 import type { RunEvent } from "../lib/types";
 import type { RunStoreApi } from "../store";
 import { startedOf, type Assumptions, type SystemKind } from "./assumptions";
@@ -54,8 +55,9 @@ export function PairEnd({ left, right, leftSystem, assumptions }: PairEndProps) 
   const r = useEndSide(right, assumptions.system);
   const leftRun = useStore(left, (s) => s.runId);
   const rightRun = useStore(right, (s) => s.runId);
+  const byHand = useStore(left, (s) => readFacts(s.events[0], null).profile === "same-moment");
   if (!l.finished || !r.finished) return null;
-  const text = pairEndText(l, r, assumptions);
+  const text = pairEndText(l, r, assumptions, byHand);
   const ends = [
     { side: l, run: leftRun },
     { side: r, run: rightRun },

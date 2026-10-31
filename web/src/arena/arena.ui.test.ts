@@ -13,7 +13,8 @@ import type { RunEvent, RunListing } from "../lib/types";
 import { RunStoreProvider, type RunApi } from "../store";
 import type { PairListing } from "./api";
 import { ArenaView } from "./ArenaPage";
-import { ArenaBoard } from "./ArenaBoard";
+import { ArenaBoard, edgePath } from "./ArenaBoard";
+import { CHIP_H } from "./board";
 import { ArenaSide } from "./ArenaSide";
 import { ArenaTimeline } from "./ArenaTimeline";
 import { frameOf, sharedFrames } from "./frame";
@@ -131,6 +132,26 @@ describe("the board", () => {
     expect(count(html, /dot--idle/) + count(html, /dot--working/)).toBe(4);
     expect(html).not.toContain("dot--waiting");
     expect(html).not.toContain("coord--down");
+  });
+
+  it("draws the line to a coordinator on a row below down, one along its row as an arch over the chips, and one above it from the chip's top", () => {
+    const numbers = (d: string) => d.match(/-?\d+(\.\d+)?/g)!.map(Number);
+    const [, y1, , , , , , y2] = numbers(edgePath({ x: 0, y: 0 }, { x: 100, y: 70 }));
+    expect([y1, y2]).toEqual([CHIP_H, 70]);
+    const [, startY, , liftY, , , , endY] = numbers(edgePath({ x: 0, y: 70 }, { x: 200, y: 70 }));
+    expect([startY, endY]).toEqual([70, 70]);
+    expect(liftY).toBeLessThan(70);
+    const [, fromTop, , , , , , toBottom] = numbers(edgePath({ x: 0, y: 140 }, { x: 100, y: 70 }));
+    expect([fromTop, toBottom]).toEqual([140, 70 + CHIP_H]);
+  });
+
+  it("cuts the lines of a coordinator that is down, to the ones under it as well as to itself", async () => {
+    const swarm = swarmStream();
+    kill(swarm, "o0", 10_000);
+    const session = createPairSession({ api: api({ s: swarm.events, r: swarm.events }), clock: { scheduler: idle } });
+    await session.open("s", "r", { atMs: 11_000, speed: null, play: false });
+    renderCurrent(session.left);
+    expect(count(board(session.left), /board__edge board__edge--down/)).toBe(2); // o0 to o1 and to o2
   });
 
   it("holds the same frame for both sides, so a dot is the same size in each", async () => {
@@ -405,8 +426,20 @@ describe("the pinned timeline", () => {
 
   it("caps the boards to the room above the bar only in the window that pins it: a stacked page has them whole", () => {
     expect(laptop).not.toBe("");
-    expect(rule(laptop, ".board")).toContain("max-height: max(190px, calc(var(--arena-room) - var(--arena-chrome)))");
+    expect(rule(laptop, ".board")).toContain("max-height: max(150px, calc(var(--arena-room) - var(--arena-chrome)))");
     expect(/\n\.board \{[^}]*max-height/.test(sheet)).toBe(false);
+  });
+
+  it("gives the main action one width wherever the boards share a row, so that a press does not wrap the lead again and move them", () => {
+    const wide = media("(min-width: 1101px)");
+    expect(rule(wide, ".arena__play")).toContain("min-width: 390px");
+    expect(rule(wide, ".arena .pagehead")).toContain("flex-wrap: nowrap");
+  });
+
+  it("tightens only the app's sides in a laptop's window: a director's frame keeps the head it was made with", () => {
+    const tight = media("(min-width: 1101px) and (max-height: 900px)");
+    expect(tight).not.toBe("");
+    for (const selector of tight.match(/^ {2}[^ ].*\{$/gm) ?? []) expect(selector).toContain(".arena:not(.arena--bare)");
   });
 
   it("hands the bar to the end of the page once the pair has played out, so that the end card is what is under the boards", () => {

@@ -2,10 +2,10 @@
 // nothing zooms or drifts while the failure plays out, and it is the same size on both sides, so a
 // dot is the same number of pixels in the swarm as in its rival (the two panels are the same size).
 //
-// The frame has to hold every shape the tree takes: a node arrives, a subtree is adopted. So it is
-// the union of the layout's bounds at each structural event of the whole log, found by folding only
-// the events that change the structure (a layout reads who exists and who hangs from whom, nothing
-// else).
+// The frame has to hold every shape the tree takes: a node arrives, a team grows with the agents it
+// adopts. So it is the union of the layout's bounds at each structural event of the whole log, found
+// by folding only the events that change the structure (a layout reads who exists and who hangs from
+// whom, nothing else).
 
 import { emptyView, foldEvent } from "../lib/reducer";
 import type { RunEvent } from "../lib/types";

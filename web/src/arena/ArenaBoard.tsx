@@ -13,13 +13,15 @@ const owner = (color: string): CSSProperties => ({ "--owner": color }) as CSSPro
 const CHIP_WORDS = { up: "up", suspected: "suspected", restarting: "restarting", down: "down", finished: "finished" } as const;
 const TAG_H = 16;
 const CROSS = 5; // half-width of the ✕ drawn on a chip that is down
+const ARCH = 40; // how far a line along a row rises over the chips
 
-/** A cubic from the bottom of one chip to the top of another, leaving and arriving vertically. */
-function edgePath(from: Point, to: Point): string {
+/** A cubic from the bottom of one chip to the top of another, leaving and arriving vertically. An heir keeps its row, so it can adopt a coordinator
+ * beside it, along the row, which is an arch over the chips between them, or one on a row above, which is the same cubic from its top. */
+export function edgePath(from: Point, to: Point): string {
   const x1 = from.x + CHIP_W / 2;
-  const y1 = from.y + CHIP_H;
   const x2 = to.x + CHIP_W / 2;
-  const y2 = to.y;
+  if (to.y === from.y) return `M${x1} ${from.y}C${x1} ${from.y - ARCH} ${x2} ${to.y - ARCH} ${x2} ${to.y}`;
+  const [y1, y2] = to.y > from.y ? [from.y + CHIP_H, to.y] : [from.y, to.y + CHIP_H];
   const bend = (y2 - y1) / 2;
   return `M${x1} ${y1}C${x1} ${y1 + bend} ${x2} ${y2 - bend} ${x2} ${y2}`;
 }
@@ -78,7 +80,7 @@ export const ArenaBoard = memo(function ArenaBoard({ frame, label, rootLabel }: 
           const parent = node.parent === null ? undefined : layout.nodes.find((n) => n.id === node.parent && !n.leaf);
           if (!parent) return null;
           const actor = view.actors[node.id];
-          const down = chipState(actor) === "down";
+          const down = chipState(actor) === "down" || chipState(view.actors[parent.id]) === "down";
           const adopted = actor.adoptedTs !== undefined;
           return (
             <path

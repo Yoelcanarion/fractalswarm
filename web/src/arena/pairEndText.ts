@@ -84,8 +84,11 @@ const NO_AGENT = "Here only coordinators crashed and no agent was killed; the re
 
 const noAgentKilled = (left: EndSide, right: EndSide): boolean => left.agentsKilled === 0 && right.agentsKilled === 0 && left.crashes + right.crashes > 0;
 
-/** The words of the end of a pair. */
-export function pairEndText(left: EndSide, right: EndSide, assumptions: Assumptions): PairEndText {
+/** The arena's lead says that a same-moment pair's kills were set by hand. This is what the benchmark does instead. */
+const BY_HAND = "The kills fell at the same second because we set them by hand. The benchmark's rule hits each side at the same point of the work instead.";
+
+/** The words of the end of a pair. ``byHand``: its kills were set at fixed seconds of the shared clock. */
+export function pairEndText(left: EndSide, right: EndSide, assumptions: Assumptions, byHand = false): PairEndText {
   const finished = [left, right].filter((side) => side.completed).length;
   return {
     headline: finished === 2 ? "Both runs finished." : finished === 1 ? "Only one of the two runs finished." : "Neither run finished.",
@@ -94,6 +97,6 @@ export function pairEndText(left: EndSide, right: EndSide, assumptions: Assumpti
       { who: capitalize(assumptions.name), text: sideText(right, assumptions) },
     ],
     scope: `This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after ${secondsText(assumptions.detectionMs)} and restarting after ${secondsText(assumptions.restartMs)}: it shows what happened here, not what usually happens.`,
-    more: [noAgentKilled(left, right) ? NO_AGENT : "", handedOver(left), handedOver(right)].filter(Boolean),
+    more: [byHand ? BY_HAND : "", noAgentKilled(left, right) ? NO_AGENT : "", handedOver(left), handedOver(right)].filter(Boolean),
   };
 }

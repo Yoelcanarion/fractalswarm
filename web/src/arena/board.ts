@@ -19,9 +19,9 @@ export const CHIP_H = 30;
 export const DOT = 16;
 export const PITCH = 22; // distance between the centres of two dots
 export const COL_GAP = 18; // between two subtrees
-export const ROW_GAP = 78; // between a coordinator's row and its sub-coordinators'
-export const LEAF_TOP = 14; // between a chip and the team of agents under it
-export const TEAM_PAD = 6; // around a team, inside its outline
+export const ROW_GAP = 70; // between a coordinator's row and its sub-coordinators'
+export const LEAF_TOP = 10; // between a chip and the team of agents under it
+export const TEAM_PAD = 4; // around a team, inside its outline
 export const LEAF_ROW_MAX = 6; // dots per row; more wrap into a second row
 
 export interface Box {
@@ -55,13 +55,14 @@ interface Children {
   leaves: string[];
 }
 
+/** A coordinator goes where it was spawned, and an agent under whoever it answers to now. */
 function childrenIndex(view: ViewState): { roots: string[]; kids: Map<string, Children> } {
   const kids = new Map<string, Children>();
   const roots: string[] = [];
   for (const id of view.order) {
     const actor = view.actors[id];
     if (isInfraKind(actor.kind)) continue;
-    const parent = actor.parent;
+    const parent = isDot(view, id) ? actor.parent : actor.originalParent;
     if (parent === null || !view.actors[parent] || isInfraKind(view.actors[parent].kind)) {
       if (!isDot(view, id)) roots.push(id);
       continue;
@@ -81,7 +82,9 @@ export const teamSize = (leaves: number): { w: number; h: number } =>
   leaves === 0 ? { w: 0, h: 0 } : { w: columns(leaves) * PITCH + 2 * TEAM_PAD, h: rowsOf(leaves) * PITCH + 2 * TEAM_PAD };
 
 /** Where every coordinator and agent goes. Subtrees take the width they need, parents centre over
- * their children, a team of agents sits centred under its coordinator. */
+ * their children, a team of agents sits centred under its coordinator. A takeover moves agents and
+ * the lines between coordinators (ArenaBoard), not the coordinators: an heir stands on its own row, so
+ * the tree is as tall after five crashes as before the first, and the dead stay where they fell. */
 export function layoutBoard(view: ViewState): BoardLayout {
   const { roots, kids } = childrenIndex(view);
   const width = new Map<string, number>();

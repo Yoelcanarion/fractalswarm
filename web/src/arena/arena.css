@@ -10,17 +10,17 @@
   min-height: 100%;
   padding: var(--space-3) var(--space-4);
   outline: none;
-  /* The room the page has, which room.ts measures (its scroll area: the window less the bars of the app and the guide band while that is open), and
-     what the page keeps of it around the boards (the lead, the picker, the head of each side, the scoreboard's first row, the pinned timeline), in px.
-     The boards take the rest of a laptop's window, down to a floor, and the whole of their frame in a taller one. The first is the window's own until
-     it is measured. */
+  /* The room the page has, which lib/room.ts measures (its scroll area: the window less the bars of the app and the guide band while that is open),
+     and what the page keeps of it around the boards, which chrome.ts measures (all that stands over a side, a side without its board, the pinned
+     timeline). The boards take the rest of a laptop's window, down to a floor, and the whole of their frame in a taller one. Until they are measured,
+     these are the window's own and a usual figure. */
   --arena-room: calc(100vh - 52px);
-  --arena-chrome: 490px;
+  --arena-chrome: 440px;
 }
 
 /* The lead stays three lines at most, whichever pair it speaks of, and the main action's two buttons sit beside it. */
 .arena .pagehead__lead {
-  max-width: 104ch;
+  max-width: 125ch;
 }
 
 /* The main action, and the clock beside it while it plays. */
@@ -303,7 +303,7 @@
 .coord__id {
   fill: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -744,7 +744,7 @@
    carries the clock. In a window that holds it the drawing gives way, not the bar: the frame is drawn smaller to fit (it keeps its proportions). */
 @media (min-width: 1101px) and (min-height: 701px) {
   .board {
-    max-height: max(190px, calc(var(--arena-room) - var(--arena-chrome)));
+    max-height: max(150px, calc(var(--arena-room) - var(--arena-chrome)));
   }
 
   /* the pinned bar has the clock */
@@ -792,6 +792,57 @@
 
   .arena:not(.arena--bare) .lane__marks {
     height: 16px;
+  }
+}
+
+/* The boards share a row: the main action keeps one width whatever it holds, so that a press does not make the lead beside it wrap again and move them. */
+@media (min-width: 1101px) {
+  .arena .pagehead {
+    flex-wrap: nowrap;
+  }
+
+  .arena .pagehead__text {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .arena__play {
+    min-width: 390px;
+    justify-content: flex-end;
+  }
+}
+
+/* A laptop's window: what the head of each side gives back goes to the tree. A director's frame keeps the head it was made with. */
+@media (min-width: 1101px) and (max-height: 900px) {
+  .arena:not(.arena--bare) {
+    gap: var(--space-2);
+    padding-block: var(--space-2);
+  }
+
+  .arena:not(.arena--bare) .side {
+    gap: 6px;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .arena:not(.arena--bare) .side__head {
+    gap: 6px;
+  }
+
+  .arena:not(.arena--bare) .side__name {
+    font-size: var(--fs-lead);
+  }
+
+  .arena:not(.arena--bare) .side__proof {
+    min-height: 28px;
+  }
+
+  .arena:not(.arena--bare) .side__proof .badge--big {
+    padding-block: 3px;
+  }
+
+  .arena:not(.arena--bare) .status {
+    min-height: 32px;
+    padding-block: 3px;
   }
 }
 

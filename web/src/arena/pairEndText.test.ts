@@ -99,6 +99,13 @@ describe("the end of a pair", () => {
     expect(of(0, 0)).not.toContain(words);
   });
 
+  it("says under the fold what the benchmark does instead, for a pair whose kills were set by hand, and only for that", () => {
+    const words = "The benchmark's rule hits each side at the same point of the work instead.";
+    const rival = assumptions("durable-max");
+    expect(pairEndText(side(), side({ system: "durable-max" }), rival, true).more.join(" ")).toContain(words);
+    expect(pairEndText(side(), side({ system: "durable-max" }), rival).more.join(" ")).not.toContain(words);
+  });
+
   it("states the scope: one run of each, on one seed, under one failure plan, with the rival's setting", () => {
     expect(plain(pair().scope)).toBe(
       "This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after 5 s and restarting after 0 s: it shows what happened here, not what usually happens.",
