@@ -1,4 +1,4 @@
-// The menu at the end of the page: the doors into the simulation, and which of them lead anywhere in a
+// The menu at the end of the page: the doors into the app, and which of them lead anywhere in a
 // build that has no server. The static showcase (W8) is built with Vite mode "static"; its doors that
 // need the local server say so instead of leading to a dead page.
 

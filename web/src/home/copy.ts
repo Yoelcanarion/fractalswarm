@@ -30,9 +30,9 @@ const plural = (n: number | null | undefined, one: string, many: string = `${one
 export const COPY = {
   title: `FractalSwarm · ${TAGLINE}`,
   description:
-    "Kill half the brains. It still finishes. FractalSwarm is a multi-agent runtime on Muse Spark and Muse Wonder. Kill a coordinator yourself, watch the rest take over, then step into the simulation.",
+    "Kill half the brains. It still finishes. FractalSwarm is a multi-agent runtime on Muse Spark and Muse Wonder. Kill a coordinator yourself, watch the rest take over, then step into the app.",
 
-  bar: { brand: "FractalSwarm", enter: "Enter the simulation", enterShort: "Enter", skip: "Skip to the story", home: "Back to the home page" },
+  bar: { brand: "FractalSwarm", enter: "Enter the app", enterShort: "Enter", skip: "Skip to the story", home: "Back to the home page" },
 
   seeMore: "See more",
   repeat: "Repeat",
