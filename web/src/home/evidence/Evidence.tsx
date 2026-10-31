@@ -238,6 +238,10 @@ function Helps() {
     >
       <Chart name="PairedBars" path="verdicts" duration={1.6} extra={{ setting: false }} />
       <Setting>{captionFor(story, "headline")}</Setting>
+      <Reveal delay={90}>
+        <p className="home-beat__verdict">{COPY.evidence.helps.realistic}</p>
+        <Claim id="R7" />
+      </Reveal>
       {cost && (
         <Reveal delay={100}>
           <p className="home-beat__verdict">{COPY.evidence.helps.cost}</p>

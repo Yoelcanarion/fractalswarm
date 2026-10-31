@@ -80,8 +80,8 @@ describe("the evidence page, rendered with a story", () => {
   });
 
   it("draws the claims the evidence is about, once each", () => {
-    expect(new Set(drawnClaims(html).map((claim) => claim.id))).toEqual(new Set(["S2", "S4", "S5", "S6", "R2", "R3", "R4", "R5"]));
-    for (const id of ["S2", "S4", "S5", "S6", "R2", "R3", "R4", "R5"]) expect(countOf(html, `data-claim="${id}"`), id).toBe(1);
+    expect(new Set(drawnClaims(html).map((claim) => claim.id))).toEqual(new Set(["S2", "S4", "S5", "S6", "R2", "R3", "R4", "R5", "R7"]));
+    for (const id of ["S2", "S4", "S5", "S6", "R2", "R3", "R4", "R5", "R7"]) expect(countOf(html, `data-claim="${id}"`), id).toBe(1);
     expect(html).not.toContain('data-claim="R1"');
   });
 

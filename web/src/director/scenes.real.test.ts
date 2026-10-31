@@ -433,7 +433,7 @@ describe("the final run, as s4 and s5 meet it", () => {
 
 describe("s7, which meets no log", () => {
   it("rings the three rows of the regime map and then the outcome as the voice reaches each, with no camera, and ends before its scene does", () => {
-    // voice at 140 wpm: "It helps when a supervisor is slow to restart a coordinator" to 4.7 s, "It ties in our main setting" to 7.3 s, "It loses to a fast external restart" to 10.3 s, "and its detector raises false alarms" to 12.9 s
+    // voice at 140 wpm: "It helps when a supervisor restarts slowly" to 3.0 s, "or loses its in-flight calls" to 5.1 s, "It ties the ideal one" to 7.3 s, "It loses to a fast external restart" to 10.3 s, "and its detector raises false alarms" to 12.9 s
     const scene = byId("s7-where-it-helps");
     const trace = play(scene, { end: 0, crashes: [], calls: new Map() });
     expect(trace.state.warnings).toEqual([]);
@@ -442,11 +442,12 @@ describe("s7, which meets no log", () => {
     expect(pointedAt(trace)).toEqual(["restart-row", "gate-row", "fast-restart-row", "outcome"]);
     const [restart, gate, fast, outcome] = trace.rings;
     expect(restart.from).toBeLessThan(1000);
-    expect(Math.abs(gate.from - 4700)).toBeLessThan(150);
+    expect(Math.abs(restart.to - 3000)).toBeLessThan(150);
+    expect(Math.abs(gate.from - 5200)).toBeLessThan(150);
     expect(Math.abs(fast.from - 7300)).toBeLessThan(150);
-    expect(Math.abs(outcome.from - 10_000)).toBeLessThan(150);
-    // each ring ends where the next begins, and the outcome's goes to the end of the scene
-    expect(Math.abs(restart.to - gate.from)).toBeLessThan(150);
+    expect(Math.abs(outcome.from - 10_300)).toBeLessThan(150);
+    // from the in-flight calls no row of the map is ringed: that rival is not on it, and the lower third says what was measured. After it each
+    // ring ends where the next begins, and the outcome's goes to the end of the scene
     expect(Math.abs(gate.to - fast.from)).toBeLessThan(150);
     expect(Math.abs(fast.to - outcome.from)).toBeLessThan(150);
     expect(Math.abs(outcome.to - scene.durationMs)).toBeLessThan(150);

@@ -77,7 +77,7 @@ describe("the home page, rendered with a story", () => {
   });
 
   it("draws the claims the home page is about and no other: the rest are on the evidence page", () => {
-    expect(new Set(drawnClaims(html).map((claim) => claim.id))).toEqual(new Set(["S1", "S3", "S5", "S6", "R5", "R6"]));
+    expect(new Set(drawnClaims(html).map((claim) => claim.id))).toEqual(new Set(["S1", "S3", "S5", "S6", "R5", "R6", "R7"]));
   });
 
   it("never draws a claim that is not claimed", () => {

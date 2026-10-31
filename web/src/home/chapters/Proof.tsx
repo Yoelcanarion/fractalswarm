@@ -60,6 +60,7 @@ export function Proof() {
             {captionFor(story, "hero")} {"·"} {COPY.rivalReason}
           </Setting>
           <Claim id="R5" className="home-claim--small" />
+          <Claim id="R7" className="home-claim--small" />
           <Claim id="S5" className="home-claim--lead" />
           <p className="home-limit home-limit--wide">{COPY.proof.more.proves}</p>
           {/* folded, it shows the finished output: it has been asked for, so it does not type itself out */}

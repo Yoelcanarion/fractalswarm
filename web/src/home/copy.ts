@@ -157,6 +157,7 @@ export const COPY = {
       gate: (crashes: string) => `With a fake model, at our pre-registered gate, this measure tied at ${crashes} crashes.`,
       cost: "One loss: its failure detector declared live coordinators dead on these runs.",
       perRun: "false deaths per run",
+      realistic: "Two wins against a realistic durable supervisor.",
     },
     fails: {
       lead: "Where it does worse.",

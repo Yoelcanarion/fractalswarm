@@ -27,7 +27,7 @@ export interface ClaimRow {
   status: string;
 }
 
-/** The rows of the claims tables in docs/claims.md (S1 to S7, R1 to R6), read as the generator reads them. */
+/** The rows of the claims tables in docs/claims.md (S1 to S7, R1 to R7), read as the generator reads them. */
 export function claimRows(): ClaimRow[] {
   const doc = readFileSync(`${REPO_ROOT}docs/claims.md`, "utf-8");
   const rows: ClaimRow[] = [];
@@ -136,6 +136,7 @@ const FIXTURE_STATE: Record<string, ClaimState> = {
   R4: "allowed",
   R5: "allowed",
   R6: "allowed",
+  R7: "allowed",
 };
 
 /** The text a test claim has: a plain sentence, with a code span in one and two sentences in R6. */
