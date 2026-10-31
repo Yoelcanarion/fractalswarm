@@ -19,6 +19,8 @@ export interface SwarmTreeProps extends VizProps<TreeSlice> {
   /** "story" (the default, the one TREE_KEYFRAMES describe): slow enough to read, for a scroll.
    * "hero": about nine seconds when driven by time. */
   pacing?: Pacing;
+  /** Draw the tree to this shape, width over height, where its own picture (about 1.5 to 1) is too wide for the room it has: see `fitted`. */
+  aspect?: number;
   /** Under each node: its id; its id and name; nothing. */
   labels?: "ids" | "names" | "none";
   /** The run clock in the corner. */
@@ -238,8 +240,8 @@ export function TreeSvg({ svgRef, model, labels, clock, ambient, className, titl
   );
 }
 
-export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", labels = "ids", clock = true, ambient = false, appear }: SwarmTreeProps) {
-  const player = useMemo(() => treePlayer(data, pacing), [data, pacing]);
+export function SwarmTree({ progress, data, still, stillAt, className, pacing = "story", aspect, labels = "ids", clock = true, ambient = false, appear }: SwarmTreeProps) {
+  const player = useMemo(() => treePlayer(data, pacing, aspect), [data, pacing, aspect]);
   const { model } = player;
   const svg = useRef<SVGSVGElement>(null);
   const rig = useRef<TreeRig | null>(null);

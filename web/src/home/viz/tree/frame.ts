@@ -5,7 +5,7 @@
 import type { TreeSlice } from "../../data/types";
 import { clamp01, lerp, smoothstep, span } from "../shared";
 import type { Epoch, Slot } from "./layout";
-import { isBusy, treeModel, type Msg, type TreeModel } from "./model";
+import { fitted, isBusy, treeModel, type Msg, type TreeModel } from "./model";
 import { buildTimeline, treeKeyframes, type Cursor, type Keyframe, type Pacing, type Timeline } from "./timeline";
 
 /** Where in a takeover's hold (0..1) each part of the choreography plays. */
@@ -132,12 +132,17 @@ function rowsOf(epoch: Epoch): Rows {
   return { of: Object.fromEntries(epoch.present.map((id) => [id, heights.indexOf(key(id))])), count: heights.length };
 }
 
-const players = new WeakMap<TreeSlice, Partial<Record<Pacing, TreePlayer>>>();
+const players = new WeakMap<TreeSlice, Partial<Record<string, TreePlayer>>>();
 
-export function treePlayer(tree: TreeSlice, pacing: Pacing): TreePlayer {
+/**
+ * The player of a tree at a pacing. `aspect` draws the tree to that shape (width over height, see `fitted`) where the picture's own
+ * is too wide for the room it has. The timeline is the same either way: it reads times, never places.
+ */
+export function treePlayer(tree: TreeSlice, pacing: Pacing, aspect?: number): TreePlayer {
   const cached = players.get(tree) ?? {};
   players.set(tree, cached);
-  return (cached[pacing] ??= createPlayer(treeModel(tree), pacing));
+  const key = aspect === undefined ? pacing : `${pacing}@${aspect}`;
+  return (cached[key] ??= createPlayer(aspect === undefined ? treeModel(tree) : fitted(treeModel(tree), aspect), pacing));
 }
 
 /**

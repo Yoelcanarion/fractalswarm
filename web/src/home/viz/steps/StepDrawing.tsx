@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { Story } from "../../data/types";
 import { useStory } from "../../story";
 import { useCalm } from "../page";
@@ -15,8 +16,13 @@ export const STEP_LABELS: Record<StepId, string> = {
 
 export interface StepDrawingProps {
   step: StepId;
-  /** Hover, focus or a tap on the card: the drawing plays to its end in under a second, and eases back when it is left. */
+  /** The drawing is at its end: it plays there from its first frame in under a second, and eases back when this turns false. */
   active: boolean;
+  /**
+   * A counter (0 when absent): each increment, while the drawing is at its end, cuts it back to its first frame and plays it again
+   * to its end. The page counts a hover, a key on the card or a tap.
+   */
+  replay?: number;
   /** The score of each candidate as a share of the range, best first; the recorded run's first round when absent. */
   scores?: number[];
   /** Standing still, which the page says through its own context when this is absent: the drawing in its end state, whatever the card is doing. */
@@ -91,11 +97,22 @@ function Adopt() {
 /**
  * The drawing on one of the Solution's three cards. It is the same picture at rest and when played, drawn with CSS only: each part
  * has a transition in the page's one ease, their delays spread evenly across it so that they land one after another and the whole
- * takes about nine tenths of a second; leaving the card eases it back from wherever it has got to, and never snaps.
+ * takes about nine tenths of a second; `active` turning false eases it back from wherever it has got to, and never snaps. A replay
+ * cuts the drawing back to its first frame with no transition (`data-reset`), and lets it play once that frame has been painted. It
+ * is the same element throughout: a new one under a resting pointer would make the page see the pointer enter the card again.
  */
-export function StepDrawing({ step, active, scores, still, className }: StepDrawingProps) {
+export function StepDrawing({ step, active, replay = 0, scores, still, className }: StepDrawingProps) {
   const story = useStory();
-  const on = useCalm(still) || active;
+  const [started, setStarted] = useState(0);
+  useEffect(() => {
+    if (replay === 0) return undefined;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => setStarted(replay));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [replay]);
+  const cut = started !== replay;
+  const on = useCalm(still) || (active && !cut);
   return (
     <svg
       className={className ? `hv hv-step ${className}` : "hv hv-step"}
@@ -104,6 +121,7 @@ export function StepDrawing({ step, active, scores, still, className }: StepDraw
       aria-label={STEP_LABELS[step]}
       data-step={step}
       data-on={on ? "true" : "false"}
+      data-reset={cut ? "true" : undefined}
     >
       {step === "log" && <Log />}
       {step === "heir" && <Heir scores={scores ?? recordedScores(story)} />}

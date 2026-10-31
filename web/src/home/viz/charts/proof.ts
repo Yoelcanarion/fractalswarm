@@ -114,7 +114,7 @@ export function proofPanels(story: ProofStory): ProofPanel[] {
       rows: [
         {
           id: "stall",
-          label: "Stalled after a crash · a dot for each seed",
+          label: "Stalled after a crash · a dot for each run",
           unit: "s",
           swarm: perSeed(story, "swarm", profile, (c) => c.stallS),
           rival: perSeed(story, "durable-max", profile, (c) => c.stallS),
@@ -144,7 +144,7 @@ export function proofReading(panels: ProofPanel[], swarm: string): string {
       const parts = panel.rows.map((row) => {
         const seeds = (list: SeedValue[]): string => list.map((s) => proofText(s.value, row.unit)).join(", ");
         const verdict = row.verdict ? `the data's verdict is a ${row.verdict}` : "no verdict";
-        return `${row.id === "stall" ? "stall" : "extra cost"} by seed: ${swarm} ${seeds(row.swarm)}; ${panel.rival} ${seeds(row.rival)}; ${verdict}`;
+        return `${row.id === "stall" ? "stall" : "extra cost"} by run:${swarm} ${seeds(row.swarm)}; ${panel.rival} ${seeds(row.rival)}; ${verdict}`;
       });
       return `Against the ${panel.rival.toLowerCase()} (${panel.setting}), ${parts.join(". ")}.`;
     })
