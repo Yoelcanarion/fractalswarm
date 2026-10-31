@@ -33,7 +33,14 @@ Clone it and run one command. [uv](https://docs.astral.sh/uv/) installs the rest
 uv run fractalswarm demo --verify    # no API key needed
 ```
 
-<!-- arena-gif -->
+<p align="center">
+  <picture>
+    <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/arena-same-second.png">
+    <img src="docs/assets/arena-same-second.gif" alt="The arena, replaying two real runs side by side at double speed. On the left, FractalSwarm loses five coordinators and its tree re-wires around each. On the right, an ideal durable supervisor crashes five times and its agents wait for each restart. Both place all 48 talks. A caption says that over ten seeds the two tied on stall time and extra cost." width="100%">
+  </picture>
+</p>
+
+<p align="center"><sub>Two real runs, replayed at double speed. Each side takes five crashes at the same second, set by hand, not by the benchmark's rule.</sub></p>
 
 > "On the real model, with five of its ten coordinators crashed and half its agents killed, every run finished with a valid result. It stalled 11.2 s against 42.8 s for an in-process supervisor, and tied an ideal durable supervisor on stall time and extra cost."
 >
@@ -186,6 +193,7 @@ The web app lives in `web/` (Vite, React, TypeScript): `npm --prefix web install
 
 - A kill is an actor crash inside one Python process, and the chaos is injected. The log is centralized.
 - Not every set of deaths recovers. "Kill half" is true of the set the demo kills. Some other sets leave nobody who can start the recovery, and the run hangs: [`docs/any-survivor.md`](docs/any-survivor.md) has those sets and an opt-in repair, which costs more false deaths and is on in no recorded run.
+- A track lead's death has six real runs on two seeds. One of them ended partial, with 40 of 48 talks: the takeover held, and a session then ran out of retries (`bench/REPORT.md` §4.10.9).
 - The baselines run on this runtime with the failure semantics in the report; they are not the original frameworks' deployments, except LangGraph.
 - Recovery after the whole Python process dies is an opt-in feature (`fractalswarm resume`, [`docs/resume.md`](docs/resume.md)), and it is not part of the demo.
 - More in [`bench/REPORT.md`](bench/REPORT.md) §6.

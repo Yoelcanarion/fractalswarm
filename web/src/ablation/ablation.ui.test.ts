@@ -284,7 +284,7 @@ describe("the flow", () => {
     expect(waiting).toContain('<h1 class="pagehead__title">Model vs parser</h1>');
     expect(waiting).toContain("skeleton-group--stack");
     expect(waiting).toContain('role="status"');
-    expect(waiting).toContain("All ablations");
+    expect(waiting).toContain("All comparisons");
   });
 
   it("says when an ablation could not be loaded, and says how to go on", () => {

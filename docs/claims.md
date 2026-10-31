@@ -92,3 +92,5 @@ simulated clock), and `bench/results/honesty.json` holds every comparison.
 | "Cheaper" | Only if extra cost is measurably lower against the same rival under the same failures (H2 a win). Against `durable-max` a tie is expected. |
 | "More reliable" | Not beyond the failure modes actually tested; the log remains a central component. |
 | "First" | Show it, don't claim it. |
+| "Any half", or recovery from any set of deaths | Some sets leave nobody who can start the recovery, and the run hangs (`docs/any-survivor.md`). "Kill half" is true of the set the demo kills. |
+| That a track lead's death is safe on the real model | Six real runs on two seeds, and one ended partial with 40 of 48 talks, so PREREG §9's rule reports a refutation (`bench/REPORT.md` §4.10.9). No real run crashed a lead with its plan in flight. |

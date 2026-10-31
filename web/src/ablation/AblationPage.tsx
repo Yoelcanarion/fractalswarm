@@ -176,7 +176,7 @@ export function AblationFailed({ problem, onRetry }: { problem: Problem; onRetry
             Try again
           </button>
           <a className="btn" href={ablationHash(null)}>
-            All ablations
+            All comparisons
           </a>
         </>
       }
@@ -272,7 +272,7 @@ export function AblationFlow({ api, runId, loadRuns }: AblationFlowProps) {
         <>
           <span className="mono abl__runid">{runId}</span>
           <a className="btn" href={ablationHash(null)}>
-            All ablations
+            All comparisons
           </a>
         </>
       }

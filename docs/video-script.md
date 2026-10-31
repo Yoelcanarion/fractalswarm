@@ -106,7 +106,7 @@ Anything that doesn't answer one of them stays out of the video.
 - The arena, mid-run, with the crash markers of both sides lined up on the shared timeline.
 - **Right:** at each crash, a band for 5 s, in the UI's words: "o0 down for 1.5 s · 8 agents waiting for it", its seconds counting up.
 - **Left:** only one subtree pauses.
-- **Face-to-face counters:** idle agent-seconds, time to recover, cost, duplicated work and reassignments.
+- **Face-to-face counters:** idle agent-seconds, time to recover, coordinator-dependency time, cost, duplicated work and contracts sent again.
 - **Caption, always visible:** "Rival: ideal durable supervisor — 5 s detection · 0 s restart · workers survive · same log".
 - **Lower third, over the full board:** "Ten seeds: tied on stall time and extra cost". The board is one seed; the lower third keeps it from arguing with the voice.
 
