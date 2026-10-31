@@ -1740,3 +1740,22 @@ No real call, no spend. Nothing pushed. Handlers untouched, and no public claim 
 **Checks at 7ceab52:** web 2,713 of 2,713, tsc clean, build committed, `phone_checks` 16 of 16, the wheel to the foot of six pages at 1920x950, the bars at eight window sizes, the lens at five. Python untouched since 93464b3. Nothing pushed.
 
 **Ledger:** unchanged, spent $60.03, reserved $13.73.
+
+### Then: the arena on a laptop
+
+**The fault.** Most jurors have a laptop, and no test had played the arena at 1536x730 with the guide open. The tree's ids came out at about 5 px, and the timeline covered the teams and the work meter, the bar that shows a stall. Two causes: a takeover of the root pushed the whole tree down a row, so the frame held its deepest shape from the first second (441 units of drawing in 190 px); and the room for the boards was a fixed 490 px guess, the same mistake as the lens's 163.
+
+**b503b3a:**
+- A coordinator stays where it was spawned. An heir stands on its own row, and what it adopts is a line along the row (an arch) or across it. The dead stay where they fell, and a line to or from a coordinator that is down is cut at once. Agents still move to their new owner's team. The frame is 235 high after five crashes, as before the first.
+- `arena/chrome.ts` measures what stands around the boards, in place of the guess. Under 900 px of height the heads of the sides are closer, and the floor is 150 px.
+- The main action keeps one width, so a press no longer wraps the lead again and moves the boards (at 1366 they jumped 41 px).
+
+**Result:** at 1536x730 with the guide open the ids are at about 15 px, the board is 197 px and the work meter is clear of the bar. At 1920x950 the board is 340 px.
+
+**Deviation to read:** the lead's second sentence is shorter, "We set these kills by hand, not by the benchmark's rule." The old ending, that the rule hits each side at the same point of the work, moved under More on this pair. The rival's sentence stays: W5 added it for a stranger, on purpose.
+
+**Takes:** `s1` and `s6` draw this board, so they are stale until `takes\grabar_escenas.ps1` runs. One frame of each checked by eye at 1920x1080: the tree is larger, nothing else moved.
+
+**Checks at b503b3a:** web 2,722 of 2,722, tsc clean, build committed. The arena measured at eleven window sizes: the work meter clear of the bar at each, and the boards at the same height before and during play. `phone_checks` 16 of 16, `menus_over` 5 of 5, the wheel on six pages, sideways 0 at 360, 390 and 430, the lens 14 of 15 (the known case), Firefox ok, the static check CLEAN. That check first printed 9 problems, all `ERR_ABORTED` on the largest log pages: my gzip server was still compressing when the script moved on. On a plain file server, none. Python untouched since 93464b3. Nothing pushed.
+
+**Ledger:** unchanged, spent $60.03, reserved $13.73.
