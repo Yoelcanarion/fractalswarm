@@ -20,10 +20,13 @@ export interface SideNumbers {
   windows: readonly OutageWindow[];
   /** The playhead, in virtual ms: an outage that has not ended grows with it. */
   nowMs: number;
+  /** Idle agent-ms by the scored rule, on the log so far (``recoveryAt``, lib/recovery.ts): the number the run is scored on, as it stood. Not
+   * ``counters.idleAgentMs``, the older fold of every free agent under a coordinator that is out, which runs ahead of the scored number. */
+  idleMs: number;
   /** The run has played to its last event, so its fold is the whole run. */
   finished: boolean;
   official: Official | null;
-  /** A coordinator's crash stopped workers of this side (an in-process supervisor takes its workers down with it). */
+  /** A coordinator's crash has stopped workers of this side (an in-process supervisor takes its workers down with it). */
   crashStopped?: boolean;
 }
 
@@ -46,7 +49,7 @@ export interface ScoreRow {
   /** Each side's bar, 0 to 1, against the larger of the two numbers of the row. */
   leftShare: number;
   rightShare: number;
-  /** A line under a side's scored number, for what the number alone leaves out; null where there is none. */
+  /** A line under a side's number, for what the number alone leaves out; null where there is none. */
   notes: { left: string | null; right: string | null };
 }
 
@@ -63,7 +66,7 @@ interface RowDef {
   liveLabel?: string;
   live(side: SideNumbers): number | null;
   official(side: SideNumbers, official: Official): number | null;
-  /** A line on one side's scored number, for what it leaves out. */
+  /** A line on one side's number, for what it leaves out; it decides for itself when there is one to say. */
   note?(side: SideNumbers): string | null;
 }
 
@@ -102,11 +105,12 @@ export const ROW_DEFS: readonly RowDef[] = [
     unit: "", // the label says it; "16.0 agent·s" does not fit beside the other side in the strip
     decimals: 1,
     definition: "Agent time spent idle because the coordinator they answer to was down.",
-    // The metrics count an agent only while work it could take is held up by the coordinator that is down, and the log settles that only after the wait has
-    // ended: the fold counted every free agent under a coordinator that was out, which ran ahead of the scored number and fell back to it on the last frame.
-    liveNote: "Shown once the run is scored: the metrics count an agent only while work it could take is held up by a coordinator that is down, which the log settles after the wait has ended.",
-    live: () => null,
+    // The scored rule itself, run on the log so far (lib/recovery.ts, a port of bench/recovery.py): an agent counts only while it is alive, holds no attempt, and
+    // a session it served has work waiting on a coordinator that is down, and the log settles that when the wait has ended. So the number moves when a wait
+    // ends, and the last frame shows the number the run is scored on. (The fold of every free agent under a coordinator that was out ran ahead of it.)
+    live: (s) => seconds(s.idleMs),
     official: (_s, o) => o.recovery?.idleAgentS ?? null,
+    // On a side whose crash stopped its workers the number is not how long they waited: they were gone, which is the time the coordinator-dependency row counts.
     note: (s) => (s.crashStopped ? "A worker a crash stopped is not idle: see coordinator-dependency time." : null),
   },
   {
@@ -202,10 +206,7 @@ export function scoreRows(left: SideNumbers, right: SideNumbers): ScoreRow[] {
       right: r,
       leftShare: share(l.value, scale),
       rightShare: share(r.value, scale),
-      notes: {
-        left: l.source === "official" ? (def.note?.(left) ?? null) : null,
-        right: r.source === "official" ? (def.note?.(right) ?? null) : null,
-      },
+      notes: { left: def.note?.(left) ?? null, right: def.note?.(right) ?? null },
     };
   });
 }
