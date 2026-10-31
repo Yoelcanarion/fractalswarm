@@ -27,9 +27,15 @@ describe("the Runs page's verify cell", () => {
     expect(`${words.label} ${words.detail}`).not.toMatch(/re-run|replaying|just now/i);
   });
 
-  it("leaves a mismatch, an error and a replay in progress as W4 words them", () => {
+  it("leaves a broken chain, a recording this code does not reproduce, an error and a replay in progress as W4 words them", () => {
     vi.stubEnv("MODE", "static");
-    expect(verifyWords({ state: "done", report: { ...VERIFY, ok: false, first_divergence: 7 } } as never).label).toBe("Replay mismatch at seq 7");
+    const broken = { ...VERIFY, ok: false, chain_ok: false, first_divergence: 7 };
+    expect(verifyWords({ state: "done", report: broken } as never)).toMatchObject({ label: "Replay mismatch at seq 7", tone: "bad" });
+    const notReproduced = { ...VERIFY, ok: false, chain_ok: true, first_divergence: 7 };
+    expect(verifyWords({ state: "done", report: notReproduced } as never)).toMatchObject({
+      label: "Log intact. This code does not reproduce this recording: first difference at seq 7.",
+      tone: "warn",
+    });
     expect(verifyWords({ state: "error", error: "x" }).label).toBe("Could not check");
     expect(verifyWords({ state: "pending" }).label).toBe("Replaying…");
   });
