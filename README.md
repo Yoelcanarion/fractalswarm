@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="#verify-it-yourself"><img alt="Replay: bit for bit" src="https://img.shields.io/badge/replay-bit_for_bit-17855a?style=flat-square"></a>
+  <a href="https://github.com/Yoelcanarion/fractalswarm/actions/workflows/replay.yml"><img alt="Replay of every shipped run, on GitHub's machines" src="https://github.com/Yoelcanarion/fractalswarm/actions/workflows/replay.yml/badge.svg?branch=master"></a>
   <a href="bench/REPORT.md"><img alt="LLM tokens on coordination: zero" src="https://img.shields.io/badge/LLM_tokens_on_coordination-zero-2563c9?style=flat-square"></a>
   <a href="#why-metas-models-matter"><img alt="Built on Muse Spark, Muse Wonder and Llama PromptGuard 2" src="https://img.shields.io/badge/built_on-Muse_Spark_%C2%B7_Muse_Wonder_%C2%B7_Llama_PromptGuard_2-a36a00?style=flat-square"></a>
   <img alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-555?style=flat-square">
@@ -137,6 +137,8 @@ Below, T2 is the conference task, C0 a run with no failures, and C3 the harshest
 ## Verify it yourself
 
 Replay proves that this code produces the recorded run from the recorded model outputs. It does not prove where those outputs came from.
+
+GitHub's machines replay every shipped run on each push to `master`: see the [Replay workflow](https://github.com/Yoelcanarion/fractalswarm/actions/workflows/replay.yml). On your own machine:
 
 ```sh
 uv run fractalswarm demo --verify                 # replays a real recorded run, opens the UI

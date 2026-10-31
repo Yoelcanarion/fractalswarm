@@ -1,0 +1,27 @@
+# Replays every run the repository ships, on a machine that is not ours. No key, no model, $0.
+name: Replay
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Replay the recorded runs and compare the hashes
+        run: |
+          for run in final backup toy pair-durable-max-swarm pair-durable-max-rival pair-central-swarm pair-central-rival; do
+            echo "== demo/$run"
+            uv run fractalswarm replay "demo/$run" --verify | tee /tmp/replay.txt
+            grep -q '^MATCH' /tmp/replay.txt
+          done
+      - name: Recompute every heir of the final run from its log
+        run: uv run fractalswarm takeover demo/final

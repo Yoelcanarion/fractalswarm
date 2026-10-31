@@ -1,4 +1,5 @@
-"""Write the README's banners, ``docs/assets/banner-dark.svg`` and ``banner-light.svg``.
+"""Write the README's banners, ``docs/assets/banner-dark.svg`` and ``banner-light.svg``, and
+``social-preview.svg``, the end of the film as a still at 1280x640 for GitHub's social preview.
 
 They hold no fact of their own. Who dies, who inherits and in what order are read from the log of
 ``demo/final``, and the last line from ``web/src/home/data/story.json``. The timing is the film's,
@@ -115,7 +116,13 @@ def safe(name: str) -> str:
     return name.replace(".", "_")
 
 
-def build(theme: str, kills: list[tuple[str, str]], roots: list[str], closing: str) -> str:
+def build(
+    theme: str,
+    kills: list[tuple[str, str]],
+    roots: list[str],
+    closing: str,
+    social: bool = False,
+) -> str:
     c = COLORS[theme]
     kill_at = [FIRST_KILL + index * BETWEEN_KILLS for index in range(len(kills))]
     back = LOOP - 0.6  # everything returns together at the end of the loop
@@ -132,6 +139,13 @@ def build(theme: str, kills: list[tuple[str, str]], roots: list[str], closing: s
         f".root{{font-size:13px;font-weight:700;text-anchor:middle;fill:{c['heir']}}}",
     ]
     shapes: list[str] = []
+    # the last frame: for a reader who asked for no motion, and for the social preview
+    last = [
+        ".going{opacity:0}",
+        ".done{opacity:1}",
+        ".fill{transform:scaleX(1)}",
+        ".pass{opacity:0}",
+    ]
 
     for a, b in EDGES:
         (x1, y1), (x2, y2) = NODES[a], NODES[b]
@@ -145,6 +159,7 @@ def build(theme: str, kills: list[tuple[str, str]], roots: list[str], closing: s
         for a, b in EDGES:
             if dead in (a, b):
                 name = safe(a + b)
+                last.append(f".e{name}{{opacity:.14}}")
                 css.append(
                     looped(
                         f".e{name}",
@@ -179,6 +194,7 @@ def build(theme: str, kills: list[tuple[str, str]], roots: list[str], closing: s
         name = safe(dead)
         alive = f"fill:{c['node']};stroke:{c['ring']};opacity:1"
         gone = f"fill:{c['bg']};stroke:{c['dead']};opacity:.65"
+        last += [f".n{name}{{{gone}}}", f".x{name}{{opacity:1}}"]
         css.append(
             looped(
                 f".n{name}",
@@ -232,6 +248,7 @@ def build(theme: str, kills: list[tuple[str, str]], roots: list[str], closing: s
     for index, owner in enumerate(roots):
         x, y = NODES[owner]
         above = y - (32 if owner == "o0" else 28)
+        last.append(f".r{index}{{opacity:{1 if index == len(roots) - 1 else 0}}}")
         start = 0 if index == 0 else passes[index - 1]
         stops = [(0, "opacity:1" if index == 0 else "opacity:0")]
         if index > 0:
@@ -312,21 +329,27 @@ def build(theme: str, kills: list[tuple[str, str]], roots: list[str], closing: s
         f'<text x="66" y="310" font-size="17" style="fill:{c["muted"]}">'
         "The survivors take over with no election.</text>"
     )
-    still = (
-        "@media (prefers-reduced-motion:reduce){*{animation:none!important}"
-        ".done{opacity:1}.going{opacity:0}.fill{transform:scaleX(1)}}"
-    )
     label = (
         "FractalSwarm. Kill half the brains. It still finishes. A tree of ten coordinators loses "
         "five of them, the root among them, each one handing its work to a survivor, and the "
         f"recorded run ends with {closing}."
     )
+    if social:
+        moving = ("@keyframes", "animation")
+        base = [rule for rule in css if not any(word in rule for word in moving)]
+        box = ".fill{transform-box:fill-box;transform-origin:left}.pulse{display:none}"
+        style = "".join([*base, box, *last])
+        height, corner, shift = 640, 0, 130
+    else:
+        reduced = "@media (prefers-reduced-motion:reduce){*{animation:none!important}"
+        style = "".join([*css, reduced, *last, "}"])
+        height, corner, shift = 380, 20, 0
     return (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 380" width="1280" height="380" '
-        f'role="img" aria-label="{label}">'
-        f"<style>{''.join(css)}{still}</style>"
-        f'<rect width="1280" height="380" rx="20" fill="{c["bg"]}"/>'
-        f"{words}{''.join(shapes)}</svg>\n"
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 {height}" width="1280" '
+        f'height="{height}" role="img" aria-label="{label}">'
+        f"<style>{style}</style>"
+        f'<rect width="1280" height="{height}" rx="{corner}" fill="{c["bg"]}"/>'
+        f'<g transform="translate(0 {shift})">{words}{"".join(shapes)}</g></svg>\n'
     )
 
 
@@ -337,6 +360,8 @@ def main() -> None:
         path = OUT / f"banner-{theme}.svg"
         path.write_text(build(theme, kills, roots, closing), encoding="utf-8", newline="\n")
         print(path.relative_to(ROOT_DIR), path.stat().st_size)
+    social = OUT / "social-preview.svg"
+    social.write_text(build("dark", kills, roots, closing, social=True), "utf-8", newline="\n")
     print("kills", kills, "root", roots)
 
 
