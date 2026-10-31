@@ -1,7 +1,7 @@
 # FractalSwarm benchmark report
 
-> Status: **the $0 sections, the headline, the reading in §5 and the results of the three real-model
-> matrices run so far (§3, §4.10) are written; the results of §8 are not.** §4.1–§4.9 report the
+> Status: **the $0 sections, the headline, the reading in §5 and the results of the real-model
+> matrices (§3, §4.10) and of the scaling sweep (§8) are written.** §4.1–§4.9 report the
 > fake-LLM runs of the arena phase on the simulated clock: the rivals gate, the sensitivity sweeps,
 > an exploratory crash-time jitter sweep, the per-process view and the false deaths. §4.10 reports
 > the paid runs on the Meta Model API: 96 cells of six workflows and two tasks (`results/v1`, two
@@ -13,7 +13,7 @@
 > from files committed under `bench/results/` (`results.csv`, `results.json`, `honesty.json`,
 > `verdicts.txt`, the cell files), except where the text says it was computed from the run logs or
 > the progress log, which are not committed with the results. §4.10.8 adds the eight LangGraph
-> cells (two seeds, descriptive). The results of §8 are not written yet.
+> cells and §8 the twenty of the scaling sweep (two seeds each, descriptive).
 
 **Headline (decision gate, Oct 29: outcome B). Resilience comparable to an ideal durable
 supervisor, without a central coordinator or a separate recovery mechanism.** Against
@@ -153,7 +153,8 @@ their run logs), recorded from Oct 28 to Oct 30 and read in §4.10. Every cell c
 the 176 are valid: the swarm at C0 on seed 5 of the ten-seed matrix is not (§4.10.7). The clock is
 live (`clock: live` in all 176 run logs), so stall times, makespans, costs and call counts are those
 of the API on the day each cell ran, and a new run would not repeat them. The eight LangGraph cells
-of Oct 31 are not among the 176 (§4.10.8). Neither are two runs of T3, the comparative report on web
+(§4.10.8) and the twenty of the scaling sweep (§8), both of Oct 31, are not among the 176. Neither
+are two runs of T3, the comparative report on web
 pages, on Oct 31 (`t3-real-c0` and `t3-real-kill-half`, $0.40 each; both placed 6 of 6 cells with no
 hard violation): they are outside any matrix, their logs hold third-party pages and are not
 committed, and no claim rests on them.
@@ -1799,10 +1800,31 @@ sessions.
 
 **Read it knowing the ceiling.** T2 has six sessions, each a chain of three contracts (extract,
 place, blurb), so at most six agents can work at once. Past six the extra agents idle and the
-curves flatten; the chart marks the limit with a dotted line. At C0 stall is a few seconds at most
-for every workflow: the metric is built for crashes.
+curves flatten; the chart marks the limit with a dotted line. Stall is a measure built for crashes;
+at C0 it counts the moments when no agent has work in flight, which on the real model reach 25 s.
 
-Results: TBD (`bench/results/scaling/scaling-t2_conference.png`, one line per workflow).
+**Results** (Oct 31, at `10c2ff7`, real model, two seeds, $5.71 against a worst case of $10.00). All
+20 cells completed and are valid, with no LLM error and no coordination token. Means over the seeds:
+
+| Agents | Makespan (s): swarm | `central` | Cost ($): swarm | `central` | Stall (s): swarm | `central` | Quality: swarm | `central` |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 329 | 287 | 0.273 | 0.245 | 15.4 | 0.0 | 0.872 | 0.792 |
+| 2 | 194 | 193 | 0.308 | 0.312 | 3.5 | 12.9 | 0.872 | 0.872 |
+| 4 | 178 | 160 | 0.353 | 0.279 | 6.5 | 16.0 | 0.880 | 0.792 |
+| 8 | 141 | 144 | 0.278 | 0.262 | 9.8 | 10.2 | 0.860 | 0.820 |
+| 16 | 140 | 187 | 0.251 | 0.292 | 10.9 | 25.2 | 0.880 | 0.900 |
+
+*`bench/results/scaling/results.csv`, columns `makespan_s`, `cost_usd`, `stall_s` and `score`; the
+chart is `bench/results/scaling/scaling-t2_conference.png`.*
+
+![Makespan, cost and stall against total agents, swarm and central, at C0](results/scaling/scaling-t2_conference.png)
+
+Makespan falls by more than half from one agent to eight, for both workflows, and stops falling at the
+ceiling of six. Cost stays between $0.25 and $0.35 with no trend, as a fixed amount of work predicts,
+so the swarm's extra orchestrators (3 at one agent, 13 at sixteen) add no visible cost at C0. The two
+workflows read the same within what two seeds can show: `central`'s 187 s at 16 agents is the mean of
+141 and 233 s. This sweep has no crash in it, it stops at 16 agents, and its task cannot use more than
+six at once, so it says nothing about a larger team on a wider task.
 
 ```sh
 uv run fractalswarm bench bench/matrix-scaling.yaml --fake             # $0, sim clock
