@@ -20,6 +20,12 @@ import "./hero.css";
  */
 export const HERO_LOOP: LoopSpec = { enter: 1.3, run: TREE_HERO_SECONDS, rest: 1.8, leave: 0.9 };
 
+/**
+ * The shape of the hero's tree, width over height. Its column is a square with one line under the figure, and the run's own picture
+ * (almost 1.5 to 1) leaves a third of it empty and every glyph small: the tree is laid out narrower, which draws it larger.
+ */
+export const HERO_ASPECT = 1.12;
+
 /** What the figure says it is, in the words of docs/claims.md: a recorded run, replayed. It is never called live. */
 export const HERO_NOTE = { loop: "A recorded run, replayed on a loop.", still: "The end of a recorded run." } as const;
 
@@ -52,7 +58,7 @@ export function Hero() {
         </div>
       </div>
       <figure ref={figure} className="home-hero__object" aria-label={COPY.hero.object}>
-        <Viz name="SwarmTree" data={tree} progress={play} still={still} pacing="hero" ambient appear={appear} />
+        <Viz name="SwarmTree" data={tree} progress={play} still={still} pacing="hero" aspect={HERO_ASPECT} ambient appear={appear} />
         {tree != null && (
           <figcaption className="home-hero__note">
             <span>{still ? HERO_NOTE.still : HERO_NOTE.loop}</span>

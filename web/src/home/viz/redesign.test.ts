@@ -170,6 +170,13 @@ describe("the Proof's data", () => {
     expect(mean(cost?.rival)).toBeCloseTo(story.numbers.r2.durableMaxExtraPct, 1);
   });
 
+  it("call a dot a run, since the word seed is for the setting line, which says how many", () => {
+    for (const row of [...central.rows, ...durable.rows]) expect(row.label).not.toMatch(/seed/i);
+    expect(durable.rows[0]?.label).toContain("a dot for each run");
+    expect(proofReading(panels, "FractalSwarm")).not.toMatch(/by seed/);
+    expect(durable.setting).toMatch(/\d+ seeds/);
+  });
+
   it("print the data's verdict beside the ideal durable supervisor, as it is", () => {
     const rows = story.verdicts?.comparisons ?? [];
     const want = (metric: string): string | null => rows.find((c) => c.rival === "durable-max" && c.metric === metric)?.verdict ?? null;
@@ -514,6 +521,14 @@ describe("the Proof's drawing in two columns", () => {
     expect(html.match(/class="hv-proof-dot"/g)).toHaveLength(2 * 2 * story.numbers.r2.seeds);
     for (const panel of panels) expect(html).toContain(`>${panel.rival}</text>`);
     expect(html).toContain(">tie</text>");
+  });
+
+  it("names a dot a run, in its row and in its hover text: the word seed is for the setting line", () => {
+    const html = draw(panels, 1200);
+    expect(html.match(/<title>Run \d+: /g)).toHaveLength(2 * 2 * story.numbers.r2.seeds);
+    expect(html).toContain("a dot for each run");
+    expect(html).not.toMatch(/<title>Seed |a dot for each seed/);
+    expect(html).toMatch(new RegExp(`>[^<]*${story.numbers.r2.seeds} seeds</text>`));
   });
 
   it("writes a shared setting once, and each panel's own where they differ", () => {
