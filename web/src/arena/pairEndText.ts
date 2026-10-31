@@ -1,7 +1,7 @@
 // The plain end of a pair: when both runs have played out, a few words on what each one did, and on what one pair is
 // worth. Only counts the logs hold, and the scope in the words of docs/claims.md: a result is stated with its setting
 // and never as a general claim, so this says one run of each, on one seed, under one failure plan, and nothing in it
-// says who is ahead. Where a result holds over many seeds is the job of "Trade-offs" and of the Evidence page.
+// says who is ahead. Where a result holds over many seeds is the job of "Trade-offs" and of "Charts".
 
 import { secondsText, type Assumptions, type SystemKind } from "./assumptions";
 
@@ -29,6 +29,8 @@ export interface PairEndText {
   sides: { who: string; text: string }[];
   /** One run of each, on one seed, with the rival's setting. */
   scope: string;
+  /** The nuance, under a fold; empty when there is none. */
+  more: string[];
 }
 
 const count = (n: number, one: string, many = `${one}s`): string => `${n} ${n === 1 ? one : many}`;
@@ -41,12 +43,12 @@ function finishing(side: EndSide): string {
 }
 
 /** Why the takeover check counts more hand-overs than there were coordinators lost, in the words the run page uses for it. Nothing where it counts
- * no more. */
+ * no more, and nothing for a side that is not a swarm: a supervisor's crashes are not hand-overs. */
 function handedOver(side: EndSide): string {
   const { handOvers, crashes } = side;
-  if (handOvers == null || crashes === 0 || handOvers <= crashes) return "";
+  if (side.system !== "swarm" || handOvers == null || crashes === 0 || handOvers <= crashes) return "";
   const those = crashes === 1 ? "that coordinator" : `those ${crashes} coordinators`;
-  return ` The takeover check counts ${handOvers} hand-overs for ${those}: one coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes.`;
+  return `The takeover check counts ${handOvers} hand-overs for ${those}: one coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes.`;
 }
 
 const paid = (side: EndSide): string => (side.duplicatedCalls === 0 ? "No call was paid for twice." : `${count(side.duplicatedCalls, "call")} paid for again.`);
@@ -57,7 +59,7 @@ export function sideText(side: EndSide, assumptions: Assumptions): string {
   const pause = secondsText(assumptions.detectionMs + assumptions.restartMs);
   switch (side.system) {
     case "swarm":
-      return n === 0 ? `No coordinator crashed. It ${finishing(side)}. ${paid(side)}` : `Lost ${count(n, "coordinator")} and ${side.completed ? "still " : ""}${finishing(side)}. ${paid(side)}${handedOver(side)}`;
+      return n === 0 ? `No coordinator crashed. It ${finishing(side)}. ${paid(side)}` : `Lost ${count(n, "coordinator")} and ${side.completed ? "still " : ""}${finishing(side)}. ${paid(side)}`;
     case "central":
       return n === 0
         ? `Its supervisor did not crash. It ${finishing(side)}. ${paid(side)}`
@@ -78,7 +80,7 @@ export function sideText(side: EndSide, assumptions: Assumptions): string {
 const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** The recorded pairs crash coordinators and no agent, and a person who has read the numbers of C3 should not take them for that run. */
-const NO_AGENT = " Here only coordinators crashed and no agent was killed; the results over ten seeds kill half the agents as well.";
+const NO_AGENT = "Here only coordinators crashed and no agent was killed; the results over ten seeds kill half the agents as well.";
 
 const noAgentKilled = (left: EndSide, right: EndSide): boolean => left.agentsKilled === 0 && right.agentsKilled === 0 && left.crashes + right.crashes > 0;
 
@@ -91,6 +93,7 @@ export function pairEndText(left: EndSide, right: EndSide, assumptions: Assumpti
       { who: "FractalSwarm", text: sideText(left, assumptions) },
       { who: capitalize(assumptions.name), text: sideText(right, assumptions) },
     ],
-    scope: `This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after ${secondsText(assumptions.detectionMs)} and restarting after ${secondsText(assumptions.restartMs)}: it shows what happened here, not what usually happens.${noAgentKilled(left, right) ? NO_AGENT : ""}`,
+    scope: `This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after ${secondsText(assumptions.detectionMs)} and restarting after ${secondsText(assumptions.restartMs)}: it shows what happened here, not what usually happens.`,
+    more: [noAgentKilled(left, right) ? NO_AGENT : "", handedOver(left), handedOver(right)].filter(Boolean),
   };
 }

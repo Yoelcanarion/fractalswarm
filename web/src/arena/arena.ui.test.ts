@@ -241,7 +241,7 @@ describe("the scoreboard", () => {
     const html = score(await opened(0));
     expect(text(html)).toContain("One pair is one run on one seed under one failure plan");
     expect(html).toContain('<a href="#/helps">Trade-offs</a>');
-    expect(html).toContain('<a href="#/evidence">the Evidence page</a>');
+    expect(html).toContain('<a href="#/charts">Charts</a>');
   });
 });
 
@@ -548,7 +548,7 @@ describe("the end of a pair", () => {
     expect(t).toContain("Ideal durable supervisor Its supervisor crashed 1 time; its workers kept going and the board paused 5 s each time.");
     expect(t).toContain("This is one run of each, on one seed, under one failure plan");
     expect(html).toContain('<a href="#/helps">Trade-offs</a>');
-    expect(html).toContain('<a href="#/evidence">the Evidence page</a>');
+    expect(html).toContain('<a href="#/charts">Charts</a>');
     // what each run produced is one click away, from the side that produced it
     expect(html).toMatch(/<a href="#\/run\/s\/results\?at=end">See its (program|result)<\/a>/);
     expect(html).toMatch(/<a href="#\/run\/r\/results\?at=end">See its (program|result)<\/a>/);

@@ -110,7 +110,7 @@ export function Scoreboard({ left, right, official, playing, fixedStep, caveat =
         {caveat && (
           <>
             {" "}
-            One pair is one run on one seed under one failure plan, so it shows what happened here and nothing more: <a href="#/helps">Trade-offs</a> holds the multi-seed verdicts, and <a href="#/evidence">the Evidence page</a> the numbers.
+            One pair is one run on one seed under one failure plan, so it shows what happened here and nothing more: <a href="#/helps">Trade-offs</a> holds the multi-seed verdicts, and <a href="#/charts">Charts</a> the numbers.
           </>
         )}
       </p>

@@ -34,14 +34,17 @@ describe("what a side did, by the kind of system it is", () => {
     expect(sideText(side({ crashes: 0 }), assumptions("durable-max"))).toBe("No coordinator crashed. It finished with all 48 talks placed. No call was paid for twice.");
   });
 
-  it("swarm: says why the takeover check counts more hand-overs than the coordinators lost, in the run page's words, and only then", () => {
-    const why = "The takeover check counts 7 hand-overs for those 5 coordinators: one coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes.";
-    expect(sideText(side({ handOvers: 7 }), assumptions("durable-max"))).toBe(`Lost 5 coordinators and still finished with all 48 talks placed. No call was paid for twice. ${why}`);
-    expect(sideText(side({ crashes: 1, handOvers: 2 }), assumptions("durable-max"))).toContain("counts 2 hand-overs for that coordinator:");
-    for (const handOvers of [5, 4, 0, null, undefined]) expect(sideText(side({ handOvers }), assumptions("durable-max")), `${handOvers}`).not.toContain("hand-overs");
-    expect(sideText(side({ crashes: 0, handOvers: 3 }), assumptions("durable-max"))).not.toContain("hand-overs");
+  it("swarm: says why the takeover check counts more hand-overs than the coordinators lost, in the run page's words, only then, and under the fold", () => {
+    const rival = assumptions("durable-max");
+    const more = (left: Partial<EndSide>, right: Partial<EndSide> = { system: "durable-max" }) => pairEndText(side(left), side(right), rival).more.join(" ");
+    expect(more({ handOvers: 7 })).toBe("The takeover check counts 7 hand-overs for those 5 coordinators: one coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes.");
+    expect(more({ crashes: 1, handOvers: 2 })).toContain("counts 2 hand-overs for that coordinator:");
+    for (const handOvers of [5, 4, 0, null, undefined]) expect(more({ handOvers }), `${handOvers}`).not.toContain("hand-overs");
+    expect(more({ crashes: 0, handOvers: 3 })).not.toContain("hand-overs");
     // a supervisor's crashes are not hand-overs
-    expect(sideText(side({ system: "durable-max", handOvers: 7 }), assumptions("durable-max"))).not.toContain("hand-overs");
+    expect(more({}, { system: "durable-max", handOvers: 7 })).not.toContain("hand-overs");
+    // and the two sides stay short: the nuance is not in what a person reads first
+    expect(sideText(side({ handOvers: 7 }), rival)).toBe("Lost 5 coordinators and still finished with all 48 talks placed. No call was paid for twice.");
   });
 
   it("an in-process supervisor: its workers stop with it, and the calls paid for again are counted", () => {
@@ -89,7 +92,7 @@ describe("the end of a pair", () => {
   it("says when no agent was killed, since the results over ten seeds kill half of them, and only when the logs say so", () => {
     const words = "Here only coordinators crashed and no agent was killed; the results over ten seeds kill half the agents as well.";
     const rival = assumptions("durable-max");
-    const of = (agentsKilled: number | undefined, crashes = 5) => pairEndText(side({ agentsKilled, crashes }), side({ system: "durable-max", agentsKilled, crashes }), rival).scope;
+    const of = (agentsKilled: number | undefined, crashes = 5) => pairEndText(side({ agentsKilled, crashes }), side({ system: "durable-max", agentsKilled, crashes }), rival).more.join(" ");
     expect(of(0)).toContain(words);
     expect(of(3)).not.toContain(words);
     expect(of(undefined)).not.toContain(words);
@@ -112,7 +115,7 @@ describe("the end of a pair", () => {
   it("never says who is ahead, or anything docs/claims.md does not allow", () => {
     for (const rival of ["central", "durable-max", "durable"] as const) {
       const text = pairEndText(side(), side({ system: rival }), assumptions(rival));
-      const all = [text.headline, text.scope, ...text.sides.map((s) => s.text)].join(" ").toLowerCase();
+      const all = [text.headline, text.scope, ...text.more, ...text.sides.map((s) => s.text)].join(" ").toLowerCase();
       for (const word of ["simpler", "cheaper", "more reliable", "better", "wins", "won", "beats", "first"]) expect(all, `${rival}: ${word}`).not.toContain(word);
     }
   });

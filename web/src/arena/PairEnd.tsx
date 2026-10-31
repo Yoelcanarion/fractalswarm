@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useStore } from "zustand";
 
+import { Details } from "../components/ui";
 import { resultsHash } from "../lib/address";
 import { arenaCounters } from "../lib/arena";
 import type { RunEvent } from "../lib/types";
@@ -82,8 +83,17 @@ export function PairEnd({ left, right, leftSystem, assumptions }: PairEndProps) 
         })}
       </dl>
       <p className="pairend__scope">
-        {text.scope} <a href="#/helps">Trade-offs</a> shows when this holds, and <a href="#/evidence">the Evidence page</a> has the numbers over ten seeds.
+        {text.scope} <a href="#/helps">Trade-offs</a> shows when this holds, and <a href="#/charts">Charts</a> has the numbers over ten seeds.
       </p>
+      {text.more.length > 0 && (
+        <Details inline summary="More on this pair">
+          {text.more.map((line) => (
+            <p key={line} className="pairend__more">
+              {line}
+            </p>
+          ))}
+        </Details>
+      )}
     </section>
   );
 }

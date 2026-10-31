@@ -18,9 +18,9 @@
   --arena-chrome: 490px;
 }
 
-/* The lead is two lines at a laptop's width, and narrow enough that the main action's two buttons sit beside it instead of under it. */
+/* The lead stays three lines at most, whichever pair it speaks of, and the main action's two buttons sit beside it. */
 .arena .pagehead__lead {
-  max-width: 82ch;
+  max-width: 104ch;
 }
 
 /* The main action, and the clock beside it while it plays. */
@@ -69,7 +69,7 @@
 
 /* the name of a pair is long, and three of them differ only in its last words: the select is as wide as it needs, up to the bar */
 .picker select {
-  max-width: min(100%, 520px);
+  max-width: min(100%, 720px);
 }
 
 /* the control is its select; the whole name it shows on a phone is only there (below) */
@@ -917,10 +917,15 @@
   line-height: 1.45;
 }
 
-.pairend__scope {
+.pairend__scope,
+.pairend__more {
   margin: 0;
   font-size: var(--fs-body);
   color: var(--text-muted);
+}
+
+.pairend__more + .pairend__more {
+  margin-top: var(--space-2);
 }
 
 /* A phone, the rest of it: less padding, the rival's assumptions as a block, the badge allowed to wrap, one column of text and the numbers
