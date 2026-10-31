@@ -2,7 +2,7 @@
   <a href="#verify-it-yourself">
     <picture>
       <source media="(prefers-color-scheme: light)" srcset="docs/assets/banner-light.svg">
-      <img src="docs/assets/banner-dark.svg" alt="FractalSwarm. Kill half the brains. It still finishes. A tree of ten coordinators loses five of them, the root among them, each one handing its work to a survivor, and the recorded run places all 48 talks." width="100%">
+      <img src="docs/assets/banner-dark.svg" alt="FractalSwarm. Kill half the brains. It still finishes. A tree of ten coordinators loses five of them, the root among them, survivors take over the work of each, and the recorded run places all 48 talks." width="100%">
     </picture>
   </a>
 </p>
@@ -108,7 +108,7 @@ We built the strongest rival we could implement fairly, and ran the headline und
 | An ideal durable supervisor, whose agents keep working through a crash | **Tie** | Preserved work, extra cost, time to recover, duplicated spend and stall time | Real model, T2, 10 seeds |
 | The same rival, on false deaths | **Loss** | 1.90 per run against none: the swarm's failure detector declares live coordinators dead | Real model, T2, 10 seeds |
 | A realistic durable supervisor, which redoes its in-flight calls | **Ahead per crash** | Coordinator-dependency time 11.4 s against 50.3 s. Stall time and extra cost tie, and false deaths are a loss | Real model, T2 at C3, 10 seeds, per crash |
-| An external supervisor that detects and restarts within 0.5–1 s | **Loss** | Locality fails, at 13.2 and 5.7 times the supervisor's dependency time | Fake model, T2 at C3 |
+| An external supervisor that detects and restarts within 0.5–1 s, while the swarm keeps its 5 s detection | **Loss** | Locality fails, at 13.2 and 5.7 times the supervisor's dependency time | Fake model, T2 at C3 |
 | The ideal durable supervisor, with each coordinator process failing at the same rate | **Comparable** | The supervisor recovers sooner | Fake model, T2, single-crash probes, 4 seeds |
 | An in-process supervisor, whose workers die with it | **Ahead** | Stalled 11.2 s against 42.8 s, with +2.4% extra cost against +67.0% on the pre-registered basis, or −1.1% against +29.2% on completed calls only. Most of that gap comes from the rival's design, so it is no evidence against a well-built supervisor | Real model, T2 at C3, 10 seeds |
 

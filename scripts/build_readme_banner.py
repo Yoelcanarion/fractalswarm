@@ -331,7 +331,7 @@ def build(
     )
     label = (
         "FractalSwarm. Kill half the brains. It still finishes. A tree of ten coordinators loses "
-        "five of them, the root among them, each one handing its work to a survivor, and the "
+        "five of them, the root among them, survivors take over the work of each, and the "
         f"recorded run ends with {closing}."
     )
     if social:
