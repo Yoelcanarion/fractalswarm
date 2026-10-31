@@ -532,6 +532,12 @@ describe("the keyboard on the run page", () => {
     expect(css.slice(0, phone)).not.toMatch(/\.runstrip__proof \.badge \{[^}]*white-space: normal/);
   });
 
+  it("keeps the height of each block of the results where the page is as tall as the screen, so that the program is not squeezed under the cards after it", () => {
+    const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
+    expect(css).toMatch(/\.results \{\s*flex: 1;\s*min-height: 0;\s*overflow: auto;/);
+    expect(css).toMatch(/\.results > \* \{\s*flex-shrink: 0;\s*\}/);
+  });
+
   it("lets the row of numbers be narrower than the loading skeleton's blocks, which have a width of their own", () => {
     const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
     const phone = css.indexOf("@media (max-width: 760px) {\n  /* A page on a phone");

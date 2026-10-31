@@ -2173,11 +2173,16 @@ textarea {
   gap: 12px;
 }
 
+/* Above 900 px of height the page is as tall as the screen and this is what scrolls, so a block keeps its own height: squeezed to fit, the
+   program was a strip of 28 px at 1920x950 and its rows ran on under the cards below it. */
+.results > * {
+  flex-shrink: 0;
+}
+
 .results__head {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  flex-shrink: 0;
 }
 
 .results__title {

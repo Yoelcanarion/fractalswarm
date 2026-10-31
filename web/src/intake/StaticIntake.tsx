@@ -4,7 +4,7 @@ import { REPO_URL } from "../lib/links";
 /** New task on the static showcase. There is no server to read a text, so there is no form to fill in for nothing: only where the real one is. */
 export function StaticIntake() {
   return (
-    <div className="intake">
+    <div className="intake intake--static">
       <PageHeader
         className="intake__head"
         title="New task"

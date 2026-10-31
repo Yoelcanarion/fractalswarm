@@ -10,6 +10,12 @@
   margin: 0 auto;
 }
 
+/* One narrow card, on the left edge of the other pages: centred as the wide form is, it stood at neither side of a 2560 px screen. */
+.intake--static {
+  max-width: none;
+  margin: 0;
+}
+
 /* The shared page head (components/ui PageHeader): the page's flex gap already spaces it from what follows. */
 .intake > .intake__head {
   margin-bottom: 0;
