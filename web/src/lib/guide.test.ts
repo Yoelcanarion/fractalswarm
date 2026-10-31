@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_CAPABILITIES, siteOf } from "./controls";
-import { afterGuideButton, GUIDE_KEY, GUIDE_STEPS, guideSeen, guideSteps, rememberGuide } from "./guide";
+import { afterGuideButton, GUIDE_KEY, GUIDE_STEPS, guideSeen, guideShows, guideSteps, rememberGuide } from "./guide";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -26,6 +26,16 @@ describe("the guide's steps", () => {
   });
 });
 
+describe("where the guide shows", () => {
+  it("gives way on a page with steps of its own, but for the whole guide, which was asked for", () => {
+    expect(guideShows("short", false)).toBe(true);
+    expect(guideShows("short", true)).toBe(false);
+    expect(guideShows("full", true)).toBe(true);
+    expect(guideShows("closed", false)).toBe(false);
+    expect(guideShows("closed", true)).toBe(false);
+  });
+});
+
 describe("the guide's steps on the static showcase", () => {
   const server = guideSteps("server");
   const showcase = guideSteps("static");
@@ -45,8 +55,8 @@ describe("the guide's steps on the static showcase", () => {
 
   it("keep the headings and the links, but for step 2's: a site that starts no run points at the arena, where the kills are watched", () => {
     expect(showcase.map(({ title }) => title)).toEqual(server.map(({ title }) => title));
-    expect(server.map(({ action }) => action?.href)).toEqual(["#/run", "#/new", undefined]);
-    expect(showcase.map(({ action }) => action)).toEqual([server[0].action, { label: "Watch it in the arena", href: "#/arena" }, undefined]);
+    expect(server.map(({ action }) => action?.href)).toEqual(["#/run", "#/new", "#/runs?details=all"]);
+    expect(showcase.map(({ action }) => action)).toEqual([server[0].action, { label: "Watch it in the arena", href: "#/arena" }, server[2].action]);
   });
 
   it("are the site's from the first paint of a static build, before any capabilities have arrived, so that the short band does not change", () => {

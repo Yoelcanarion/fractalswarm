@@ -2,7 +2,7 @@ import { CircleHelp } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import type { Site } from "../../lib/controls";
-import { afterGuideButton, guideSeen, guideSteps, rememberGuide, type GuideMode } from "../../lib/guide";
+import { afterGuideButton, guideSeen, guideShows, guideSteps, rememberGuide, type GuideMode } from "../../lib/guide";
 
 export interface GuideState {
   open: boolean;
@@ -14,15 +14,16 @@ export interface GuideState {
   dismiss: () => void;
 }
 
-/** Short the first time this browser meets the app, closed once it is dismissed, and the button in the top bar brings it back, in full. */
-export function useGuide(): GuideState {
+/** Short the first time this browser meets the app, closed once it is dismissed, and the button in the top bar brings it back, in full.
+ * ``stepped``: the page has numbered steps of its own. */
+export function useGuide(stepped = false): GuideState {
   const [mode, setMode] = useState<GuideMode>(() => (guideSeen() ? "closed" : "short"));
   const toggle = useCallback(() => setMode(afterGuideButton), []);
   const dismiss = useCallback(() => {
     rememberGuide();
     setMode("closed");
   }, []);
-  return { open: mode !== "closed", full: mode === "full", toggle, dismiss };
+  return { open: guideShows(mode, stepped), full: mode === "full", toggle, dismiss };
 }
 
 /** The button that opens and closes the guide: it sits in the top bar, so it is on every page. */

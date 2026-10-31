@@ -431,7 +431,7 @@ describe("the flow", () => {
 
   it("opens on the form, at the first step", () => {
     const markup = flow();
-    expect(plainText(markup)).toContain("New task (live)");
+    expect(plainText(markup)).toContain("New task");
     expect(markup).toMatch(/aria-current="step"[^>]*><span[^>]*>1<\/span>Paste/);
     expect(plainText(markup)).toContain("kept on this machine");
   });
@@ -445,7 +445,7 @@ describe("the flow", () => {
   it("opens every address with the same head: the page's one h1, what it is for, and the steps beside it", () => {
     for (const markup of [flow(), flow({ intakeId: "intake-1" })]) {
       expect(markup.match(/<h1/g)).toHaveLength(1);
-      expect(markup).toContain('<h1 class="pagehead__title">New task (live)</h1>');
+      expect(markup).toContain('<h1 class="pagehead__title">New task</h1>');
       expect(plainText(markup)).toContain("Paste the talks and the emails or notes.");
       expect(markup).toContain('<span class="term">Muse</span>');
       expect(markup).toMatch(/pagehead__actions[^]*aria-current="step"/);

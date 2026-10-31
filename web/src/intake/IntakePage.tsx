@@ -177,7 +177,7 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart, site = "serve
     <div className="intake">
       <PageHeader
         className="intake__head"
-        title="New task (live)"
+        title="New task"
         lead={
           <>
             Paste the talks and the emails or notes. <Term id="muse">Muse</Term> reads them into the program’s shape, you check each row against the text it came from, and only then does anything run. By default the run kills half the brains.

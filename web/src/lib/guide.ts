@@ -29,6 +29,7 @@ export const GUIDE_STEPS: readonly GuideStep[] = [
     id: "verify",
     title: "Verify the replay",
     says: "A run is played again from its log and must give the same hash. “Replay verified ✓” means every event matches. A recorded run checks itself when it opens.",
+    action: { label: "Verify one on Runs", href: "#/runs?details=all" },
   },
 ];
 
@@ -53,6 +54,10 @@ export const guideSteps = (site: Site): readonly GuideStep[] => (site === "stati
 /** How much of the guide shows: none of it; the short band a first visit gets, with a heading and where it is done for each step; or the whole
  * of it, with what each step says. */
 export type GuideMode = "closed" | "short" | "full";
+
+/** Whether the guide shows. A page with numbered steps of its own does not get the short band as well, which would be two lists of 1, 2, 3 on
+ * one screen; the band waits for the next page, and the Guide button still brings the whole of it. */
+export const guideShows = (mode: GuideMode, stepped: boolean): boolean => (stepped ? mode === "full" : mode !== "closed");
 
 /** What the Guide button in the top bar does: it asks for the sentences when there are none, and closes them when they are showing. */
 export const afterGuideButton = (mode: GuideMode): GuideMode => (mode === "full" ? "closed" : "full");

@@ -284,7 +284,7 @@ describe("the page", () => {
     expect(out).toContain('href="#/run/old-1?at=end"');
     expect(t).toContain("How to read this table");
     expect(t).toContain("Start a run of your own");
-    expect(t).toContain("on the practice model, so it costs nothing");
+    expect(t).toContain("on the fake model, so it costs nothing");
     expect(t).toContain("Describe the job and start it");
     // The live run is in its own strip, not in the table of recorded ones.
     expect(out.split("runstable")[1]).not.toContain("#/run/now");

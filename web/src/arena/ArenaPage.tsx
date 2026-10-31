@@ -176,7 +176,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
             </>
           }
         >
-          A pair is the swarm and a rival running the same job under the same failures. Pick one above, or start one of your own: on the practice model it is free.
+          A pair is the swarm and a rival running the same job under the same failures. Pick one above, or start one of your own: on the fake model it is free.
         </EmptyState>
       )}
       {chosen && loading && <ArenaSkeleton />}

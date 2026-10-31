@@ -97,7 +97,7 @@ export function App() {
   const loadRuns = useRunStore((s) => s.loadRuns);
   const loadCapabilities = useRunStore((s) => s.loadCapabilities);
   const openRun = useRunStore((s) => s.openRun);
-  const guide = useGuide();
+  const guide = useGuide(route.page === "intake");
   const site = useSite();
 
   useEffect(() => {

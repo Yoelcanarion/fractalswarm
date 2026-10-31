@@ -237,7 +237,7 @@ export function RunsPage() {
 
       {/* the site starts no run: its form would have all three buttons off */}
       {site === "server" && (
-        <Details id="start" summary="Start a run of your own" hint="on the practice model, so it costs nothing">
+        <Details id="start" summary="Start a run of your own" hint="on the fake model, so it costs nothing">
           <NewTaskForm />
         </Details>
       )}
