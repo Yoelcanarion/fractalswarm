@@ -64,6 +64,10 @@ export function readTakeover(body: unknown): TakeoverSummary | null {
 export const logHasTakeover = (events: readonly RunEvent[]): boolean =>
   events.some((event) => event.type === "ownership.remapped" || event.type === "tree.adopted");
 
+/** A supervisor's log, a rival's: it holds a `baseline.crashed`. Its crashes are not kills and nobody takes over, so the server answers
+ * its takeover check with 501 (the evidence is the recovery chip) and the page does not ask, which would only put a red line in the console. */
+export const isSupervisorLog = (events: readonly RunEvent[]): boolean => events.some((event) => event.type === "baseline.crashed");
+
 export type ChipTone = "good" | "bad" | "muted";
 
 export interface Chip {
