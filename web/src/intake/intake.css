@@ -608,13 +608,34 @@
 }
 
 .rtable input,
-.rtable select {
+.rtable select,
+.rtable textarea {
   width: 100%;
   min-width: 7rem;
 }
 
+.rtable__title {
+  display: block;
+  resize: none;
+  line-height: 1.3;
+}
+
+/* The column that takes what the others leave: the one read word by word. */
+.rtable__wide {
+  width: 100%;
+}
+
+.rtable__stack > * + * {
+  margin-top: var(--space-1);
+}
+
+.rtable__stack select {
+  display: block;
+  min-width: 9rem;
+}
+
 .rtable__number {
-  width: 7rem;
+  width: 5.5rem;
   min-width: 0;
 }
 

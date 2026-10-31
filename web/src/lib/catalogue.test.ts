@@ -6,6 +6,7 @@ import {
   BILLING,
   chaosWords,
   featuredRows,
+  yourRows,
   filterRows,
   formatDuration,
   NO_FILTER,
@@ -289,5 +290,16 @@ describe("the runs a short list opens with", () => {
   it("are the finished runs in order when there is no final run, and none when nothing has finished", () => {
     expect(featuredRows([rowOf(listing("a", SWARM, "completed")), rowOf(listing("b", SWARM, "completed"))]).map((row) => row.listing.id)).toEqual(["a", "b"]);
     expect(featuredRows([rowOf(listing("a", SWARM, "running"))])).toEqual([]);
+  });
+
+  it("leave a person's own to their own list: newest first, without the bundled runs, the readings of a text, or what is still running", () => {
+    const yours = yourRows([
+      rowOf({ ...listing("pair-2", SWARM, "completed"), source: "private" }),
+      rowOf({ ...listing("reading", "fractalswarm.intake.actor:INTAKE", "completed"), source: "private" }),
+      rowOf(listing("from-the-form", SWARM, "completed")),
+      rowOf(listing("still-going", SWARM, "running")),
+      rowOf({ ...listing("demo-final", SWARM, "completed"), source: "demo" }),
+    ]);
+    expect(yours.map((row) => row.listing.id)).toEqual(["pair-2", "from-the-form"]);
   });
 });

@@ -32,6 +32,18 @@ export interface PairSessionOptions {
   clock?: ClockOptions;
 }
 
+/** Calls ``settled`` once the run open in ``store`` has stopped recording: at once if it has. What is said of a whole log, its replay check and its
+ * scored numbers, is not asked of a part of one: scored half way, a run's numbers would stand as its final ones. Returns what stops the waiting. */
+export function whenSettled(store: RunStoreApi, settled: () => void): () => void {
+  if (!store.getState().live) {
+    settled();
+    return () => undefined;
+  }
+  return store.subscribe((now, before) => {
+    if (before.live && !now.live) settled();
+  });
+}
+
 export function createPairSession(options: PairSessionOptions = {}): PairSession {
   const clock = createClock(options.clock);
   const left = createRunStore({ api: options.api, clock });

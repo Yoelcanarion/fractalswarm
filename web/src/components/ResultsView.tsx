@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 
+import { readFacts } from "../lib/catalogue";
 import { asNumber, asStrings, digest } from "../lib/generic";
 import { defineTerm } from "../lib/glossary";
+import { programOf, type Program, type ProgramTalk } from "../lib/program";
 import type { ViewState } from "../lib/reducer";
 import { outcomeOf, placementsOf, type Outcome } from "../lib/results";
 import { useRunStore } from "../store";
@@ -15,47 +17,54 @@ const OUTCOME: Record<Outcome, { label: string; tone: "good" | "warn" | "bad" | 
   failed: { label: "failed", tone: "bad" },
 };
 
-const natural = (a: string, b: string): number => a.localeCompare(b, "en", { numeric: true });
-
-// Report fields the headline, the schedule and the document already show.
+// Report fields the headline, the program and the document already show.
 const SHOWN = new Set(["expected", "placed", "gaps", "hard_violations", "soft_score", "schedule", "violations", "violation_counts", "markdown"]);
+
+const NO_REPORT: Record<string, unknown> = {};
 
 const clip = (text: string, max = 160): string => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
-function Schedule({ report }: { report: Record<string, unknown> }) {
-  const placements = useMemo(() => placementsOf(report), [report]);
-  if (placements.length === 0) return <Nothing>This report carries no schedule.</Nothing>;
-  const unique = (pick: (p: (typeof placements)[number]) => string) => [...new Set(placements.map(pick))].sort(natural);
-  const days = unique((p) => p.day);
-  const rooms = unique((p) => p.room);
-  const slots = unique((p) => p.slot);
-  const at = new Map(placements.map((p) => [`${p.day}|${p.room}|${p.slot}`, p.talk]));
+function ProgramCell({ talk, room }: { talk: ProgramTalk | null; room: string }) {
+  if (talk === null) return <td className="program__free" />;
+  const who = [talk.speaker, talk.attendance === null ? null : `about ${talk.attendance} people`].filter(Boolean).join(" · ");
   return (
-    <div className="rgrid">
-      {days.map((day) => (
+    <td className="program__talk" data-room={room} title={[talk.id, talk.track].filter(Boolean).join(" · ")}>
+      <span className="program__title">{talk.title}</span>
+      {who && <span className="program__who">{who}</span>}
+    </td>
+  );
+}
+
+/** The finished program as a person reads one: a row for each hour and a column for each room. On a phone it is a list, with the room on each talk. */
+function ProgramTable({ program }: { program: Program }) {
+  return (
+    <div className="program">
+      {program.days.map(({ day, slots }) => (
         <div key={day}>
           <div className="grid__day-title">Day {day}</div>
-          <table className="grid__table">
+          <table className="program__table">
             <thead>
               <tr>
-                <th />
-                {slots.map((slot) => (
-                  <th key={slot}>{slot}</th>
+                <th scope="col" className="program__hours">
+                  Time
+                </th>
+                {program.rooms.map((room) => (
+                  <th key={room.id} scope="col">
+                    {room.name}
+                    {room.capacity !== null && <span className="program__seats">{room.capacity} seats</span>}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {rooms.map((room) => (
-                <tr key={room}>
-                  <th>{room}</th>
-                  {slots.map((slot) => {
-                    const talk = at.get(`${day}|${room}|${slot}`);
-                    return (
-                      <td key={slot} className={`cell cell--result ${talk ? "cell--filled" : ""}`} title={talk ? `${talk} · day ${day} ${room} slot ${slot}` : ""}>
-                        {talk && <span className="cell__talk">{talk}</span>}
-                      </td>
-                    );
-                  })}
+              {slots.map((slot) => (
+                <tr key={slot.id}>
+                  <th scope="row" className="program__hours">
+                    {slot.hours}
+                  </th>
+                  {slot.talks.map((talk, index) => (
+                    <ProgramCell key={program.rooms[index].id} talk={talk} room={program.rooms[index].name} />
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -71,9 +80,13 @@ export function ResultsView({ view }: { view: ViewState }) {
   const seek = useRunStore((s) => s.seek);
   const total = useRunStore((s) => s.events.length);
   const live = useRunStore((s) => s.live);
+  const first = useRunStore((s) => s.events[0]);
+  const facts = useMemo(() => readFacts(first, null), [first]);
   const outcome = outcomeOf(results);
   const task = results.task;
-  const report = task?.report ?? {};
+  const report = task?.report ?? NO_REPORT;
+  const placements = useMemo(() => placementsOf(report), [report]);
+  const program = useMemo(() => programOf(placements, first), [placements, first]);
   // The root's own list, plus any goal that ended with gaps: a partial result names all of them.
   const gaps = [...new Set([...asStrings(report.gaps), ...results.goalOrder.flatMap((id) => results.goals[id].gaps)])];
   const expected = asNumber(report.expected);
@@ -96,7 +109,7 @@ export function ResultsView({ view }: { view: ViewState }) {
             <span className="results__outcome">{OUTCOME[outcome].label}</span>
           </Pill>
           <div>
-            <h2 className="results__task">{task ? task.task : "Result"}</h2>
+            <h2 className="results__task">{program.conference ?? (task ? task.task : "Result")}</h2>
             <div className="muted">
               {task
                 ? `reported by ${task.actor} at t = ${virtualSeconds(task.ts)} · task.result, event ${task.seq}`
@@ -109,7 +122,7 @@ export function ResultsView({ view }: { view: ViewState }) {
           {hard !== null && <PStat label="hard violations" value={hard} tone={hard === 0 ? "good" : "bad"} />}
           {soft !== null && <PStat label="soft score" value={soft.toFixed(2)} />}
           <PStat label="gaps" value={gaps.length} tone={gaps.length > 0 ? "warn" : ""} />
-          <PStat label="spent" value={money(economy.spentUsd)} />
+          <PStat label={facts.billed === false ? "notional spend" : "spent"} value={money(economy.spentUsd)} />
           <PStat label="coordination tokens" value={view.counters.coordinationTokens} tone="good" title={defineTerm("coordinationTokens")} />
         </div>
         {outcome === "pending" && (
@@ -129,11 +142,20 @@ export function ResultsView({ view }: { view: ViewState }) {
         )}
       </section>
 
-      <div className="results__cols">
-        <Card title="Schedule" hint={placed === null ? undefined : `${placed} talks placed`}>
-          {task ? <Schedule report={report} /> : <Nothing>The schedule is part of the final report.</Nothing>}
+      {placements.length > 0 ? (
+        <Card title="Program" hint={program.reading === null ? undefined : `from the reading you approved, fingerprint ${program.reading}`}>
+          <ProgramTable program={program} />
         </Card>
+      ) : (
+        task === null &&
+        facts.task === "t2_conference" && (
+          <Card title="Program">
+            <Nothing>The program is part of the final report.</Nothing>
+          </Card>
+        )
+      )}
 
+      <div className="results__cols">
         <Card title="Goals and verification" hint="each goal, and how it was checked">
           <div className="pstats">
             <PStat label="contracts verified" value={`${contracts.verified} / ${contracts.created}`} />

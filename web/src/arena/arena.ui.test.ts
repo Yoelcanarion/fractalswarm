@@ -436,8 +436,11 @@ describe("the page", () => {
     const stopped = await view({ session: await opened(20_000), left: "s", right: "r" });
     expect(stopped).toContain('<button type="button" class="btn btn--on">Carry on</button>');
     expect(stopped).toContain('class="arena__clock mono"');
-    // played out, it offers the first crash again
-    expect(text(await view({ session: await opened(75_000), left: "s", right: "r" }))).toContain("Watch the first crash");
+    // played out, it opens what the swarm's run produced, with playing the pair again beside that
+    const over = await view({ session: await opened(75_000), left: "s", right: "r" });
+    expect(over).toMatch(/<a class="btn btn--on" href="#\/run\/s\/results\?at=end">See the (program|result)<\/a>/);
+    expect(over).toContain('<button type="button" class="btn">Play both from the start</button>');
+    expect(text(over)).not.toContain("Watch the first crash");
   });
 
   it("makes playing the pair the main action where no coordinator is killed, and offers no first crash", async () => {
@@ -500,6 +503,9 @@ describe("the end of a pair", () => {
     expect(t).toContain("This is one run of each, on one seed, under one failure plan");
     expect(html).toContain('<a href="#/helps">Trade-offs</a>');
     expect(html).toContain('<a href="#/evidence">the Evidence page</a>');
+    // what each run produced is one click away, from the side that produced it
+    expect(html).toMatch(/<a href="#\/run\/s\/results\?at=end">See its (program|result)<\/a>/);
+    expect(html).toMatch(/<a href="#\/run\/r\/results\?at=end">See its (program|result)<\/a>/);
   });
 
   it("waits for the slower run: one side done is not the end of the pair", async () => {

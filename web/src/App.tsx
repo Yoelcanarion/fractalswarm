@@ -131,8 +131,8 @@ export function App() {
   const opening = route.page === "run" && loadError === null && openingRun({ runId, named: route.runId, runs, runsLoaded }) !== null;
 
   return (
-    // on a phone the run page is scrolled as a page, with the bars above it (styles.css `.app--run`)
-    <div className={route.page === "run" && route.view === "overview" ? "app app--run" : "app"}>
+    // on a phone the run page and its results are scrolled as a page, with the bars above them (styles.css `.app--run`)
+    <div className={route.page === "run" && (route.view === "overview" || route.view === "results") ? "app app--run" : "app"}>
       <TopBar
         where={route}
         runId={runId}

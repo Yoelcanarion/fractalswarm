@@ -4,8 +4,9 @@ import { useStore } from "zustand";
 import { ClockScope } from "../components/ClockScope";
 import { EmptyState, PageHeader, Skeleton, SkeletonGroup } from "../components/ui";
 import { listRuns } from "../lib/api";
+import { readFacts } from "../lib/catalogue";
 import type { RunListing } from "../lib/types";
-import { RunStoreProvider } from "../store";
+import { RunStoreProvider, type RunStoreApi } from "../store";
 import "./arena.css";
 import { fetchOfficial, fetchPairs, type PairListing } from "./api";
 import { ArenaPlay } from "./ArenaPlay";
@@ -21,13 +22,14 @@ import { playedOut } from "./playedOut";
 import { arenaHash, type ArenaRoute } from "./route";
 import { Scoreboard } from "./Scoreboard";
 import { useRoom } from "./room";
-import { createPairSession, type PairSession } from "./session";
+import { createPairSession, whenSettled, type PairSession } from "./session";
 
 const NO_OFFICIAL: { left: Official | null; right: Official | null } = { left: null, right: null };
 // The failure plan's crash points are points of the work, not of time (profiles.py, half_the_brains_plan): on the shared clock the first kill
 // does not fall at the same second on both sides. "About" because the logs put one crash a step apart (the durable pair's fourth: progress 0.67
 // on one side, 0.72 on the other).
 const LEAD = "FractalSwarm, on the left, and a rival, on the right, plan the same conference under the same failures, each at about the same point of the work.";
+const PRACTICE = "Both ran on the free practice model: nothing was billed, and their costs are only notional.";
 
 /** The arena: the swarm and its rival on one clock, face to face. */
 export function ArenaPage({ route }: { route: ArenaRoute }) {
@@ -63,19 +65,26 @@ export function ArenaPage({ route }: { route: ArenaRoute }) {
   useEffect(() => {
     if (!session || !left || !right) return;
     let live = true;
+    const waiting: (() => void)[] = [];
     setOfficial(NO_OFFICIAL);
-    void session.open(left, right, playback).then(async () => {
+    void session.open(left, right, playback).then(() => {
       if (!live) return;
-      // Replay both runs from their logs, as the run page does, and fetch the scored numbers.
-      for (const store of [session.left, session.right]) {
-        const s = store.getState();
-        if (!s.live && !s.loadError) void s.runVerify();
-      }
-      const [l, r] = await Promise.all([fetchOfficial(left).catch(() => null), fetchOfficial(right).catch(() => null)]);
-      if (live) setOfficial({ left: l, right: r });
+      // Replay each run from its log, as the run page does, and fetch its scored numbers, once it has stopped recording.
+      const settle = (store: RunStoreApi, run: string, side: keyof typeof NO_OFFICIAL) =>
+        whenSettled(store, () => {
+          const s = store.getState();
+          if (!s.loadError) void s.runVerify();
+          void fetchOfficial(run)
+            .catch(() => null)
+            .then((scored) => {
+              if (live) setOfficial((known) => ({ ...known, [side]: scored }));
+            });
+        });
+      waiting.push(settle(session.left, left, "left"), settle(session.right, right, "right"));
     });
     return () => {
       live = false;
+      for (const stop of waiting) stop();
     };
     // The address decides the pair; its playback applies once, when it opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,6 +133,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   const frames = useMemo(() => sharedFrames(frameOf(leftEvents), frameOf(rightEvents)), [leftEvents, rightEvents]);
   const assumptions = useMemo(() => assumptionsOf(startedOf(rightEvents), startedOf(leftEvents)), [leftEvents, rightEvents]);
   const leftSystem = useMemo(() => systemKind(String(startedOf(leftEvents)?.payload.scenario ?? "")), [leftEvents]);
+  const practice = useMemo(() => [leftEvents, rightEvents].every((events) => readFacts(events[0], null).billed === false), [leftEvents, rightEvents]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     const target = event.target as HTMLElement;
@@ -149,7 +159,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
         <PageHeader
           compact
           title="Arena"
-          lead={watching ? `${LEAD} ${rivalSentence(assumptions)}` : LEAD}
+          lead={watching ? [LEAD, rivalSentence(assumptions), practice ? PRACTICE : ""].filter(Boolean).join(" ") : LEAD}
           actions={watching && <ArenaPlay clock={clock} left={session.left} right={session.right} />}
         />
       )}
@@ -176,7 +186,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
             </>
           }
         >
-          A pair is the swarm and a rival running the same job under the same failures. Pick one above, or start one of your own: on the fake model it is free.
+          A pair is the swarm and a rival running the same job under the same failures. Pick one above, or start one of your own: on the practice model it is free.
         </EmptyState>
       )}
       {chosen && loading && <ArenaSkeleton />}

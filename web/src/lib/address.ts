@@ -32,6 +32,9 @@ export function defaultRunId(runs: readonly { id: string }[]): string | null {
 /** The address of a run opened from a list of runs. */
 export const openedRunHash = (id: string): string => `#/run/${encodeURIComponent(id)}${AT_END}`;
 
+/** The address of what a run produced, its Results view at its end, where the final report is. */
+export const resultsHash = (id: string): string => `#/run/${encodeURIComponent(id)}/results${AT_END}`;
+
 export type Opening = { kind: "run"; id: string } | { kind: "list" };
 
 export interface OpeningState {

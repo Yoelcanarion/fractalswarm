@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { FrameScheduler } from "../lib/clock";
 import type { RunEvent } from "../lib/types";
 import type { RunApi } from "../store";
-import { createPairSession } from "./session";
+import { createPairSession, whenSettled } from "./session";
 import { call, crash, kill, restart, rivalStream, swarmStream, takeOver } from "./testing";
 
 function pair(): { swarm: RunEvent[]; rival: RunEvent[] } {
@@ -40,6 +40,44 @@ async function opened(playback?: Parameters<ReturnType<typeof createPairSession>
   await session.open("s", "r", playback);
   return session;
 }
+
+describe("a run still recording", () => {
+  // One side has not ended: its log is cut before run.completed, and its tail is ended by hand.
+  async function recording() {
+    const { swarm, rival } = pair();
+    const ends = new Map<string, () => void>();
+    const api: RunApi = {
+      ...fakeApi({ s: swarm.slice(0, -1), r: rival }),
+      tailEvents: (id, _from, _onBatch, onEnd) => {
+        ends.set(id, onEnd);
+        return () => undefined;
+      },
+    };
+    const session = createPairSession({ api, clock: { scheduler: idle } });
+    await session.open("s", "r");
+    return { session, ends };
+  }
+
+  it("is settled when it ends, and a run that has ended is settled at once: nothing is scored on part of a log", async () => {
+    const { session, ends } = await recording();
+    expect(session.left.getState().live).toBe(true);
+    const settled: string[] = [];
+    whenSettled(session.left, () => settled.push("swarm"));
+    whenSettled(session.right, () => settled.push("rival"));
+    expect(settled).toEqual(["rival"]);
+    ends.get("s")?.();
+    expect(settled).toEqual(["rival", "swarm"]);
+  });
+
+  it("stops waiting when the page has moved on", async () => {
+    const { session, ends } = await recording();
+    const settled: string[] = [];
+    const stop = whenSettled(session.left, () => settled.push("swarm"));
+    stop();
+    ends.get("s")?.();
+    expect(settled).toEqual([]);
+  });
+});
 
 describe("a pair on one clock", () => {
   it("opens both runs at their start", async () => {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { FeaturedRuns } from "../components/catalogue/FeaturedRuns";
+import { FeaturedRuns, YourRuns } from "../components/catalogue/FeaturedRuns";
 import { LiveNow } from "../components/catalogue/LiveNow";
 import "../components/catalogue/catalogue.css";
 import { RunsKey } from "../components/catalogue/RunsKey";
@@ -26,6 +26,7 @@ import {
   type RunFacts,
   type SortKey,
   type VerifyView,
+  yourRows,
 } from "../lib/catalogue";
 import { createFactsLoader } from "../lib/factsLoader";
 import { useDocumentTitle } from "../lib/title";
@@ -135,6 +136,9 @@ export function RunsPage() {
   const failed = runsError !== null;
   const clear = () => setFilter(NO_FILTER);
   const final = defaultRunId(runs);
+  // The site holds only what it was built with, so nothing there is a person's own.
+  const yours = site === "server" ? yourRows(rows) : [];
+  const toStartWith = rows.filter((row) => !yours.includes(row));
 
   return (
     <div className="runs">
@@ -199,7 +203,8 @@ export function RunsPage() {
             </p>
           )}
           <LiveNow rows={liveRows} />
-          <FeaturedRuns rows={featuredRows(rows, site === "static" ? rows.length : FEATURED_RUNS)} />
+          <YourRuns rows={yours} />
+          <FeaturedRuns rows={featuredRows(toStartWith, site === "static" ? rows.length : FEATURED_RUNS)} titled={yours.length > 0} />
           <Details id="all" summary={`All ${rows.length} run${rows.length === 1 ? "" : "s"}`} hint="search, filter, sort and check them">
             <RunsToolbar
               filter={filter}
@@ -237,7 +242,7 @@ export function RunsPage() {
 
       {/* the site starts no run: its form would have all three buttons off */}
       {site === "server" && (
-        <Details id="start" summary="Start a run of your own" hint="on the fake model, so it costs nothing">
+        <Details id="start" summary="Start a run of your own" hint="on the practice model, so it costs nothing">
           <NewTaskForm />
         </Details>
       )}

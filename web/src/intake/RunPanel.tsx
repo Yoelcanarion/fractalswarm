@@ -83,7 +83,7 @@ export function RunPanel({ api, intakeId, realAllowed, canStart, onStarted, init
         label="Model"
         value={choice.backend}
         options={["fake", "real"] as const}
-        words={(backend) => (backend === "fake" ? "Practice LLM · free" : "Meta Model API · billed")}
+        words={(backend) => (backend === "fake" ? "Practice model · free" : "Meta Model API · billed")}
         onChange={(backend) => set("backend", backend)}
         disabled={(backend) => backend === "real" && !realAllowed}
       />

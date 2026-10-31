@@ -471,7 +471,7 @@ describe("the keyboard on the run page", () => {
 
   it("scrolls the run page as one page on a phone, the bars above it going up with it and only the replay bar staying", () => {
     const app = readFileSync(REPO_ROOT + "web/src/App.tsx", "utf-8");
-    expect(app).toMatch(/route\.page === "run" && route\.view === "overview" \? "app app--run" : "app"/);
+    expect(app).toMatch(/route\.page === "run" && \(route\.view === "overview" \|\| route\.view === "results"\) \? "app app--run" : "app"/);
     const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
     const phone = css.indexOf("@media (max-width: 760px) {\n  /* The run page on a phone");
     expect(phone).toBeGreaterThan(0);

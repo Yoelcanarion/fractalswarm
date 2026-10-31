@@ -128,12 +128,12 @@ function TalksTable({ original, working, facts, selection, onSelect, onChange, l
         <thead>
           <tr>
             <th scope="col">Id</th>
-            <th scope="col">Title</th>
-            <th scope="col">Speaker</th>
-            <th scope="col">Track</th>
+            <th scope="col" className="rtable__wide">
+              Title
+            </th>
+            <th scope="col">Speaker, track</th>
             <th scope="col">Attendance</th>
             <th scope="col">Sources</th>
-            <th scope="col">From</th>
             <th scope="col">
               <span className="sr-only">Remove</span>
             </th>
@@ -151,10 +151,18 @@ function TalksTable({ original, working, facts, selection, onSelect, onChange, l
                     {talk.id}
                   </th>
                   <td>
-                    <input aria-label={`${talk.id} title`} value={talk.title} disabled={locked} onChange={(event) => change(talk.id, { title: event.target.value })} />
+                    {/* a title is checked against the text word by word, so it shows whole */}
+                    <textarea
+                      aria-label={`${talk.id} title`}
+                      className="rtable__title"
+                      rows={3}
+                      value={talk.title}
+                      disabled={locked}
+                      onChange={(event) => change(talk.id, { title: event.target.value.replace(/\s*\n\s*/g, " ") })}
+                    />
                     {was && <Was shown={`“${was.title}”`} fields={prov.fields} field="title" />}
                   </td>
-                  <td>
+                  <td className="rtable__stack">
                     <select aria-label={`${talk.id} speaker`} value={talk.speaker_id} disabled={locked} onChange={(event) => change(talk.id, { speaker_id: event.target.value })}>
                       {!working.speakers.some((speaker) => speaker.id === talk.speaker_id) && <option value={talk.speaker_id}>none</option>}
                       {working.speakers.map((speaker) => (
@@ -163,8 +171,6 @@ function TalksTable({ original, working, facts, selection, onSelect, onChange, l
                         </option>
                       ))}
                     </select>
-                  </td>
-                  <td>
                     <select aria-label={`${talk.id} track`} value={talk.track_id} disabled={locked} onChange={(event) => change(talk.id, { track_id: event.target.value })}>
                       {!working.tracks.some((track) => track.id === talk.track_id) && <option value={talk.track_id}>none</option>}
                       {working.tracks.map((track) => (
@@ -193,11 +199,9 @@ function TalksTable({ original, working, facts, selection, onSelect, onChange, l
                     />
                     {was && <Was shown={was.attendance === null ? "nothing" : String(was.attendance)} fields={prov.fields} field="attendance" />}
                   </td>
-                  <td>
-                    <SourceChips kind="talks" id={talk.id} facts={facts} selection={selection} onSelect={onSelect} />
-                  </td>
-                  <td>
+                  <td className="rtable__stack">
                     <ProvenanceBadge {...prov} reader={reader} />
+                    <SourceChips kind="talks" id={talk.id} facts={facts} selection={selection} onSelect={onSelect} />
                   </td>
                   <td>
                     <button
@@ -218,7 +222,7 @@ function TalksTable({ original, working, facts, selection, onSelect, onChange, l
                 {picked && (
                   <tr className="rdetail">
                     <td />
-                    <td colSpan={7}>
+                    <td colSpan={5}>
                       <Quotes kind="talks" id={talk.id} facts={facts} />
                     </td>
                   </tr>

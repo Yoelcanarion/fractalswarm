@@ -405,7 +405,7 @@ describe("running the approved reading", () => {
     expect(pressed(markup, "Arena pair")).toBe(true);
     expect(pressed(markup, "Ideal durable supervisor")).toBe(true);
     expect(pressed(markup, "Half the brains")).toBe(true);
-    expect(pressed(markup, "Practice LLM · free")).toBe(true);
+    expect(pressed(markup, "Practice model · free")).toBe(true);
     expect(plainText(markup)).toContain("Start the arena pair");
     expect(plainText(markup)).not.toContain("SPEND");
     expect(plainText(markup)).not.toContain("Billed:");

@@ -360,6 +360,33 @@ describe("run store", () => {
     expect(store.getState().epoch).toBe(before);
   });
 
+  it("waits at the head of a run still recording, playing, goes on as its events come in, and stops when it ends", async () => {
+    const log = logAt(everySecond(4), false);
+    const scheduler = manualScheduler();
+    const clock = createClock({ scheduler });
+    const { api, tails } = fakeApi({ live: log.slice(0, -1) });
+    const ended: (() => void)[] = [];
+    const tailEvents: RunApi["tailEvents"] = (id, from, onBatch, onEnd) => {
+      ended.push(onEnd);
+      return api.tailEvents(id, from, onBatch, onEnd);
+    };
+    const store = createRunStore({ api: { ...api, tailEvents }, clock });
+    await store.getState().openRun("live");
+    clock.seekTime(0);
+    clock.setSpeed(20);
+    clock.setPlaying(true);
+    for (let ms = 0; ms <= 300; ms += 100) scheduler.frame(ms);
+    expect(clock.now()).toBe(3000);
+    expect(clock.state.getState().playing).toBe(true);
+    tails.get("live")!(log.slice(-1));
+    scheduler.frame(400);
+    expect(clock.now()).toBe(4000);
+    expect(clock.state.getState().playing).toBe(true);
+    ended[0]();
+    scheduler.frame(500);
+    expect(clock.state.getState().playing).toBe(false);
+  });
+
   it("jumps every store on a shared clock when one of them is scrubbed", async () => {
     const clock = createClock({ scheduler: manualScheduler() });
     const { api } = fakeApi({ a: logAt(everySecond(10)), b: logAt(everySecond(10)) });

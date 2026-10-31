@@ -121,7 +121,7 @@ export function NewTaskForm() {
   return (
     <div className="newtask">
       <p className="newtask__lead">
-        Describe the job and start it. The run uses the fake model, a simulated clock and no failures, so it costs nothing. What you fill in is a{" "}
+        Describe the job and start it. The run uses the practice model, a simulated clock and no failures, so it costs nothing. What you fill in is a{" "}
         <Term id="taskSpec">task spec</Term>.
       </p>
 
@@ -153,7 +153,7 @@ export function NewTaskForm() {
         <Field label="Seed" help="Seeds the run's randomness.">
           {(aria) => <input {...aria} value={form.seed} onChange={(e) => set("seed", e.target.value)} />}
         </Field>
-        <Field label="Budget (USD)" help="The most the run may spend. On the fake model nothing is charged.">
+        <Field label="Budget (USD)" help="The most the run may spend. On the practice model nothing is charged.">
           {(aria) => <input {...aria} inputMode="decimal" value={form.budgetUsd} onChange={(e) => set("budgetUsd", e.target.value)} />}
         </Field>
         <Field label="Scaling" help={SCALING_HELP[form.scalingMode]}>

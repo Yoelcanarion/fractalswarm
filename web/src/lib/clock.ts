@@ -41,6 +41,8 @@ export interface ClockedState {
   events: RunEvent[];
   cursor: number;
   clock: Clock;
+  /** A run still recording: more of its log is on the way. */
+  live?: boolean;
   /** Move to virtual time ``t``; the cursor is derived from ``t`` unless it is given. */
   syncTo(t: number, cursor?: number): void;
   commitPlayhead(t: number): void;
@@ -139,6 +141,7 @@ export function createClock(options: ClockOptions = {}): Clock {
       const { cursor, events } = s.getState();
       return cursor >= events.length;
     });
+  const recording = (): boolean => [...stores].some((s) => s.getState().live === true);
 
   const emit = (): void => listeners.forEach((listener) => listener(t));
 
@@ -166,7 +169,8 @@ export function createClock(options: ClockOptions = {}): Clock {
       }
     }
     if (moved || force || frameMs - lastCommitMs >= commitIntervalMs) commit(frameMs);
-    if (state.getState().playing && finished()) {
+    // A playhead that has caught up with a run still recording waits there, playing, and goes on as its events come in.
+    if (state.getState().playing && finished() && !recording()) {
       state.setState({ playing: false });
       mirror({ playing: false });
       commit(frameMs);

@@ -2167,7 +2167,7 @@ textarea {
 
 .results__cols {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 0.8fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
   align-items: start;
 }
@@ -2177,16 +2177,94 @@ textarea {
   overflow: visible;
 }
 
-.rgrid {
+/* The finished program, as a person reads one: a row for each hour and a column for each room. */
+.program {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-4);
 }
 
-.cell--result {
-  height: 30px;
-  text-align: center;
-  vertical-align: middle;
+.program__table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 3px;
+}
+
+.program__table th {
+  padding: 4px 8px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: left;
+  vertical-align: top;
+}
+
+.program__table th.program__hours {
+  width: 104px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.program__seats {
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.program__talk,
+.program__free {
+  padding: 6px 8px;
+  border-radius: var(--radius-2);
+  font-size: var(--fs-body);
+  vertical-align: top;
+}
+
+.program__talk {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.program__title {
+  display: block;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.program__who {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+
+/* On a phone a row of four rooms cannot be read: each hour is a list, and each talk says its room. */
+@media (max-width: 720px) {
+  .program__table,
+  .program__table tbody,
+  .program__table tr,
+  .program__table th,
+  .program__table td {
+    display: block;
+    width: auto;
+  }
+  .program__table thead,
+  .program__table td.program__free {
+    display: none;
+  }
+  .program__table tr {
+    margin-bottom: var(--space-3);
+  }
+  .program__table td + td,
+  .program__table th + td {
+    margin-top: 4px;
+  }
+  .program__table td::before {
+    content: attr(data-room);
+    display: block;
+    color: var(--text-muted);
+  }
 }
 
 .results__doc {
@@ -2517,9 +2595,6 @@ textarea {
   }
   .pcard--wide {
     grid-column: 1 / -1;
-  }
-  .results__cols {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 

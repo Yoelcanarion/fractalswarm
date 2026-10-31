@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useStore } from "zustand";
 
+import { resultsHash } from "../lib/address";
 import { arenaCounters } from "../lib/arena";
 import type { RunStoreApi } from "../store";
 import { startedOf, type Assumptions, type SystemKind } from "./assumptions";
@@ -44,18 +45,35 @@ export interface PairEndProps {
 export function PairEnd({ left, right, leftSystem, assumptions }: PairEndProps) {
   const l = useEndSide(left, leftSystem);
   const r = useEndSide(right, assumptions.system);
+  const leftRun = useStore(left, (s) => s.runId);
+  const rightRun = useStore(right, (s) => s.runId);
   if (!l.finished || !r.finished) return null;
   const text = pairEndText(l, r, assumptions);
+  const ends = [
+    { side: l, run: leftRun },
+    { side: r, run: rightRun },
+  ];
   return (
     <section className="pairend" role="status" aria-label="How this pair ended">
       <h2 className="pairend__title">{text.headline}</h2>
       <dl className="pairend__sides">
-        {text.sides.map((side) => (
-          <div key={side.who} className="pairend__side">
-            <dt>{side.who}</dt>
-            <dd>{side.text}</dd>
-          </div>
-        ))}
+        {text.sides.map((side, index) => {
+          const { side: end, run } = ends[index];
+          return (
+            <div key={side.who} className="pairend__side">
+              <dt>{side.who}</dt>
+              <dd>
+                {side.text}
+                {end.completed && run !== null && (
+                  <>
+                    {" "}
+                    <a href={resultsHash(run)}>{end.total === null ? "See its result" : "See its program"}</a>
+                  </>
+                )}
+              </dd>
+            </div>
+          );
+        })}
       </dl>
       <p className="pairend__scope">
         {text.scope} <a href="#/helps">Trade-offs</a> shows when this holds, and <a href="#/evidence">the Evidence page</a> has the numbers over ten seeds.

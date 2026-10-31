@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { parseArenaRoute } from "../arena/route";
 import { canonicalBody } from "./spend";
 import { BOX_LIMIT, chaosLabel, confirmed, DEFAULT_CHOICE, emptyForm, formProblems, launchBody, practiceTalks, readingBody, requestFor, roomsOf, scenarioLabel, specOf, startedRuns, untilRunsListed, watchHash } from "./launch";
 
@@ -116,8 +117,9 @@ describe("running the approved reading", () => {
     expect(body).not.toHaveProperty("preflight_token");
   });
 
-  it("says where to watch: the arena for a pair, the run page for one run", () => {
-    expect(watchHash({ left: "p-swarm", right: "p-durable-max" })).toBe("#/arena/p-swarm/p-durable-max");
+  it("says where to watch: the arena for a pair, playing from its start at the speed of a whole run, the run page for one run", () => {
+    expect(watchHash({ left: "p-swarm", right: "p-durable-max" })).toBe("#/arena/p-swarm/p-durable-max?speed=5&play");
+    expect(parseArenaRoute(watchHash({ left: "p-swarm", right: "p-durable-max" }))?.playback).toEqual({ atMs: null, speed: 5, play: true });
     expect(watchHash({ run_id: "ui 1" })).toBe("#/run/ui%201");
   });
 

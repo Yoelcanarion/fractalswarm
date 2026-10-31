@@ -20,7 +20,7 @@ export interface RunEvent {
 
 export interface RunListing {
   id: string;
-  source: "runs" | "demo";
+  source: "runs" | "demo" | "private";
   run_id: string | null;
   scenario: string | null;
   seed: string | null;

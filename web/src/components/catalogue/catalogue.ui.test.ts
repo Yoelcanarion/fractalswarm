@@ -284,7 +284,7 @@ describe("the page", () => {
     expect(out).toContain('href="#/run/old-1?at=end"');
     expect(t).toContain("How to read this table");
     expect(t).toContain("Start a run of your own");
-    expect(t).toContain("on the fake model, so it costs nothing");
+    expect(t).toContain("on the practice model, so it costs nothing");
     expect(t).toContain("Describe the job and start it");
     // The live run is in its own strip, not in the table of recorded ones.
     expect(out.split("runstable")[1]).not.toContain("#/run/now");
@@ -293,7 +293,7 @@ describe("the page", () => {
   it("lists every run the static site holds and offers no form that starts one, where a server lists four and offers it", () => {
     // the five the site is built with: the exporter lists the final run, then the others by name, so the durable swarm comes last
     const ids = ["demo-final", "demo-pair-central-rival", "demo-pair-central-swarm", "demo-pair-durable-max-rival", "demo-pair-durable-max-swarm"];
-    const runs = ids.map((id) => listing(id));
+    const runs = ids.map((id) => listing(id, "completed", SWARM, { source: "demo" }));
     const featuredIds = (out: string): string[] =>
       [...(/<ul class="featured"[\s\S]*?<\/ul>/.exec(out)?.[0] ?? "").matchAll(/class="mono featured__id" href="#\/run\/([^?"]+)/g)].map((m) => m[1]);
     const site = page({ runsLoaded: true, runs, capabilities: { ...DEFAULT_CAPABILITIES, static: true } });
@@ -306,8 +306,26 @@ describe("the page", () => {
     expect(server).toContain('<details id="start"');
   });
 
+  it("puts a person's own runs first, each with the way to what it produced, and keeps them out of the runs to start with", () => {
+    const demo = listing("demo-final", "completed", SWARM, { source: "demo" });
+    const mine = listing("pair-1-swarm", "completed", SWARM, { source: "private" });
+    const reading = listing("intake-1", "completed", "fractalswarm.intake.actor:INTAKE", { source: "private" });
+    const out = page({ runsLoaded: true, runs: [mine, reading, demo] });
+    const yours = /<section class="yourruns"[\s\S]*?<\/section>/.exec(out)?.[0] ?? "";
+    expect(text(yours)).toContain("Your runs");
+    expect(yours).toContain('href="#/run/pair-1-swarm?at=end"');
+    expect(yours).not.toContain("intake-1"); // a reading places no talk
+    expect(out.indexOf("yourruns")).toBeLessThan(out.indexOf('aria-label="Runs to start with"'));
+    const toStart = /<ul class="featured" aria-label="Runs to start with"[\s\S]*?<\/ul>/.exec(out)?.[0] ?? "";
+    expect(toStart).not.toContain("pair-1-swarm");
+    expect(toStart).toContain("demo-final");
+    // the static site holds nobody's runs
+    expect(page({ runsLoaded: true, runs: [mine, demo], capabilities: { ...DEFAULT_CAPABILITIES, static: true } })).not.toContain("yourruns");
+  });
+
   it("opens with one main action and the runs to start from, with the whole list and the form under Details", () => {
-    const out = page({ runsLoaded: true, runs: [listing("old-1"), listing("demo-final"), listing("old-2", "interrupted")] });
+    const demo = { source: "demo" } as const;
+    const out = page({ runsLoaded: true, runs: [listing("old-1", "completed", SWARM, demo), listing("demo-final", "completed", SWARM, demo), listing("old-2", "interrupted", SWARM, demo)] });
     // the main action is the final run, wherever the server lists it
     expect(out).toContain('<a class="btn btn--on" href="#/run/demo-final?at=end">Open the final run</a>');
     // the short list leads with it

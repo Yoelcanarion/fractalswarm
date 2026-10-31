@@ -59,7 +59,7 @@ export async function fetchPairs(): Promise<PairListing[]> {
 }
 
 /** The scored numbers of a run, or null when the server has none to give (an unknown run, an older
- * server) or the run is still recording and not yet worth scoring. */
+ * server). The server scores the log it has, so this waits for a run still recording to end (`whenSettled`). */
 export async function fetchOfficial(runId: string): Promise<Official | null> {
   const response = await fetch(`api/runs/${encodeURIComponent(runId)}/metrics`);
   if (!response.ok) return null;

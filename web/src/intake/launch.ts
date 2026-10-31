@@ -2,6 +2,8 @@
 // (`POST api/intake`) and a run or a pair on the approved reading (`POST api/tasks`, `POST api/arena`).
 
 import { crashesText, rivalLabel } from "../arena/helps/labels";
+import { arenaHash } from "../arena/route";
+import { WHOLE_RUN_SPEED } from "../lib/playback";
 import type { Room } from "./proposal";
 import type { Gate } from "./spend";
 import { LIMITS } from "./validate";
@@ -158,6 +160,6 @@ export async function untilRunsListed(
   return false;
 }
 
-/** Where the person goes to watch it: the arena for a pair, the run page for one run. */
+/** Where the person goes to watch it: the arena for a pair, playing from its start, and the run page for one run, which follows it as it records. */
 export const watchHash = (launch: { left: string; right: string } | { run_id: string }): string =>
-  "left" in launch ? `#/arena/${encodeURIComponent(launch.left)}/${encodeURIComponent(launch.right)}` : `#/run/${encodeURIComponent(launch.run_id)}`;
+  "left" in launch ? `${arenaHash(launch.left, launch.right)}?speed=${WHOLE_RUN_SPEED}&play` : `#/run/${encodeURIComponent(launch.run_id)}`;
