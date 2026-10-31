@@ -64,6 +64,18 @@
   background: var(--ok-bg-strong);
 }
 
+.steps__back {
+  display: inherit;
+  align-items: inherit;
+  gap: inherit;
+  color: inherit;
+  text-decoration: none;
+}
+
+.steps__back:hover {
+  text-decoration: underline;
+}
+
 .steps__item--now {
   color: var(--text-primary);
   border-color: var(--accent);

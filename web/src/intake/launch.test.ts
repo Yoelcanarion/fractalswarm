@@ -3,10 +3,30 @@
 import { describe, expect, it } from "vitest";
 
 import { canonicalBody } from "./spend";
-import { BOX_LIMIT, chaosLabel, confirmed, DEFAULT_CHOICE, emptyForm, formProblems, launchBody, readingBody, requestFor, roomsOf, scenarioLabel, specOf, startedRuns, untilRunsListed, watchHash } from "./launch";
+import { BOX_LIMIT, chaosLabel, confirmed, DEFAULT_CHOICE, emptyForm, formProblems, launchBody, practiceTalks, readingBody, requestFor, roomsOf, scenarioLabel, specOf, startedRuns, untilRunsListed, watchHash } from "./launch";
 
 describe("the form", () => {
   const filled = { ...emptyForm(), talks: "Submission 1 ..." };
+
+  describe("with the practice reader", () => {
+    const talk = (n: number) => `Submission ${n}\nTitle: Talk ${n}\nSpeaker: Ana Ruiz <a@example.invalid>\nTrack: Data Infra\nAbstract: Why it matters.`;
+    const talks = (n: number) => Array.from({ length: n }, (_, i) => talk(i + 1)).join("\n\n");
+
+    it("counts only the blocks it can read", () => {
+      expect(practiceTalks(talks(3))).toBe(3);
+      expect(practiceTalks("Title: A talk\nSpeaker: Ana Ruiz\nAbstract: No track.")).toBe(0);
+      expect(practiceTalks("Rust for data engineers, by Ana Ruiz")).toBe(0);
+    });
+
+    it("says before a reading what would leave the review empty", () => {
+      expect(formProblems({ ...emptyForm(), talks: talks(2) }, "fake")).toEqual(["The practice reader can read 2 of the 8 talks a program needs. It takes Title, Speaker, Track and Abstract lines, as in the sample text."]);
+      expect(formProblems({ ...emptyForm(), talks: talks(8) }, "fake")).toEqual([]);
+    });
+
+    it("leaves Muse any wording", () => {
+      expect(formProblems({ ...emptyForm(), talks: talks(2) }, "real")).toEqual([]);
+    });
+  });
 
   it("needs talks, and nothing else", () => {
     expect(formProblems(emptyForm())).toEqual(["Paste the talks: titles, speakers, abstracts."]);

@@ -1,12 +1,20 @@
-// Where each row of the reading comes from: Muse's reading as it stood, a row the person edited, or one they added.
+// Where each row of the reading comes from: the reading as it stood, a row the person edited, or one they added.
 // `diffProposal` is the server's own list of edits (`diff` in intake/service.py), computed the same way, so what the
 // page shows before approving is what the approval then reports; a test holds the two to one real answer.
 
+import type { Backend } from "./launch";
 import type { Proposal, RowKind } from "./proposal";
 
 export type Provenance = "muse" | "edited" | "added";
 
-export const PROVENANCE_WORDS: Record<Provenance, string> = { muse: "Muse", edited: "Edited by you", added: "Added by you" };
+export const PROVENANCE_WORDS: Record<Exclude<Provenance, "muse">, string> = { edited: "Edited by you", added: "Added by you" };
+
+/** Who read the text, in the review's words. The practice reader is a parser and does not go by a model's name. */
+export function readerWords(reader: Backend | null | undefined): { name: string; badge: string; row: string } {
+  return reader === "fake"
+    ? { name: "The practice reader", badge: "Practice", row: "Read by the practice reader, left as it was" }
+    : { name: "Muse", badge: "Muse", row: "Read by Muse, left as it was" };
+}
 
 /** Structural equality, the way Python's `!=` reads two JSON values. */
 export function same(a: unknown, b: unknown): boolean {

@@ -195,6 +195,10 @@ def test_the_approved_input_is_the_checkers_truth_with_the_sentence_behind_each_
     assert state_of(flow.private, flow.intake_id)["state"] == "approved"
 
 
+def test_the_state_says_who_read_the_text(flow: Flow) -> None:
+    assert state_of(flow.private, flow.intake_id)["reader"] == "fake"
+
+
 def test_a_swarm_and_its_rival_run_on_the_identical_input(flow: Flow) -> None:
     swarm, central = (events_of(r.paths.root)[0].payload for r in (flow.swarm, flow.central))
     assert swarm["params"] == central["params"]  # the corpus, the truth and where they came from

@@ -3,6 +3,7 @@
 // the answer, or why there is none, and an answer the page cannot read is refused with the field it stumbled on.
 
 import type { Texts } from "./highlight";
+import type { Backend } from "./launch";
 import { readProposal, type Proposal } from "./proposal";
 import { readPreflight, type Kind, type Preflight } from "./spend";
 import { bad, count, flag, list, oneOf, reading, record, text, textOrEmpty, type Read } from "./strict";
@@ -42,6 +43,8 @@ export interface Started {
 export const INTAKE_STATES = ["reading", "proposed", "approved", "refused", "failed", "interrupted"] as const;
 export type IntakeStateName = (typeof INTAKE_STATES)[number];
 
+const READERS: readonly Backend[] = ["fake", "real"];
+
 export interface Scan {
   source_id: string;
   decision: string;
@@ -66,6 +69,8 @@ export interface IntakeState {
   /** The text as the server keeps it: addresses already replaced. */
   texts: Texts;
   proposal: Proposal | null;
+  /** Who read the text. A server that predates it sends none, and those readings were Muse's. */
+  reader?: Backend | null;
   scans: Scan[];
   refused: { segments: string[]; reason: string } | null;
   failed: { errors: string[] } | null;
@@ -154,6 +159,7 @@ export function readIntakeState(raw: unknown): Read<IntakeState> {
         const s = record(scan, `intake.scans[${i}]`);
         return { source_id: text(s.source_id, `intake.scans[${i}].source_id`), decision: text(s.decision, `intake.scans[${i}].decision`), reasons: strings(s.reasons, `intake.scans[${i}].reasons`), findings: strings(s.findings, `intake.scans[${i}].findings`) };
       }),
+      reader: r.reader === undefined || r.reader === null ? null : oneOf(r.reader, READERS, "intake.reader"),
       refused: refused === null ? null : { segments: strings(refused.segments, "intake.refused.segments"), reason: text(refused.reason, "intake.refused.reason") },
       // the errors are whatever the schema check said: show them as they came
       failed: failed === null ? null : { errors: list(failed.errors ?? [], "intake.failed.errors").map((error) => (typeof error === "string" ? error : JSON.stringify(error))) },

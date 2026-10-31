@@ -6,6 +6,7 @@ import { addSpeaker, addTalk, patchSpeaker, patchTalk, patchTrack, removeSpeaker
 import { describeCells } from "./format";
 import { BLOCK_FIELDS, FIELD_WORDS, type Fact, type Selection } from "./highlight";
 import { PREFERENCES, type Preference, type Proposal, type Speaker, type Talk } from "./proposal";
+import type { Backend } from "./launch";
 import { ProvenanceBadge } from "./ProvenanceBadge";
 import { provenanceOf, removedRows } from "./provenance";
 
@@ -18,6 +19,8 @@ export interface TablesProps {
   onChange: (next: Proposal) => void;
   /** Approved: the reading is read-only. */
   locked: boolean;
+  /** Who read the text. */
+  reader: Backend | null | undefined;
 }
 
 const QUOTE_SHOWN = 240;
@@ -72,7 +75,7 @@ function Removed<T extends { id: string }>({ rows, name, onRestore, locked }: { 
   if (rows.length === 0) return null;
   return (
     <p className="removed">
-      Taken out of Muse&rsquo;s reading:{" "}
+      Taken out of the reading:{" "}
       {rows.map((row) => (
         <span key={row.id} className="removed__item">
           <span className="mono">{row.id}</span> {name(row)}{" "}
@@ -86,7 +89,7 @@ function Removed<T extends { id: string }>({ rows, name, onRestore, locked }: { 
 }
 
 function Was({ shown, fields, field }: { shown: string; fields: string[]; field: string }) {
-  return fields.includes(field) ? <small className="was">Muse read {shown}</small> : null;
+  return fields.includes(field) ? <small className="was">Read as {shown}</small> : null;
 }
 
 const pickRow = (kind: "talks" | "speakers", id: string): Selection => ({ kind, id, field: null });
@@ -99,7 +102,7 @@ const pickIfNew = (selection: Selection | null, kind: "talks" | "speakers", id: 
   if (!(selection?.kind === kind && selection.id === id)) onSelect(pickRow(kind, id));
 };
 
-function TalksTable({ original, working, facts, selection, onSelect, onChange, locked }: TablesProps) {
+function TalksTable({ original, working, facts, selection, onSelect, onChange, locked, reader }: TablesProps) {
   const removed = removedRows(original, working, "talks");
   const change = (id: string, patch: Partial<Omit<Talk, "id">>) => onChange(patchTalk(working, id, patch));
   return (
@@ -194,7 +197,7 @@ function TalksTable({ original, working, facts, selection, onSelect, onChange, l
                     <SourceChips kind="talks" id={talk.id} facts={facts} selection={selection} onSelect={onSelect} />
                   </td>
                   <td>
-                    <ProvenanceBadge {...prov} />
+                    <ProvenanceBadge {...prov} reader={reader} />
                   </td>
                   <td>
                     <button
@@ -232,7 +235,7 @@ function TalksTable({ original, working, facts, selection, onSelect, onChange, l
 
 const PREFERENCE_WORDS: Record<Preference, string> = { morning: "Morning", afternoon: "Afternoon" };
 
-function SpeakersTable({ original, working, facts, selection, onSelect, onChange, locked }: TablesProps) {
+function SpeakersTable({ original, working, facts, selection, onSelect, onChange, locked, reader }: TablesProps) {
   const removed = removedRows(original, working, "speakers");
   const change = (id: string, patch: Partial<Omit<Speaker, "id">>) => onChange(patchSpeaker(working, id, patch));
   return (
@@ -308,7 +311,7 @@ function SpeakersTable({ original, working, facts, selection, onSelect, onChange
                     <SourceChips kind="speakers" id={speaker.id} facts={facts} selection={selection} onSelect={onSelect} />
                   </td>
                   <td>
-                    <ProvenanceBadge {...prov} />
+                    <ProvenanceBadge {...prov} reader={reader} />
                   </td>
                   <td>
                     <Tooltip
@@ -351,7 +354,7 @@ function SpeakersTable({ original, working, facts, selection, onSelect, onChange
   );
 }
 
-function TracksTable({ original, working, onChange, locked }: TablesProps) {
+function TracksTable({ original, working, onChange, locked, reader }: TablesProps) {
   return (
     <section className="rt" aria-label="Tracks">
       <header className="rt__head">
@@ -381,7 +384,7 @@ function TracksTable({ original, working, onChange, locked }: TablesProps) {
                 </td>
                 <td>{working.talks.filter((talk) => talk.track_id === track.id).length}</td>
                 <td>
-                  <ProvenanceBadge {...prov} />
+                  <ProvenanceBadge {...prov} reader={reader} />
                 </td>
               </tr>
             );

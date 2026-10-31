@@ -105,7 +105,7 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart, site = "serve
     };
   }, [api, intakeId, attempt]);
 
-  // Muse's reading, the first time it is there: it is both what the rows are compared against and where the person starts.
+  // The reading, the first time it is there: it is both what the rows are compared against and where the person starts.
   useEffect(() => {
     if (original !== null || state === null || state.intake_id !== intakeId) return;
     const start = startingReading(state);
@@ -171,7 +171,7 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart, site = "serve
   };
 
   const costly = backend === "real";
-  const problems = formProblems(form);
+  const problems = formProblems(form, backend);
 
   return (
     <div className="intake">
@@ -180,7 +180,7 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart, site = "serve
         title="New task"
         lead={
           <>
-            Paste the talks and the emails or notes. <Term id="muse">Muse</Term> reads them into the program’s shape, you check each row against the text it came from, and only then does anything run. By default the run kills half the brains.
+            Paste the talks and the emails or notes. <Term id="muse">Muse</Term>, or the free practice reader, fits them to the program’s shape. You check each row against the text it came from, and only then does anything run. By default the run kills half the brains.
           </>
         }
         actions={<Steps current={stepOf(phase)} />}
@@ -253,6 +253,7 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart, site = "serve
         <ReviewScreen
           original={original}
           working={working}
+          reader={phase.state.reader}
           texts={texts}
           scans={phase.state.scans}
           selection={selection}

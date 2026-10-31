@@ -70,7 +70,7 @@ export function ShapeCard() {
       <p className="shape__line">
         <b>2 days</b> · <b>3 tracks × 2 blocks</b> · <b>{LIMITS.minTalks} to {LIMITS.maxTalks} talks</b>
       </p>
-      <p className="shape__note">The shape is fixed. Muse fits what you paste to it, and says when it had to merge, split or cut.</p>
+      <p className="shape__note">The shape is fixed. The reader fits what you paste to it, and says when it had to merge, split or cut.</p>
     </section>
   );
 }
@@ -79,7 +79,7 @@ const count = (text: string): string => `${text.length.toLocaleString("en-US")} 
 
 export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, site = "server", busy, error, onRead, onSample, sampling, onClear, spend }: IntakeFormProps) {
   const set = <K extends keyof ReadingForm>(key: K, value: ReadingForm[K]) => onForm({ ...form, [key]: value });
-  const problems = formProblems(form);
+  const problems = formProblems(form, backend);
   const roomProblems = roomsOf(form.rooms).problems;
   const real = backend === "real";
   // what the optional fields hold is shown, never folded away: the sample text fills them
@@ -91,7 +91,7 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, site
           <span className="field__label">
             Talks <span className="field__hint">titles, speakers, abstracts. Required.</span>
           </span>
-          <textarea className="field__box" rows={14} value={form.talks} onChange={(event) => set("talks", event.target.value)} spellCheck={false} autoComplete="off" placeholder="Submission 1&#10;Title: …&#10;Speaker: …&#10;Abstract: …" />
+          <textarea className="field__box" rows={14} value={form.talks} onChange={(event) => set("talks", event.target.value)} spellCheck={false} autoComplete="off" placeholder="Submission 1&#10;Title: …&#10;Speaker: …&#10;Track: …&#10;Abstract: …" />
           <span className="field__count mono">{count(form.talks)}</span>
         </label>
         <Details id="more" summary="Add emails, notes, rooms or a conference name" hint="all optional" open={moreFilled}>

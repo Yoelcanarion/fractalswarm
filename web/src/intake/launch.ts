@@ -4,6 +4,7 @@
 import { crashesText, rivalLabel } from "../arena/helps/labels";
 import type { Room } from "./proposal";
 import type { Gate } from "./spend";
+import { LIMITS } from "./validate";
 
 // ---- the reading ----
 
@@ -29,6 +30,13 @@ export const BOX_LIMIT = 200_000;
 
 export type Backend = "fake" | "real";
 
+// The practice reader is a parser and not a model: it reads only blocks in the sample's wording (`SUBMISSION` in intake/fake.py), so a text
+// with fewer of them than a program takes can only end in an empty review. Muse reads any wording, and then the form has nothing to say.
+const PRACTICE_TALK = /^Title:.+\nSpeaker:.+\nTrack:.+\nAbstract:.+$/gm;
+
+/** How many talks of a text the practice reader can read. */
+export const practiceTalks = (text: string): number => text.match(PRACTICE_TALK)?.length ?? 0;
+
 /** The rooms the person filled in, or none (then the server uses its default four); a row half filled in is a mistake to show. */
 export function roomsOf(rows: RoomRow[]): { rooms: Pick<Room, "name" | "capacity">[]; problems: string[] } {
   const rooms: Pick<Room, "name" | "capacity">[] = [];
@@ -46,9 +54,12 @@ export function roomsOf(rows: RoomRow[]): { rooms: Pick<Room, "name" | "capacity
 }
 
 /** Why the form cannot be read yet, in the person's terms; empty when it can. */
-export function formProblems(form: ReadingForm): string[] {
+export function formProblems(form: ReadingForm, backend: Backend = "real"): string[] {
   const problems: string[] = [];
   if (form.talks.trim() === "") problems.push("Paste the talks: titles, speakers, abstracts.");
+  else if (backend === "fake" && practiceTalks(form.talks) < LIMITS.minTalks) {
+    problems.push(`The practice reader can read ${practiceTalks(form.talks)} of the ${LIMITS.minTalks} talks a program needs. It takes Title, Speaker, Track and Abstract lines, as in the sample text.`);
+  }
   for (const [box, label] of [["talks", "talks"], ["notes", "notes"], ["conference", "conference"]] as const) {
     if (form[box].length > BOX_LIMIT) problems.push(`The ${label} box is over ${BOX_LIMIT.toLocaleString("en-US")} characters.`);
   }

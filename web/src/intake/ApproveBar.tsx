@@ -4,7 +4,7 @@ import { canApprove, type Issue } from "./validate";
 
 export interface ApproveBarProps {
   issues: Issue[];
-  /** What the person changed from Muse's reading, as the server lists it. */
+  /** What the person changed from the reading, as the server lists it. */
   edits: string[];
   busy: boolean;
   /** What the server said when it did not take the approval. */
@@ -36,13 +36,13 @@ export function ApproveBar({ issues, edits, busy, error, onApprove }: ApproveBar
       )}
       <p className="approve__edits">
         {edits.length === 0 ? (
-          "No edits: this is Muse’s reading as it stands."
+          "No edits: this is the reading as it stands."
         ) : (
           <>
             <b>
               {edits.length} {edits.length === 1 ? "edit" : "edits"}
             </b>{" "}
-            to Muse’s reading: {edits.map(editWords).join("; ")}.
+            to the reading: {edits.map(editWords).join("; ")}.
           </>
         )}
       </p>

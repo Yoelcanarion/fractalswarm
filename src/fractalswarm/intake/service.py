@@ -54,14 +54,19 @@ def create_input(
     private: PrivateDir, intake_id: str, body: dict[str, Any]
 ) -> tuple[dict[str, Any], Path]:
     """Write ``input.json`` and ``pseudonyms.json`` for a new intake from a request body
-    (``talks``, ``notes``, ``conference``, ``rooms``, ``names``). Returns the run params of the
-    ``intake`` scenario and the directory."""
+    (``talks``, ``notes``, ``conference``, ``rooms``, ``names``, ``backend``). Returns the run
+    params of the ``intake`` scenario and the directory."""
     cleaned, rooms = read_body(body)
     segments, pseudonyms = mask(cleaned)
     directory = private.intake_dir(intake_id)
     directory.mkdir(parents=True, exist_ok=False)
     write_json(directory / "pseudonyms.json", pseudonyms.mapping())
-    saved = {"segments": segments, "rooms": rooms, "names": bool(body.get("names", False))}
+    saved = {
+        "segments": segments,
+        "rooms": rooms,
+        "names": bool(body.get("names", False)),
+        "reader": body.get("backend", "fake"),
+    }
     write_json(directory / "input.json", saved | {"created_at": utc_now()})
     return {"segments": segments, "rooms": rooms}, directory
 
@@ -119,6 +124,7 @@ def state_of(
         "state": state,
         "status": status,
         "texts": saved.get("segments"),
+        "reader": saved.get("reader"),
         "proposal": proposed["payload"]["proposal"] if proposed else None,
         "input_sha256": proposed["payload"]["input_sha256"] if proposed else None,
         "scans": [

@@ -23,7 +23,7 @@ import { SourcePane } from "./SourcePane";
 import { SpendPanel, type SpendPanelProps } from "./SpendPanel";
 import { Steps } from "./Steps";
 import { checkProposal } from "./validate";
-import { museReading, museTexts, preflightOf, stateOf } from "./testing";
+import { fixture, museReading, museTexts, preflightOf, stateOf } from "./testing";
 import { gateFor } from "./spend";
 
 const html = <P extends object>(component: FunctionComponent<P>, props: P): string => renderToStaticMarkup(createElement(component, props));
@@ -88,9 +88,16 @@ describe("the form", () => {
   });
 
   it("cannot read an empty form, and can read one with talks", () => {
+    const { talks } = fixture("sample.json");
     expect(readButton(form())).toContain("disabled");
-    expect(readButton(form({ form: { ...emptyForm(), talks: "Submission 1" } }))).not.toContain("disabled");
-    expect(readButton(form({ form: { ...emptyForm(), talks: "Submission 1" }, busy: true }))).toContain("disabled");
+    expect(readButton(form({ form: { ...emptyForm(), talks } }))).not.toContain("disabled");
+    expect(readButton(form({ form: { ...emptyForm(), talks }, busy: true }))).toContain("disabled");
+  });
+
+  it("says what the practice reader needs before it leaves a person with an empty review", () => {
+    const markup = form({ form: { ...emptyForm(), talks: "Rust for data engineers, by Ana Ruiz" } });
+    expect(readButton(markup)).toContain("disabled");
+    expect(plainText(markup)).toContain("The practice reader can read 0 of the 8 talks a program needs.");
   });
 
   it("says a half-filled room is a mistake, in the person's terms", () => {
@@ -217,15 +224,15 @@ describe("the review", () => {
     const markup = edited(addTalk(patchTalk(muse, "T01", { attendance: 40 }), muse));
     const text = plainText(markup);
     expect(text).toContain("Edited by you");
-    expect(text).toContain("Muse read 33");
+    expect(text).toContain("Read as 33");
     expect(text).toContain("Added by you");
     // the order of the server's own list: what was added, what was removed, then the fields changed
-    expect(text).toContain("2 edits to Muse’s reading: talk T13 added; talk T01: attendance.");
+    expect(text).toContain("2 edits to the reading: talk T13 added; talk T01: attendance.");
   });
 
   it("lists a row that was taken out, with a way back", () => {
     const text = plainText(edited(removeTalk(muse, "T05")));
-    expect(text).toContain("Taken out of Muse’s reading:");
+    expect(text).toContain("Taken out of the reading:");
     expect(text).toContain("Put back");
   });
 
@@ -258,6 +265,15 @@ describe("the review", () => {
     expect(plainText(review({ original: noted, working: noted }))).toContain("Dara Duarte gives a talk but wrote no note: any time is assumed");
   });
 
+  it("does not call the practice reader Muse", () => {
+    const text = plainText(review({ reader: "fake" }));
+    expect(text).toContain("The practice reader’s notes");
+    expect(text).toContain("The practice reader left no notes on this reading.");
+    expect(text).toContain("Practice");
+    expect(text).toContain("No edits: this is the reading as it stands.");
+    expect(text).not.toContain("Muse");
+  });
+
   it("says what the scan found in the boxes", () => {
     expect(plainText(review())).toContain("Scanned 3 boxes: all allowed; email addresses replaced in talks and notes.");
   });
@@ -271,10 +287,10 @@ describe("the review", () => {
     expect(text).toContain("Approved");
     expect(text).toContain("2026-10-29 16:24 UTC");
     expect(text).toContain("fingerprint 08e68651a110");
-    expect(text).toContain("2 edits to Muse’s reading: speaker S02: preference; talk T01: attendance.");
+    expect(text).toContain("2 edits to the reading: speaker S02: preference; talk T01: attendance.");
     expect(text).toContain("Quinn Tanaka has no talk in the program: left out");
     expect(text).toContain("the run panel");
-    expect(text).toContain("These rows are Muse’s reading. The server keeps the version you approved");
+    expect(text).toContain("These rows are the reading as it came. The server keeps the version you approved");
     const inputs = markup.match(/<(input|select|button)[^>]*>/g) ?? [];
     const editable = inputs.filter((tag) => /aria-label="(T|S|track)[^"]*(title|speaker|track|attendance|name|preference)|aria-label="Conference name"/.test(tag));
     expect(editable.length).toBeGreaterThan(30);
