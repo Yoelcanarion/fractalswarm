@@ -20,8 +20,7 @@ export interface SideNumbers {
   windows: readonly OutageWindow[];
   /** The playhead, in virtual ms: an outage that has not ended grows with it. */
   nowMs: number;
-  /** Idle agent-ms by the scored rule, on the log so far (``recoveryAt``, lib/recovery.ts): the number the run is scored on, as it stood. Not
-   * ``counters.idleAgentMs``, the older fold of every free agent under a coordinator that is out, which runs ahead of the scored number. */
+  /** Idle agent-ms by the scored rule, on the log so far (``recoveryAt``, lib/recovery.ts): the number the run is scored on, as it stood. */
   idleMs: number;
   /** The run has played to its last event, so its fold is the whole run. */
   finished: boolean;

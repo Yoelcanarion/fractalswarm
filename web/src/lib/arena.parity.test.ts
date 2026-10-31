@@ -1,12 +1,9 @@
 // The arena's display counters (lib/arena.ts, a fold a scrubber can drag) against the numbers W1's metrics score for the
 // same logs (bench/recovery.py `analyze`, served as `recovery` by GET /api/runs/{id}/metrics). The scoreboard shows the
 // fold while a run plays and the scored number once it has ended, so a figure that differs jumps at the last event. This
-// file pins both sides: where the fold IS the scored number (the crashes, the outage windows to the millisecond, the
-// contracts sent again, duplicated work, coordinator-dependency time, idle agent-seconds, and at every prefix of the log).
-// The idle agent-seconds the arena shows are the scored rule run on the log so far (lib/recovery.ts, `idleMs`), so the
-// card ends on the number the run is scored on, on every log the site ships. (lib/arena.ts also keeps the older display
-// fold of the free agents under a coordinator that is out, `idleAgentMs`; the card no longer reads it, and the first
-// block of cases below says by how much it differs.)
+// file pins that none does: the crashes, the outage windows to the millisecond, the contracts sent again, duplicated work,
+// coordinator-dependency time and idle agent-seconds are the scored numbers at the last event, and at every prefix of the
+// log. The idle agent-seconds are the scored rule run on the log so far (lib/recovery.ts, `idleMs`), on every log the site ships.
 //
 // Official numbers: lib/fixtures/recovery-official.json, taken from `analyze` on each log and on prefixes of it (`prefixes`:
 // the dependency time, the waits and the duplicated calls; `idle_prefixes`: the idle agent-seconds). The logs in demo/ are
@@ -54,8 +51,6 @@ interface Case {
   what: string;
   present: boolean;
   load: () => RunEvent[];
-  /** The older display fold's idle agent-seconds (`counters.idleAgentMs`), and how it stands to the scored figure (`idle_agent_s`). */
-  idle?: { fold: number; against: "equal" | "above" };
 }
 
 const CASES: Case[] = [
@@ -64,28 +59,24 @@ const CASES: Case[] = [
     what: "swarm, 5 coordinator kills (the committed demo log)",
     present: true,
     load: () => loadJsonl("demo/backup/events.jsonl"),
-    idle: { fold: 14.078, against: "above" },
   },
   {
     name: "central",
     what: "central baseline, 5 crashes",
     present: existsSync(recordedPath("t2-real-c3-central-seed1")),
     load: () => recorded("t2-real-c3-central-seed1"),
-    idle: { fold: 0, against: "equal" },
   },
   {
     name: "swarm-c3",
     what: "swarm, 5 coordinator kills (Phase 1 real run)",
     present: existsSync(recordedPath("t2-real-c3-swarm-seed1b")),
     load: () => recorded("t2-real-c3-swarm-seed1b"),
-    idle: { fold: 26.564, against: "equal" },
   },
   {
     name: "pipeline-c3",
     what: "pipeline baseline, 5 crashes",
     present: existsSync(recordedPath("tmp-pipeline-c3")),
     load: () => recorded("tmp-pipeline-c3"),
-    idle: { fold: 0, against: "equal" },
   },
   // The five logs the site ships (all in the repo): the run the arena opens on, and the two pairs of real runs.
   { name: "final", what: "swarm, 5 coordinator kills (the run the site opens on)", present: true, load: () => loadJsonl("demo/final/events.jsonl") },
@@ -124,15 +115,6 @@ for (const item of CASES) {
     it("idle agent-seconds, as the card counts them, are the scored figure at the last event, to the millisecond", () => {
       expect(recoveryAt(view.arena.recorded, end).idleMs).toBe(Math.round(scored.idle_agent_s * 1000));
     });
-
-    const old = item.idle;
-    if (old) {
-      it(`the older display fold of the idle agents (no longer on the card) is ${old.against === "equal" ? "the scored figure" : "above the scored figure, which also needs the session to have work waiting on the coordinator"}`, () => {
-        expect(counters.idleAgentMs / 1000).toBeCloseTo(old.fold, 3);
-        if (old.against === "equal") expect(counters.idleAgentMs / 1000).toBeCloseTo(scored.idle_agent_s, 3);
-        else expect(counters.idleAgentMs / 1000).toBeGreaterThan(scored.idle_agent_s);
-      });
-    }
 
     it("duplicated work is the scored count", () => {
       expect(counters.duplicatedCalls).toBe(scored.dup_calls);

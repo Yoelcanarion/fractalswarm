@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { arenaCounters, fingerprint, idleAgents } from "./arena";
+import { arenaCounters, fingerprint } from "./arena";
 import { openArbitrationCount } from "./collisions";
 import { ADOPTION_LIFE_MS, adoptionGlow, glow, litMessages, MESSAGE_LIFE_MS, messageGlow, restartProgress } from "./decay";
 import { foldEvents, type ViewState } from "./reducer";
@@ -136,68 +136,13 @@ describe("arena counters", () => {
     expect(at(v, 14_000).coordinatorDownMs).toBe(4000);
   });
 
-  it("counts agent-time idle while their coordinator is down", () => {
-    // A coordinator that goes down and leaves its agents alive (a durable supervisor).
-    const s = supervised();
-    s.at(10_000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 0, lost: [], restart_in_ms: 5000 });
-    s.at(15_000).emit("baseline.restarted", "o0", { coordinator: "o0", crash: 1, redo: [] });
-    const v = foldEvents(s.events);
-    // Two agents, idle for the 5 s between the crash and the restart.
-    expect(at(v, 15_000).idleAgentMs).toBe(2 * 5000);
-    expect(at(v, 15_000).idleAgentsNow).toBe(0);
-    expect(at(v, 99_000).idleAgentMs).toBe(2 * 5000); // nothing accrues once it is back
-  });
-
-  it("does not count the agents that a central supervisor's crash takes with it: their work is redone, not waited for", () => {
-    // bench/recovery.py scores 0.0 idle agent-seconds for t2-real-c3-central-seed1: an agent counts only while it is alive.
-    const s = supervised();
-    centralCrash(s, 10_000);
-    expect(idleAgents(foldEvents(s.events))).toBe(0);
-    restart(s, 15_000);
-    const v = foldEvents(s.events);
-    expect(at(v, 15_000)).toMatchObject({ idleAgentMs: 0, coordinatorDownMs: 5000 });
-  });
-
-  it("does not count an agent that finished, or was killed by chaos, under a coordinator that goes down", () => {
-    const s = supervised();
-    s.at(500).emit("actor.stopped", "o0.a1", { actor_id: "o0.a1", reason: "done" }); // finished its work
-    s.at(600).emit("chaos.injected", "@chaos", { fault: "kill_agent", target: "o0.a2" });
-    s.emit("actor.stopped", "chaos", { actor_id: "o0.a2", reason: "chaos" });
-    s.at(1000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 0, lost: [], restart_in_ms: 5000 });
-    const v = foldEvents(s.events);
-    expect(idleAgents(v)).toBe(0); // a1 is done and a2 is dead: nobody is waiting for o0
-    expect(at(v, 6000).idleAgentMs).toBe(0);
-  });
-
-  it("does not count the agents of a member the detector declared dead without a kill", () => {
+  it("does not count a member the detector declared dead without a kill as a coordinator crash", () => {
     const s = new Stream().emit("run.started", "@kernel", { seed: "0", scenario: "swarm", params: {}, clock: "sim" });
     s.spawn("o0", "root", null).spawn("o1", "track", "o0").spawn("o1.a", "agent", "o1");
     s.at(5000).emit("member.dead", "o0", { member: "o1", last_heard_ms: 1100, missed: 5 }); // a false death
     const v = foldEvents(s.events);
     expect(v.actors.o1.status).toBe("dead");
-    expect(idleAgents(v)).toBe(0);
-    expect(at(v, 60_000)).toMatchObject({ idleAgentMs: 0, coordinatorCrashes: 0 });
-  });
-
-  it("does not count an agent the crash stopped, nor the respawned one once the restart brings it back", () => {
-    const s = supervised();
-    s.at(1000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 2, lost: [], restart_in_ms: 5000 });
-    s.emit("actor.stopped", "o0", { actor_id: "o0.a1", reason: "crash" });
-    s.emit("actor.stopped", "o0", { actor_id: "o0.a2", reason: "crash" });
-    expect(idleAgents(foldEvents(s.events))).toBe(0); // gone, not waiting
-    restart(s, 6000, 1, []);
-    const v = foldEvents(s.events);
-    expect(idleAgents(v)).toBe(0); // back, and the coordinator is up
-    expect(at(v, 9000).idleAgentMs).toBe(0);
-  });
-
-  it("does not count an agent that is in the middle of a call", () => {
-    const s = supervised();
-    llm(s, "o0.a1", "e1", { role: "agent", n: 1 });
-    s.at(1000).emit("baseline.crashed", "o0", { coordinator: "o0", crash: 1, dispatched: 1, lost: [], restart_in_ms: 5000 });
-    const v = foldEvents(s.events);
-    expect(idleAgents(v)).toBe(1); // o0.a2 only: o0.a1 is still working (durable-max)
-    expect(at(v, 3000).idleAgentMs).toBe(1 * 2000);
+    expect(at(v, 60_000)).toMatchObject({ coordinatorCrashes: 0, coordinatorDownMs: 0 });
   });
 
   it("counts a swarm kill from the kill to the last takeover event for the victim", () => {

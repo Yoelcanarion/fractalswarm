@@ -49,13 +49,8 @@ describe.skipIf(!recorded("t2-real-c3-central-seed1"))("central baseline, 5 coor
     ]);
   });
 
-  it("measures the outage from crash to restart, and no agent idles in it: the crash takes them with it", () => {
+  it("measures the outage from crash to restart", () => {
     expect(counters.coordinatorDownMs).toBe(25_108);
-    expect(counters.idleAgentsNow).toBe(0);
-    // The agents are stopped with the supervisor and respawned by the restart, and the redone work is counted above.
-    // bench/recovery.py scores this run's idle agent-seconds 0.0 too (arena.parity.test.ts).
-    expect(counters.idleAgentMs).toBe(0);
-    expect(Object.keys(view.actors).length).toBeGreaterThan(2);
   });
 });
 
@@ -76,13 +71,6 @@ describe.skipIf(!recorded("t2-real-c3-swarm-seed1b"))("swarm, 5 coordinator kill
     ]);
     expect(counters.coordinatorDownMs).toBe(30_845);
   });
-
-  it("counts idle agents only while a really killed coordinator has them waiting", () => {
-    // 13 agents, 2 under each killed orchestrator: false deaths and finished or killed agents
-    // must not keep counting after a takeover.
-    expect(counters.idleAgentsNow).toBe(0);
-    expect(counters.idleAgentMs).toBeLessThan(counters.coordinatorDownMs * 2);
-  });
 });
 
 describe.skipIf(!recorded("tmp-pipeline-c3"))("pipeline baseline, 5 coordinator crashes (real run)", () => {
@@ -95,9 +83,5 @@ describe.skipIf(!recorded("tmp-pipeline-c3"))("pipeline baseline, 5 coordinator 
       redispatches: 5,
       duplicatedCalls: 5,
     });
-  });
-
-  it("loses its one agent with each crash, so nothing idles (bench/recovery.py: 0.0 idle agent-seconds)", () => {
-    expect(counters.idleAgentMs).toBe(0);
   });
 });

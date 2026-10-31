@@ -11,13 +11,7 @@
 //   coordinator down-time per crash, one window: a supervisor's baseline.crashed -> baseline.restarted;
 //                         the swarm's kill -> the last takeover event for the victim (bench/recovery.py
 //                         ends it at the last ownership.remapped, and tree.adopted lands with it)
-//   idle agents           an agent that is alive, has no call in flight, and answers to a coordinator that
-//                         is down; integrated over virtual time in agent-ms. One a crash stopped is gone
-//                         (a process-tree baseline redoes its work), not idle: bench/recovery.py scores
-//                         the central baseline's idle agent-seconds 0.0. Approximates "idle agent-seconds",
-//                         which also needs its session to have work waiting on the coordinator, so it
-//                         is equal or higher (tests: arena.parity.test.ts)
-//   re-dispatches         contract.dispatched of work that was rejected as lost, or of an idem_key that
+//   re-dispatches        contract.dispatched of work that was rejected as lost, or of an idem_key that
 //                         went out before
 //   duplicated calls      the scored "Duplicated work" (bench/recovery.py dup_calls), by the same
 //                         rules on the events so far: a call of an attempt that a later attempt of
@@ -28,9 +22,12 @@
 //                         (lib/recovery.ts). The window a coordinator was down is `coordinatorDownMs`
 //   hard violations       the final schedule check, once task.result lands
 //   cost so far           budget.settled, summed (Counters.spentUsd)
+//
+// The idle agent-seconds are not a counter of this file: the scoreboard reads them from lib/recovery.ts
+// (`recoveryAt(...).idleMs`), the scored rule run on the log so far.
 
 import { asString, asStrings } from "./generic";
-import type { ActorNode, ViewState } from "./reducer";
+import type { ViewState } from "./reducer";
 import { emptyRecorded, isRecoveryEvent, record, recoveryAt, type Recorded } from "./recovery";
 import type { RunEvent } from "./types";
 
@@ -43,9 +40,6 @@ export interface OutageWindow {
 
 export interface ArenaState {
   windows: OutageWindow[];
-  idleAgentMs: number;
-  idleNow: number; // idle agents right now, as of the last event
-  lastTs: number;
   redispatches: number;
   lostWork: Record<string, true>; // work rejected as lost and not sent again yet
   dispatchedKeys: Record<string, true>;
@@ -54,9 +48,6 @@ export interface ArenaState {
 
 export const emptyArena = (): ArenaState => ({
   windows: [],
-  idleAgentMs: 0,
-  idleNow: 0,
-  lastTs: 0,
   redispatches: 0,
   lostWork: {},
   dispatchedKeys: {},
@@ -69,8 +60,6 @@ export interface ArenaCounters {
   coordinatorCrashes: number;
   coordinatorDownMs: number;
   dependencyMs: number; // the scored coordinator-dependency time, on the log so far
-  idleAgentMs: number;
-  idleAgentsNow: number;
   redispatches: number;
   duplicatedCalls: number;
   hardViolations: number | null; // null until the run has been checked
@@ -89,29 +78,6 @@ export function fingerprint(value: unknown): string {
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
-}
-
-const isLeaf = (actor: ActorNode): boolean => actor.kind === "agent" || actor.kind === "worker";
-// A coordinator that is really out: killed, or crashed and restarting. One the detector declared
-// dead with no kill (a false death) may still be working, so its agents are not waiting.
-const DOWN: ReadonlySet<string> = new Set(["restarting", "killed"]);
-
-/** An agent that is waiting on its coordinator rather than finished or gone: alive. One that finished,
- * was killed by chaos, or was stopped by the coordinator's crash (the restart respawns it and its work
- * is done again) is not. */
-const awaitsCoordinator = (actor: ActorNode): boolean => actor.status === "alive";
-
-/** Agents waiting on a coordinator that is down, and not in the middle of an LLM call. */
-export function idleAgents(view: ViewState): number {
-  const busy = new Set(Object.values(view.inflight).map((call) => call.actor));
-  let idle = 0;
-  for (const id of view.order) {
-    const actor = view.actors[id];
-    if (!isLeaf(actor) || busy.has(id) || !awaitsCoordinator(actor)) continue;
-    const owner = actor.parent === null ? undefined : view.actors[actor.parent];
-    if (owner && !isLeaf(owner) && DOWN.has(owner.status)) idle += 1;
-  }
-  return idle;
 }
 
 const workKey = (p: Record<string, unknown>): string => `${asString(p.goal_id)}/${asString(p.contract_id)}`;
@@ -166,17 +132,11 @@ function windowsFor(state: ArenaState, event: RunEvent): OutageWindow[] {
   }
 }
 
-/** Fold one event. ``after`` is the view after the tree and panels have folded it. */
-export function foldArena(state: ArenaState, event: RunEvent, after: ViewState): ArenaState {
+/** Fold one event. The view after the tree and panels have folded it (``_after``) is passed by the reducer and not read here. */
+export function foldArena(state: ArenaState, event: RunEvent, _after: ViewState): ArenaState {
   const p = event.payload;
-  const ts = event.ts_virtual;
   let next = state;
   if (isRecoveryEvent(event)) next = { ...next, recorded: record(next.recorded, event) };
-
-  // Idle agent-time accrues over the stretch since the previous event, at the count it left.
-  if (state.idleNow > 0 && ts > state.lastTs) {
-    next = { ...next, idleAgentMs: next.idleAgentMs + state.idleNow * (ts - state.lastTs) };
-  }
 
   const windows = windowsFor(next, event);
   if (windows !== next.windows) next = { ...next, windows };
@@ -201,9 +161,7 @@ export function foldArena(state: ArenaState, event: RunEvent, after: ViewState):
     }
   }
 
-  const anyDown = next.windows.some((w) => w.until === null) || Object.values(after.actors).some((a) => DOWN.has(a.status));
-  const idleNow = anyDown ? idleAgents(after) : 0;
-  return idleNow === next.idleNow && ts === next.lastTs ? next : { ...next, idleNow, lastTs: ts };
+  return next;
 }
 
 /** The counters at virtual time ``nowMs``. An outage that has not ended keeps growing with the
@@ -212,14 +170,11 @@ export function arenaCounters(view: ViewState, nowMs: number): ArenaCounters {
   const { arena } = view;
   const recovery = recoveryAt(arena.recorded, nowMs);
   const down = arena.windows.reduce((sum, w) => sum + Math.max(0, (w.until ?? nowMs) - w.since), 0);
-  const idle = arena.idleAgentMs + (arena.idleNow > 0 ? arena.idleNow * Math.max(0, nowMs - arena.lastTs) : 0);
   return {
     costUsd: view.counters.spentUsd,
     coordinatorCrashes: arena.windows.length,
     coordinatorDownMs: down,
     dependencyMs: recovery.dependencyMs,
-    idleAgentMs: idle,
-    idleAgentsNow: arena.idleNow,
     redispatches: arena.redispatches,
     duplicatedCalls: recovery.duplicatedCalls,
     hardViolations: view.schedule.hardViolations,
