@@ -27,7 +27,7 @@ const NO_OFFICIAL: { left: Official | null; right: Official | null } = { left: n
 // The failure plan's crash points are points of the work, not of time (profiles.py, half_the_brains_plan): on the shared clock the first kill
 // does not fall at the same second on both sides. "About" because the logs put one crash a step apart (the durable pair's fourth: progress 0.67
 // on one side, 0.72 on the other).
-const LEAD = "FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures, each at about the same point of the work.";
+const LEAD = "FractalSwarm, on the left, and a rival, on the right, plan the same conference under the same failures, each at about the same point of the work.";
 
 /** The arena: the swarm and its rival on one clock, face to face. */
 export function ArenaPage({ route }: { route: ArenaRoute }) {

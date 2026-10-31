@@ -421,7 +421,7 @@ describe("the page", () => {
     const session = await opened(0);
     const html = await view({ session, left: "s", right: "r" });
     // the plan's crash points are points of the work, not of time: the two sides are hit at about the same point of the work, not at the same second
-    expect(text(html)).toContain("FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures, each at about the same point of the work.");
+    expect(text(html)).toContain("FractalSwarm, on the left, and a rival, on the right, plan the same conference under the same failures, each at about the same point of the work.");
     expect(text(html)).toContain("The rival is an ideal durable supervisor: its workers survive a crash, and it is back after 5 s.");
     expect(html).toContain('<button type="button" class="btn btn--on">Watch the first crash</button>');
     expect(html).toContain('<button type="button" class="btn">Play both from the start</button>');

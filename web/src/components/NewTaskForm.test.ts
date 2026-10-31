@@ -50,7 +50,7 @@ describe("the form", () => {
 
   it("says in words what each field is for, as text on the page and not as a hover hint", () => {
     expect(out).not.toMatch(/ title="/);
-    expect(plain).toContain("Orchestrators per level");
+    expect(plain).toContain("Coordinators per level");
     expect(plain).toContain("Builds the tree the fanout describes");
     expect(plain).toContain("Seeds the run's randomness");
     expect(plain).toContain("The most the run may spend");

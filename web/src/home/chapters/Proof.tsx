@@ -37,7 +37,9 @@ export function Proof() {
           <ProofBars play={play} />
         </div>
         <div className="home-proof__under">
-          <p className="home-setting home-proof__reason">{COPY.rivalReason}</p>
+          <p className="home-setting home-proof__reason">
+            {COPY.rivalReason} {COPY.durableReason}
+          </p>
           <div className="home-proof__after">
             <p className="home-proof__links">
               <a className="home-link" href={evidenceHash("tie")}>

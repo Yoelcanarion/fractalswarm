@@ -16,7 +16,8 @@ export interface Door {
   closedNote?: string;
 }
 
-// The purposes are a few words: the card has a drawing and a title, and the page is held to about 200 words (words.test.ts).
+// The titles are the app's own tabs, so a door and the tab it opens have one name. The purposes are a few words: the card has a
+// drawing and a title, and the page is held to about 200 words (words.test.ts).
 //
 // Four doors, and each opens a page that stands on its own. Two are not on the menu, and their routes stay: the Director's
 // (`#/director`, a page of scenes for the video, with no way back and most scenes needing a run in the address) and the ablation's
@@ -24,15 +25,15 @@ export interface Door {
 export const DOORS: readonly Door[] = [
   {
     id: "arena",
-    title: "The arena",
-    purpose: "Rival systems, compared.",
+    title: "Arena",
+    purpose: "Against a rival.",
     href: "#/arena",
     needsServer: false,
   },
   {
     // One door: the page behind "#/new" is where you paste your own text and launch the run on it.
     id: "live",
-    title: "A live run",
+    title: "New task",
     purpose: "Your own text.",
     href: "#/new",
     needsServer: true,
@@ -40,16 +41,16 @@ export const DOORS: readonly Door[] = [
   },
   {
     id: "replays",
-    title: "Replays",
-    purpose: "Every recorded run.",
+    title: "Runs",
+    purpose: "Recorded runs.",
     href: "#/runs",
     needsServer: false,
   },
   {
     // The evidence page: the charts, the fair fight, where it ties and where it does worse.
     id: "numbers",
-    title: "The numbers",
-    purpose: "All the evidence.",
+    title: "Evidence",
+    purpose: "Numbers, ties and losses.",
     href: "#/evidence",
     needsServer: false,
   },

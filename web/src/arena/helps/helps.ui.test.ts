@@ -212,8 +212,8 @@ describe("the setting of the counts", () => {
   });
 
   it("says where the real-model reading is, with a link to it", () => {
-    expect(line).toContain('<a href="#/evidence">evidence page</a>');
-    expect(plainText(line)).toContain("The real-model reading is on the evidence page.");
+    expect(line).toContain('<a href="#/evidence">their own page</a>');
+    expect(plainText(line)).toContain("The real-model results are on their own page.");
   });
 
   it("is on the panel only: where there are no counts, there is no setting to state", () => {

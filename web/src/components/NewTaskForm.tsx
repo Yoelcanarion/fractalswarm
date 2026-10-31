@@ -164,7 +164,7 @@ export function NewTaskForm() {
             </select>
           )}
         </Field>
-        <Field label="Fanout" help="Orchestrators per level. 3,2 is a root with 3 tracks, each with 2 sessions: 6 sessions in all.">
+        <Field label="Fanout" help="Coordinators per level. 3,2 is a root with 3 tracks, each with 2 sessions: 6 sessions in all.">
           {(aria) => <input {...aria} value={form.fanout} onChange={(e) => set("fanout", e.target.value)} />}
         </Field>
         <Field label="Agents per session" help="The agents that work in each session.">

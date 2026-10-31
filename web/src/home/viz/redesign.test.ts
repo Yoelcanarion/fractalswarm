@@ -155,8 +155,8 @@ describe("the Proof's data", () => {
   });
 
   it("print the setting of each: the model, the task, the failure profile and the seeds", () => {
-    expect(central.setting).toBe(`Real model · T2 conference · C3 · ${story.numbers.r5.t2.seeds} seeds`);
-    expect(durable.setting).toBe(`Real model · T2 conference · C3 · ${story.numbers.r2.seeds} seeds`);
+    expect(central.setting).toBe(`Real model · conference · 5 crashes · ${story.numbers.r5.t2.seeds} seeds`);
+    expect(durable.setting).toBe(`Real model · conference · 5 crashes · ${story.numbers.r2.seeds} seeds`);
   });
 
   it("draw every seed of both workflows, and their means are the numbers the page quotes", () => {
@@ -203,7 +203,7 @@ describe("the Proof's data", () => {
     expect(reading).toContain(`FractalSwarm ${proofText(t2.swarmExtraPct, "pct")}, In-process supervisor ${proofText(t2.centralExtraPct, "pct")}`);
     for (const row of durable.rows) expect(reading).toContain(`the data's verdict is a ${row.verdict}`);
     // the extra cost names its basis, because the claims give it on two
-    expect(reading).toContain("extra cost, pre-registered basis: FractalSwarm");
+    expect(reading).toContain("extra cost over its crash-free run, pre-registered basis: FractalSwarm");
     expect(reading).not.toMatch(/\bwin\b|faster|cheaper|simpler|more reliable|NaN|undefined/i);
   });
 });

@@ -306,7 +306,7 @@ describe("the run page", () => {
     // the view stays as it opened, with nothing in it, and the playhead is at the end of the log: what a run that never spawned one looks like
     store.setState({ cursor: store.getState().events.length });
     const t = text(render(store, createElement(RunPage)));
-    expect(t).toContain("This run created no orchestrator");
+    expect(t).toContain("This run created no coordinator");
     expect(t).toContain("Its log ends without one");
     expect(t).not.toContain("Waiting for the first actor");
     expect(t).not.toContain("The run is at its start");

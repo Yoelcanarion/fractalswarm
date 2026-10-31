@@ -98,7 +98,7 @@ export function PlanView({ runId, view, live }: Props) {
           <PStat label="tracks" value={tracks.length} />
           <PStat label="talks planned" value={talks} />
           <PStat label="scope nodes" value={approval?.nodes ?? security.scope?.nodes.length ?? 0} title="the nodes the approved plan lets a subgoal map to (Security tab)" />
-          <PStat label="sub-plans" value={plan.refinements.length} title="plan.refined: an orchestrator split its subgoal" />
+          <PStat label="sub-plans" value={plan.refinements.length} title="plan.refined: a coordinator split its subgoal" />
           <PStat label="plans rejected" value={plan.rejections.length} tone={plan.rejections.length > 0 ? "warn" : ""} />
           {proposal?.fallback && <PStat label="planner" value="fallback" tone="warn" title="the deterministic fallback plan, not the model's" />}
         </div>
@@ -222,7 +222,7 @@ export function PlanView({ runId, view, live }: Props) {
 
         <Card title="Sub-plans and rejections" hint="below the root">
           {plan.refinements.length === 0 ? (
-            <Nothing>No orchestrator has split its subgoal yet.</Nothing>
+            <Nothing>No coordinator has split its subgoal yet.</Nothing>
           ) : (
             <table className="ptable">
               <tbody>

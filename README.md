@@ -6,6 +6,8 @@ FractalSwarm is a runtime for teams of LLM agents. Its coordinators form a tree,
 
 Built on Muse Spark, Muse Wonder and Llama PromptGuard 2 for the Meta Global AI Developer Hackathon.
 
+Clone it and run one command. [uv](https://docs.astral.sh/uv/) installs the rest, Python included.
+
 ```sh
 uv run fractalswarm demo --verify    # no API key needed
 ```

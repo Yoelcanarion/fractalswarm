@@ -41,18 +41,21 @@ export const COPY = {
   labels: { stalled: "stalled", extraCost: "extra cost", extraCostBasis: "extra cost, pre-registered basis" },
 
   // Said next to every number that is set against the in-process supervisor (R5): the gap is mostly a property of that design.
-  rivalReason: "In-process: its workers die with it, so most of the gap comes from that design.",
+  rivalReason: "In-process: its agents die with it, so most of the gap comes from that design.",
+  // What the other rival's name means, in the words of the video's s6: the proof sets the two side by side.
+  durableReason: "Ideal durable: its agents survive, and it restarts at once.",
 
   hero: {
-    kicker: "Muse Spark · Muse Wonder",
-    line: "AI agents led by a tree of small coordinators. Any of them can die mid-run, and the rest take over its work.",
+    kicker: "Built on Muse Spark · Muse Wonder",
+    line: "AI agents plan a conference, led by a tree of small coordinators. Any of them can die, and the rest take over its work.",
     kill: "Kill one yourself",
     object: "The real tree of a recorded run: a root, its tracks and sessions, and their agents. Coordinators are killed one after another, and it heals.",
   },
 
   problem: {
     title: "A team that depends on one coordinator.",
-    line: "In the simplest setup its workers die with it, and their calls are paid for twice.",
+    line: "In the simplest setup its agents die with it, and finished work is paid for twice.",
+    key: "Rows: agents · Bars: model calls",
     film: "Work lanes of a real run of an in-process supervisor: one lane per agent, one bar per model call, on a shared clock. The coordinator crashes, the work waits, and the calls it had already made are made again.",
     more: {
       film: "The film:",

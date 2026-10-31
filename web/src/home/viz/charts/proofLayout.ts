@@ -20,6 +20,8 @@ export const PAIR_GAP = 48;
 
 /** Below this width a workflow's name sits above its line instead of beside it. */
 const INLINE_FROM = 560;
+/** Below this width a row's long label does not fit on its line. */
+const LONG_LABEL_FROM = 340;
 const NAME_W = 172;
 const VALUE_W = 64;
 const BAR_H = 10;
@@ -173,7 +175,7 @@ function barRowGeo(row: BarRow, rival: string, c: Cursor, env: Env): RowGeo {
     return line;
   });
   c.y += ROW_GAP;
-  return { id: row.id, label: row.label, labelAt, chip: null, zero: null, lines };
+  return { id: row.id, label: env.w < LONG_LABEL_FROM && row.short ? row.short : row.label, labelAt, chip: null, zero: null, lines };
 }
 
 function seedRowGeo(row: SeedRow, rival: string, c: Cursor, env: Env): RowGeo {

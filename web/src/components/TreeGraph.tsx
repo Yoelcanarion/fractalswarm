@@ -256,7 +256,7 @@ function Graph({ view }: { view: ViewState }) {
       >
         <Background gap={28} size={1} color="var(--grid)" />
         <Panel position="top-left" className="run__legend">
-          colour = the subtree an actor belongs to · ✕ killed · a moving line is a message
+          colour = the branch of the tree a card belongs to · ✕ killed · a moving line is a message
         </Panel>
       </ReactFlow>
     </div>
@@ -272,7 +272,7 @@ function NoTreeYet() {
   if (live) return <div className="empty">Waiting for the first actor to spawn…</div>;
   if (total > 0 && cursor >= total) {
     return (
-      <EmptyState title="This run created no orchestrator">
+      <EmptyState title="This run created no coordinator">
         Its log ends without one, so there is no tree to draw. The counters and the events show what did happen.
       </EmptyState>
     );
@@ -280,7 +280,7 @@ function NoTreeYet() {
   const { seek, setPlaying } = store.getState();
   return (
     <EmptyState
-      title={cursor === 0 ? "The run is at its start" : "No orchestrator exists yet at this point"}
+      title={cursor === 0 ? "The run is at its start" : "No coordinator exists yet at this point"}
       actions={
         <>
           {crashAt !== null && (
@@ -313,7 +313,7 @@ function NoTreeYet() {
         </>
       }
     >
-      Press play, or drag the playhead along the bar below: each orchestrator appears when it was spawned.
+      Press play, or drag the playhead along the bar below: each coordinator appears when it starts.
     </EmptyState>
   );
 }

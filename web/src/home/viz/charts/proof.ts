@@ -12,6 +12,8 @@ export type Unit = "s" | "pct";
 export interface BarRow {
   id: "stall" | "cost";
   label: string;
+  /** The label on a line too narrow for `label`. */
+  short?: string;
   unit: Unit;
   swarm: number;
   rival: number;
@@ -35,7 +37,7 @@ export interface SeedRow {
 interface PanelBase {
   /** "In-process supervisor": the name the data gives the rival. */
   rival: string;
-  /** "Real model · T2 conference · C3 · 2 seeds": the setting of the numbers. */
+  /** "Real model · conference · 5 crashes · 2 seeds": the setting of the numbers, in words. The fold beside the chart gives its names, T2 and C3. */
   setting: string;
 }
 
@@ -55,12 +57,14 @@ export type ProofPanel = BarsPanel | SeedsPanel;
 
 export type ProofStory = Pick<Story, "numbers" | "verdicts" | "workflows" | "headline" | "hero">;
 
-/** t2_conference becomes "T2 conference". */
-const taskName = (task: string): string => task.replace(/^t(\d+)_/, "T$1 ").replace(/_/g, " ");
+/** t2_conference becomes "conference": the task in words. */
+const taskName = (task: string): string => task.replace(/^t\d+_/, "").replace(/_/g, " ");
 const seedsName = (n: number): string => `${n} seed${n === 1 ? "" : "s"}`;
 
 /** What an extra cost is measured on: the pre-registered basis, which estimates the cost of the calls a crash cancels (the claims' R5 gives the other). */
 const COST_LABEL = "Extra cost, pre-registered basis";
+/** The same, saying what it is extra to: on the line that has no verdict beside it. */
+const COST_LABEL_LONG = "Extra cost over its crash-free run, pre-registered basis";
 
 /** Written the way the page writes them: one decimal, a real minus. */
 export function proofText(value: number, unit: Unit): string {
@@ -73,6 +77,12 @@ export function proofText(value: number, unit: Unit): string {
 export function barShare(value: number, other: number): number {
   const longest = Math.max(value, other, 0);
   return longest <= 0 ? 0 : Math.max(0, value) / longest;
+}
+
+/** "5 crashes": a failure profile in words, read from the data; its name where the data has no count for it. */
+function profileName(story: ProofStory, profile: string | null): string | null {
+  const point = story.hero.series["central"]?.points.find((p) => p.profile === profile);
+  return point ? `${point.x} ${point.x === 1 ? "crash" : "crashes"}` : profile;
 }
 
 const setting = (real: boolean, task: string, profile: string | null, seeds: number): string =>
@@ -100,21 +110,21 @@ export function proofPanels(story: ProofStory): ProofPanel[] {
       kind: "bars",
       id: "central",
       rival: story.workflows["central"] ?? "central",
-      setting: setting(story.hero.model === "real", t2.task, central?.profile ?? null, t2.seeds),
+      setting: setting(story.hero.model === "real", t2.task, profileName(story, central?.profile ?? null), t2.seeds),
       rows: [
         { id: "stall", label: "Stalled after a crash", unit: "s", swarm: t2.swarmStallS, rival: t2.centralStallS },
-        { id: "cost", label: COST_LABEL, unit: "pct", swarm: t2.swarmExtraPct, rival: t2.centralExtraPct },
+        { id: "cost", label: COST_LABEL_LONG, short: COST_LABEL, unit: "pct", swarm: t2.swarmExtraPct, rival: t2.centralExtraPct },
       ],
     },
     {
       kind: "seeds",
       id: "durable-max",
       rival: story.workflows["durable-max"] ?? "durable-max",
-      setting: setting(story.headline?.real ?? story.hero.model === "real", story.numbers.r2.task, profile, story.numbers.r2.seeds),
+      setting: setting(story.headline?.real ?? story.hero.model === "real", story.numbers.r2.task, profileName(story, profile), story.numbers.r2.seeds),
       rows: [
         {
           id: "stall",
-          label: "Stalled after a crash · a dot for each run",
+          label: "Stalled · a dot for each run · left is less",
           unit: "s",
           swarm: perSeed(story, "swarm", profile, (c) => c.stallS),
           rival: perSeed(story, "durable-max", profile, (c) => c.stallS),

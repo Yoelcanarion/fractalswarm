@@ -107,13 +107,14 @@ export function HelpsHead({ actions }: { actions?: ReactNode }) {
 }
 
 /** What every count on the page was made on, in view before the first of them: the file is the $0 evidence (docs/claims.md), so a win or a tie
- * in it is a check of the design and not a result on real runs. The real-model reading is on the evidence page. */
+ * in it is a check of the design and not a result on real runs. The real-model results have a page of their own: this one is under the
+ * app's Evidence tab, so its name would send a reader to where they are. */
 function SettingLine() {
   return (
     <p className="helps__setting" data-helps="setting">
       <span className="helps__setting-tag">Fake model, simulated clock</span>
-      The $0 runs: they check the design and do not measure the real model, so a win or a tie here is not a real-run result. The real-model reading is on the{" "}
-      <a href="#/evidence">evidence page</a>.
+      The $0 runs: they check the design and do not measure the real model, so a win or a tie here is not a real-run result. The real-model results are on{" "}
+      <a href="#/evidence">their own page</a>.
     </p>
   );
 }

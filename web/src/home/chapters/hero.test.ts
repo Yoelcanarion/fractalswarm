@@ -56,7 +56,7 @@ describe("the hero's words", () => {
     expect(hero).toContain("Kill half the brains. It still finishes.");
     expect(hero).toContain("Muse Spark");
     expect(hero).toContain("Muse Wonder");
-    expect(hero).toContain("AI agents led by a tree of small coordinators.");
+    expect(hero).toContain("AI agents plan a conference, led by a tree of small coordinators.");
     const html = heroOf(render(false));
     expect(html.match(/class="home-button/g)).toHaveLength(1);
     expect(html).toContain('href="#/?at=demo"');

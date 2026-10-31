@@ -42,8 +42,9 @@ export function Problem() {
         <figure ref={film} className="home-film" aria-label={COPY.problem.film}>
           <ProblemFilm play={play} />
         </figure>
-        <div className="home-section__tools">
+        <div className="home-section__tools home-section__tools--key">
           <Repeat onClick={() => setAgain((n) => n + 1)} />
+          <p className="home-film__key">{COPY.problem.key}</p>
         </div>
         <SeeMore>
           {filmSetting && (
