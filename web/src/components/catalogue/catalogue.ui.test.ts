@@ -290,6 +290,22 @@ describe("the page", () => {
     expect(out.split("runstable")[1]).not.toContain("#/run/now");
   });
 
+  it("lists every run the static site holds and offers no form that starts one, where a server lists four and offers it", () => {
+    // the five the site is built with: the exporter lists the final run, then the others by name, so the durable swarm comes last
+    const ids = ["demo-final", "demo-pair-central-rival", "demo-pair-central-swarm", "demo-pair-durable-max-rival", "demo-pair-durable-max-swarm"];
+    const runs = ids.map((id) => listing(id));
+    const featuredIds = (out: string): string[] =>
+      [...(/<ul class="featured"[\s\S]*?<\/ul>/.exec(out)?.[0] ?? "").matchAll(/class="mono featured__id" href="#\/run\/([^?"]+)/g)].map((m) => m[1]);
+    const site = page({ runsLoaded: true, runs, capabilities: { ...DEFAULT_CAPABILITIES, static: true } });
+    expect(featuredIds(site)).toEqual(ids);
+    expect(site).not.toContain('<details id="start"');
+    expect(text(site)).not.toContain("Start a run of your own");
+    expect(text(site)).toContain("All 5 runs");
+    const server = page({ runsLoaded: true, runs });
+    expect(featuredIds(server)).toEqual(ids.slice(0, 4));
+    expect(server).toContain('<details id="start"');
+  });
+
   it("opens with one main action and the runs to start from, with the whole list and the form under Details", () => {
     const out = page({ runsLoaded: true, runs: [listing("old-1"), listing("demo-final"), listing("old-2", "interrupted")] });
     // the main action is the final run, wherever the server lists it

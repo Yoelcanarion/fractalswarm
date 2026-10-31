@@ -1,56 +1,111 @@
 import { getViewportForBounds, type Node } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 
-import { ACROSS, boundsOf, layoutTree } from "../lib/layout";
+import { ACROSS, boundsOf, layoutTree, type Bounds, type Placed } from "../lib/layout";
 import { foldEvents } from "../lib/reducer";
 import { loadJsonl } from "../lib/testing";
 import { FIT_MAX_ZOOM, FIT_PADDING, frameTree, keepSizes } from "./useTreeMotion";
 
 // The committed final run. Its root, o0, is killed at event 4806 (53.3 s) and its heir takes over at 5261 (58.8 s): in between the dead
-// root stays where it fell, with the tree under it, because it still holds the root key.
+// root stays where it fell, with the tree under it, because it still holds the root key. The takeover is logged in two steps, the heir taking
+// the key and then the adoptions of the dead root's children, and for the moment between them three brains stand side by side in the top row.
 const events = loadJsonl("demo/final/events.jsonl");
 const ROOT_DOWN = 5100;
+const BETWEEN = 5260; // the first 5260 events: the heir has the key, and its brothers have not been adopted yet
+const EARLY = 60; // thirteen cards, the tree still growing: the root alone in the top row, and the tree as tall as a pane of 336 px allows
 
-// The pane of a 1366 px window's run page, and the key in its corner: a line 8 px from the edge and 25 px high.
+// The pane of a 1366 px window's run page, and the key in its corner (measured on the page): 8 px from the edge, 533 wide and 23 high. A window
+// of 1024 px has a pane of 990, which the key reaches past the middle of.
 const PANE = { width: 1332, height: 336, minZoom: 0.2 };
-const KEY_REACH = 33;
+const NARROW = { width: 990, height: 336, minZoom: 0.2 };
+const KEY = { left: 8, right: 541, bottom: 31 };
+const KEY_GAP = 6; // what the camera keeps clear round the key
+
+const cardsOf = (placed: Placed[]): Bounds[] => placed.map(({ x, y, width, height }) => ({ x, y, width, height }));
+const plainFrame = (area: Bounds, pane: typeof PANE) => getViewportForBounds(area, pane.width, pane.height, pane.minZoom, FIT_MAX_ZOOM, FIT_PADDING);
+// where a card is on the pane when the camera frames the tree as `view` says
+const drawn = (p: Placed, view: { x: number; y: number; zoom: number }) => ({
+  left: view.x + p.x * view.zoom,
+  top: view.y + p.y * view.zoom,
+  right: view.x + (p.x + p.width) * view.zoom,
+  bottom: view.y + (p.y + p.height) * view.zoom,
+});
+const underKey = (p: Placed, view: { x: number; y: number; zoom: number }): boolean => {
+  const card = drawn(p, view);
+  return card.top < KEY.bottom + KEY_GAP && card.left < KEY.right + KEY_GAP && card.right > KEY.left;
+};
 
 describe("where the camera puts the tree", () => {
-  const view = foldEvents(events.slice(0, ROOT_DOWN));
-  const placed = layoutTree(view);
-  const area = boundsOf(view, placed)!;
+  const rootDown = foldEvents(events.slice(0, ROOT_DOWN));
+  const rootPlaced = layoutTree(rootDown);
+  const rootArea = boundsOf(rootDown, rootPlaced)!;
+  const between = foldEvents(events.slice(0, BETWEEN));
+  const betweenPlaced = layoutTree(between);
+  const betweenArea = boundsOf(between, betweenPlaced)!;
+  const early = foldEvents(events.slice(0, EARLY));
+  const earlyPlaced = layoutTree(early);
+  const earlyArea = boundsOf(early, earlyPlaced)!;
 
   it("has the dead root alone in the top row until its heir takes over", () => {
-    const top = placed.filter((p) => p.y === area.y && !p.fallen);
+    const top = rootPlaced.filter((p) => p.y === rootArea.y && !p.fallen);
     expect(top.map((p) => p.id)).toEqual(["o0"]);
   });
 
-  it("keeps every card below the key of the tree, and keeps the margin it always had on the other three sides", () => {
-    const { x, y, zoom } = frameTree(area, PANE, false, KEY_REACH);
-    for (const p of placed) {
-      const card = { left: x + p.x * zoom, top: y + p.y * zoom, right: x + (p.x + p.width) * zoom, bottom: y + (p.y + p.height) * zoom };
-      expect(card.top, `${p.id} is under the key`).toBeGreaterThanOrEqual(KEY_REACH);
+  it("has three brains side by side in the top row for the moment between the takeover and the adoptions", () => {
+    const top = betweenPlaced.filter((p) => p.y === betweenArea.y && !p.fallen);
+    expect(top.map((p) => p.id)).toEqual(["o1", "o2", "o3"]);
+  });
+
+  it("frames the tree as large as the pane allows where no card is under the key: the root over the middle of a laptop's pane", () => {
+    expect(rootPlaced.some((p) => underKey(p, plainFrame(rootArea, PANE)))).toBe(false);
+    expect(frameTree(rootArea, PANE, false, KEY, cardsOf(rootPlaced))).toEqual(plainFrame(rootArea, PANE));
+  });
+
+  it("keeps every card below the key where one would be under it, and keeps the margin it always had on the other three sides", () => {
+    expect(betweenPlaced.some((p) => underKey(p, plainFrame(betweenArea, PANE)))).toBe(true);
+    const view = frameTree(betweenArea, PANE, false, KEY, cardsOf(betweenPlaced));
+    for (const p of betweenPlaced) {
+      const card = drawn(p, view);
+      expect(card.top, `${p.id} is under the key`).toBeGreaterThanOrEqual(KEY.bottom);
       expect(card.left).toBeGreaterThanOrEqual(parseFloat(FIT_PADDING) - 1);
       expect(card.right).toBeLessThanOrEqual(PANE.width - parseFloat(FIT_PADDING) + 1);
       expect(card.bottom).toBeLessThanOrEqual(PANE.height - parseFloat(FIT_PADDING) + 1);
     }
   });
 
-  it("costs the tree some of its size, and no more than the key's height", () => {
-    const clear = frameTree(area, PANE, false, 0);
-    const kept = frameTree(area, PANE, false, KEY_REACH);
+  it("keeps the root clear of the key in a pane narrower than the key and the card side by side, which a window of 1024 px is", () => {
+    expect(earlyPlaced.filter((p) => p.y === earlyArea.y).map((p) => p.id)).toEqual(["o0"]);
+    // over the middle of a pane of 990 px the card starts under the key, which reaches to 541 px; over the middle of 1332 px it does not
+    expect(earlyPlaced.some((p) => underKey(p, plainFrame(earlyArea, NARROW)))).toBe(true);
+    expect(earlyPlaced.some((p) => underKey(p, plainFrame(earlyArea, PANE)))).toBe(false);
+    const view = frameTree(earlyArea, NARROW, false, KEY, cardsOf(earlyPlaced));
+    for (const p of earlyPlaced) expect(drawn(p, view).top, `${p.id} is under the key`).toBeGreaterThanOrEqual(KEY.bottom);
+  });
+
+  it("does not need the key's room once the tree is wider than the pane lets it be tall: it is centred, with room above it", () => {
+    // the whole tree in a pane of 990 px is limited by its width, so it sits lower than the key reaches
+    expect(rootPlaced.some((p) => underKey(p, plainFrame(rootArea, NARROW)))).toBe(false);
+    expect(frameTree(rootArea, NARROW, false, KEY, cardsOf(rootPlaced))).toEqual(plainFrame(rootArea, NARROW));
+  });
+
+  it("costs the tree some of its size where it keeps clear, and no more than the key's height", () => {
+    const clear = plainFrame(betweenArea, PANE);
+    const kept = frameTree(betweenArea, PANE, false, KEY, cardsOf(betweenPlaced));
     expect(kept.zoom).toBeLessThan(clear.zoom);
-    expect(kept.zoom).toBeGreaterThan(clear.zoom * (1 - (KEY_REACH + 6) / PANE.height));
+    expect(kept.zoom).toBeGreaterThan(clear.zoom * (1 - (KEY.bottom + KEY_GAP) / PANE.height));
   });
 
   it("frames the tree as before where there is no key to keep clear of", () => {
-    expect(frameTree(area, PANE, false)).toEqual(getViewportForBounds(area, PANE.width, PANE.height, PANE.minZoom, FIT_MAX_ZOOM, FIT_PADDING));
+    expect(frameTree(betweenArea, PANE, false)).toEqual(plainFrame(betweenArea, PANE));
+    expect(frameTree(betweenArea, PANE, false, null, cardsOf(betweenPlaced))).toEqual(plainFrame(betweenArea, PANE));
   });
 
   it("does not look at the key for a tree on its side, which has none", () => {
-    const across = layoutTree(view, true);
-    const sideways = boundsOf(view, across)!;
-    expect(frameTree(sideways, PANE, true, 999)).toEqual(getViewportForBounds(sideways, PANE.width, PANE.height, PANE.minZoom, 1, `${ACROSS.pad}px`));
+    const across = layoutTree(rootDown, true);
+    const sideways = boundsOf(rootDown, across)!;
+    expect(frameTree(sideways, PANE, true, { left: 0, right: 999, bottom: 999 }, cardsOf(across))).toEqual(
+      getViewportForBounds(sideways, PANE.width, PANE.height, PANE.minZoom, 1, `${ACROSS.pad}px`),
+    );
   });
 });
 

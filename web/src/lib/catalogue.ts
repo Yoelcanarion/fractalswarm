@@ -124,9 +124,13 @@ export interface CatalogueRow {
   facts: RunFacts | null;
 }
 
+/** How many runs the Runs page opens with on a server, whose list grows with every run it records. The static site holds the few it was
+ * built with, and lists all of them. */
+export const FEATURED_RUNS = 4;
+
 /** The runs a page that cannot list them all opens with: the final run, then the other finished runs in the server's order (newest
  * first). A live run has its own strip and an empty one has nothing to open. */
-export function featuredRows(rows: readonly CatalogueRow[], limit = 4): CatalogueRow[] {
+export function featuredRows(rows: readonly CatalogueRow[], limit = FEATURED_RUNS): CatalogueRow[] {
   const finished = rows.filter((row) => row.state !== "live" && row.state !== "empty");
   return [...finished.filter((row) => row.listing.id === FINAL_RUN), ...finished.filter((row) => row.listing.id !== FINAL_RUN)].slice(0, limit);
 }

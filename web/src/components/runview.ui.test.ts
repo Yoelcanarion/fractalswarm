@@ -359,8 +359,20 @@ describe("the guide", () => {
     expect(renderToStaticMarkup(createElement(Guide, { guide: guide(true, true) }))).toContain("A recorded run checks itself when it opens.");
   });
 
-  it("is the same short band on the static site as on a server, so that it does not change when the capabilities arrive", () => {
-    expect(renderToStaticMarkup(createElement(Guide, { guide: guide(true), site: "static" }))).toBe(renderToStaticMarkup(createElement(Guide, { guide: guide(true) })));
+  it("is the same short band on the static site as on a server but for one link: the site starts no run, so step 2 points at the arena", () => {
+    const site = renderToStaticMarkup(createElement(Guide, { guide: guide(true), site: "static" }));
+    const server = renderToStaticMarkup(createElement(Guide, { guide: guide(true) }));
+    const start = '<a class="guide__go" href="#/new">Start a run</a>';
+    const watch = '<a class="guide__go" href="#/arena">Watch it in the arena</a>';
+    expect(server).toContain(start);
+    expect(site).toContain(watch);
+    expect(site).not.toContain("Start a run");
+    expect(server.replace(start, watch)).toBe(site);
+  });
+
+  it("keeps the button of the short band clear of the row above it, whose link can run as far right as the button does", () => {
+    const css = readFileSync(REPO_ROOT + "web/src/components/shell/shell.css", "utf-8").replace(/\r\n/g, "\n");
+    expect(css).toMatch(/\.guide:not\(\.guide--full\) \.guide__done \{\s*position: absolute;\s*right: var\(--space-3\);\s*bottom: var\(--space-2\);\s*padding-block: 5px;/);
   });
 
   it("opens for a browser that has not seen it, and stays closed for one that has", () => {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { PageHeader, Term } from "../components/ui";
+import { siteOf, type Site } from "../lib/controls";
 import { useRunStore } from "../store";
 import "./intake.css";
 import { createIntakeApi, type Approval, type IntakeApi, type IntakeState } from "./api";
@@ -38,12 +39,14 @@ export interface IntakeFlowProps {
   realAllowed: boolean;
   /** The server starts runs from the API. */
   canStart: boolean;
+  /** Where the page runs: on the static site there is no server, and what it says about itself is its own. */
+  site?: Site;
 }
 
 /** The whole flow on one address: paste, read, review, approve, run. What the server knows (the reading and its state) is
  * asked of it; what only the person has (the text in the form, the rows as they have corrected them) is kept here, in
  * memory, and nowhere else. */
-export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowProps) {
+export function IntakeFlow({ api, intakeId, realAllowed, canStart, site = "server" }: IntakeFlowProps) {
   const [form, setFormState] = useState<ReadingForm>(rememberedForm);
   const setForm = (next: ReadingForm) => {
     remember(next);
@@ -184,7 +187,15 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
       />
       {!canStart && (
         <p className="intake__notice" role="status">
-          This server does not start runs from the API (the static demo bundle, for one), so reading and running live text needs <code>fractalswarm serve</code>.
+          {site === "static" ? (
+            <>
+              This site starts no run. Reading and running your text needs the app: <code>uv run fractalswarm serve</code>.
+            </>
+          ) : (
+            <>
+              This server does not start runs from the API, so reading and running live text needs <code>fractalswarm serve</code>.
+            </>
+          )}
         </p>
       )}
 
@@ -197,6 +208,7 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
           realAllowed={realAllowed}
           busy={busy}
           error={formError}
+          site={site}
           onRead={() => void read()}
           onSample={() => void useSample()}
           sampling={sampling}
@@ -267,5 +279,5 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
 export function IntakePage({ route }: { route: IntakeRoute }) {
   const capabilities = useRunStore((s) => s.capabilities);
   const api = useMemo(() => createIntakeApi(), []);
-  return <IntakeFlow api={api} intakeId={route.intakeId} realAllowed={capabilities.real === true} canStart={capabilities.tasks} />;
+  return <IntakeFlow api={api} intakeId={route.intakeId} realAllowed={capabilities.real === true} canStart={capabilities.tasks} site={siteOf(capabilities)} />;
 }

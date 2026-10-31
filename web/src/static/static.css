@@ -76,4 +76,18 @@ html[data-staticbar="on"] .dir-page {
   .staticbar__side {
     flex-shrink: 1;
   }
+
+  /* One line on a phone: what the site is and, while a log loads, how far it has loaded in its place. The banner sits outside the app, whose
+     pages scroll inside their own content, so it cannot go up with them (the run page, which does scroll as a page on a phone, takes it up with
+     it): four lines of it, with the bars under it, were a third of the screen of a first visit. The command and the build note are in the
+     banner at a wider width, and the commit is in the badge's tooltip. */
+  .staticbar {
+    flex-wrap: nowrap;
+  }
+
+  .staticbar__more,
+  .staticbar__note,
+  .staticbar--loading .staticbar__text {
+    display: none;
+  }
 }

@@ -198,6 +198,7 @@ function buildGraph(view: ViewState, now: number, active: string | null, across:
     bounds: boundsOf(view, placed),
     structure: structureKey(view, placed),
     across,
+    cards: placed.map(({ x, y, width, height }) => ({ x, y, width, height })),
   };
   return { nodes, edges, shape };
 }

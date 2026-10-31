@@ -212,11 +212,14 @@
     gap: var(--space-3);
   }
 
-  /* the short band is three rows, and the button goes in the space beside the last, which has no link: not a row of its own */
+  /* the short band is three rows, and the button goes in the space beside the last, which has no link: not a row of its own. It is a little shorter
+     than a button is, so that it does not reach up into the row above, whose link can run as far right as the button does ("Watch it in the arena"
+     on the static site, 17 px under it at 390 px) */
   .guide:not(.guide--full) .guide__done {
     position: absolute;
     right: var(--space-3);
     bottom: var(--space-2);
+    padding-block: 5px;
   }
 }
 

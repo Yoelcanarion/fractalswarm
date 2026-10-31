@@ -56,6 +56,19 @@ describe("the form", () => {
     expect(text).toContain("Email addresses are replaced by placeholders");
   });
 
+  it("says on the static site what is true of what is pasted: it stays in the page, and the private folder is the app's", () => {
+    const text = plainText(form({ site: "static" }));
+    expect(text).toContain("Private by design");
+    expect(text).toContain("What you paste stays in this page: this site has no server, so it is not sent, stored or logged anywhere, and a reload clears it.");
+    expect(text).toContain("In the app, which you run yourself, it is kept in a private folder on your machine, outside the repo, and is never bundled or committed.");
+    expect(text).toContain("Email addresses are replaced by placeholders");
+    expect(text).toContain("with Muse, which is billed, the text (addresses replaced) is sent to Meta’s model API");
+    expect(text).not.toContain("stays on this machine");
+    expect(text).not.toContain("the server’s private folder");
+    // a server's box is as it was
+    expect(plainText(form({ site: "server" }))).toContain("it is kept in the server’s private folder, outside the repo");
+  });
+
   it("gives the program's fixed shape, so the person knows what Muse will fit the text to", () => {
     const text = plainText(form());
     expect(text).toContain("2 days");
@@ -440,7 +453,14 @@ describe("the flow", () => {
   });
 
   it("says when the server does not start runs", () => {
-    expect(plainText(flow({ canStart: false }))).toContain("This server does not start runs from the API");
+    expect(plainText(flow({ canStart: false }))).toContain("This server does not start runs from the API, so reading and running live text needs fractalswarm serve");
+    expect(plainText(flow({ canStart: false }))).not.toContain("static demo bundle");
+  });
+
+  it("says on the static site that it starts no run and what to run instead, and not that a server does not", () => {
+    const notice = plainText(/<p class="intake__notice"[^>]*>[\s\S]*?<\/p>/.exec(flow({ canStart: false, site: "static" }))?.[0] ?? "");
+    expect(notice).toBe("This site starts no run. Reading and running your text needs the app: uv run fractalswarm serve.");
+    expect(flow({ canStart: true, site: "static" })).not.toContain("intake__notice");
   });
 });
 

@@ -33,7 +33,10 @@ export type Capabilities = Record<ControlKey, boolean> & {
  * checked, is not the same in the two. */
 export type Site = "server" | "static";
 
-export const siteOf = (capabilities: Capabilities): Site => (capabilities.static === true ? "static" : "server");
+/** The static build knows it from the first paint, by its mode (`vite build --mode static`), so what differs there (the guide's short band, the
+ * first thing a visitor meets) is right when it first draws and does not change when the capabilities arrive. The answer to `api/capabilities`
+ * says it too, which is what a page read outside that build goes by. */
+export const siteOf = (capabilities: Capabilities): Site => (import.meta.env.MODE === "static" || capabilities.static === true ? "static" : "server");
 
 /** What a server without `GET api/capabilities` is taken to offer. */
 export const DEFAULT_CAPABILITIES: Capabilities = { chaos: false, approve: false, tasks: false, budget: true, halt: true };

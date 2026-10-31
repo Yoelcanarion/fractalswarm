@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Details } from "../components/ui";
+import type { Site } from "../lib/controls";
 
 import { BOX_LIMIT, formProblems, roomsOf, type Backend, type ReadingForm } from "./launch";
 import { LIMITS } from "./validate";
@@ -12,6 +13,8 @@ export interface IntakeFormProps {
   onBackend: (backend: Backend) => void;
   /** The server lets a launch be billed (`GET api/capabilities`: `real`). */
   realAllowed: boolean;
+  /** Where the page runs (the privacy notice says what is true there). */
+  site?: Site;
   busy: boolean;
   /** Why the last call failed, in the server's words. */
   error: string | null;
@@ -24,8 +27,24 @@ export interface IntakeFormProps {
   spend: ReactNode;
 }
 
-/** What stays private and what leaves the machine, said before anything is pasted. */
-export function PrivacyNotice({ backend }: { backend: Backend }) {
+/** What stays private and what leaves the machine, said before anything is pasted. On the static site there is no server and no folder of its:
+ * what is pasted stays in the page, and the notice says what the app does with it, which is what a person who runs it will meet. */
+export function PrivacyNotice({ backend, site = "server" }: { backend: Backend; site?: Site }) {
+  if (site === "static") {
+    return (
+      <aside className="privacy" aria-label="Private data">
+        <h3 className="privacy__title">Private by design</h3>
+        <ul>
+          <li>What you paste stays in this page: this site has no server, so it is not sent, stored or logged anywhere, and a reload clears it.</li>
+          <li>
+            In the app, which you run yourself, it is kept in a private folder on your machine, outside the repo, and is never bundled or committed. Email addresses
+            are replaced by placeholders (person-01@example.invalid) before anything is logged or read by a model.
+          </li>
+          <li>The app&rsquo;s practice reader runs on your machine, so nothing leaves it; with Muse, which is billed, the text (addresses replaced) is sent to Meta&rsquo;s model API.</li>
+        </ul>
+      </aside>
+    );
+  }
   return (
     <aside className="privacy" aria-label="Private data">
       <h3 className="privacy__title">Private by design</h3>
@@ -58,7 +77,7 @@ export function ShapeCard() {
 
 const count = (text: string): string => `${text.length.toLocaleString("en-US")} / ${BOX_LIMIT.toLocaleString("en-US")}`;
 
-export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, busy, error, onRead, onSample, sampling, onClear, spend }: IntakeFormProps) {
+export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, site = "server", busy, error, onRead, onSample, sampling, onClear, spend }: IntakeFormProps) {
   const set = <K extends keyof ReadingForm>(key: K, value: ReadingForm[K]) => onForm({ ...form, [key]: value });
   const problems = formProblems(form);
   const roomProblems = roomsOf(form.rooms).problems;
@@ -130,7 +149,7 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, busy
 
       <div className="intake__side">
         <ShapeCard />
-        <PrivacyNotice backend={backend} />
+        <PrivacyNotice backend={backend} site={site} />
         <Details id="reader" summary="Reader" hint={real ? "Muse · billed" : "the practice reader · free"} open={real}>
           <fieldset className="reader">
             <legend className="sr-only">Reader</legend>

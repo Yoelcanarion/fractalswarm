@@ -32,7 +32,7 @@ import { useRunStore } from "../store";
 export const FIT_MARGIN = 24;
 export const FIT_PADDING = `${FIT_MARGIN}px`;
 export const FIT_MAX_ZOOM = 1.5;
-// What is kept clear between the key of the tree (a line in the pane's top-left corner) and the cards under it.
+// What is kept clear between the key of the tree (a line in the pane's top-left corner) and the cards near it.
 const KEY_GAP = 6;
 // A tree on its side (a phone) is drawn at a scale of one, in the pixels its ids are sized in: it is never zoomed in, and its margin is small.
 export const FIT_MAX_ZOOM_ACROSS = 1;
@@ -46,6 +46,8 @@ export interface TreeShape {
   structure: string;
   /** The tree is on its side, as on a phone (``ACROSS``). */
   across: boolean;
+  /** Where each card is placed, in the tree's own units: the camera looks at them to see whether one would be under the key. */
+  cards: readonly Bounds[];
 }
 
 export interface TreeMotion<N extends Node> {
@@ -59,34 +61,58 @@ export interface TreeMotion<N extends Node> {
 type FlowStore = ReturnType<typeof useStoreApi>;
 type Padding = Parameters<typeof getViewportForBounds>[5];
 
-/** Where the camera puts a tree in a pane: as large as the pane allows, in the middle of what the key leaves free. ``keyReach`` is how far down
- * the pane's top the key reaches; no card is drawn above it, so the key never covers one (a tree with no root, in the seconds between a
- * root's death and its heir, has three cards in the top row, and the leftmost was under it). A tree on its side has no key. */
-export function frameTree(area: Bounds, pane: { width: number; height: number; minZoom: number }, across: boolean, keyReach = 0): Viewport {
-  const top = `${Math.max(FIT_MARGIN, keyReach + KEY_GAP)}px` as const;
-  const padding: Padding = across ? `${ACROSS.pad}px` : { top, right: FIT_PADDING, bottom: FIT_PADDING, left: FIT_PADDING };
-  return getViewportForBounds(area, pane.width, pane.height, pane.minZoom, across ? FIT_MAX_ZOOM_ACROSS : FIT_MAX_ZOOM, padding);
+/** The key of the tree: the box it covers, in the pane's own pixels (the pane's top-left corner is 0, 0). */
+export interface KeyBox {
+  left: number;
+  right: number;
+  bottom: number;
 }
 
-/** How far down from the pane's top the key of the tree reaches. It wraps as the pane narrows, so it is measured; zero where it is not drawn. */
-function keyReach(store: FlowStore): number {
+/** Whether a card of the tree, framed as ``view`` puts it, is under the key or within the gap kept clear round it. */
+function underKey(view: Viewport, cards: readonly Bounds[], key: KeyBox): boolean {
+  return cards.some((card) => {
+    const left = view.x + card.x * view.zoom;
+    const top = view.y + card.y * view.zoom;
+    return top < key.bottom + KEY_GAP && left < key.right + KEY_GAP && left + card.width * view.zoom > key.left;
+  });
+}
+
+/** Where the camera puts a tree in a pane: as large as the pane allows, in the middle of it, and never with a card under the key. The key is a
+ * line in the pane's corner, and where the tree's cards are clear of it (a root over the middle of a pane the key does not reach, which is a
+ * laptop's window and wider) the tree has the room it would have lost to it. Where one would be under it (the root of a pane narrower than the
+ * key and the card side by side; a top row that is wide for the moment between a takeover and the adoptions that follow it) the tree starts
+ * below the key. A tree on its side has no key. */
+export function frameTree(area: Bounds, pane: { width: number; height: number; minZoom: number }, across: boolean, key: KeyBox | null = null, cards: readonly Bounds[] = []): Viewport {
+  const frame = (top: number): Viewport => {
+    const padding: Padding = across ? `${ACROSS.pad}px` : { top: `${top}px`, right: FIT_PADDING, bottom: FIT_PADDING, left: FIT_PADDING };
+    return getViewportForBounds(area, pane.width, pane.height, pane.minZoom, across ? FIT_MAX_ZOOM_ACROSS : FIT_MAX_ZOOM, padding);
+  };
+  const plain = frame(FIT_MARGIN);
+  if (across || key === null || !underKey(plain, cards, key)) return plain;
+  return frame(Math.max(FIT_MARGIN, key.bottom + KEY_GAP));
+}
+
+/** The box of the key of the tree in the pane's own pixels. It wraps as the pane narrows, so it is measured; null where it is not drawn. */
+function keyBox(store: FlowStore): KeyBox | null {
   const pane = store.getState().domNode;
   const key = pane?.querySelector<HTMLElement>(".run__legend");
-  if (!pane || !key || key.offsetParent === null) return 0;
-  return Math.ceil(key.getBoundingClientRect().bottom - pane.getBoundingClientRect().top);
+  if (!pane || !key || key.offsetParent === null) return null;
+  const at = pane.getBoundingClientRect();
+  const box = key.getBoundingClientRect();
+  return { left: Math.floor(box.left - at.left), right: Math.ceil(box.right - at.left), bottom: Math.ceil(box.bottom - at.top) };
 }
 
 /** Move the camera to show ``bounds()``. The pane may not have a size yet on the first call, so
  * ask again for a few frames. */
 function fitCamera(flow: ReactFlowInstance, store: FlowStore, shape: () => TreeShape, duration: number, attempt = 0): void {
-  const { bounds: area, across } = shape();
+  const { bounds: area, across, cards } = shape();
   if (!area) return;
   const { width, height, minZoom } = store.getState();
   if (width <= 0 || height <= 0) {
     if (attempt < FIT_RETRIES) requestAnimationFrame(() => fitCamera(flow, store, shape, duration, attempt + 1));
     return;
   }
-  const viewport = frameTree(area, { width, height, minZoom }, across, keyReach(store));
+  const viewport = frameTree(area, { width, height, minZoom }, across, keyBox(store), cards);
   void flow.setViewport(viewport, { duration, ease: EASE_OUT, interpolate: "linear" });
 }
 

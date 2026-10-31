@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_CAPABILITIES, siteOf } from "./controls";
 import { afterGuideButton, GUIDE_KEY, GUIDE_STEPS, guideSeen, guideSteps, rememberGuide } from "./guide";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 describe("the guide's steps", () => {
   it("are three, in the order a person meets them: choose a run, kill half the brains, verify the replay", () => {
@@ -39,8 +43,17 @@ describe("the guide's steps on the static showcase", () => {
     expect(kill).not.toMatch(/, start a run\./);
   });
 
-  it("keep the headings and the links, so that the short band does not change when the capabilities arrive", () => {
-    expect(showcase.map(({ id, title, action }) => ({ id, title, action }))).toEqual(server.map(({ id, title, action }) => ({ id, title, action })));
+  it("keep the headings and the links, but for step 2's: a site that starts no run points at the arena, where the kills are watched", () => {
+    expect(showcase.map(({ title }) => title)).toEqual(server.map(({ title }) => title));
+    expect(server.map(({ action }) => action?.href)).toEqual(["#/run", "#/new", undefined]);
+    expect(showcase.map(({ action }) => action)).toEqual([server[0].action, { label: "Watch it in the arena", href: "#/arena" }, undefined]);
+  });
+
+  it("are the site's from the first paint of a static build, before any capabilities have arrived, so that the short band does not change", () => {
+    expect(guideSteps(siteOf(DEFAULT_CAPABILITIES))[1].action?.href).toBe("#/new");
+    vi.stubEnv("MODE", "static");
+    expect(siteOf(DEFAULT_CAPABILITIES)).toBe("static");
+    expect(guideSteps(siteOf(DEFAULT_CAPABILITIES))[1].action).toEqual({ label: "Watch it in the arena", href: "#/arena" });
   });
 
   it("make no claim of their own", () => {

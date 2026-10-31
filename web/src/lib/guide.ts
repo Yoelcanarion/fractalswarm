@@ -1,6 +1,6 @@
 // The guide every page can show: three steps, in the order a person meets them. What it says about a recorded run is what a recorded
 // run does: it cannot be changed, so its kills are watched, and a run of one's own starts on New task. On the static showcase, which has no
-// server, two of the sentences say what is true there instead (`guideSteps`). Pure, but for the seen flag.
+// server, two of the sentences and one link say what is true there instead (`guideSteps`). Pure, but for the seen flag.
 
 import type { Site } from "./controls";
 
@@ -32,15 +32,20 @@ export const GUIDE_STEPS: readonly GuideStep[] = [
   },
 ];
 
-/** The two sentences that differ on the static showcase: nothing is started from it, and a recording's replay was checked when the site was built,
- * not when it opened. The headings and the links are the same, so a first visit's short band does not change when the capabilities arrive. */
-const STATIC_SAYS: Readonly<Partial<Record<GuideStep["id"], string>>> = {
-  kill: "In the final run half of the coordinators were killed on purpose: press Play and watch the rest take over. A recording cannot be changed, and this site starts no run: to kill some, run the app yourself.",
-  verify:
-    "A run is played again from its log and must give the same hash. “Replay verified” means every event matches. Here that was done when the site was built, not in your browser; the badge names the commit.",
+/** What differs on the static showcase. Nothing is started from it, so step 2 says so and points at the arena, where the kills are watched in a
+ * pair of recordings; and a recording's replay was checked when the site was built, not when it opened. The headings are the same. The site
+ * is known from the first paint (`siteOf`: the build's mode), so the short band, which shows the links, has the right ones when it first draws. */
+const STATIC_CHANGES: Readonly<Partial<Record<GuideStep["id"], Partial<Pick<GuideStep, "says" | "action">>>>> = {
+  kill: {
+    says: "In the final run half of the coordinators were killed on purpose: press Play and watch the rest take over. A recording cannot be changed, and this site starts no run: to kill some, run the app yourself.",
+    action: { label: "Watch it in the arena", href: "#/arena" },
+  },
+  verify: {
+    says: "A run is played again from its log and must give the same hash. “Replay verified” means every event matches. Here that was done when the site was built, not in your browser; the badge names the commit.",
+  },
 };
 
-const STATIC_STEPS: readonly GuideStep[] = GUIDE_STEPS.map((step) => ({ ...step, says: STATIC_SAYS[step.id] ?? step.says }));
+const STATIC_STEPS: readonly GuideStep[] = GUIDE_STEPS.map((step) => ({ ...step, ...STATIC_CHANGES[step.id] }));
 
 /** The steps for where the app runs. */
 export const guideSteps = (site: Site): readonly GuideStep[] => (site === "static" ? STATIC_STEPS : GUIDE_STEPS);

@@ -1,8 +1,12 @@
+import { readFileSync } from "node:fs";
+
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { COMMAND } from "./answers";
 import { buildDetail, buildNote, showsBanner } from "./Banner";
-import { readStamp, verifiedAtBuild, whereChecked } from "./BuildVerified";
+import { BuildVerified, buildVerifiedHint, readStamp, verifiedAtBuild, whereChecked } from "./BuildVerified";
 import { megabytes, overall, SHOW_FROM_BYTES, type LoadProgress } from "./progress";
 import { VERIFY, makeSite } from "./testing";
 
@@ -78,6 +82,44 @@ describe("what the verify badge says about the report", () => {
   it("says where the check was made, whether or not it can say when", () => {
     expect(whereChecked(readStamp(VERIFY))).toBe("Checked when this page was built, at commit ccccccc on 2026-10-30, not in your browser.");
     expect(whereChecked(null)).toBe("Checked when this page was built, not in your browser.");
+  });
+});
+
+describe("the badge of a replay checked at build", () => {
+  const out = renderToStaticMarkup(createElement(BuildVerified, { report: VERIFY as never }));
+
+  it("is one short line, so that it fits beside the other chips: verified at build, and nothing of the commit or the hash", () => {
+    expect(/<span class="badge badge--good badge--big">([^<]*)<\/span>/.exec(out)?.[1]).toBe("Replay verified at build ✓");
+    expect(out).not.toContain("verify__head");
+  });
+
+  it("keeps the commit, the day, the hash and the command to check it in its tooltip, and as text for a screen reader", () => {
+    const hint = buildVerifiedHint(VERIFY as never);
+    expect(hint).toContain("at commit ccccccc on 2026-10-30, not in your browser");
+    expect(hint).toContain("10 events re-run from run.started");
+    expect(hint).toContain("hash match: recorded and replayed head aaaa");
+    expect(hint).toContain("Check it yourself: uv run fractalswarm demo --verify");
+    expect(out).toContain(hint);
+  });
+});
+
+describe("the banner on a phone", () => {
+  const css = readFileSync(new URL("static.css", import.meta.url), "utf-8").replace(/\r\n/g, "\n");
+  const source = readFileSync(new URL("Banner.tsx", import.meta.url), "utf-8");
+  const phone = css.indexOf("@media (max-width: 720px)");
+
+  it("is one line: the command and the build note are not drawn, and what a load has done takes the place of what the site is", () => {
+    expect(phone).toBeGreaterThan(0);
+    expect(css.slice(phone)).toMatch(/\.staticbar \{\s*flex-wrap: nowrap;/);
+    expect(css.slice(phone)).toMatch(/\.staticbar__more,\s*\.staticbar__note,\s*\.staticbar--loading \.staticbar__text \{\s*display: none;/);
+    // they are drawn everywhere else
+    expect(css.slice(0, phone)).not.toMatch(/staticbar__more|staticbar__note/);
+  });
+
+  it("marks the parts the phone leaves out, and the banner that is loading", () => {
+    expect(source).toContain('Static showcase: recorded runs only.<span className="staticbar__more"> Run it yourself: <code>{COMMAND}</code></span>');
+    expect(source).toContain('className="staticbar__side staticbar__note"');
+    expect(source).toContain('"staticbar staticbar--loading"');
   });
 });
 

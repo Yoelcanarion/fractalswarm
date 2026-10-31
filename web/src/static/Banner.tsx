@@ -63,16 +63,16 @@ export function StaticBanner({ site }: { site: SiteStamp }) {
 
   if (hidden) return null;
   return (
-    <div className="staticbar" role="note">
+    <div className={loading ? "staticbar staticbar--loading" : "staticbar"} role="note">
       <span className="staticbar__text">
-        Static showcase: recorded runs only. Run it yourself: <code>{COMMAND}</code>
+        Static showcase: recorded runs only.<span className="staticbar__more"> Run it yourself: <code>{COMMAND}</code></span>
       </span>
       {loading ? (
         <span className="staticbar__side" role="status">
           Loading {loading.runs.join(", ")}: {megabytes(loading.loaded)} of {megabytes(loading.total)} MB
         </span>
       ) : (
-        <span className="staticbar__side" title={buildDetail(site)}>
+        <span className="staticbar__side staticbar__note" title={buildDetail(site)}>
           {buildNote(site)}
         </span>
       )}

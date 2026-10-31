@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { asRunStatus, controlState, DEFAULT_CAPABILITIES, LIVE_ONLY, parseCapabilities, siteOf, statusBadge, type Capabilities } from "./controls";
 
@@ -53,6 +53,15 @@ describe("on the static showcase, which has no server", () => {
     expect(siteOf(parseCapabilities({ chaos: true }))).toBe("server");
     expect(siteOf(DEFAULT_CAPABILITIES)).toBe("server");
     expect("static" in parseCapabilities({ chaos: true })).toBe(false);
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("is known from the build's mode, before any capabilities have arrived", () => {
+    expect(siteOf(DEFAULT_CAPABILITIES)).toBe("server");
+    vi.stubEnv("MODE", "static");
+    expect(siteOf(DEFAULT_CAPABILITIES)).toBe("static");
+    expect(controlState("tasks", { status: null, capabilities: DEFAULT_CAPABILITIES }).reason).toBe("this site shows recorded runs only: to start one, run the app with uv run fractalswarm serve");
   });
 
   it("says that the site shows recorded runs, not that a server does not start them, and how to start one", () => {

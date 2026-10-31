@@ -13,6 +13,7 @@ import { defaultRunId, openedRunHash } from "../lib/address";
 import { fetchEventAt, verifyRun } from "../lib/api";
 import { withDetails } from "../lib/details";
 import {
+  FEATURED_RUNS,
   featuredRows,
   filterRows,
   NO_FILTER,
@@ -198,7 +199,7 @@ export function RunsPage() {
             </p>
           )}
           <LiveNow rows={liveRows} />
-          <FeaturedRuns rows={featuredRows(rows)} />
+          <FeaturedRuns rows={featuredRows(rows, site === "static" ? rows.length : FEATURED_RUNS)} />
           <Details id="all" summary={`All ${rows.length} run${rows.length === 1 ? "" : "s"}`} hint="search, filter, sort and check them">
             <RunsToolbar
               filter={filter}
@@ -234,9 +235,12 @@ export function RunsPage() {
         </>
       )}
 
-      <Details id="start" summary="Start a run of your own" hint="on the practice model, so it costs nothing">
-        <NewTaskForm />
-      </Details>
+      {/* the site starts no run: its form would have all three buttons off */}
+      {site === "server" && (
+        <Details id="start" summary="Start a run of your own" hint="on the practice model, so it costs nothing">
+          <NewTaskForm />
+        </Details>
+      )}
     </div>
   );
 }

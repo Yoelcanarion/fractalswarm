@@ -1,8 +1,9 @@
 // The verify badge of the static showcase. A page on GitHub Pages has no server to replay a log on, so the report behind
-// the badge was made by scripts/build_static_site.py when the site was built, and the badge says so: when, at which
-// commit, and that the check did not happen in the visitor's browser. Components/VerifyBadge.tsx renders this in place
-// of its own text, in the static build only.
+// the badge was made by scripts/build_static_site.py when the site was built, and the badge says so: the chip says it was
+// at build, and its tooltip when, at which commit, which hash, and that the check did not happen in the visitor's browser.
+// Components/VerifyBadge.tsx renders this in place of its own text, in the static build only.
 
+import { Hint } from "../components/ui/Hint";
 import type { VerifyReport } from "../lib/types";
 import { COMMAND } from "./answers";
 
@@ -33,15 +34,16 @@ export function verifiedAtBuild(report: VerifyReport): { label: string; detail: 
   };
 }
 
+/** What the badge's tooltip says: where the check was made (the commit and the day), that the hash matched and which it was, and how to check one
+ * yourself. The badge is one short line, because the banner names the build already and the places the badge sits in (a strip, a column of
+ * chips) are narrow. */
+export const buildVerifiedHint = (report: VerifyReport): string =>
+  `${whereChecked(readStamp(report))} ${report.replayed_events} events re-run from run.started; hash match: recorded and replayed head ${report.replayed_head}. Check it yourself: ${COMMAND}`;
+
 export function BuildVerified({ report }: { report: VerifyReport }) {
-  const stamp = readStamp(report);
   return (
-    <span
-      className="badge badge--good badge--big"
-      title={`${whereChecked(stamp)} ${report.replayed_events} events re-run from run.started; recorded and replayed head ${report.replayed_head}. Check it yourself: ${COMMAND}`}
-    >
-      Replay verified at build{stamp === null ? "" : `, commit ${stamp.commit_short.slice(0, 7)}`} ✓ hash match{" "}
-      <span className="mono verify__head">{report.replayed_head.slice(0, 12)}</span>
-    </span>
+    <Hint label={buildVerifiedHint(report)}>
+      <span className="badge badge--good badge--big">Replay verified at build ✓</span>
+    </Hint>
   );
 }
