@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { FrameScheduler } from "../lib/clock";
+import { PHONE_QUERY } from "../lib/phone";
 import type { RunEvent } from "../lib/types";
 import type { RunApi } from "../store";
-import { clockReadout, firstCrashOfPair, playFromStart, watchFirstCrash } from "./play";
+import { bringBoardIntoView, clockReadout, firstCrashOfPair, playFromStart, watchFirstCrash } from "./play";
 import { createPairSession } from "./session";
 import { crash, kill, restart, rivalStream, swarmStream, takeOver } from "./testing";
 
@@ -95,5 +96,49 @@ describe("the clock beside the main action", () => {
     expect(clockReadout(12_345, 76_400)).toBe("t = 12.3 s / 76.4 s");
     expect(clockReadout(7_000, 76_400)).toBe("t = 7.00 s / 76.4 s");
     expect(clockReadout(80_000, 76_400)).toBe("t = 76.4 s / 76.4 s"); // it does not run past the end
+  });
+});
+
+// On a phone the boards come one under the other under the lead, and a press on a play action scrolls the first one to the top of the window.
+describe("bringing the first board into view", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** A window that is a phone's (true), a wider one (false) or has no media queries (null); the frames are held until `draw()`. */
+  function windowOf(phone: boolean | null) {
+    const scrolled: unknown[] = [];
+    const asked: string[] = [];
+    const frames: Array<() => void> = [];
+    vi.stubGlobal("window", phone === null ? {} : { matchMedia: (query: string) => ({ matches: phone && query === PHONE_QUERY }) });
+    vi.stubGlobal("document", {
+      querySelector: (selector: string) => {
+        asked.push(selector);
+        return selector === ".arena .side" ? { scrollIntoView: (options: unknown) => scrolled.push(options) } : null;
+      },
+    });
+    vi.stubGlobal("requestAnimationFrame", (callback: () => void) => frames.push(callback));
+    return { scrolled, asked, draw: () => frames.splice(0).forEach((callback) => callback()) };
+  }
+
+  it("scrolls the swarm's board to the top of the window on a phone, once the page is drawn for what the press did", () => {
+    const { scrolled, asked, draw } = windowOf(true);
+    bringBoardIntoView();
+    expect(scrolled).toEqual([]);
+    draw();
+    expect(asked).toEqual([".arena .side"]);
+    expect(scrolled).toEqual([expect.objectContaining({ block: "start" })]);
+  });
+
+  it("leaves a wider window where it is: the boards are on its first screen", () => {
+    const { scrolled, draw } = windowOf(false);
+    bringBoardIntoView();
+    draw();
+    expect(scrolled).toEqual([]);
+  });
+
+  it("does nothing where there is no window to ask", () => {
+    const { scrolled, draw } = windowOf(null);
+    bringBoardIntoView();
+    draw();
+    expect(scrolled).toEqual([]);
   });
 });

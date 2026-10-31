@@ -369,6 +369,44 @@ describe("the arena on a phone", () => {
   });
 });
 
+describe("the pinned timeline", () => {
+  // The bar is pinned in a window that holds it and two boards above it, and is a page's last element elsewhere. This reads the sheet.
+  const sheet = readFileSync(`${REPO_ROOT}web/src/arena/arena.css`, "utf-8").replace(/\r\n/g, "\n");
+  const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const media = (query: string): string => {
+    const start = sheet.indexOf(`@media ${query} {`);
+    return start < 0 ? "" : sheet.slice(start, sheet.indexOf("\n}\n", start));
+  };
+  const rule = (css: string, selector: string): string => new RegExp(`${escape(selector)} \\{([^}]*)\\}`).exec(css)?.[1] ?? "";
+  const laptop = media("(min-width: 1101px) and (min-height: 701px)");
+  const unpinned = media("(max-width: 1100px), (max-height: 700px)");
+
+  it("pins the bar to the bottom of the view", () => {
+    expect(rule(sheet, ".tl")).toContain("position: sticky");
+    expect(rule(sheet, ".tl")).toContain("bottom: 0");
+  });
+
+  it("leaves the bar at the end of the page where the boards stack and where the window is too short to hold it with the boards: the same width as the stacking", () => {
+    expect(unpinned).not.toBe("");
+    expect(rule(unpinned, ".tl")).toContain("position: static");
+    expect(rule(media("(max-width: 1100px)"), ".arena__stage")).toContain("grid-template-columns: minmax(0, 1fr)");
+  });
+
+  it("caps the boards to the room above the bar only in the window that pins it: a stacked page has them whole", () => {
+    expect(laptop).not.toBe("");
+    expect(rule(laptop, ".board")).toContain("max-height: max(190px, calc(var(--arena-room) - var(--arena-chrome)))");
+    expect(/\n\.board \{[^}]*max-height/.test(sheet)).toBe(false);
+  });
+
+  it("hands the bar to the end of the page once the pair has played out, so that the end card is what is under the boards", () => {
+    expect(rule(sheet, ".arena--played-out .tl")).toContain("position: static");
+  });
+
+  it("shows the clock beside the main action only where the bar, which has one, is not pinned", () => {
+    expect(rule(laptop, ".arena:not(.arena--played-out) .arena__clock")).toContain("display: none");
+  });
+});
+
 describe("the page", () => {
   const view = async (over: Partial<Parameters<typeof ArenaView>[0]> = {}) =>
     renderToStaticMarkup(
@@ -382,7 +420,8 @@ describe("the page", () => {
   it("says what it is for and what the rival is, and has one main action once a pair is open: watch the first crash, with playing both from the start beside it", async () => {
     const session = await opened(0);
     const html = await view({ session, left: "s", right: "r" });
-    expect(text(html)).toContain("FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures.");
+    // the plan's crash points are points of the work, not of time: the two sides are hit at about the same point of the work, not at the same second
+    expect(text(html)).toContain("FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures, each at about the same point of the work.");
     expect(text(html)).toContain("The rival is an ideal durable supervisor: its workers survive a crash, and it is back after 5 s.");
     expect(html).toContain('<button type="button" class="btn btn--on">Watch the first crash</button>');
     expect(html).toContain('<button type="button" class="btn">Play both from the start</button>');
@@ -494,6 +533,13 @@ describe("the end of a pair", () => {
 
   it("is not in a director's frame, which is the arena and nothing around it", async () => {
     expect(await page(75_000, { bare: true })).not.toContain("pairend");
+  });
+
+  it("marks the page as played out once both runs have, so that the replay bar leaves the bottom of the view for the end of the page, and takes the mark off when they play", async () => {
+    const classes = (html: string) => /<div class="(arena[^"]*)"/.exec(html)?.[1];
+    expect(classes(await page(30_000))).toBe("arena");
+    expect(classes(await page(65_000))).toBe("arena"); // the swarm has ended, the rival has not
+    expect(classes(await page(75_000))).toBe("arena arena--played-out");
   });
 
   it("says the hand-overs of the takeover check with their reason once the check is in, and not before", async () => {
