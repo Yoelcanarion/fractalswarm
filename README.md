@@ -36,7 +36,7 @@ uv run fractalswarm demo --verify    # no API key needed
 <p align="center">
   <picture>
     <source media="(prefers-reduced-motion: reduce)" srcset="docs/assets/arena-same-second.png">
-    <img src="docs/assets/arena-same-second.gif" alt="The arena, replaying two real runs side by side at double speed. On the left, FractalSwarm loses five coordinators and its tree re-wires around each. On the right, an ideal durable supervisor crashes five times and its agents wait for each restart. Both place all 48 talks. A caption says that over ten seeds the two tied on stall time and extra cost." width="100%">
+    <img src="docs/assets/arena-same-second.gif" alt="The arena, replaying two real runs side by side at double speed. On the left, FractalSwarm loses five coordinators and its tree re-wires around each. On the right, an ideal durable supervisor crashes five times, and what needs it waits for each restart. Both place all 48 talks. A caption says that over ten seeds the two tied on stall time and extra cost." width="100%">
   </picture>
 </p>
 

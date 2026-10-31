@@ -1762,8 +1762,8 @@ This reading covers the $0 runs of §4.1–§4.9; the real-model rows are read i
   difference between the swarm and `durable-max` that is smaller than that is not read as one.
   Locality against `durable-max` moved when seven seeds were added to the three (§4.10.7), and a
   larger set may move it again. A new real run would not
-  repeat the numbers. All 86 coordinator crashes of the real swarm runs hit a session coordinator; in
-  the bench, a crash of the root was run at $0 only (§4.7), and a track lead's on two real seeds, where
+  repeat the numbers. All 86 coordinator crashes of the real swarm runs before §4.10.9 hit a session
+  coordinator; in the bench, a crash of the root was run at $0 only (§4.7), and a track lead's on two real seeds, where
   one run of six ended partial (§4.10.9). Not every set of deaths recovers: some leave nobody who can
   start the recovery, and the run hangs (`docs/any-survivor.md`). The 29 cells of Oct 28 ran before the
   handler freeze, 18 of them before the routing log existed (§3). The cost of a cancelled call is an
