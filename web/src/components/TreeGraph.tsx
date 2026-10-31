@@ -1,4 +1,4 @@
-import { Background, Handle, Position, ReactFlow, ReactFlowProvider, type Edge, type Node, type NodeProps } from "@xyflow/react";
+import { Background, Handle, Panel, Position, ReactFlow, ReactFlowProvider, type Edge, type Node, type NodeProps } from "@xyflow/react";
 import { memo, useMemo, useState, type CSSProperties, type FocusEvent, type KeyboardEvent } from "react";
 
 import { useLens, useLensStoreApi } from "../lensStore";
@@ -22,6 +22,8 @@ type ActorData = {
   rootDuty: boolean;
   glow: Glow | null;
   leaf: boolean;
+  /** A dead brain that handed over everything it held: it stands in the row of the fallen under the tree. */
+  fallen: boolean;
   /** The one card the Tab key lands on: the cards are a single stop, and the arrow keys move between them. */
   tabbable: boolean;
 };
@@ -29,7 +31,7 @@ type ActorData = {
 type ActorProps = NodeProps<Node<ActorData>>;
 
 function ActorCardView({ data }: ActorProps) {
-  const { actor, color, rootDuty, glow, leaf, tabbable } = data;
+  const { actor, color, rootDuty, glow, leaf, fallen, tabbable } = data;
   // A click (or Enter) opens the actor's calls in the Muse lens; a second one closes it.
   const lens = useLensStoreApi();
   const inLens = useLens((s) => s.open && s.scope.kind === "actor" && s.scope.actor === actor.id);
@@ -42,6 +44,7 @@ function ActorCardView({ data }: ActorProps) {
   const classes = [
     "actor",
     leaf ? "actor--leaf" : "",
+    fallen ? "actor--fallen" : "",
     down ? "actor--down" : "",
     outage ? "actor--restarting" : "",
     actor.status === "stopped" ? "actor--stopped" : "",
@@ -50,14 +53,16 @@ function ActorCardView({ data }: ActorProps) {
     inLens ? "actor--lens" : "",
   ].join(" ");
   const style = { "--owner": color, ...(glow ? glowVars(glow.born, glow.life) : {}) } as CSSProperties;
+  const calls = `${actor.llmCalls} ${actor.llmCalls === 1 ? "model call" : "model calls"}`;
   return (
     <div
       className={classes}
       style={style}
+      title={`${actor.id}: ${actor.kind}${down ? (actor.status === "dead" ? ", detected dead" : ", killed") : ""}, ${calls}${actor.adoptedBy ? `, adopted by ${actor.adoptedBy}` : ""}`}
       role="button"
       tabIndex={tabbable ? 0 : -1}
       aria-pressed={inLens}
-      aria-label={`${actor.id}, ${actor.kind}${down ? `, ${actor.status === "dead" ? "detected dead" : "killed"}` : ""}, ${actor.llmCalls} ${actor.llmCalls === 1 ? "model call" : "model calls"}. Open in the Muse lens.`}
+      aria-label={`${actor.id}, ${actor.kind}${down ? `, ${actor.status === "dead" ? "detected dead" : "killed"}` : ""}, ${calls}. Open in the Muse lens.`}
       onClick={toggleLens}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -67,23 +72,22 @@ function ActorCardView({ data }: ActorProps) {
       }}
     >
       <Handle type="target" position={Position.Top} className="actor__handle" />
-      <div className="actor__id">{actor.id}</div>
-      <div className="actor__meta">
-        <span>{actor.kind}</span>
-        {actor.llmCalls > 0 && <span>· {actor.llmCalls} {actor.llmCalls === 1 ? "call" : "calls"}</span>}
+      <div className="actor__id">
+        {down && (
+          <span className="actor__x" title={actor.status === "dead" ? "detected dead" : "killed"}>
+            ✕
+          </span>
+        )}
+        {actor.id}
       </div>
       {rootDuty && <div className="actor__duty">ROOT</div>}
-      {actor.adoptedBy && <div className="actor__adopted">adopted by {actor.adoptedBy}</div>}
+      {/* said while the takeover is fresh, under the card so that the card keeps its size and the lines stay where they are; always in the title */}
+      {glow?.kind === "adopted" && actor.adoptedBy && <div className="actor__adopted">adopted by {actor.adoptedBy}</div>}
       {outage && (
         <>
           <div className="actor__state">restarting</div>
           <div className="actor__ring" role="img" aria-label="restarting" style={ringVars(outage)} />
         </>
-      )}
-      {down && (
-        <div className="actor__x" title={actor.status === "dead" ? "detected dead" : "killed"}>
-          ✕
-        </div>
       )}
       <Handle type="source" position={Position.Bottom} className="actor__handle" />
     </div>
@@ -117,7 +121,7 @@ function buildGraph(view: ViewState, now: number, active: string | null): TreeFr
   const placed = layoutTree(view);
   // Tab lands on the card last focused, or on the first one
   const stop = placed.some(({ id }) => id === active) ? active : (placed[0]?.id ?? null);
-  const nodes: Node<ActorData>[] = placed.map(({ id, x, y }) => {
+  const nodes: Node<ActorData>[] = placed.map(({ id, x, y, fallen }) => {
     const actor = view.actors[id];
     return {
       id,
@@ -131,6 +135,7 @@ function buildGraph(view: ViewState, now: number, active: string | null): TreeFr
         rootDuty: holder === id,
         glow: glowOf(actor, now, adoptionLife),
         leaf: isLeafKind(actor.kind),
+        fallen,
         tabbable: id === stop,
       },
     };
@@ -140,25 +145,25 @@ function buildGraph(view: ViewState, now: number, active: string | null): TreeFr
   const lit = new Set<string>();
   const edges: Edge[] = [];
   const inTree = (id: string): boolean => view.actors[id] !== undefined && !isInfraKind(view.actors[id].kind);
-  for (const id of view.order) {
+  for (const { id, parent } of placed) {
     const actor = view.actors[id];
-    if (!inTree(id) || !actor.parent || !inTree(actor.parent)) continue;
+    if (parent === null || !inTree(id) || !inTree(parent)) continue;
     let talkingTs = -Infinity;
     for (const m of recent) {
-      if ((m.from === actor.parent && m.to === id) || (m.from === id && m.to === actor.parent)) {
+      if ((m.from === parent && m.to === id) || (m.from === id && m.to === parent)) {
         talkingTs = Math.max(talkingTs, m.ts);
       }
     }
     const talking = talkingTs > -Infinity;
     if (talking) {
-      lit.add(`${actor.parent}->${id}`);
-      lit.add(`${id}->${actor.parent}`);
+      lit.add(`${parent}->${id}`);
+      lit.add(`${id}->${parent}`);
     }
     const adopted = actor.adoptedTs !== undefined && now - actor.adoptedTs < adoptionLife;
     const down = actor.status === "killed" || actor.status === "dead" || actor.status === "restarting";
     edges.push({
       id: `tree-${id}`,
-      source: actor.parent,
+      source: parent,
       target: id,
       animated: talking || adopted,
       className: adopted ? "edge--adopted" : talking ? "edge--talking" : down ? "edge--down" : "",
@@ -167,7 +172,7 @@ function buildGraph(view: ViewState, now: number, active: string | null): TreeFr
   }
   // Messages between actors that are not parent and child get their own animated edge.
   for (const m of recent) {
-    if (lit.has(`${m.from}->${m.to}`) || !inTree(m.from) || !inTree(m.to)) continue;
+    if (m.from === m.to || lit.has(`${m.from}->${m.to}`) || !inTree(m.from) || !inTree(m.to)) continue;
     const fade = glowVars(m.ts, messageLife);
     edges.push({
       id: `msg-${m.seq}`,
@@ -183,7 +188,7 @@ function buildGraph(view: ViewState, now: number, active: string | null): TreeFr
   }
 
   const shape: TreeShape = {
-    parents: new Map(placed.map(({ id }) => [id, view.actors[id].parent])),
+    parents: new Map(placed.map(({ id, parent }) => [id, parent])),
     bounds: boundsOf(view, placed),
     structure: structureKey(view, placed),
   };
@@ -233,6 +238,9 @@ function Graph({ view }: { view: ViewState }) {
       minZoom={0.2}
     >
       <Background gap={28} size={1} color="var(--grid)" />
+      <Panel position="top-left" className="run__legend">
+        colour = the subtree an actor belongs to · ✕ killed · a moving line is a message
+      </Panel>
     </ReactFlow>
   );
 }
@@ -275,7 +283,9 @@ export function TreeGraph({ view }: { view: ViewState }) {
   return (
     <ClockScope>
       <ReactFlowProvider>
-        <Graph view={view} />
+        <div className="run__fill">
+          <Graph view={view} />
+        </div>
       </ReactFlowProvider>
     </ClockScope>
   );

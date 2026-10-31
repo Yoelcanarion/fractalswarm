@@ -5,6 +5,7 @@ import { runCap } from "../lib/economy";
 import type { ViewState } from "../lib/reducer";
 import { ControlButton, useControlState } from "./ControlButton";
 import { money, virtualSeconds } from "./PanelParts";
+import { Details } from "./ui";
 
 interface Props {
   runId: string;
@@ -15,7 +16,8 @@ interface Props {
 const CONFIRM_MS = 4000;
 
 /** Budget shock and kill switch (spec §16). Both write the live run's control inbox; what they
- * did shows up in the panels once the run records ``budget.shock`` or ``run.halted``. */
+ * did shows up in the panels once the run records ``budget.shock`` or ``run.halted``. On a recording they have nothing to act on, so
+ * they are folded away, the way the plan's approval is: in view while the run is live. */
 export function RunControls({ runId, view }: Props) {
   const budget = useControlState("budget");
   const { economy } = view.panels;
@@ -47,9 +49,8 @@ export function RunControls({ runId, view }: Props) {
     }
   };
 
-  return (
-    <section className="panel controls">
-      <span className="controls__label">Run controls</span>
+  const controls = (
+    <div className="controls__body">
       <form
         className="controls__shock"
         onSubmit={(e) => {
@@ -73,13 +74,6 @@ export function RunControls({ runId, view }: Props) {
         </ControlButton>
         <span className="muted">{cap === null ? "no cap set" : `now ${money(cap, 2)}`} · the ladder reacts at once</span>
       </form>
-      <span className={`controls__state ${halted ? "controls__state--bad" : ""}`}>
-        {halted
-          ? `Halted by ${halted.by} at t = ${virtualSeconds(halted.ts)}: ${halted.reason}. Nothing starts after run.halted.`
-          : budget.enabled
-            ? "live run: these act on it"
-            : `recorded run: controls ${budget.reason}`}
-      </span>
       <div className="controls__kill">
         {armed ? (
           <>
@@ -96,6 +90,26 @@ export function RunControls({ runId, view }: Props) {
           </ControlButton>
         )}
       </div>
+    </div>
+  );
+
+  return (
+    <section className="panel controls">
+      <span className="controls__label">Run controls</span>
+      {budget.enabled ? (
+        controls
+      ) : (
+        <Details inline id="controls" summary="Budget shock and kill switch" hint="only on a live run" className="controls__fold">
+          {controls}
+        </Details>
+      )}
+      <span className={`controls__state ${halted ? "controls__state--bad" : ""}`}>
+        {halted
+          ? `Halted by ${halted.by} at t = ${virtualSeconds(halted.ts)}: ${halted.reason}. Nothing starts after run.halted.`
+          : budget.enabled
+            ? "live run: these act on it"
+            : `recorded run: controls ${budget.reason}`}
+      </span>
       {result && !halted && <div className={`chaos__result ${result.ok ? "" : "chaos__result--bad"}`}>{result.detail}</div>}
     </section>
   );

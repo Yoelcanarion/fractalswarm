@@ -183,7 +183,11 @@ function HeroChart() {
     <Beat id="hero-chart" lead={COPY.evidence.hero.lead} layout="wide">
       {/* the chart prints its own setting by default; the page prints it once, in the same words as everywhere else */}
       <Chart name="LineDraw" path="hero" duration={2.2} className="home-chart--hero" extra={{ setting: false }} />
-      <Setting>{captionFor(story, "hero")}</Setting>
+      {/* its extra cost is on R5's pre-registered basis, and R5 names both bases: it stands here with its setting and its reason */}
+      <Setting>
+        {captionFor(story, "hero")} {"·"} {COPY.rivalReason}
+      </Setting>
+      <Claim id="R5" className="home-claim--small" />
     </Beat>
   );
 }
@@ -238,7 +242,7 @@ function Helps() {
         <Reveal delay={100}>
           <p className="home-beat__verdict">{COPY.evidence.helps.cost}</p>
           <div className="home-figures">
-            <Figure value={cost.perRun} format={(n) => figure(n, 1)} label={COPY.evidence.helps.perRun} tone="loss" size="stat" />
+            <Figure value={cost.perRun} format={(n) => figure(n, 2)} label={COPY.evidence.helps.perRun} tone="loss" size="stat" />
           </div>
         </Reveal>
       )}

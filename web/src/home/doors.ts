@@ -17,6 +17,10 @@ export interface Door {
 }
 
 // The purposes are a few words: the card has a drawing and a title, and the page is held to about 200 words (words.test.ts).
+//
+// Four doors, and each opens a page that stands on its own. Two are not on the menu, and their routes stay: the Director's
+// (`#/director`, a page of scenes for the video, with no way back and most scenes needing a run in the address) and the ablation's
+// (`#/ablation`, which says that none has been recorded; its door comes back when one is). Their thumbnails stay in `viz/doors`.
 export const DOORS: readonly Door[] = [
   {
     id: "arena",
@@ -42,27 +46,12 @@ export const DOORS: readonly Door[] = [
     needsServer: false,
   },
   {
-    id: "director",
-    title: "Director",
-    purpose: "Guided scenes.",
-    href: "#/director",
-    needsServer: false,
-  },
-  {
-    // The evidence page: the charts, the fair fight, where it helps and where it does not.
+    // The evidence page: the charts, the fair fight, where it ties and where it does worse.
     id: "numbers",
     title: "The numbers",
     purpose: "All the evidence.",
     href: "#/evidence",
     needsServer: false,
-  },
-  {
-    id: "ablation",
-    title: "Model against parser",
-    purpose: "Muse versus code.",
-    href: "#/ablation",
-    needsServer: true,
-    closedNote: "Needs the local server: it runs the comparison.",
   },
 ];
 

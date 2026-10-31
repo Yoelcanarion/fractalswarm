@@ -12,6 +12,7 @@ import { Repeat } from "../parts/Repeat";
 import { SeeMore } from "../parts/SeeMore";
 import { useStory } from "../story";
 import { ProblemFilm } from "../viz/film/ProblemFilm";
+import { captionsFor } from "../viz/lanes/WorkLanes";
 
 /**
  * The problem, as a short film of the real work lanes of an in-process supervisor. It starts by itself when the film is
@@ -29,6 +30,8 @@ export function Problem() {
   const [again, setAgain] = useState(0);
   const play = arrived ? 1 + again : 0;
   const s = COPY.problem.more;
+  // the film draws no setting of its own (its captions need the room): the run it plays is named here, longest form first
+  const filmSetting = story?.lanes?.central ? captionsFor(story.lanes.central)[0] : undefined;
 
   return (
     <section id="problem" className="home-section home-problem" aria-labelledby="problem-title">
@@ -43,30 +46,34 @@ export function Problem() {
           <Repeat onClick={() => setAgain((n) => n + 1)} />
         </div>
         <SeeMore>
+          {filmSetting && (
+            <Setting>
+              {s.film} {filmSetting}
+            </Setting>
+          )}
           <p className="home-fold__text">{s.example(f)}</p>
           <p className="home-fold__text">{s.numbers}</p>
           <div className="home-pair">
             <div className="home-pair__side">
               <p className="home-pair__who">{s.rival}</p>
               <Figure value={rival.stallS} format={(n) => seconds(n)} label={COPY.labels.stalled} tone="rival" />
-              <Figure value={rival.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCost} tone="paid-twice" />
+              <Figure value={rival.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCostBasis} tone="paid-twice" />
             </div>
             <div className="home-pair__side">
               <p className="home-pair__who">{s.swarm}</p>
               <Figure value={swarm.stallS} format={(n) => seconds(n)} label={COPY.labels.stalled} tone="swarm" />
-              <Figure value={swarm.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCost} tone="swarm" />
+              <Figure value={swarm.extraCostPct} format={(n) => percent(n)} label={COPY.labels.extraCostBasis} tone="swarm" />
             </div>
           </div>
           <Setting>
             {captionFor(story, "hero")} {"·"} {COPY.rivalReason}
           </Setting>
           <Claim id="R5" className="home-claim--small" />
-          <p className="home-fold__text">
-            {s.better} {s.betterMore}
-          </p>
+          <p className="home-fold__text">{s.better}</p>
           <figure className="home-fold__figure">
             <PartsDiagram workers={f.agents} />
           </figure>
+          <Claim id="S3" />
         </SeeMore>
       </div>
     </section>

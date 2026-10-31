@@ -79,7 +79,7 @@ export function Timeline() {
         </div>
       </div>
       <label className="speedpick">
-        Speed
+        <span className="speedpick__label">Speed</span>
         <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="replay speed">
           {SPEEDS.map((s) => (
             <option key={s} value={s}>
