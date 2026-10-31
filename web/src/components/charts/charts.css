@@ -237,6 +237,21 @@
   overflow-wrap: anywhere;
 }
 
+.resultstable__runs summary {
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.resultstable__runs .resultstable__run {
+  white-space: nowrap;
+}
+
+.charts__notvalid {
+  margin: var(--space-3) 0 0;
+  font-size: var(--fs-body);
+}
+
 .charts__tablenote {
   margin: var(--space-3) 0 0;
   font-size: var(--fs-body);

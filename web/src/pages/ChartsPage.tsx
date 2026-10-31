@@ -12,6 +12,12 @@ import { heroSets, runCount, type HeroSet } from "../lib/hero";
 import { drawsInProcess, IN_PROCESS_REASON, isFlat } from "../lib/heroText";
 import { useDocumentTitle } from "../lib/title";
 
+/** Why a chart of a recorded set shows less than 100%: the one run on record that is not valid (bench/REPORT.md §4.10.7). */
+export const NOT_VALID: Readonly<Record<string, string>> = {
+  "headline-10":
+    "One run of this set is not valid: the swarm with no failures, on seed 5. A track planner put a Day-1-only talk in a day-2 session, and that session's 8 talks stayed unplaced, so it placed 40 of 48. There was no crash and no API error, and the run stays in the data.",
+};
+
 type Load =
   | { status: "loading" }
   | { status: "error"; message: string }
@@ -132,6 +138,7 @@ function ChartsBody({ sets, runs }: { sets: HeroSet[]; runs: ReadonlySet<string>
           <MetricChart {...chart} metric="coordinationTokens" height={220} />
         )}
       </div>
+      {NOT_VALID[set.name] && <p className="muted charts__notvalid">{NOT_VALID[set.name]}</p>}
       <Details id="more" summary="Hide a workflow, show the band of seeds, or read every number" hint="the table of the charts is here">
         <div className="charts__controls">
           <SeriesKey series={hero.series} colors={colors} hidden={hidden} onToggle={toggle} />

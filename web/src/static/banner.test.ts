@@ -40,7 +40,7 @@ describe("what the banner says about the build", () => {
 
   it("says the replays were checked at build, at which commit, and not in the browser", () => {
     const note = buildNote(site);
-    expect(note).toContain("checked when this site was built");
+    expect(note).toContain("checked at build");
     expect(note).toContain("cccccccc".slice(0, 7));
     expect(note).toContain("2026-10-30");
     expect(note).toContain("not in your browser");
@@ -117,7 +117,8 @@ describe("the banner on a phone", () => {
   });
 
   it("marks the parts the phone leaves out, and the banner that is loading", () => {
-    expect(source).toContain('Static showcase: recorded runs only.<span className="staticbar__more"> Run it yourself: <code>{COMMAND}</code></span>');
+    expect(source).toMatch(/Static showcase: recorded runs only\.\s*<span className="staticbar__more">/);
+    expect(source).toContain('Run it yourself: <a href={REPO_URL}>get the code</a>, then <code>{COMMAND}</code>');
     expect(source).toContain('className="staticbar__side staticbar__note"');
     expect(source).toContain('"staticbar staticbar--loading"');
   });

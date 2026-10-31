@@ -114,7 +114,7 @@ export function RunsPage() {
   const verifyOne = useCallback(async (id: string) => {
     setVerify((now) => ({ ...now, [id]: { state: "pending" } }));
     try {
-      const report = await verifyRun(id);
+      const report = await verifyRun(id, import.meta.env.MODE === "static");
       if (mounted.current) setVerify((now) => ({ ...now, [id]: { state: "done", report } }));
     } catch (error) {
       if (mounted.current) setVerify((now) => ({ ...now, [id]: { state: "error", error: messageOf(error) } }));

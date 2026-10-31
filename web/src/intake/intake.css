@@ -957,6 +957,40 @@
   }
 }
 
+.staticnew {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 46rem;
+  padding: var(--space-4);
+}
+
+.staticnew .panel__title {
+  margin: 0;
+}
+
+.staticnew p {
+  margin: 0;
+}
+
+.staticnew__steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.staticnew__steps code {
+  overflow-wrap: anywhere;
+}
+
+.staticnew__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 /* On a phone a row is a card: beside five other columns a title gets a dozen letters a line, and it is the cell read word by word. */
 @media (max-width: 720px) {
   .rtable--cards,

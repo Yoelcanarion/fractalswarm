@@ -43,4 +43,15 @@ export interface VerifyReport {
   detail: string;
   bundle_head: string | null;
   bundle_head_ok: boolean;
+  /** The static showcase only, when asked: what this browser found when it recomputed the log's hash chain itself. */
+  here?: ChainHere;
+}
+
+export interface ChainHere {
+  /** The chain holds, and it reaches the head stored with the run. */
+  ok: boolean;
+  events: number;
+  head: string;
+  brokenAt: number | null;
+  ms: number;
 }

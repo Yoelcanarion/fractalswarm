@@ -273,6 +273,8 @@ export interface VerifyWords {
   label: string;
   tone: "plain" | "good" | "bad" | "warn";
   detail: string;
+  /** A second verdict beside the first. */
+  also?: { label: string; detail: string };
 }
 
 /** A replay that does not match while the log's own hash chain holds is not a broken log: this code does not reproduce that recording
@@ -283,12 +285,21 @@ export const notReproduced = (report: VerifyReport): boolean => !report.ok && re
 export const notReproducedWords = (report: VerifyReport): string =>
   `Log intact. This code does not reproduce this recording${report.first_divergence === null ? "" : `: first difference at seq ${report.first_divergence}`}.`;
 
+/** The Runs page's button for every listed run. On the static showcase the browser does the work, and what it does is not a replay. */
+export function verifyAllLabel(verifying: boolean, verifiable: number): string {
+  const here = import.meta.env.MODE === "static";
+  if (verifying) return here ? "Recomputing…" : "Replaying…";
+  if (verifiable === 0) return here ? "Nothing to recompute" : "Nothing to verify";
+  return here ? `Recompute ${verifiable} log${verifiable === 1 ? "" : "s"} here` : `Verify ${verifiable} listed run${verifiable === 1 ? "" : "s"}`;
+}
+
 /** The same verdict the run page gives (components/VerifyBadge.tsx): verified only when the replay and the bundle's head both match. */
 export function verifyWords(view: VerifyView): VerifyWords {
   switch (view.state) {
     case "idle":
       return { label: "Not checked", tone: "plain", detail: "" };
     case "pending":
+      if (import.meta.env.MODE === "static") return { label: "Recomputing…", tone: "plain", detail: "Your browser is recomputing every hash of the log." };
       return { label: "Replaying…", tone: "plain", detail: "Re-running the run from its log." };
     case "error":
       return { label: "Could not check", tone: "warn", detail: view.error };
@@ -296,7 +307,7 @@ export function verifyWords(view: VerifyView): VerifyWords {
       const { report } = view;
       if (report.ok && report.bundle_head_ok) {
         // The static showcase has no server to replay on: its report was made when the site was built (static/BuildVerified.tsx).
-        if (import.meta.env.MODE === "static") return { ...verifiedAtBuild(report), tone: "good" };
+        if (import.meta.env.MODE === "static") return { tone: "good", ...verifiedAtBuild(report) };
         return {
           label: "Replay verified",
           tone: "good",

@@ -3,6 +3,7 @@ import { useStore } from "zustand";
 
 import { resultsHash } from "../lib/address";
 import { arenaCounters } from "../lib/arena";
+import type { RunEvent } from "../lib/types";
 import type { RunStoreApi } from "../store";
 import { startedOf, type Assumptions, type SystemKind } from "./assumptions";
 import { pairEndText, type EndSide } from "./pairEndText";
@@ -10,6 +11,10 @@ import { playedOut } from "./playedOut";
 import { talksTotal, workOf } from "./work";
 
 const NOT_YET: Omit<EndSide, "system"> = { finished: false, completed: false, crashes: 0, handOvers: null, duplicatedCalls: 0, placed: 0, total: null };
+
+/** The kills of agents a log holds (lib/timeline.ts reads the same event). */
+const agentKills = (events: readonly RunEvent[]): number =>
+  events.filter((e) => e.type === "chaos.injected" && String(e.payload.fault ?? e.payload.kind ?? "") === "kill_agent").length;
 
 /** One side's figures at the end of its run. Nothing is counted until the replay has played the run out. */
 function useEndSide(store: RunStoreApi, system: SystemKind): EndSide {
@@ -26,6 +31,7 @@ function useEndSide(store: RunStoreApi, system: SystemKind): EndSide {
       finished,
       completed: view.completed,
       crashes: counters.coordinatorCrashes,
+      agentsKilled: agentKills(events),
       handOvers: takeover.state === "done" ? takeover.report.heirs : null,
       duplicatedCalls: counters.duplicatedCalls,
       placed: work.placed,

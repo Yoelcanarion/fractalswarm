@@ -43,7 +43,8 @@ html[data-staticbar="on"] .dir-page {
   line-height: var(--lh-tight);
 }
 
-.staticbar__text code {
+.staticbar__text code,
+.staticbar__text a {
   color: var(--text-primary);
 }
 

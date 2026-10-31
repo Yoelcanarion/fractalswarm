@@ -6,6 +6,7 @@
 // A route it cannot answer returns what the local server returns for a feature that is off (see answers.ts), so the
 // fallbacks the app already has do the rest.
 
+import type { VerifyReport } from "../lib/types";
 import {
   JSON_HEADERS,
   jsonResponse,
@@ -18,6 +19,7 @@ import {
   unknownCall,
   unknownRun,
 } from "./answers";
+import { checkChain } from "./chain";
 import { composeAnswer, isWholePage, pagesFor, readPaging } from "./events";
 import type { Entry, Manifest, RunData } from "./manifest";
 import type { LoadProgress } from "./progress";
@@ -119,6 +121,23 @@ export function createStaticFetch(options: ShimOptions): typeof fetch {
     return typeof text === "string" ? new Response(text, { status: entry.status, headers: JSON_HEADERS }) : text;
   }
 
+  /** The report the build stored, with what this browser finds when it recomputes the log's hashes from the page files themselves. */
+  async function recompute(run: RunData, signal: AbortSignal | null): Promise<Response> {
+    const stored = await respond(run.routes.verify, signal);
+    if (!stored.ok) return stored;
+    const report = (await stored.json()) as VerifyReport;
+    const pages: string[] = [];
+    for (const { file } of run.events.pages) {
+      const text = await fileText(file, signal);
+      if (typeof text !== "string") return text;
+      pages.push(text);
+    }
+    const started = performance.now();
+    const chain = await checkChain(pages);
+    const ms = performance.now() - started;
+    return jsonResponse(200, { ...report, here: { ...chain, ok: chain.ok && chain.head === report.recorded_head && chain.events === report.recorded_events, ms } });
+  }
+
   /** A request for exactly page file `index`: the file, as it is, while telling the load bar how far it has come. */
   async function wholePage(runId: string, run: RunData, index: number, signal: AbortSignal | null): Promise<Response> {
     const { pages } = run.events;
@@ -202,7 +221,7 @@ export function createStaticFetch(options: ShimOptions): typeof fetch {
     if (name === undefined) return only("GET", () => respond(run.routes.summary, signal));
     if (extra === undefined) {
       if (name === "events") return only("GET", () => eventsRoute(runId, run, query, signal));
-      if (name === "verify") return only("POST", () => respond(run.routes.verify, signal));
+      if (name === "verify") return only("POST", () => (query.has("here") ? recompute(run, signal) : respond(run.routes.verify, signal)));
       if (name === "calls") return only("GET", () => callsRoute(run, query, signal));
       if (READ_ROUTES.has(name)) return only("GET", () => respond(run.routes[name], signal));
       if (CONTROLS.has(name)) return only("POST", () => notLive("run", runId));

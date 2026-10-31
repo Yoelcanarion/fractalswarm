@@ -8,7 +8,9 @@ import { heroSets } from "../../lib/hero";
 import { REPO_ROOT } from "../../lib/testing";
 import { seriesColors } from "./colors";
 import { MetricChart } from "./MetricChart";
-import { ResultsTable, runName } from "./ResultsTable";
+import story from "../../home/data/story.json";
+import { NOT_VALID } from "../../pages/ChartsPage";
+import { ResultsTable, runName, seedsText } from "./ResultsTable";
 import { SeriesKey } from "./SeriesKey";
 import { SetCaption, SetPicker } from "./SetHeader";
 
@@ -125,6 +127,33 @@ describe("the table of every number", () => {
     const some = table(["swarm__t2_conference__C3__s1"]);
     expect(some).toContain('href="#/run/swarm__t2_conference__C3__s1?at=end"');
     expect(some.match(/#\/run\//g)).toHaveLength(1);
+  });
+
+  it("gives seeds and runs in the order of their numbers, and a run of seeds as its two ends", () => {
+    expect(seedsText([1, 10, 2, 3, 4, 5, 6, 7, 8, 9])).toBe("1 to 10");
+    expect(seedsText(["1", "2", "3"])).toBe("1 to 3");
+    expect(seedsText([3, 1])).toBe("1, 3");
+    expect(seedsText([1, 10, 2])).toBe("1, 2, 10");
+    expect(seedsText([])).toBe("–");
+    const out = html(createElement(ResultsTable, { hero: { ...hero, series: [{ ...hero.series[0], points: [{ ...hero.series[0].points[0], runs: ["runs/a__s10", "runs/a__s2"] }] }] }, knownRuns: new Set<string>() }));
+    expect(out.indexOf("a__s2")).toBeLessThan(out.indexOf("a__s10"));
+  });
+
+  it("keeps a row low: several runs are a count that opens on their names, and one run is its name", () => {
+    const several = html(createElement(ResultsTable, { hero: { ...hero, series: [{ ...hero.series[0], points: [{ ...hero.series[0].points[0], runs: ["runs/a", "runs/b"] }] }] }, knownRuns: new Set<string>() }));
+    expect(several).toMatch(/<details class="resultstable__runs"><summary>2 runs<\/summary>/);
+    expect(several).toContain(">a</span>");
+    const one = html(createElement(ResultsTable, { hero: { ...hero, series: [{ ...hero.series[0], points: [{ ...hero.series[0].points[0], runs: ["runs/a"] }] }] }, knownRuns: new Set<string>() }));
+    expect(one).not.toContain("<details");
+    expect(one).toContain(">a</span>");
+  });
+
+  it("says why validity is below 100% in the one set where it is, for the run the report and the story name", () => {
+    expect(Object.keys(NOT_VALID)).toEqual(["headline-10"]);
+    expect(story.numbers.validity.headline10.invalid).toEqual(["swarm__t2_conference__C0__s5"]);
+    expect(NOT_VALID["headline-10"]).toContain("the swarm with no failures, on seed 5");
+    expect(NOT_VALID["headline-10"]).toContain("40 of 48");
+    expect(NOT_VALID["headline-10"]).toContain("no crash and no API error");
   });
 });
 

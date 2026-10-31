@@ -26,11 +26,27 @@ export function whereChecked(stamp: BuildStamp | null): string {
 }
 
 /** The same truth for a place that shows a verdict as plain words (the Runs page's verify cell), in the static build only:
- * in place of "Replay verified" and "N events re-run from run.started", which would say a replay ran just now. */
-export function verifiedAtBuild(report: VerifyReport): { label: string; detail: string } {
+ * in place of "Replay verified" and "N events re-run from run.started", which would say a replay ran just now. With what this browser
+ * found when asked to recompute the log's hashes, which is a thing it really did, and a smaller one: nothing is replayed here. */
+export function verifiedAtBuild(report: VerifyReport): { label: string; detail: string; also?: { label: string; detail: string }; tone?: "bad" } {
+  const built = `${whereChecked(readStamp(report))} Recorded and replayed head ${report.replayed_head.slice(0, 12)}. Check it yourself: ${COMMAND}`;
+  const { here } = report;
+  if (here === undefined) return { label: "Replay verified at build", detail: built };
+  if (!here.ok) {
+    return {
+      label: here.brokenAt === null ? "Log does not reach its stored head" : `Hash chain broken at event ${here.brokenAt}`,
+      tone: "bad",
+      detail: `Your browser recomputed the log's hashes and stopped there. ${built}`,
+    };
+  }
+  const events = here.events.toLocaleString("en-US");
   return {
     label: "Replay verified at build",
-    detail: `${whereChecked(readStamp(report))} Recorded and replayed head ${report.replayed_head.slice(0, 12)}. Check it yourself: ${COMMAND}`,
+    detail: built,
+    also: {
+      label: `${events} hashes recomputed here in ${(here.ms / 1000).toFixed(1)} s ✓`,
+      detail: `Your browser recomputed the hash of each of the ${events} events from the log this site shows, and reached head ${here.head.slice(0, 12)}, the one stored with the run. Changing one event would change every hash after it. That checks the log; it is not a replay, which needs the code.`,
+    },
   };
 }
 
@@ -38,7 +54,7 @@ export function verifiedAtBuild(report: VerifyReport): { label: string; detail: 
  * yourself. The badge is one short line, because the banner names the build already and the places the badge sits in (a strip, a column of
  * chips) are narrow. */
 export const buildVerifiedHint = (report: VerifyReport): string =>
-  `${whereChecked(readStamp(report))} ${report.replayed_events} events re-run from run.started; hash match: recorded and replayed head ${report.replayed_head}. Check it yourself: ${COMMAND}`;
+  `${whereChecked(readStamp(report))} ${report.replayed_events} events re-run from run.started; hash match: recorded and replayed head ${report.replayed_head}. On Runs your browser can recompute the hashes of the log itself. Check it yourself: ${COMMAND}`;
 
 export function BuildVerified({ report }: { report: VerifyReport }) {
   return (

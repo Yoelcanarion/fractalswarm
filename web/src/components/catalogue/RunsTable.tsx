@@ -72,9 +72,10 @@ function StateCell({ state }: { state: RunState }) {
 function VerifyCell({ row, view, onVerify }: { row: CatalogueRow; view: VerifyView; onVerify: (id: string) => void }) {
   if (row.state === "live" || row.state === "empty") return <span className="muted">–</span>;
   if (view.state === "idle") {
+    const here = import.meta.env.MODE === "static";
     return (
-      <button type="button" className="btn btn--seg" onClick={() => onVerify(row.listing.id)} aria-label={`Verify the replay of ${row.listing.id}`}>
-        Verify
+      <button type="button" className="btn btn--seg" onClick={() => onVerify(row.listing.id)} aria-label={here ? `Recompute the hashes of ${row.listing.id}` : `Verify the replay of ${row.listing.id}`}>
+        {here ? "Recompute" : "Verify"}
       </button>
     );
   }
@@ -89,6 +90,13 @@ function VerifyCell({ row, view, onVerify }: { row: CatalogueRow; view: VerifyVi
   return (
     <span className="runcell__verify">
       {words.detail ? <Tooltip label={words.detail}>{badge}</Tooltip> : badge}
+      {words.also && (
+        <Tooltip label={words.also.detail}>
+          <span className="badge badge--good" role="status">
+            {words.also.label}
+          </span>
+        </Tooltip>
+      )}
       {view.state === "error" && (
         <button type="button" className="btn btn--seg" onClick={() => onVerify(row.listing.id)} aria-label={`Try again to verify ${row.listing.id}`}>
           Retry

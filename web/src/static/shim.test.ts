@@ -106,6 +106,13 @@ describe("the replay report", () => {
     expect(await answer(get(`api/runs/${ALPHA}/verify`, post()))).toEqual({ status: 200, body: VERIFY });
   });
 
+  it("is recomputed from the page files when asked, and a log with no hashes does not pass", async () => {
+    const { get } = setup();
+    const { status, body } = await answer(get(`api/runs/${ALPHA}/verify?here=1`, post()));
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ ...VERIFY, here: { ok: false, events: 0, brokenAt: 1 } });
+  });
+
   it("is a POST, as in the API", async () => {
     const { get } = setup();
     expect((await answer(get(`api/runs/${ALPHA}/verify`))).status).toBe(405);

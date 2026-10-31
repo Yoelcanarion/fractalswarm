@@ -48,8 +48,9 @@ export async function loadAllEvents(runId: string, fromSeq = 1): Promise<RunEven
 // The server refuses a POST that is not JSON (415), even one with no body, so every POST says so and sends {}.
 const JSON_POST = { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" } as const;
 
-export const verifyRun = (runId: string) =>
-  fetch(`api/runs/${encodeURIComponent(runId)}/verify`, JSON_POST).then((r) => json<VerifyReport>(r));
+/** `here` asks the static showcase to recompute the log's hashes in this browser as well; a server replays, and pays it no attention. */
+export const verifyRun = (runId: string, here = false) =>
+  fetch(`api/runs/${encodeURIComponent(runId)}/verify${here ? "?here=1" : ""}`, JSON_POST).then((r) => json<VerifyReport>(r));
 
 /** The takeover check of a finished run. Null when the server does not expose it (404, 405 or 501) or
  * the run has not completed (409), which the chip takes to mean "show nothing". */

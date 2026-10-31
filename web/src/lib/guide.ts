@@ -42,7 +42,8 @@ const STATIC_CHANGES: Readonly<Partial<Record<GuideStep["id"], Partial<Pick<Guid
     action: { label: "Watch it in the arena", href: "#/arena" },
   },
   verify: {
-    says: "A run is played again from its log and must give the same hash. “Replay verified” means every event matches. Here that was done when the site was built, not in your browser; the badge names the commit.",
+    says: "A run is played again from its log and must give the same hash. That replay ran when this site was built, not in your browser. On Runs your browser can recompute every hash of the log itself.",
+    action: { label: "Recompute on Runs", href: "#/runs?details=all" },
   },
 };
 

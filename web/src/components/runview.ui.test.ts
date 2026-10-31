@@ -365,7 +365,7 @@ describe("the guide", () => {
   it("says on the static site what is true there: the replay was checked when the site was built, and nothing is started", () => {
     const out = renderToStaticMarkup(createElement(Guide, { guide: guide(true, true), site: "static" }));
     for (const step of guideSteps("static")) expect(out).toContain(step.says.slice(0, 40));
-    expect(out).toContain("when the site was built, not in your browser");
+    expect(out).toContain("when this site was built, not in your browser");
     expect(out).toContain("this site starts no run");
     expect(out).not.toContain("checks itself when it opens");
     // and on a server it is as it was
@@ -373,7 +373,7 @@ describe("the guide", () => {
     expect(renderToStaticMarkup(createElement(Guide, { guide: guide(true, true) }))).toContain("A recorded run checks itself when it opens.");
   });
 
-  it("is the same short band on the static site as on a server but for one link: the site starts no run, so step 2 points at the arena", () => {
+  it("is the same short band on the static site as on a server but for two links: the site starts no run, so step 2 points at the arena, and step 3 names the button there is", () => {
     const site = renderToStaticMarkup(createElement(Guide, { guide: guide(true), site: "static" }));
     const server = renderToStaticMarkup(createElement(Guide, { guide: guide(true) }));
     const start = '<a class="guide__go" href="#/new">Start a run</a>';
@@ -381,7 +381,7 @@ describe("the guide", () => {
     expect(server).toContain(start);
     expect(site).toContain(watch);
     expect(site).not.toContain("Start a run");
-    expect(server.replace(start, watch)).toBe(site);
+    expect(server.replace(start, watch).replace(">Verify one on Runs<", ">Recompute on Runs<")).toBe(site);
   });
 
   it("keeps the button of the short band clear of the row above it, whose link can run as far right as the button does", () => {

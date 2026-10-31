@@ -86,6 +86,16 @@ describe("the end of a pair", () => {
     expect(pairEndText(side({ completed: false }), side({ system: "central", completed: false }), assumptions("central")).headline).toBe("Neither run finished.");
   });
 
+  it("says when no agent was killed, since the results over ten seeds kill half of them, and only when the logs say so", () => {
+    const words = "Here only coordinators crashed and no agent was killed; the results over ten seeds kill half the agents as well.";
+    const rival = assumptions("durable-max");
+    const of = (agentsKilled: number | undefined, crashes = 5) => pairEndText(side({ agentsKilled, crashes }), side({ system: "durable-max", agentsKilled, crashes }), rival).scope;
+    expect(of(0)).toContain(words);
+    expect(of(3)).not.toContain(words);
+    expect(of(undefined)).not.toContain(words);
+    expect(of(0, 0)).not.toContain(words);
+  });
+
   it("states the scope: one run of each, on one seed, under one failure plan, with the rival's setting", () => {
     expect(plain(pair().scope)).toBe(
       "This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after 5 s and restarting after 0 s: it shows what happened here, not what usually happens.",

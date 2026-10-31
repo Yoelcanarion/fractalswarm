@@ -46,17 +46,18 @@ describe("the guide's steps on the static showcase", () => {
     expect(server.find((step) => step.id === "verify")?.says).toContain("A recorded run checks itself when it opens.");
     const verify = showcase.find((step) => step.id === "verify")?.says ?? "";
     expect(verify).not.toContain("checks itself when it opens");
-    expect(verify).toContain("when the site was built, not in your browser");
+    expect(verify).toContain("when this site was built, not in your browser");
+    expect(verify).toContain("your browser can recompute every hash of the log itself");
     const kill = showcase.find((step) => step.id === "kill")?.says ?? "";
     expect(kill).toContain("A recording cannot be changed");
     expect(kill).toContain("this site starts no run");
     expect(kill).not.toMatch(/, start a run\./);
   });
 
-  it("keep the headings and the links, but for step 2's: a site that starts no run points at the arena, where the kills are watched", () => {
+  it("keep the headings and the links, but for step 2's: a site that starts no run points at the arena, where the kills are watched; and step 3 names the button there is", () => {
     expect(showcase.map(({ title }) => title)).toEqual(server.map(({ title }) => title));
     expect(server.map(({ action }) => action?.href)).toEqual(["#/run", "#/new", "#/runs?details=all"]);
-    expect(showcase.map(({ action }) => action)).toEqual([server[0].action, { label: "Watch it in the arena", href: "#/arena" }, server[2].action]);
+    expect(showcase.map(({ action }) => action)).toEqual([server[0].action, { label: "Watch it in the arena", href: "#/arena" }, { ...server[2].action, label: "Recompute on Runs" }]);
   });
 
   it("are the site's from the first paint of a static build, before any capabilities have arrived, so that the short band does not change", () => {

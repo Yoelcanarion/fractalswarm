@@ -18,7 +18,9 @@ import {
   type RunView,
   type Where,
 } from "../../lib/shell";
-import { Details, Hint, StatusBadge, ThemeToggle } from "../ui";
+import { REPO_URL } from "../../lib/links";
+import { Details, Hint, StatusBadge, ThemeToggle, Tooltip } from "../ui";
+import { GithubMark } from "../ui/GithubMark";
 import { GuideButton, type GuideState } from "./Guide";
 import "./shell.css";
 
@@ -131,6 +133,11 @@ export function TopBar({ where, guide, ...run }: TopBarProps) {
         </nav>
         <div className="topbar__right">
           {guide && <GuideButton guide={guide} />}
+          <Tooltip label="The code on GitHub" placement="bottom-end">
+            <a className="icon-btn" href={REPO_URL} aria-label="The code on GitHub">
+              <GithubMark />
+            </a>
+          </Tooltip>
           <ThemeToggle />
         </div>
       </header>

@@ -42,3 +42,31 @@ What the tester would tell a friend: "A free 12-talk schedule plus a rival compa
 
 - A test that starts its own run finds what recordings cannot: the false score only exists while a run records.
 - Ask of each screen what the person came for. Both testers reached the end of the job and neither was shown the product of it.
+
+## The third tester: a juror on the static site, at 3d5fb11 (57 actions)
+
+One agent, Sonnet, with the site's address and nothing else, asked to judge it as a juror would. Its verdict: "Yes, top three."
+
+| What it found | What it was | What was done |
+|---|---|---|
+| "Verify 5 listed runs" computes nothing and "just turns green"; weakest point of the site: "nothing can be run or re-verified from the page" | True: the button showed a report the build had stored | The browser now recomputes every hash of the log from the files the page shows (`web/src/lib/blake2b.ts`, `web/src/static/chain.ts`). The button says Recompute, and a row says how many hashes and how long |
+| No link to the code anywhere: "I would not know where to get the app" | True | The GitHub mark in both top bars, and "get the code" in the banner. The repo opens on Nov 3, and the site goes up after it |
+| New task on the site is a dead end: the form works, "Use the sample text" gives a red error naming another command | True | No form on the site: what the app does, the three steps to it, and two ways on |
+| "Half its agents killed" never seen | True: the recorded runs kill five coordinators and no agent; C3, the ten-seed numbers, also kills half the agents | The end of a pair says so when the logs show it. It counts the kills in the log, so a person's own pair that kills agents does not get the sentence |
+| Validity 90% with no failures, "not on the home page" | Reported in `bench/REPORT.md` §4.10.7, and nowhere on the charts | A note under the charts of that set |
+| The Runs column wraps names into tall rows | True, and the seeds read 1, 10, 2, 3 | A count that opens on the names, in the order of the seeds; seeds as "1 to 10" |
+| "PENDING" unexplained | S5, lifted at release by `coord\verify_all.ps1` | Nothing to do until then |
+| "A tree of small coordinators" undefined; the slogan comes before a description | A matter of taste, on reviewed copy, under the 230-word limit, and the tree is drawn beside it | Left as it is |
+| Counters read as they count up | A model reads faster than the animation | Not a finding |
+
+### The check, proved by clicks
+
+- All five shipped logs hold in Chromium and in Firefox: 30,996 events, to the head stored with each run. That is the proof that reading the page files as text gives exactly the bytes the kernel hashed, on real logs and not only on the fixture.
+- Everything together takes 2.1 s in Chromium and 3.5 s in Firefox, loading the files included. The largest log takes 0.4 s and 0.8 s.
+- With one digit changed in the first file of `demo-final` on its way to the browser, the row says "Hash chain broken at event 2828", in both browsers, and the four other logs still hold.
+- It is not a replay, and the tooltip says so. The head comes from the same site, so it shows that a log and its head agree, not who wrote them (`docs/claims.md`, S8).
+
+## What the three tests teach
+
+- A juror asks what a button really did. A check that looks like work and is not is worse than no button: this one became real, and was cheap.
+- The way to the code is the first thing a person who likes the demo looks for.

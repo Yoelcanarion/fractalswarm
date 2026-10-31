@@ -6,6 +6,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { REPO_URL } from "../../lib/links";
 import { COPY } from "../copy";
 import type { Story } from "../data/types";
 import { figure } from "../format";
@@ -153,8 +154,8 @@ describe("the evidence page, rendered with a story", () => {
     }
   });
 
-  it("reaches no outside address", () => {
-    expect(html.replace(/xmlns="[^"]*"/g, "")).not.toMatch(/https?:\/\//);
+  it("reaches no outside address but the link to the code", () => {
+    expect(html.replace(/xmlns="[^"]*"/g, "").replace(`href="${REPO_URL}"`, "")).not.toMatch(/https?:\/\//);
   });
 });
 

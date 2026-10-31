@@ -1,6 +1,6 @@
 import { RefreshCw, Search } from "lucide-react";
 
-import { STATES, type Filter, type RunState } from "../../lib/catalogue";
+import { STATES, verifyAllLabel, type Filter, type RunState } from "../../lib/catalogue";
 
 export interface RunsToolbarProps {
   filter: Filter;
@@ -66,7 +66,7 @@ export function RunsToolbar({ filter, onFilter, states, workflows, summary, onRe
           </button>
         )}
         <button type="button" className="btn" onClick={onVerifyAll} disabled={verifying || verifiable === 0}>
-          {verifying ? "Replaying…" : verifiable === 0 ? "Nothing to verify" : `Verify ${verifiable} listed run${verifiable === 1 ? "" : "s"}`}
+          {verifyAllLabel(verifying, verifiable)}
         </button>
         <button type="button" className="icon-btn" onClick={onRefresh} aria-label="Refresh the list">
           <RefreshCw size={16} aria-hidden="true" />

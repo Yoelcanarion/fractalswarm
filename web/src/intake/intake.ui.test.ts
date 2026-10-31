@@ -21,6 +21,7 @@ import { ReviewScreen, type ReviewScreenProps } from "./ReviewScreen";
 import { RunPanel, type RunPanelProps } from "./RunPanel";
 import { SourcePane } from "./SourcePane";
 import { SpendPanel, type SpendPanelProps } from "./SpendPanel";
+import { StaticIntake } from "./StaticIntake";
 import { Steps } from "./Steps";
 import { checkProposal } from "./validate";
 import { fixture, museReading, museTexts, preflightOf, stateOf } from "./testing";
@@ -54,19 +55,6 @@ describe("the form", () => {
     expect(text).toContain("kept on this machine");
     expect(text).toContain("never bundled or committed");
     expect(text).toContain("Email addresses are replaced by placeholders");
-  });
-
-  it("says on the static site what is true of what is pasted: it stays in the page, and the private folder is the app's", () => {
-    const text = plainText(form({ site: "static" }));
-    expect(text).toContain("Private by design");
-    expect(text).toContain("What you paste stays in this page: this site has no server, so it is not sent, stored or logged anywhere, and a reload clears it.");
-    expect(text).toContain("In the app, which you run yourself, it is kept in a private folder on your machine, outside the repo, and is never bundled or committed.");
-    expect(text).toContain("Email addresses are replaced by placeholders");
-    expect(text).toContain("with Muse, which is billed, the text (addresses replaced) is sent to Meta’s model API");
-    expect(text).not.toContain("kept on this machine");
-    expect(text).not.toContain("the server’s private folder");
-    // a server's box is as it was
-    expect(plainText(form({ site: "server" }))).toContain("in the server’s private folder, outside the repo");
   });
 
   it("gives the program's fixed shape, so the person knows what Muse will fit the text to", () => {
@@ -479,10 +467,16 @@ describe("the flow", () => {
     expect(plainText(flow({ canStart: false }))).not.toContain("static demo bundle");
   });
 
-  it("says on the static site that it starts no run and what to run instead, and not that a server does not", () => {
-    const notice = plainText(/<p class="intake__notice"[^>]*>[\s\S]*?<\/p>/.exec(flow({ canStart: false, site: "static" }))?.[0] ?? "");
-    expect(notice).toBe("This site starts no run. Reading and running your text needs the app: uv run fractalswarm serve.");
-    expect(flow({ canStart: true, site: "static" })).not.toContain("intake__notice");
+  it("has no form on the static site, where nothing could read it: only where the real one is, and the way back to what the site shows", () => {
+    const markup = renderToStaticMarkup(createElement(StaticIntake));
+    const text = plainText(markup);
+    expect(markup).not.toContain("<textarea");
+    expect(text).toContain("New task");
+    expect(text).toContain("This site only shows recorded runs");
+    expect(text).toContain("git clone https://github.com/Yoelcanarion/fractalswarm");
+    expect(text).toContain("uv run fractalswarm serve");
+    expect(text).toContain("The practice reader and the practice model are free");
+    expect(markup).toContain('href="#/arena"');
   });
 });
 

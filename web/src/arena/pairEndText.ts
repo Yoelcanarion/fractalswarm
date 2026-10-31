@@ -15,6 +15,8 @@ export interface EndSide {
   crashes: number;
   /** Hand-overs the takeover check counted for a swarm (goals that changed owner); null or absent where it has not said. */
   handOvers?: number | null;
+  /** Agents the failure plan killed, as the log holds them; absent where it has not said. */
+  agentsKilled?: number;
   /** Model calls made again for work already paid for. */
   duplicatedCalls: number;
   placed: number;
@@ -75,6 +77,11 @@ export function sideText(side: EndSide, assumptions: Assumptions): string {
 
 const capitalize = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
+/** The recorded pairs crash coordinators and no agent, and a person who has read the numbers of C3 should not take them for that run. */
+const NO_AGENT = " Here only coordinators crashed and no agent was killed; the results over ten seeds kill half the agents as well.";
+
+const noAgentKilled = (left: EndSide, right: EndSide): boolean => left.agentsKilled === 0 && right.agentsKilled === 0 && left.crashes + right.crashes > 0;
+
 /** The words of the end of a pair. */
 export function pairEndText(left: EndSide, right: EndSide, assumptions: Assumptions): PairEndText {
   const finished = [left, right].filter((side) => side.completed).length;
@@ -84,6 +91,6 @@ export function pairEndText(left: EndSide, right: EndSide, assumptions: Assumpti
       { who: "FractalSwarm", text: sideText(left, assumptions) },
       { who: capitalize(assumptions.name), text: sideText(right, assumptions) },
     ],
-    scope: `This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after ${secondsText(assumptions.detectionMs)} and restarting after ${secondsText(assumptions.restartMs)}: it shows what happened here, not what usually happens.`,
+    scope: `This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after ${secondsText(assumptions.detectionMs)} and restarting after ${secondsText(assumptions.restartMs)}: it shows what happened here, not what usually happens.${noAgentKilled(left, right) ? NO_AGENT : ""}`,
   };
 }

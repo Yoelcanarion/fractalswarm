@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { Story } from "./data/types";
+import { REPO_URL } from "../lib/links";
 import { COPY, TAGLINE } from "./copy";
 import { DOORS } from "./doors";
 import { HomeView } from "./HomePage";
@@ -178,9 +179,10 @@ describe("the home page, rendered with a story", () => {
     expect(html).toContain('href="#/evidence"');
   });
 
-  it("reaches no outside address", () => {
+  it("reaches no outside address but the link to the code", () => {
+    expect(html).toContain(`href="${REPO_URL}"`);
     // an svg names its namespace with a URI (the icons do); that is a name, not a request
-    expect(html.replace(/xmlns="[^"]*"/g, "")).not.toMatch(/https?:\/\//);
+    expect(html.replace(/xmlns="[^"]*"/g, "").replace(`href="${REPO_URL}"`, "")).not.toMatch(/https?:\/\//);
   });
 });
 

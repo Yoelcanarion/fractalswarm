@@ -5,6 +5,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 
 import { pageOf } from "../home/route";
+import { REPO_URL } from "../lib/links";
 import { COMMAND } from "./answers";
 import type { SiteStamp } from "./manifest";
 import { megabytes, overall, PROGRESS_EVENT, type LoadProgress } from "./progress";
@@ -40,7 +41,7 @@ const useReports = (): ReadonlyMap<string, LoadProgress> => {
 
 /** What the replay badges rest on: the check was made when the site was built, not in the visitor's browser. */
 export const buildNote = (site: SiteStamp): string =>
-  `Replays were checked when this site was built (commit ${site.commit_short.slice(0, 7)}${site.dirty ? "+" : ""}, ${site.built_at.slice(0, 10)}), not in your browser.`;
+  `Replays checked at build (${site.commit_short.slice(0, 7)}${site.dirty ? "+" : ""}, ${site.built_at.slice(0, 10)}), not in your browser.`;
 
 /** The same, with the full commit and the command to check one yourself, for the tooltip. */
 export const buildDetail = (site: SiteStamp): string =>
@@ -65,7 +66,11 @@ export function StaticBanner({ site }: { site: SiteStamp }) {
   return (
     <div className={loading ? "staticbar staticbar--loading" : "staticbar"} role="note">
       <span className="staticbar__text">
-        Static showcase: recorded runs only.<span className="staticbar__more"> Run it yourself: <code>{COMMAND}</code></span>
+        Static showcase: recorded runs only.
+        <span className="staticbar__more">
+          {" "}
+          Run it yourself: <a href={REPO_URL}>get the code</a>, then <code>{COMMAND}</code>
+        </span>
       </span>
       {loading ? (
         <span className="staticbar__side" role="status">
