@@ -23,7 +23,9 @@ mkdirSync(outDir, { recursive: true });
 
 const EXE = process.env.CHROMIUM_EXE ?? "C:/Users/yogar/AppData/Local/ms-playwright/chromium-1140/chrome-win/chrome.exe";
 const BANNER = "Static showcase: recorded runs only. Run it yourself: uv run fractalswarm demo --verify";
-const RUNS = (process.env.RUNS ?? "demo-toy,demo-backup").split(",");
+const RUNS = (process.env.RUNS ?? "demo-final").split(",");
+// The doors of the home page that lead somewhere on a site with no server (web/src/home/doors.ts); "A live run" (#/new) is the closed one.
+const OPEN_DOORS = ["#/arena", "#/runs", "#/evidence"];
 const BIG = process.env.BIG_RUN ?? "demo-backup";
 const VIEWS = ["", "/plan", "/panels", "/security", "/results", "/events"];
 const ORIGIN = new URL(baseUrl).origin;
@@ -129,11 +131,11 @@ for (const [name, hash] of [["home-empty", ""], ["home-slash", "#/"], ["home-nam
   const open = await page.locator("a.home-door").count();
   const closed = await page.locator(".home-door--closed").count();
   console.log(`  ${open} open doors, ${closed} closed`);
-  if (open !== 4 || closed !== 2) problem(name, `4 open and 2 closed doors expected, found ${open} and ${closed}`);
+  if (open !== OPEN_DOORS.length || closed !== 1) problem(name, `${OPEN_DOORS.length} open and 1 closed doors expected, found ${open} and ${closed}`);
   for (const note of await page.locator(".home-door--closed .home-door__note").allInnerTexts()) {
     if (!/needs the local server/i.test(note)) problem(name, `a closed door does not say it needs the local server: ${JSON.stringify(note)}`);
   }
-  for (const href of ["#/arena", "#/runs", "#/director", "#/charts"]) {
+  for (const href of OPEN_DOORS) {
     const door = page.locator(`a.home-door[href="${href}"]`);
     await door.scrollIntoViewIfNeeded();
     await door.click();
@@ -146,7 +148,8 @@ for (const [name, hash] of [["home-empty", ""], ["home-slash", "#/"], ["home-nam
     if (/\bundefined\b|\bNaN\b|\[object Object\]/.test(body)) problem(name, `${href} shows undefined, NaN or [object Object]`);
     if (body.trim().length < 40) problem(name, `${href} is (nearly) blank, reached from the home page`);
     const overflow = await overflowOf(page);
-    if (overflow.y > 1) problem(name, `${href} scrolls as a whole after the home page: ${overflow.y}px`);
+    // the evidence page is a long document: it scrolls as a whole by design, the app's pages do not
+    if (href !== "#/evidence" && overflow.y > 1) problem(name, `${href} scrolls as a whole after the home page: ${overflow.y}px`);
     await shot(page, `${name}-${href.slice(2)}`);
     await page.goBack();
     await page.waitForFunction(() => window.location.hash === "#/" || window.location.hash === "");
@@ -193,6 +196,7 @@ for (const run of RUNS) {
 
 // ---- the other pages and the doors that need the local server
 const pages = [
+  ["evidence", "#/evidence", [], { scroll: false }], // W6's page behind the home page: baked, no request but the manifest
   ["charts", "#/charts", []],
   ["helps", "#/helps", []],
   ["runs", "#/runs", RUNS],
@@ -204,8 +208,8 @@ const pages = [
   ["unknown-run", "#/run/nope", ["nope"]],
 ];
 if (left !== "-") pages.push(["arena-pair", `#/arena/${left}/${right}?at=end`, []]);
-for (const [name, hash, needles] of pages) {
-  const page = await visit(name, hash, { needles, wait: (p) => p.waitForTimeout(1500) });
+for (const [name, hash, needles, options = {}] of pages) {
+  const page = await visit(name, hash, { needles, wait: (p) => p.waitForTimeout(1500), ...options });
   await page.close();
 }
 if (left !== "-") {

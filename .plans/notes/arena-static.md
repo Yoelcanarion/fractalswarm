@@ -4,6 +4,15 @@ Branch `Yoelcanarion/w8-static-showcase`. Brief: `.plans/arena/w8-static.md`. Ar
 
 ## Where this stands (stopped by Yoel at 12:00 CET, resumed at 15:45 after the reboot of 15:31)
 
+**Oct 31, round 3 (HOLD until about 04:00 CET): arena fa5149c merged; the code side is done, the builds wait for RELEASE.**
+
+- Merge: arena fa5149c (the redesign, the final pairs, Watch the first crash) into this branch as e5b7d92. Two conflicts, both import lines (VerifyBadge.tsx, catalogue.ts): I kept both sides, so my static branches sit beside arena's amber "Log intact. This code does not reproduce this recording" branch, and my verifywords test now covers that wording too. tsc clean.
+- The app makes no new `api/` request (I read every request line added since a1ca0e4: arena only gave intake's fetcher a parameter). Rival runs no longer ask for a takeover check; a swarm's log still does, and the shim answers it from the stored file as before. The Ablation tab shows only when the run list holds an ablation run, which the site never does, so it stays hidden. `#/evidence` is W6's baked page (no request at all); the banner rule counts it as an app page, so the banner shows on it.
+- Exporter: `GET api/pairs` now lists the pairs the repository ships (demo/pairs.json, public, with labels) first. For each `--pair` the site holds, `pairs.json` stores that shipped entry as the API lists it, and refuses one not marked public; a pair that is not shipped is described from its two logs, as before. A note says when the site does not hold the app's FINAL_RUN (demo-final). A probe of the six bundles (final, the four pair bundles, backup, toy) against the exporter's source and privacy refusals, first events only and no replay: all taken. `headline-10` is now a fourth recorded set in `GET api/bench/results`; `public_bench` leaves its path alone.
+- The command for the final site: `uv run python scripts/build_static_site.py --runs demo/final --pair demo/pair-durable-max-swarm:demo/pair-durable-max-rival --pair demo/pair-central-swarm:demo/pair-central-rival`. Size not measured yet: the bundles are 33 MB on disk for the final run and the two pairs (backup would add 7.9 MB), against the 40 MB budget.
+- The browser check now expects the home page's four doors (three open: #/arena, #/runs, #/evidence; one closed: #/new), visits #/evidence, and defaults to the run demo-final. Its other needles (arena, new task, run page, the Runs page's verify button) come from before the redesign and are to be read at the first pass.
+- web/src/director/sources.json is still all null; the Director is off the home menu, its route stays.
+
 **Oct 30, after W4 (arena a1ca0e4) merged: the pass is partly done; the worker stopped at its usage limit.**
 
 Done, commit 2793e71 on this branch (arena a1ca0e4 merged as 1152597):
