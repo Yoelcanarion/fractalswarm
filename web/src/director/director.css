@@ -90,6 +90,14 @@ html.dir-on body {
   display: none;
 }
 
+/* A take with the Muse lens open on an actor's call frames the tree in what the drawer leaves free (the drawer's width and its gap, as lens.css has
+   them), so that the actor is ringed beside the drawer, not under it. The tree frames itself again whenever its pane changes size
+   (components/useTreeMotion.ts), on the way in and on the way out. The card that carries the ring says the lens is open: the drawer itself stays in the
+   page for a while after it closes, and the pane would stay narrow with it. */
+.dir__stage:has(.run__tree .actor--lens) .run__tree {
+  margin-right: calc(720px + 12px);
+}
+
 /* ---- the title card ---- */
 .dir__title {
   display: flex;

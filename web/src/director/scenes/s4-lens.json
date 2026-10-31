@@ -4,7 +4,7 @@
   "stage": "run",
   "duration_ms": 18000,
   "calls": {
-    "spark": { "model": "spark", "purpose": "work" },
+    "spark": { "model": "spark", "purpose": "work", "actor": "o3.1.a1", "nth": 1 },
     "wonder": { "model": "wonder", "role": "root_planner" }
   },
   "steps": [
@@ -12,13 +12,19 @@
     { "do": "play" },
     { "do": "wait", "until": "call-end:spark", "timeout_ms": 8000 },
     { "do": "pause" },
-    { "do": "lens", "open": "spark" },
-    { "do": "highlight", "target": { "region": "lens" }, "ms": 3000 },
-    { "do": "wait", "ms": 5500 },
     { "do": "lens", "open": "wonder" },
-    { "do": "wait", "ms": 4000 },
+    { "do": "highlight", "target": { "region": "lens" }, "ms": 1400 },
+    { "do": "wait", "ms": 2800 },
+    { "do": "lens", "open": "spark" },
+    { "do": "highlight", "target": { "actor": "o3.1.a1" }, "ms": 1700 },
+    { "do": "wait", "ms": 1800 },
+    { "do": "camera", "fit": { "region": "lens-call" }, "pad": 0.03, "ms": 1000 },
+    { "do": "wait", "ms": 1100 },
+    { "do": "highlight", "target": { "region": "lens-sentence" }, "ms": 4850 },
+    { "do": "wait", "ms": 4850 },
+    { "do": "camera", "home": true, "ms": 700 },
     { "do": "lens", "close": true },
-    { "do": "highlight", "target": { "region": "meter" }, "ms": 3500 },
-    { "do": "wait", "ms": 3500 }
+    { "do": "highlight", "target": { "region": "meter" }, "ms": 3350 },
+    { "do": "wait", "ms": 3350 }
   ]
 }

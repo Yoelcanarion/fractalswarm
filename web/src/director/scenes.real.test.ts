@@ -208,17 +208,24 @@ describe("the final run, as s4 and s5 meet it", () => {
     expect(seen.length).toBeGreaterThan(0);
   });
 
-  it("has the two calls s4 opens, where the lens rows of the final run put them: the first Spark work call ends before the first outage", () => {
+  it("has the two calls s4 opens, where the lens rows of the final run put them: the second call of o3.1.a1, the first of the run to publish a fact, and Wonder's root plan", () => {
     const calls = byId("s4-lens").calls;
     const spark = pickCall(rows, calls.spark);
     expect(spark?.purpose).toBe("work");
     expect(spark?.model).toContain("spark");
+    expect(spark).toMatchObject({ actor: "o3.1.a1", effect_id: "eff-4696.0" });
     expect(pickCall(rows, calls.wonder)).toMatchObject({ role: "root_planner", model: "muse-wonder-1.0" });
     const times = callTimes(rows, calls);
     expect([...times.keys()].sort()).toEqual(["spark", "wonder"]);
-    expect(Math.round(times.get("spark")!.start / 100) / 10).toBe(50.9);
-    expect(Math.round(times.get("spark")!.end! / 100) / 10).toBe(52.5);
-    expect(times.get("spark")!.end!).toBeLessThan(crashes[0].at);
+    expect(Math.round(times.get("spark")!.start / 100) / 10).toBe(52.5);
+    expect(Math.round(times.get("spark")!.end! / 100) / 10).toBe(59);
+    // the sentence behind the decision: no fact is published before this call ends, so the call before it (the one s4 used to open) has no
+    // fact or sentence to show, and the lens of this one opens with the fact next to the sentence of the email it came from
+    const facts = events.filter((event) => event.type === "fact.published");
+    expect(facts[0]).toMatchObject({ ts_virtual: times.get("spark")!.end, payload: { agent: "o3.1.a1", key: "speaker:S01:availability" } });
+    // it ends after the first outage began and before the second does: the root is dead and its heir holds it, and the take shows the kill
+    expect(times.get("spark")!.end!).toBeGreaterThan(crashes[0].at);
+    expect(times.get("spark")!.end!).toBeLessThan(crashes[1].at);
     // Wonder's root plan is done long before: the lens opens a finished call
     expect(times.get("wonder")!.end!).toBeLessThan(times.get("spark")!.start);
   });
@@ -232,7 +239,7 @@ describe("the final run, as s4 and s5 meet it", () => {
     });
   }
 
-  it("s4 plays the tree to the end of the first Spark work call, stops before anything crashes, and opens Spark's call, then Wonder's", () => {
+  it("s4 plays the tree to the end of the call that publishes the first fact, past the first kill, and opens Wonder's root plan, then that call, then the meter", () => {
     const scene = byId("s4-lens");
     const times = callTimes(rows, scene.calls);
     const trace = play(scene, context(scene));
@@ -240,8 +247,15 @@ describe("the final run, as s4 and s5 meet it", () => {
     expect(paused).toBeGreaterThan(0);
     const at = trace.frames[paused].at;
     expect(at).toBeGreaterThanOrEqual(times.get("spark")!.end!);
-    expect(at).toBeLessThan(crashes[0].at);
-    expect(trace.opened).toEqual(["spark", "wonder", null]);
+    // the kill is in the take: the root is dead when the lens opens, and the second outage has not begun
+    expect(at).toBeGreaterThan(crashes[0].at);
+    expect(at).toBeLessThan(crashes[1].at);
+    expect(trace.opened).toEqual(["wonder", "spark", null]);
+    // no call is opened from the playhead's future: both have started by the pause, and the replay does not move after it
+    for (const name of ["spark", "wonder"]) expect(times.get(name)!.start, name).toBeLessThanOrEqual(at);
+    // what the take points at, in order: the drawer, the agent that made the second call (beside the drawer), the sentence the fact rests on, the meter
+    const rings = trace.rings.map((ring) => (ring.target.kind === "region" ? ring.target.region : ring.target.kind === "actor" ? ring.target.actor : ring.target.kind));
+    expect(rings).toEqual(["lens", "o3.1.a1", "lens-sentence", "meter"]);
   });
 
   it("s5 shows two outages, the one two levels down first and the root's second, each from just before it to the heir's takeover", () => {
