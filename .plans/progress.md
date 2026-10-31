@@ -1526,6 +1526,12 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 
 **Colours again (f70db44):** on W5's `s5` sheet the o3 subtree went orange for a second at about 70 s and came back: for that second o3 hung under o2. A level-1 brain now keeps its colour wherever it is hung, as `colorOf`'s comment always said. On the whole of `demo/final`, one picture per instant, no card regains a colour it has lost, and a track's changes only when it takes the root. The flash is still in `durable-c`'s `s5`.
 
-**Now:** the first coordinator is on what is meant to be the last pass before the final takes (`rehearsal-1031\durable-c`). Web suite 2,542 green. No paid run; no worker running.
+**The last pass (09:23) and the candidate takes (9fbcafc):** the first coordinator read the script row by row against `docs/claims.md` and found one miss: `s5` showed S6 without its limitation, and the video never said that the log is a central component. The lower third now says it. The closing card had no tagline: it has now, and it is the last thing on screen. A scene that opens on a seek now opens on a settled picture, so the cut from `s4` to `s5` does not blink. **Candidate takes of all seven director scenes:** `~/.fractalswarm/takes/candidate-1031`, durable pair, every sidecar clean, contact sheets in `sheets/`. The script's slots: 3:00, 407 words at 140 wpm.
+
+**My miss:** the plural wording in `verify/recovery.py` (79b071a) broke `test_static_site.py`, whose fixture stores the report's text. I had run only the nearby tests, so it stayed red on the branch for about four hours; the full chunks caught it and 0ccaffb fixed it. Any change under `src/` now gets `tests/unit` first.
+
+**Checks at 0ccaffb, all green:** unit 1,211; integration 325, 170, 120, 107, 186 (908); the 13 strict-mode tests; `ruff check` and `format --check`. Web suite 2,548 at 82e28eb.
+
+**In progress:** I took back the dash on the first card: it is empty for a whole play, on a card a juror reads early, and there are four days left. W5 ports the scored idle rule to `lib/recovery.ts`, with parity on prefixes from a $0 run of `analyze`, and re-records `s1` and `s6`. If parity fails on any shipped log, the dash stays.
 
 **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, which rival the video's `s1` and `s6` use, master, the public repo, where the static site goes.
