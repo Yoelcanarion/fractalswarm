@@ -164,7 +164,7 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, site
               <input type="radio" name="reader" checked={real} disabled={!realAllowed} onChange={() => onBackend("real")} />
               <span>
                 <b>Muse</b> · billed
-                <span className="reader__says">{realAllowed ? "Reads any wording. The cost is checked first." : "Billed launches are off on this server."}</span>
+                <span className="reader__says">{realAllowed ? "Reads any wording. The cost is checked first." : "Billed launches are off here."}</span>
               </span>
             </label>
           </fieldset>

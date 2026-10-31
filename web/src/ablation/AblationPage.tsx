@@ -124,7 +124,7 @@ export function Launcher({ api, runs, listError = null, onRetryList }: LauncherP
             <SkeletonText lines={3} />
           </SkeletonGroup>
         ) : runs.length === 0 ? (
-          <p className="abl__hint">No ablation has been recorded on this server yet.</p>
+          <p className="abl__hint">No ablation has been recorded here yet.</p>
         ) : (
           <>
             <ul className="abl__list">

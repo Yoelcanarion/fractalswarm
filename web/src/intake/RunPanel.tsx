@@ -87,7 +87,7 @@ export function RunPanel({ api, intakeId, realAllowed, canStart, onStarted, init
         onChange={(backend) => set("backend", backend)}
         disabled={(backend) => backend === "real" && !realAllowed}
       />
-      {!realAllowed && <p className="runit__says">Billed launches are off on this server.</p>}
+      {!realAllowed && <p className="runit__says">Billed launches are off here.</p>}
 
       {billed ? (
         <SpendPanel

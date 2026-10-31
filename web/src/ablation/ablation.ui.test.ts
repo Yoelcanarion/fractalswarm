@@ -243,7 +243,7 @@ describe("starting and picking an ablation", () => {
     expect(markup).toContain('<a href="#/ablation/ablation-34a7d710">ablation-34a7d710</a>');
     expect(markup).toContain('<a href="#/ablation/ablation-sample">ablation-sample</a>');
     expect(markup).not.toContain("demo-toy");
-    expect(plainText(launcher([]))).toContain("No ablation has been recorded on this server yet.");
+    expect(plainText(launcher([]))).toContain("No ablation has been recorded here yet.");
     expect(plainText(launcher(null))).toContain("Loading the ablations on record…");
   });
 

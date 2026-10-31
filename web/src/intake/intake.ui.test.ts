@@ -100,7 +100,7 @@ describe("the form", () => {
 
   it("offers Muse only when the server lets a launch be billed, and says so when it does not", () => {
     const off = form({ realAllowed: false });
-    expect(plainText(off)).toContain("Billed launches are off on this server.");
+    expect(plainText(off)).toContain("Billed launches are off here.");
     expect(/<input[^>]*type="radio"[^>]*disabled/.test(off)).toBe(true);
     const on = form({ realAllowed: true });
     expect(plainText(on)).toContain("The cost is checked first.");
@@ -404,7 +404,7 @@ describe("running the approved reading", () => {
   it("does not offer the billed model on a server that does not allow it", () => {
     const markup = run({ realAllowed: false });
     expect(/<button[^>]*role="radio"[^>]*disabled[^>]*>Meta Model API · billed<\/button>/.test(markup)).toBe(true);
-    expect(plainText(markup)).toContain("Billed launches are off on this server.");
+    expect(plainText(markup)).toContain("Billed launches are off here.");
   });
 
   it("billed, puts the cost check where the free button was, and the free button is gone", () => {

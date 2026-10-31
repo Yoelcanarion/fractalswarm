@@ -176,7 +176,7 @@ export function ChartsPage() {
     return (
       <EmptyState
         tone="warn"
-        title="No measured results on this server"
+        title="No measured results here"
         actions={
           <a className="btn" href="#/runs">
             Open the runs
