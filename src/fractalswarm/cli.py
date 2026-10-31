@@ -184,7 +184,6 @@ def run(
     from fractalswarm.market.ledger import ProjectLedger
     from fractalswarm.planning.taskspec import TaskSpec, run_params
     from fractalswarm.runs import record_run
-    from fractalswarm.safety.firewall import Firewall, HeuristicBackend, default_backend
 
     if scenario not in (
         "swarm",
@@ -256,8 +255,7 @@ def run(
     rate = plan_from(params).api_fault_rate
     if rate:
         llm = FaultyBackend(llm, ApiFaults(seed=spec.seed, rate=rate))
-    hf_token = settings.hf_token.get_secret_value() if settings.hf_token else None
-    scanner = Firewall(default_backend(hf_token) if firewall == "auto" else HeuristicBackend())
+    scanner = pick_scanner(firewall, settings)
     scanner.warm()  # before the clock starts
 
     run_id = run_id or f"{taskspec.stem}-{datetime.now():%Y%m%d-%H%M%S}"
@@ -349,7 +347,6 @@ def intake(
     from fractalswarm.llm.client import UNBILLED_STATUSES, RetryPolicy
     from fractalswarm.market.ledger import ProjectLedger
     from fractalswarm.runs import record_run
-    from fractalswarm.safety.firewall import Firewall, HeuristicBackend, default_backend
 
     firewall = firewall or ("auto" if backend == "real" else "heuristic")
     if firewall not in ("auto", "heuristic"):
@@ -380,8 +377,7 @@ def intake(
     else:
         raise typer.BadParameter("--backend must be fake or real")
     retry = RetryPolicy(statuses=UNBILLED_STATUSES) if no_paid_retries else None
-    hf_token = settings.hf_token.get_secret_value() if settings.hf_token else None
-    scanner = Firewall(default_backend(hf_token) if firewall == "auto" else HeuristicBackend())
+    scanner = pick_scanner(firewall, settings)
     scanner.warm()
     result = asyncio.run(
         record_run(
@@ -407,6 +403,23 @@ def intake(
     typer.echo(f"outcome: {done[0] if done else 'none'}")
     if "intake.proposed" not in kinds:
         raise typer.Exit(1)
+
+
+def pick_scanner(firewall: str, settings):
+    """``auto`` means PromptGuard 2, and a run without it says what screens it instead."""
+    from fractalswarm.safety.firewall import Firewall, HeuristicBackend, default_backend
+
+    if firewall != "auto":
+        return Firewall(HeuristicBackend())
+    hf_token = settings.hf_token.get_secret_value() if settings.hf_token else None
+    backend = default_backend(hf_token)
+    if backend.name == HeuristicBackend.name:
+        typer.echo(
+            "PromptGuard 2 is not available (uv sync --extra safety, and HF_TOKEN): "
+            "a pattern scanner screens the inputs of this run",
+            err=True,
+        )
+    return Firewall(backend)
 
 
 def kill_half_plan(seed: str) -> dict:
@@ -575,7 +588,6 @@ def resume(
     from fractalswarm.kernel.events import RunResumed
     from fractalswarm.market.ledger import ProjectLedger
     from fractalswarm.resume import AlreadyCompleted, ResumeRefused, resume_run
-    from fractalswarm.safety.firewall import Firewall, HeuristicBackend, default_backend
 
     firewall = firewall or ("auto" if backend == "real" else "heuristic")
     if firewall not in ("auto", "heuristic"):
@@ -597,8 +609,7 @@ def resume(
         llm = fake_backend()
     else:
         raise typer.BadParameter("--backend must be fake or real")
-    hf_token = settings.hf_token.get_secret_value() if settings.hf_token else None
-    scanner = Firewall(default_backend(hf_token) if firewall == "auto" else HeuristicBackend())
+    scanner = pick_scanner(firewall, settings)
     scanner.warm()  # before the clock starts
 
     def announce(plan: RunResumed) -> None:

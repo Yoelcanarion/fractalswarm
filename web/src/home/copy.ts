@@ -133,7 +133,7 @@ export const COPY = {
     roles: [
       { id: "spark", name: "Muse Spark", does: "Reads the emails, places the talks and checks the results." },
       { id: "wonder", name: "Muse Wonder", does: "Writes the plan every run starts from." },
-      { id: "guard", name: "Llama PromptGuard 2", does: "Guards the inputs before any model reads them." },
+      { id: "guard", name: "Llama PromptGuard 2", does: "In the recorded demo runs, it screened the inputs before any model read them." },
     ],
     tokens: "Tokens by model, in the recorded demo run.",
     coordination: "coordination tokens",

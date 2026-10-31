@@ -1611,3 +1611,12 @@ From the second read, three small changes (0e0ed22): "fake model" is the one nam
 - **New task on the site** has no form: it said "use the sample" and then gave an error.
 - **The end of a pair** says when no agent was killed, because the numbers over ten seeds kill half of them. **The charts of the ten-seed set** say why validity reads 90%. **The table of every number** is one line a row, with seeds as "1 to 10".
 - **Not done:** the hero's "tree of small coordinators" stays; it is reviewed copy and the tree is drawn beside it.
+
+**The fourth cold test: a technical juror on the repository, at 26711d9.** "Probably yes, top three"; convinced by `demo --verify`, the tamper check and recomputing the ten-seed figures. Notes in `.plans/notes/arena-cold-test.md`.
+- **PromptGuard's sentence was too wide.** "Screens every input" holds for all six recorded demo and pair runs (32 scans each, `promptguard2-22m`), and for none of the 176 bench cells or the scaling sweep, which use the pattern scanner, the bench's default, the same for every workflow. The eight LangGraph cells log no scan. New row M3; README, submission draft and the home's list of models follow it; the REPORT's §3 says it. No number moves: both scanners allowed every input of these runs (6,656 scans and 192), so the choice changed nothing the agents read. On one pair compared by source (the swarm's C3 seed 1 against `demo/final`), the 32 inputs, their decisions and their findings are the same.
+- **A real run without PromptGuard says so** (stderr, `pick_scanner` in `cli.py`). It fell back in silence. The CLI is not a handler; the freeze is untouched, and the log's `backend` field was already honest.
+- **Second cost basis, checkable:** `bench/results/headline-10/completed-calls.csv` from the 80 logs, read by `scripts/completed_calls.py`, with a test on R5's figures: +2.4 / −1.1, +8.1 / +5.1, +4.3 / −1.6, +67.0 / +29.2. They equal the REPORT's.
+- **README:** coordination defined; "before any run against that rival" (29 cells of Oct 28 came before the gate); a legend for T2, C0, C3 and the ideal rival; Verify has the numbers' commands, and says why `headline-10` reads pending; Run it has the `safety` extra.
+- **Public pointers to private files removed:** S5, S8, the REPORT, `docs/api-notes.md`, `lens.ts`.
+- **For Yoel at publish:** `.plans/` and the path in `CLAUDE.md`; the placeholders in the drafts.
+- **Checks:** unit 1,217, web 2,664, tsc, ruff, build. Spend unchanged.

@@ -195,6 +195,10 @@ $0.074 in all, and 7 ended in an error) and 778 that were cancelled (547 agent, 
 judge calls: the crashes and kills of the chaos profiles). There is no call on a coordination role (`coordinator`,
 `supervisor`, `router`, `recovery`), which is why every coordination-token count in §4.10 is 0. This
 table is computed from the logs, not from a committed file; the cost of each cell is in `results.csv`.
+Every cell screens its inputs with the pattern scanner, the bench's default and the same for every
+workflow (`heuristic` in the logs); the eight LangGraph cells of §4.10.8 log no scan. PromptGuard 2
+ran in the demo and pair runs, whose logs name it. Both allowed every input of these runs (6,656 and
+192 scans), so the choice changed nothing the agents read.
 
 **Commits and spend of the cells.**
 
@@ -476,7 +480,7 @@ seed, and at 9 of its 12 chaos cells, in the gate's configuration (default routi
 of that seed's fake outputs, not of the chaos (the cause is not traced). It is also why
 `durable-max`, invalid on all four profiles of seed 3, reads 75% and the others 81%. It does not
 carry over to other configurations. The $0 rehearsal of the headline matrix, run with Contributor
-routing (`.plans/notes/arena-rival.md`, Part 9; not committed as results), has all six of its seed-3
+routing (not committed as results), has all six of its seed-3
 cells valid (T2, swarm, `durable-max` and `durable` at C0 and C3, against one of six at the gate), and
 so has the real model: the six seed-3 cells of the headline are valid, five of them with the top score
 (§4.10.5). Why the fake outputs change with the flag is not traced.
@@ -1587,9 +1591,9 @@ crash plan per seed, failure detection of 5 s, supervisors that restart at once,
 session coordinator, one model family on one API, on the day each run was recorded. The three-seed
 reading moved when seven seeds were added, and a larger set may move the ratios again. The per-seed
 verdicts, the ratios and the completed-call figures of this sub-section are computed from `results.json`
-with `fractalswarm.bench.verdicts` and from the run logs (not committed); the recipes are in
-`.plans/notes/arena-rival.md`, Part 11. `docs/claims.md` R2 and R4–R6 and the counts in S4 and S7 are
-written from this reading.
+with `fractalswarm.bench.verdicts` and from the run logs (not committed). What the logs say about each
+cell's completed calls is in `completed-calls.csv`, and `scripts/completed_calls.py` prints both bases
+from it. `docs/claims.md` R2 and R4–R6 and the counts in S4 and S7 are written from this reading.
 
 #### 4.10.8 The LangGraph rows (secondary, two seeds, descriptive)
 
@@ -1730,6 +1734,7 @@ uv run fractalswarm bench bench/matrix-headline.yaml --confirm-real-spend
 uv run fractalswarm bench bench/matrix-headline-10.yaml --dry-run   # ten seeds, 80 cells (18 copied in first)
 uv run fractalswarm bench bench/matrix-headline-10.yaml --confirm-real-spend
 uv run fractalswarm bench verdicts bench/results/headline-10        # prints, writes nothing
+uv run python scripts/completed_calls.py                            # both cost bases, from the committed CSV
 uv run fractalswarm replay bench/results/headline/runs/<cell> --verify   # v1's cells likewise (§3)
 ```
 
@@ -1771,7 +1776,7 @@ is written by hand. `--check` names any table that is not in this file word for 
 without the test failing. The other tables of §3 and the tables of §4.10 are not generated and that
 check does not cover them: they are laid out by hand from the matrix files, `bench/results/v1`,
 `bench/results/headline` and the progress log, and where the text says so from the run logs (not
-committed; the scratch computations are recorded in `.plans/notes/arena-rival.md`, Part 10), and each
+committed), and each
 names its source and columns.
 
 ## 8. Scaling sweep (spec §15.6)

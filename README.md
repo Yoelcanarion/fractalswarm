@@ -64,15 +64,17 @@ The hard part of the demo task, planning a conference from messy emails, is read
 
 - **Muse Spark** turns human language into constraints, each linked to its source sentence. It reads the emails, places the talks, checks the work and writes the blurbs.
 - **Muse Wonder** writes the root plan. Arbitration between agents is built and tested on the fake model; the real runs we checked had no dispute to settle.
-- **Llama PromptGuard 2** runs locally and screens every email and pasted input before an agent reads it.
+- **Llama PromptGuard 2** runs locally and screens each email and pasted input before an agent reads it. It screened all 32 inputs of every recorded demo and pair run. The bench's runs, runs on the fake LLM and an install without it use a pattern scanner instead.
 
-Every Muse token goes to the problem. "Zero LLM tokens spent on coordination" is a property of the design, measured in every real run of the swarm. The rivals we built spend none either, because their supervisors are code too; the LangGraph rows do, because that pattern routes through the model (about 3% of its tokens).
+Every Muse token goes to the problem. "Zero LLM tokens spent on coordination" is a property of the design, measured in every real run of the swarm: takeover, routing and recovery are code. Planning and judging do call the model, and they count as work ([`bench/REPORT.md`](bench/REPORT.md) §2). The rivals we built spend none either, because their supervisors are code too; the LangGraph rows do, because that pattern routes through the model (about 3% of its tokens).
 
 ## The evidence
 
-We built the strongest rival we could implement fairly, and ran everything under the same failures on the real model. The rules, the rival's assumptions and every comparison are in [`bench/REPORT.md`](bench/REPORT.md); the hypotheses were committed in [`bench/PREREG.md`](bench/PREREG.md) before the first run. Every claim here maps to its runs in [`docs/claims.md`](docs/claims.md).
+We built the strongest rival we could implement fairly, and ran everything under the same failures on the real model. The rules, the rival's assumptions and every comparison are in [`bench/REPORT.md`](bench/REPORT.md); the hypotheses were committed in [`bench/PREREG.md`](bench/PREREG.md) before any run against that rival. Every claim here maps to its runs in [`docs/claims.md`](docs/claims.md).
 
 **The headline, outcome B of the preregistration:** "Resilience comparable to an ideal durable supervisor, without a central coordinator or a separate recovery mechanism."
+
+Below, T2 is the conference task, C0 a run with no failures, and C3 the harshest failure profile: five coordinator crashes, half the agents killed, 20% API faults, 20% message loss and a network partition. The ideal durable supervisor is one coordinator whose agents keep working through a crash; it is back after 5 s and loses nothing.
 
 - **Against the ideal durable supervisor (`durable-max`):** a tie on preserved work, extra cost, time to recover, duplicated spend and stall time, and a loss on false deaths (1.90 per run against none), over ten seeds. All 80 runs completed and 79 are valid (T2, C0 and C3, seeds 1–10, recorded after the handler freeze); the exception is the swarm at C0 on seed 5, one wrong model reading with no crash.
 - **Locality:** "On the real model, at the headline point (T2, C3: five coordinator crashes, half the agents killed), locality against the ideal durable supervisor tied over ten seeds: the swarm's coordinator-dependency time, blast radius and idle agent-seconds were 0.57, 0.43 and 0.70 of its values, and at or below half on 4, 7 and 6 of the ten seeds." At the $0 gate, on the fake model, locality tied at C2 and C3 too.
@@ -95,6 +97,14 @@ uv run fractalswarm replay demo/final --verify    # MATCH or MISMATCH, with the 
 uv run fractalswarm takeover demo/final           # recomputes every heir from the log
 ```
 
+The numbers need no model and no key either. These commands only print:
+
+```sh
+uv run fractalswarm bench verdicts bench/results/rivals-gate bench/results/sweeps   # outcome B, by the rules of bench/PREREG.md
+uv run fractalswarm bench verdicts bench/results/headline-10    # the ten seeds, seed by seed; the outcome reads pending here, the gate decides it
+uv run python scripts/completed_calls.py                        # the extra cost on both bases
+```
+
 ## Run it
 
 Python 3.12 through [uv](https://docs.astral.sh/uv/), which downloads it if needed.
@@ -104,6 +114,8 @@ uv sync
 uv run fractalswarm serve                                     # the UI on http://127.0.0.1:8765
 uv run fractalswarm run tasks/examples/t2-conference.yaml     # a run on the fake LLM, $0
 ```
+
+`uv sync --extra safety` adds PromptGuard 2 for real runs: it needs `HF_TOKEN`, with access to the gated model. Without it, a real run says so and a pattern scanner screens its inputs.
 
 Real runs need a key (`MODEL_API_KEY`, see [`.env.example`](.env.example)) and an explicit flag. They reserve budget before each call and stop at hard caps:
 

@@ -71,3 +71,24 @@ One agent, Sonnet, with the site's address and nothing else, asked to judge it a
 
 - A juror asks what a button really did. A check that looks like work and is not is worse than no button: this one became real, and was cheap.
 - The way to the code is the first thing a person who likes the demo looks for.
+
+## The fourth test: a technical juror on the repository (Oct 31, at 26711d9)
+
+A fresh agent on a clean clone with `.plans/` removed, reading the README and running what it says. "Probably yes, top three." What convinced it: `demo --verify` (19 s), all seven bundles MATCH, one changed byte gives MISMATCH, the ten-seed figures recomputed by hand from `results.csv`, 1,211 unit and 47 integration tests pass, ruff clean. What put it off: the README's evidence as a wall, and the drafts in `docs/`.
+
+| What it said | Was it true | What changed |
+|---|---|---|
+| "Zero LLM tokens spent on coordination", yet the coordinators call the model to plan, judge and audit | The README never said what coordination is | It does now: takeover, routing and recovery are code; planning and judging call the model and count as work (`bench/REPORT.md` §2) |
+| −1.1% against +29.2% on completed calls cannot be checked | True: the logs they came from are not committed, and the computation was a scratch script | `bench/results/headline-10/completed-calls.csv`, written from the 80 logs, and `scripts/completed_calls.py`, which prints both bases with no key. A test pins R5's four rows |
+| The README says outcome B, and R2's command prints PENDING | True: the gate derives the outcome, and `headline-10` holds no gate | The README's Verify lists both commands and says why; so does R2 |
+| "before the first run" | False against the 29 cells of Oct 28; true of the durable rivals, which started on Oct 29 at 17:07 | "before any run against that rival" |
+| The README says PromptGuard 2 screens everything, and a plain `uv sync` falls back to regexes in silence | Worse than it said: **none of the 176 bench cells used it**. They use the pattern scanner, the bench's default, the same for every workflow; all six recorded demo and pair runs did use it, 32 scans each. The eight LangGraph cells log no scan. Both scanners allowed every input, 6,656 scans and 192, so no number moves | New row M3 with that scope, every public sentence brought to it (README, submission draft, the home's list of models), a sentence in the REPORT's §3, `--extra safety` in Run it, and a real run on an install without it now says so on stderr |
+| T2, C0, C3 and `durable-max` undefined in the README | True | One line over the evidence bullets |
+| S5 and S8 point at files outside the public tree (`coord/verify_all.ps1`, `.plans/`) | True, and so did three places in the REPORT, `docs/api-notes.md` and a comment in `lens.ts` | Reworded |
+| S5 still "pending" | True until the release commit | Lifted there, as planned |
+| `.plans/` is tracked; `C:\Users\yogar` paths in 12 files | Outside `.plans/` only `CLAUDE.md` holds one | Yoel's decision at publish |
+| Placeholders in `docs/submission.md` and `docs/video-script.md` | True | Yoel's text |
+
+**Found while checking it:** `bench verdicts bench/results/rivals-gate bench/results/sweeps --prereg` without `--json bench/results/honesty.json` overwrites the older `rivals-gate/honesty.json` and dirties the tree. The README gives the form that only prints.
+
+**A lesson for the claims:** "every input" had passed four readings because all the runs a reader meets are the recorded ones. The bench's default never showed in a public sentence until someone asked what a plain install does. Counting the `firewall` effects per log took five seconds.

@@ -15,7 +15,7 @@
 
 import { asNumber, asRecord, asString, asStrings } from "./generic";
 
-// ---- the API's shapes (see .plans/notes/arena-meta.md, "Endpoint shapes (for W4)") ----
+// ---- the API's shapes ----
 
 export type Badge = "wonder" | "spark" | "contributor" | "other";
 export type Purpose =
