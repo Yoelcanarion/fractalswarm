@@ -92,3 +92,30 @@ A fresh agent on a clean clone with `.plans/` removed, reading the README and ru
 **Found while checking it:** `bench verdicts bench/results/rivals-gate bench/results/sweeps --prereg` without `--json bench/results/honesty.json` overwrites the older `rivals-gate/honesty.json` and dirties the tree. The README gives the form that only prints.
 
 **A lesson for the claims:** "every input" had passed four readings because all the runs a reader meets are the recorded ones. The bench's default never showed in a public sentence until someone asked what a plain install does. Counting the `firewall` effects per log took five seconds.
+
+## The fifth test: a juror on a phone, on the static site (Oct 31, at 1e22bf7, 69 actions)
+
+One agent, Sonnet, with the site's address at 390 x 844 and nothing else. The door nobody had walked. Its verdict: "Top three: not as it stands; yes if the repo opens." The best thing: "candour (the Tie headline, Where it does worse, the tamper test)". The weakest: the code it could not reach, and the evidence pages on a phone.
+
+| What it found | Was it true | What changed |
+|---|---|---|
+| The code link is a 404 | Yes, and expected: the repo is private until the release, and the site goes up after it | Nothing |
+| Evidence opened at the bottom, mid-chart | True, and at every width: all the pages share one scroller, and its action log shows it scrolled the arena and then pressed Evidence | A new path starts at the top, the window too (a run scrolls the window on a phone). `?at=` keeps the place |
+| Trade-offs wider than the phone, its cards clipped | True: the per-process cards pushed the page 39 px sideways | One card to a line. The full count scrolls in its own frame |
+| The Runs table wider than the phone, the check off the screen, names broken letter by letter | True: the table was 422 px wider than its box | A run is a card on a phone, each cell saying what it is |
+| Tooltips stick over the page, and Escape did not close one | Half the driver: its mouse stays where it clicked. Half real: at any width a press on a button held its hint open until the next click elsewhere, and Escape only worked with the focus in the hint, against what the component said | Focus opens a hint only from the keyboard or on a `focusable` one, Escape works from the window, and a scroll closes one a thumb opened |
+| The replay bar covers a third of the run | It was 150 px of 844 | Two lines, 97 px |
+| The caption overlaps the chips | True: the Evidence page's frame gave the strip 270 px and it needs more with the headings over it | 400 px below 900 wide, and a test that reads the height from `home.css` and lays the strip out in it |
+| The terminal clipped | True: the head hash was off the side with no sign it could be scrolled | It wraps |
+| Demo nodes ~16 px, and it reset itself | The tap areas are 40 px, and it puts itself back after 16 s of nobody touching it. A model is slow | Nothing |
+| A 150-word paragraph of numbers; jargon on Trade-offs; "PENDING" unexplained | R2 and R3 in their own words; a page of Details; S5, lifted at release | Nothing |
+
+**Found while checking it, not by the tester:**
+- The Security page went 190 px sideways: a bare `1fr` track grows to its widest line. It is `minmax(0, 1fr)` in all five grids of that rule, and the approved plan's three columns stack.
+- The broken chain's verdict ran off the card with its number. A verdict wraps there.
+- The More views menu was cut by the edge of the screen.
+- `.plans/notes/arena-static-browser-check.mjs` had stopped before its end since the redesign, so nothing had read the site from end to end. It reports CLEAN again, and it now clicks Recompute, Change one digit and Back to the real log.
+
+**Every fix checked by taps and clicks** on a scratch build, at 390 with touch and at 1366 with a mouse, and for sideways scroll at 360, 390 and 430.
+
+**What this test teaches:** a model's slowness hides a real fault as often as it invents one. "Evidence opened at the bottom" read like a slip of the driver until its action log showed the two steps before it.

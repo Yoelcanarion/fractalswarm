@@ -1693,3 +1693,17 @@ From the second read, three small changes (0e0ed22): "fake model" is the one nam
 - **The static check's stale expectations:** six in all, each read by it, none a fault; "banner missing after a reload" is the same stale constant.
 - **Push:** it reads Yoel's closing line as I do, so the nightly push is suspended for this work until he says otherwise.
 - **Still open in `docs/submission.md`, for the release:** line 5's note on placeholders, the video link, the three ablation numbers, and the partners section (its TBD and its placeholder).
+
+### After the merge, 19:45 to 20:30: read on the rendered page, and a juror on a phone
+
+No real call, no spend. Nothing pushed. Handlers untouched, and no public claim changed: what is new on a page comes from a row of `docs/claims.md`. All the changes reach no take frame: the takes start after the load, New task is Yoel's `s2`, the Evidence block is not in a take, and the rest is a phone's or a press's.
+
+- **Arena's lead (fd6053d):** while the logs loaded it said the benchmark's rule on a same-second pair. It now reads the pair's own rule from the list of pairs, and says nothing of the rule for a pair the list does not hold.
+- **New task (1e22bf7):** the merge's three cards had pushed both actions off a laptop's first screen. The sample sits on the Talks row, and the Reader and Read head the side column. By clicks at five sizes: the sample is on the first screen at all five, and Read at 1920, 1366 and 1280.
+- **Evidence, Where it does worse (b682a47):** it had nothing of the two limits the merge added, which sets of deaths and a track lead on the real model. Two more groups, drawn from the reasons of their "Not claimed" rows through `limits()`. **A slip of mine, caught by a test:** I had typed a sentence with its numbers and "the takeover held, and a session then ran out of retries", which I had not checked. `copy.test.ts` refused the typed number; the words are now the row's.
+- **A cold juror on a phone (a86b64e):** the door nobody had walked, 69 actions, at 1e22bf7. The whole table is in `.plans/notes/arena-cold-test.md`. Not only a phone's: a new screen opened where the last was scrolled to, at every width, and a press on a button held its hint open until the next click elsewhere. Its verdict depends on the code: "Top three: not as it stands; yes if the repo opens."
+- **The static check (804ec9c):** stopped before its end since the redesign. It reports CLEAN on the five logs, and clicks the recompute and the broken chain. Four warnings, each a sentence that is meant: the charts' invalid seed, a reply that failed its schema in `demo-final`'s panels, and the two pages that say they could not load what does not exist on the site.
+
+**Checks:** web 2,707 of 2,707, tsc clean, build committed with each change. Python untouched since 93464b3.
+
+**Ledger:** unchanged, spent $60.03, reserved $13.73.
