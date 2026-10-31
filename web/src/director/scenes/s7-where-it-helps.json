@@ -14,6 +14,7 @@
     { "do": "highlight", "target": { "region": "fast-restart-row" }, "ms": 3000 },
     { "do": "wait", "ms": 3000 },
     { "do": "highlight", "target": { "region": "outcome" }, "ms": 2700 },
+    { "do": "caption", "kicker": "The swarm's failure detector · 5 crashes · 10 seeds", "text": "Real model: 1.90 false deaths a run, the supervisors none", "align": "right", "ms": 2700 },
     { "do": "wait", "ms": 2600 }
   ]
 }
