@@ -190,7 +190,7 @@ describe("the scoreboard", () => {
   it("has the seven counters, swarm and rival side by side", async () => {
     const html = score(await opened(12_000));
     const t = text(html);
-    for (const label of ["Idle agent-seconds", "Time to recover", "Coordinator-dependency time", "Cost", "Duplicated work", "Reassignments", "Hard violations"]) {
+    for (const label of ["Idle agent-seconds", "Time to recover", "Coordinator-dependency time", "Cost", "Duplicated work", "Contracts sent again", "Hard violations"]) {
       expect(t).toContain(label);
     }
     expect(count(html, /class="metric"/)).toBe(7);

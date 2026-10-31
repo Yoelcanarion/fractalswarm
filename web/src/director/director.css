@@ -145,11 +145,13 @@ html.dir-on body {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent), 0 0 28px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
-/* The hover text of an element, drawn where a pointer would show it (a take has no pointer). The words are the page's own. */
+/* The hover text of an element, drawn where a pointer would show it (a take has no pointer). The words are the page's own, and so are its line breaks:
+   a title that lists checks puts one on each line (arena/recovery.ts), as the browser's own tooltip shows it. */
 .dir__tip {
   position: absolute;
   width: max-content;
   max-width: 760px;
+  white-space: pre-line;
   margin: 0;
   padding: 10px 16px;
   border: 1px solid var(--border-strong);

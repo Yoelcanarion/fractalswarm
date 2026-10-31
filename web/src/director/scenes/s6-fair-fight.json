@@ -12,11 +12,8 @@
     { "do": "wait", "ms": 5000 },
     { "do": "speed", "x": 10, "ramp_ms": 800 },
     { "do": "wait", "until": "end", "timeout_ms": 14000 },
-    { "do": "camera", "fit": { "region": "scoreboard" }, "pad": 0.06, "ms": 1400 },
     { "do": "highlight", "target": { "region": "scoreboard" }, "ms": 3500 },
-    { "do": "wait", "ms": 3500 },
-    { "do": "highlight", "target": { "counter": "idle" }, "ms": 3000 },
-    { "do": "wait", "ms": 3000 },
-    { "do": "camera", "home": true, "ms": 1200 }
+    { "do": "caption", "text": "Ten seeds: tied on stall time and extra cost", "ms": 15000 },
+    { "do": "wait", "ms": 3500 }
   ]
 }

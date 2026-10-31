@@ -14,11 +14,13 @@ function useSideNumbers(store: RunStoreApi, official: Official | null): SideNumb
   const playhead = useStore(store, (s) => s.playhead);
   const end = useStore(store, (s) => s.events.at(-1)?.ts_virtual ?? 0);
   const finished = useStore(store, playedOut);
+  const events = useStore(store, (s) => s.events);
+  const crashStopped = useMemo(() => events.some((event) => event.type === "actor.stopped" && event.payload.reason === "crash"), [events]);
   return useMemo(() => {
     // The playhead goes on while the other run plays; a run that has ended does not grow.
     const nowMs = Math.min(playhead, end);
-    return { counters: arenaCounters(view, nowMs), windows: view.arena.windows, nowMs, finished, official };
-  }, [view, playhead, end, finished, official]);
+    return { counters: arenaCounters(view, nowMs), windows: view.arena.windows, nowMs, finished, official, crashStopped };
+  }, [view, playhead, end, finished, official, crashStopped]);
 }
 
 interface MetricProps {

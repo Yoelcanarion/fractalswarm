@@ -43,6 +43,8 @@ interface Trace {
   frames: { ms: number; at: number; playing: boolean }[];
   /** Every ring the take drew, with the take's clock when it began. */
   rings: { target: Target; from: number }[];
+  /** Every lower third, with the take's clock when it came on and when it goes. */
+  captions: { text: string; from: number; to: number }[];
   opened: (string | null)[];
 }
 
@@ -53,13 +55,15 @@ function play(scene: Scene, context: TimeContext): Trace {
   const take = createTake(scene, scene.stage === "arena" || scene.stage === "run" ? replay : null, surface);
   const frames: Trace["frames"] = [];
   const rings = new Map<number, { target: Target; from: number }>();
+  const captions = new Map<number, { text: string; from: number; to: number }>();
   for (let i = 0; i < take.frames; i++) {
     take.tick();
     const state = take.state.getState();
     frames.push({ ms: state.ms, at: replay.playhead(), playing: replay.playing() });
     for (const placed of state.rings) rings.set(placed.ring.id, { target: placed.ring.target, from: placed.ring.from });
+    for (const caption of state.captions) captions.set(caption.id, { text: caption.text, from: caption.from, to: caption.to });
   }
-  return { state: take.state.getState(), frames, rings: [...rings.values()], opened: surface.opened };
+  return { state: take.state.getState(), frames, rings: [...rings.values()], captions: [...captions.values()], opened: surface.opened };
 }
 
 /** Where the replay was when the take's clock reached ``ms``. */
@@ -145,10 +149,33 @@ for (const pair of PAIRS) {
       expect(at).toBeGreaterThanOrEqual(rivalCrashes[0].at);
       expect(at).toBeLessThan(rivalCrashes[0].until);
       expect(at).toBeGreaterThanOrEqual(crashes[0].at);
-      // the swarm's first crash is on screen 14 s into the replay it starts from, about 0:20 into the clip (video script, s1)
+      // the swarm's first crash is on screen 14 s into the replay it starts from, about 0:22.5 into the clip: on the voice's "Now we kill half the brains" (video script, s1)
       const crashed = trace.frames.find((frame) => frame.at >= crashes[0].at)!;
-      expect(crashed.ms / 1000).toBeGreaterThan(19.5);
-      expect(crashed.ms / 1000).toBeLessThan(20.5);
+      expect(crashed.ms / 1000).toBeGreaterThan(22);
+      expect(crashed.ms / 1000).toBeLessThan(23);
+      // and the left's re-wire (its heir holds the work) is on screen before the clip ends
+      const rewired = trace.frames.find((frame) => frame.at >= crashes[0].until);
+      expect(rewired, "the heir takes over before the clip ends").toBeDefined();
+      expect(rewired!.ms).toBeLessThan(byId("s1-arena-open").durationMs);
+    });
+
+    it("s1 puts its rings and its lower third on the voice's moments: the right, the left, 'same failures', then the first crash (video script, s1)", () => {
+      const trace = play(byId("s1-arena-open"), context);
+      const right = ringOf(trace, "rival-head").from / 1000;
+      const left = ringOf(trace, "swarm-head").from / 1000;
+      const lower = trace.captions.find((caption) => caption.text === "Same input · same models · same failures");
+      const crashed = trace.frames.find((frame) => frame.at >= crashes[0].at)!.ms;
+      // the voice reads the problem to about 0:11 over the arena at rest, then "On the right" and "On the left", then "Same task, same models, same failures"
+      expect(right).toBeGreaterThan(11);
+      expect(right).toBeLessThan(12);
+      expect(left).toBeGreaterThan(right + 3);
+      expect(left).toBeLessThan(16);
+      expect(lower, "the lower third is shown").toBeDefined();
+      expect(lower!.from / 1000).toBeGreaterThan(18);
+      expect(lower!.from / 1000).toBeLessThan(19.5);
+      // and it is still on when "Now we kill half the brains" lands the first crash, and gone soon after
+      expect(lower!.to).toBeGreaterThan(crashed);
+      expect(lower!.to - crashed).toBeLessThan(2000);
     });
 
     it("s6 rings the rival's status at its first outage, then runs both logs to their end and shows the counters", () => {
@@ -158,6 +185,22 @@ for (const pair of PAIRS) {
       expect(status).toBeLessThan(rivalCrashes[0].at + 500);
       // the scoreboard is shown with both runs played out: the counters it points at are the final ones
       expect(playheadAt(trace, ringOf(trace, "scoreboard").from)).toBe(context.end);
+    });
+
+    it("s6 rings the whole board and no card of it (one seed would win a row the script does not claim), and draws no camera fit over a shrunken page", () => {
+      const scene = byId("s6-fair-fight");
+      expect(targetsOf(scene).filter((target) => target.kind === "counter")).toEqual([]);
+      expect(scene.steps.filter((step) => step.do === "camera")).toEqual([]);
+    });
+
+    it("s6 puts the voice's lower third over the end of the board, once both runs have played out, and the script still ends inside the scene", () => {
+      const scene = byId("s6-fair-fight");
+      const caption = scene.steps.find((step) => step.do === "caption");
+      expect(caption).toMatchObject({ text: "Ten seeds: tied on stall time and extra cost" });
+      const trace = play(scene, context);
+      expect(trace.state.warnings).toEqual([]);
+      const ended = trace.frames.find((frame) => frame.at >= context.end)!;
+      expect(ended.ms).toBeLessThan(scene.durationMs - 5000); // room for the lower third to be read before the clip ends
     });
 
     it("s8 shows the proofs with both runs played out", () => {

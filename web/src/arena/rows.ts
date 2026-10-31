@@ -23,6 +23,8 @@ export interface SideNumbers {
   /** The run has played to its last event, so its fold is the whole run. */
   finished: boolean;
   official: Official | null;
+  /** A coordinator's crash stopped workers of this side (an in-process supervisor takes its workers down with it). */
+  crashStopped?: boolean;
 }
 
 export interface ScoreCell {
@@ -100,8 +102,12 @@ export const ROW_DEFS: readonly RowDef[] = [
     unit: "", // the label says it; "16.0 agent·s" does not fit beside the other side in the strip
     decimals: 1,
     definition: "Agent time spent idle because the coordinator they answer to was down.",
-    live: (s) => seconds(s.counters.idleAgentMs),
+    // The metrics count an agent only while work it could take is held up by the coordinator that is down, and the log settles that only after the wait has
+    // ended: the fold counted every free agent under a coordinator that was out, which ran ahead of the scored number and fell back to it on the last frame.
+    liveNote: "Shown once the run is scored: the metrics count an agent only while work it could take is held up by a coordinator that is down, which the log settles after the wait has ended.",
+    live: () => null,
     official: (_s, o) => o.recovery?.idleAgentS ?? null,
+    note: (s) => (s.crashStopped ? "A worker a crash stopped is not idle: see coordinator-dependency time." : null),
   },
   {
     id: "recover",
@@ -146,10 +152,13 @@ export const ROW_DEFS: readonly RowDef[] = [
   },
   {
     id: "reassigned",
-    label: "Reassignments",
+    // The fold counts every contract sent again; the metrics count the ones that were not needed, and the two are far apart on a rival whose workers a
+    // crash stops (25 sent again, none unnecessary), so the row says which it shows.
+    label: "Unnecessary reassignments",
+    liveLabel: "Contracts sent again",
     unit: "",
     decimals: 0,
-    definition: "Work handed to a new owner again.",
+    definition: "Work handed to a new owner again when it did not have to be: the first owner had not stopped, its result was already in the log, or the same attempt was sent twice.",
     liveNote: "So far: every contract sent again after it was lost or already sent. The scored figure counts only the unnecessary ones: the assignee was alive, or its result was already in the log.",
     live: (s) => s.counters.redispatches,
     official: (_s, o) => o.recovery?.unnecessaryReassignments ?? null,
