@@ -281,9 +281,9 @@ th[aria-sort="descending"] .sorthead svg {
   }
 }
 
-/* On a phone a run is a card: eight columns put the check off the screen and broke the names letter by letter. Each cell says what it is,
-   as there is no header to read it from, and the sort goes with the header. */
-@media (max-width: 700px) {
+/* On a phone or a tablet upright a run is a card: eight columns put the check off the screen and broke the names letter by letter. Each cell
+   says what it is, as there is no header to read it from, and the sort goes with the header. */
+@media (max-width: 820px) {
   .runstable {
     border: 0;
     background: transparent;
