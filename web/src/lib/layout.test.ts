@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { ACROSS, boundsOf, colorOf, forestOf, layoutTree, LEVEL_GAP, placedWidth, structureKey, type Placed } from "./layout";
-import { foldEvents, type ViewState } from "./reducer";
+import { ACROSS, boundsOf, colorOf, forestOf, layoutTree, LEVEL_GAP, placedWidth, ROOT_COLOR, structureKey, type Placed } from "./layout";
+import { foldEvent, foldEvents, type ViewState } from "./reducer";
 import { depthTwoTree, loadJsonl, REPO_ROOT, Stream } from "./testing";
 
 /** root → t1, t2, t3 → two sessions each → one agent each, with every brain holding the key of its own name. */
@@ -121,6 +121,22 @@ describe("the committed final run, at the end", () => {
     for (const id of alive.order) expect(colorOf(killed, id), id).toBe(colorOf(alive, id));
     const changed = alive.order.filter((id) => colorOf(moved, id) !== colorOf(alive, id));
     expect(changed).toEqual(["o1"]);
+  });
+
+  it("never gives a card a colour it has lost: at each hand-over a colour moves on, and a track's changes only when it takes the root", () => {
+    const seen = new Map<string, string[]>();
+    let view = foldEvents([]);
+    for (const [i, event] of events.entries()) {
+      view = foldEvent(view, event);
+      if (events[i + 1]?.ts_virtual === event.ts_virtual) continue; // one instant is one picture: a takeover is two events at one time
+      for (const id of view.order) {
+        if (forestOf(view).parent.get(id) === undefined) continue; // the board, the chaos net: not of the tree
+        const colours = seen.get(id) ?? [];
+        if (colours.at(-1) !== colorOf(view, id)) seen.set(id, [...colours, colorOf(view, id)]);
+      }
+    }
+    for (const [id, colours] of seen) expect(new Set(colours).size, `${id}: ${colours.join(", ")}`).toBe(colours.length);
+    for (const track of ["o1", "o2", "o3"]) expect(seen.get(track)!.filter((colour) => colour !== ROOT_COLOR), track).toHaveLength(1);
   });
 
   it("has five fallen brains in the order they died, under a tree rooted in the brain that holds the root duty", () => {

@@ -228,38 +228,34 @@ export function structureKey(_state: ViewState, placed: Placed[]): string {
   return placed.map(({ id, parent, fallen }) => `${id}>${parent ?? ""}${fallen ? "!" : ""}`).join("|");
 }
 
-/** The colour key of an actor: its level-1 ancestor in the *current* tree (the one drawn, ``forestOf``). So when a subtree
- * is adopted, it takes its new owner's colour. Roots are neutral. */
+/** The colour key of an actor: going up the *current* tree (the one drawn, ``forestOf``), the first actor that spawned at level 1. So
+ * when a subtree is adopted it takes its new owner's colour, and a level-1 brain keeps its own wherever it is hung. Roots are neutral. */
 export function ownerOf(state: ViewState, id: string): string | null {
   // the tree as drawn: a root that died and handed over is not the root of what it handed over
   const up = (actor: string): string | null => forestOf(state).parent.get(actor) ?? null;
+  if (up(id) === null) return null;
   let current = id;
   const guard = new Set<string>();
   while (!guard.has(current)) {
     guard.add(current);
     const parent = up(current);
-    if (parent === null) return current === id ? null : current;
-    if (up(parent) === null) return current;
+    if (parent === null || isLevelOne(state, current)) return current;
     current = parent;
   }
   return null;
 }
 
+function isLevelOne(state: ViewState, id: string): boolean {
+  const parent = state.actors[id].originalParent;
+  return parent !== null && state.actors[parent]?.originalParent === null;
+}
+
 /** Colours are assigned to level-1 actors in spawn order and never change afterwards, so an
- * orchestrator keeps its colour however the tree is re-wired. A brain that moved up to level 1 because its parent took the
- * root keeps the colour of the subtree it came from. */
+ * orchestrator keeps its colour however the tree is re-wired. */
 export function colorOf(state: ViewState, id: string): string {
   const owner = ownerOf(state, id);
   if (owner === null) return ROOT_COLOR;
-  const levelOne = state.order.filter((actor) => {
-    const parent = state.actors[actor].originalParent;
-    return parent !== null && state.actors[parent]?.originalParent === null;
-  });
-  let first = owner;
-  for (const seen = new Set<string>(); !levelOne.includes(first) && !seen.has(first); ) {
-    seen.add(first);
-    first = state.actors[first]?.originalParent ?? first;
-  }
-  const index = levelOne.indexOf(first);
+  const levelOne = state.order.filter((actor) => isLevelOne(state, actor));
+  const index = levelOne.indexOf(owner);
   return SERIES[(index < 0 ? state.order.indexOf(owner) : index) % SERIES.length];
 }
