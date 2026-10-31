@@ -3,7 +3,7 @@
 
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Story } from "./data/types";
 import { REPO_URL } from "../lib/links";
@@ -150,6 +150,15 @@ describe("the home page, rendered with a story", () => {
     const text = plain(html);
     expect(text).toContain(COPY.solution.more.limit);
     expect(text).toContain(COPY.proof.more.proves);
+  });
+
+  it("offers the browser's own check under the proof on the static site, folded, and only there, where the button is", () => {
+    expect(html).not.toContain(COPY.proof.more.recompute.replace(/'/g, "&#x27;"));
+    vi.stubEnv("MODE", "static");
+    const fold = foldOf(sectionOf(render(FIXTURE_STORY), "proof"));
+    vi.unstubAllEnvs();
+    expect(fold).toContain('href="#/runs?details=all"');
+    expect(fold).toContain(COPY.proof.more.recompute.replace(/'/g, "&#x27;"));
   });
 
   it("types the demo's real output into the terminal, folded under the proof", () => {

@@ -2,6 +2,7 @@ import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
 
 import { COPY } from "../copy";
+import { isStaticShowcase } from "../doors";
 import { StillContext, useArrival } from "../hooks";
 import { captionFor, proofSteps } from "../numbers";
 import { SectionHead, Setting } from "../parts/Chapter";
@@ -67,6 +68,14 @@ export function Proof() {
               <>
                 <Claim id="S5" className="home-claim--lead" />
                 <p className="home-limit home-limit--wide">{COPY.proof.more.proves}</p>
+                {isStaticShowcase() && (
+                  <p className="home-proof__links">
+                    <a className="home-link" href="#/runs?details=all">
+                      {COPY.proof.more.recompute}
+                      <ArrowRight size={14} aria-hidden />
+                    </a>
+                  </p>
+                )}
                 {story && (
                   <FoldDrawing seconds={SECONDS.foldChain} className="home-fold__hash">
                     {(progress, still) => <HashStrip progress={progress} data={story.hashes} still={still} travel={CHAIN_TRAVEL} />}

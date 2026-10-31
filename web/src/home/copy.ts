@@ -95,6 +95,7 @@ export const COPY = {
       lead: "The rest of the evidence is on its own page: the models, the fair fight, the charts, where it ties and where it does worse.",
       link: "Open the evidence",
       proves: "Replay proves that this code produces the recorded run from the recorded model outputs. It does not prove where those outputs came from.",
+      recompute: "Recompute a log's hashes in your browser, and change a digit to watch it break",
       terminal: "The output of the commands, from the recorded demo run.",
       provenance: "Every number on this page comes from a committed result or a recorded run. Every claim is a row of docs/claims.md.",
     },

@@ -27,7 +27,7 @@ export interface ClaimRow {
   status: string;
 }
 
-/** The rows of the claims tables in docs/claims.md (S1 to S7, R1 to R7), read as the generator reads them. */
+/** The rows of the claims tables in docs/claims.md (S1 to S8, R1 to R7), read as the generator reads them. */
 export function claimRows(): ClaimRow[] {
   const doc = readFileSync(`${REPO_ROOT}docs/claims.md`, "utf-8");
   const rows: ClaimRow[] = [];
