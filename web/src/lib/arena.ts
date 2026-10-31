@@ -133,7 +133,7 @@ function windowsFor(state: ArenaState, event: RunEvent): OutageWindow[] {
 }
 
 /** Fold one event. The view after the tree and panels have folded it (``_after``) is passed by the reducer and not read here. */
-export function foldArena(state: ArenaState, event: RunEvent, _after: ViewState): ArenaState {
+export function foldArena(state: ArenaState, event: RunEvent): ArenaState {
   const p = event.payload;
   let next = state;
   if (isRecoveryEvent(event)) next = { ...next, recorded: record(next.recorded, event) };

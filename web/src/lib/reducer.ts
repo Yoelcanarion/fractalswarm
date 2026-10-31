@@ -395,7 +395,7 @@ export function foldEvent(state: ViewState, event: RunEvent): ViewState {
     supervision: foldSupervision(core.supervision, event),
     groups: { ...core.groups, [group]: (core.groups[group] ?? 0) + 1 },
   };
-  return { ...folded, arena: foldArena(folded.arena, event, folded) };
+  return { ...folded, arena: foldArena(folded.arena, event) };
 }
 
 export const foldEvents = (events: RunEvent[], from: ViewState = emptyView()): ViewState =>
