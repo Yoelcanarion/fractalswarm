@@ -94,11 +94,11 @@ Anything that doesn't answer one of them stays out of the video.
 - Then the root dies, and the root's duties move.
 - **Lower third:** "Shared log, not shared brain."
 
-**Voice-over (≈ 52 words):**
-> How does a team without a boss recover? Every coordinator reads the same log. When one stops sending heartbeats, each survivor computes the same heir from the log, with one rule, so there is no election.
-> The heir adopts the dead coordinator's work, and every result already in the log. Even the root can die.
+**Voice-over (≈ 50 words):**
+> How does a team without a boss recover? Every coordinator reads the same log. When one stops sending heartbeats, each survivor computes the same heir from the log, so there is no election.
+> Even the root can die. The heir adopts the work, and every result already in the log.
 
-**Key points:** one shared log · the same heir computed everywhere · no election · the heir adopts the work and the logged results · even the root.
+**Key points:** one shared log · the same heir computed everywhere · no election · even the root · the heir adopts the work and the logged results. "Even the root can die" lands on the root's X (about 0:14.5 of the scene), and the last sentence on its heir.
 
 ### s6-fair-fight (1:44–2:14)
 **On screen:**
