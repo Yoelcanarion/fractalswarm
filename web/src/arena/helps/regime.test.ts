@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { rivalOrder } from "./honesty";
-import { localityLine, regimeRows } from "./regime";
+import { localityCount, regimeRows } from "./regime";
 import { parsedSample } from "./testing";
 
 const rows = (rival: string) => regimeRows(parsedSample(), rival);
@@ -70,9 +70,9 @@ describe("the regime map", () => {
   });
 
   it("says the file's count of a rival's localities in words, and adds nothing up", () => {
-    expect(localityLine({ holds: 7, ties: 18, fails: 2, na: 0 })).toBe("locality holds at 7 settings, ties at 18 and fails at 2");
-    expect(localityLine({ holds: 1, ties: 0, fails: 0, na: 0 })).toBe("locality holds at 1 setting, ties at 0 and fails at 0");
-    expect(localityLine({ holds: 2, ties: 4, fails: 0, na: 3 })).toBe("locality holds at 2 settings, ties at 4 and fails at 0; 3 have no verdict");
+    expect(localityCount({ holds: 7, ties: 18, fails: 2, na: 0 })).toBe("holds at 7 settings, ties at 18 and fails at 2");
+    expect(localityCount({ holds: 1, ties: 0, fails: 0, na: 0 })).toBe("holds at 1 setting, ties at 0 and fails at 0");
+    expect(localityCount({ holds: 2, ties: 4, fails: 0, na: 3 })).toBe("holds at 2 settings, ties at 4 and fails at 0; 3 have no verdict");
   });
 
   it("draws only the gate against a rival that was not swept", () => {

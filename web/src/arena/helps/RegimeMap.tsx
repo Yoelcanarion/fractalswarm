@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 
-import { Details, Tooltip } from "../../components/ui";
+import { Details, Term, Tooltip } from "../../components/ui";
 import { systemName } from "../assumptions";
 import type { Honesty, Locality } from "./honesty";
 import { fmt, LOCALITY_WORD } from "./labels";
 import { Model } from "./Model";
-import { localityLine, RATIO_NAMES, regimeRows, type MapCell } from "./regime";
+import { localityCount, RATIO_NAMES, regimeRows, type MapCell } from "./regime";
 
 /** A locality as a class suffix: "n/a" cannot be one. */
 const slug = (locality: Locality): string => (locality === "n/a" ? "na" : locality);
@@ -66,14 +66,22 @@ export function RegimeMap({ honesty, rival }: RegimeMapProps) {
   const cut = honesty.rules.ratio.cdt_s?.ratio;
   const localities = honesty.localityByRival[rival];
   return (
-    <section className="map" data-helps="map" aria-label="Regime map">
+    <section className="map" data-helps="map" aria-label="Where it holds">
       <header className="helps__section-head">
         <div className="helps__h-row">
-          <h3 className="helps__h">Regime map</h3>
+          <h3 className="helps__h">Where it holds</h3>
           <Model kind="crash" />
         </div>
         <p className="helps__sub">
-          Against the {systemName(rival)}: {localities ? `${localityLine(localities)}.` : "at each setting the swarm's recovery stays local (holds), ties or fails."} One assumption changes along each row.
+          Against the {systemName(rival)}:{" "}
+          {localities ? (
+            <>
+              <Term id="locality">locality</Term> {localityCount(localities)}.
+            </>
+          ) : (
+            "at each setting the swarm's recovery stays local (holds), ties or fails."
+          )}{" "}
+          One assumption changes along each row.
         </p>
       </header>
       {rows.length === 0 ? (
@@ -104,6 +112,12 @@ export function RegimeMap({ honesty, rival }: RegimeMapProps) {
             <span>{word}</span>
           </li>
         ))}
+        <li>
+          <span className="map__num" aria-hidden>
+            N×
+          </span>
+          <span>Coordinator-dependency time, swarm over supervisor: under 1× the swarm's is shorter</span>
+        </li>
       </ul>
       <Details inline summary="How to read the map">
         <ul className="map__legend" aria-label="How to read the map">

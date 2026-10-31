@@ -90,8 +90,8 @@ export function regimeRows(honesty: Honesty, rival: string): MapRow[] {
 }
 
 /** The file's own count of a rival's localities in words; nothing is added up here. */
-export function localityLine(t: LocalityTally): string {
-  const line = `locality holds at ${countText(t.holds, "setting", "settings")}, ties at ${t.ties} and fails at ${t.fails}`;
+export function localityCount(t: LocalityTally): string {
+  const line = `holds at ${countText(t.holds, "setting", "settings")}, ties at ${t.ties} and fails at ${t.fails}`;
   return t.na > 0 ? `${line}; ${t.na} have no verdict` : line;
 }
 

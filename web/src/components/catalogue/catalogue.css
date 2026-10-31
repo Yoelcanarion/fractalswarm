@@ -160,6 +160,12 @@
   font-weight: 700;
 }
 
+/* With the table open, the short list above it would say the same runs a second time. */
+.runs:has(> #all[open]) .featured--start,
+.runs:has(> #all[open]) .yourruns--start {
+  display: none;
+}
+
 /* ---- the table ---- */
 .runstable {
   border: 1px solid var(--border);

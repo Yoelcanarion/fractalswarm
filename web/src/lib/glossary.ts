@@ -63,6 +63,10 @@ export const GLOSSARY = {
     term: "Blast radius",
     says: "The share of agents and goals waiting on a dead coordinator, and the idle agent-seconds the crash causes.",
   },
+  locality: {
+    term: "Locality",
+    says: "Whether a crash stops only its own part of the tree. The bench reads it from coordinator-dependency time, blast radius and idle agent-seconds.",
+  },
   dependencyTime: {
     term: "Coordinator-dependency time",
     says: "How long ready work cannot proceed because the coordinator that decides it is down.",

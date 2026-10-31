@@ -10,7 +10,7 @@ import { systemName } from "../assumptions";
 import { CLAIMS, type Claims } from "./claims";
 import { HelpsView, type HelpsViewProps } from "./HelpsPage";
 import { regimeRows } from "./regime";
-import { occurrences, parsedSample, plainText } from "./testing";
+import { occurrences, parsedSample, plainText, visibleText } from "./testing";
 import { WhereItHelps, type WhereItHelpsProps } from "./WhereItHelps";
 
 const render = (props: Partial<WhereItHelpsProps> = {}): string => renderToStaticMarkup(createElement(WhereItHelps, { honesty: parsedSample(), ...props }));
@@ -161,7 +161,7 @@ describe("the per-process section", () => {
 
 describe("the rival the map and the per-process view are read against", () => {
   it("starts on the one the outcome is read against", () => {
-    expect(plainText(render())).toContain("Against the ideal durable supervisor: locality holds at 7 settings, ties at 18 and fails at 2.");
+    expect(visibleText(render())).toContain("Against the ideal durable supervisor: locality holds at 7 settings, ties at 18 and fails at 2.");
   });
 
   it("says no count when the file gives none", () => {
@@ -170,7 +170,7 @@ describe("the rival the map and the per-process view are read against", () => {
   });
 
   it("starts on the one asked for, and ignores one the file does not have", () => {
-    expect(plainText(render({ rival: "central" }))).toContain(`Against the ${systemName("central")}: locality holds at 2 settings, ties at 4 and fails at 0.`);
+    expect(visibleText(render({ rival: "central" }))).toContain(`Against the ${systemName("central")}: locality holds at 2 settings, ties at 4 and fails at 0.`);
     expect(occurrences(render({ rival: "central" }), 'class="map__row"')).toBe(2);
     expect(plainText(render({ rival: "nobody" }))).toBe(plainText(render()));
   });
@@ -277,7 +277,7 @@ describe("the page", () => {
     expect(text).toContain("No verdicts yet");
     expect(text).toContain("The server has no bench/results/honesty.json (GET /api/bench/honesty answered 404).");
     expect(text).toContain("fractalswarm bench verdicts <results dirs> --prereg");
-    expect(text).not.toContain("Regime map");
+    expect(text).not.toContain("Where it holds");
     expect(text).toContain("Check again");
     expect(markup).toContain('href="#/charts"');
   });
@@ -293,7 +293,7 @@ describe("the page", () => {
     expect(plainText(invalid)).toContain("The panel shows nothing rather than part of the numbers.");
     for (const markup of [unreachable, invalid]) {
       expect(markup).toContain('role="alert"');
-      expect(plainText(markup)).not.toContain("Regime map");
+      expect(plainText(markup)).not.toContain("Where it holds");
     }
   });
 
@@ -308,7 +308,7 @@ describe("the page", () => {
 
   it("draws the panel for a file it could read", () => {
     const text = plainText(view({ status: "ready", honesty: parsedSample() }));
-    expect(text).toContain("Regime map");
+    expect(text).toContain("Where it holds");
     expect(text).toContain("Wins, ties and losses");
     expect(text).toContain("Per process");
   });

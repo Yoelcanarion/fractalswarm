@@ -26,7 +26,7 @@ function Row({ row, program }: { row: CatalogueRow; program?: boolean }) {
 export function FeaturedRuns({ rows, titled = false }: { rows: readonly CatalogueRow[]; titled?: boolean }) {
   if (rows.length === 0) return null;
   const list = (
-    <ul className="featured" aria-label="Runs to start with">
+    <ul className="featured featured--start" aria-label="Runs to start with">
       {rows.map((row) => (
         <Row key={row.listing.id} row={row} />
       ))}
@@ -34,7 +34,7 @@ export function FeaturedRuns({ rows, titled = false }: { rows: readonly Catalogu
   );
   if (!titled) return list;
   return (
-    <section className="yourruns">
+    <section className="yourruns yourruns--start">
       <h2 className="yourruns__title">Runs to start with</h2>
       {list}
     </section>

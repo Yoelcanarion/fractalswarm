@@ -248,6 +248,13 @@ describe("the page", () => {
     return html(createElement(RunStoreProvider, { store }, createElement(RunsPage)));
   };
 
+  it("lists the runs once: the short list gives way while the table of all of them is open", () => {
+    const css = readFileSync(REPO_ROOT + "web/src/components/catalogue/catalogue.css", "utf-8").replace(/\r\n/g, "\n");
+    expect(css).toMatch(/\.runs:has\(> #all\[open\]\) \.featured--start,\n\.runs:has\(> #all\[open\]\) \.yourruns--start \{\n {2}display: none;/);
+    // and a person's own runs stay in view: they are not what the short list repeats
+    expect(readFileSync(REPO_ROOT + "web/src/components/catalogue/FeaturedRuns.tsx", "utf-8")).toContain('<ul className="featured">');
+  });
+
   it("shows a skeleton, not an empty list, until the server has answered", () => {
     const out = page({ runsLoaded: false });
     expect(out).toContain("Loading the runs");
@@ -311,7 +318,7 @@ describe("the page", () => {
     const ids = ["demo-final", "demo-pair-central-rival", "demo-pair-central-swarm", "demo-pair-durable-max-rival", "demo-pair-durable-max-swarm"];
     const runs = ids.map((id) => listing(id, "completed", SWARM, { source: "demo" }));
     const featuredIds = (out: string): string[] =>
-      [...(/<ul class="featured"[\s\S]*?<\/ul>/.exec(out)?.[0] ?? "").matchAll(/class="mono featured__id" href="#\/run\/([^?"]+)/g)].map((m) => m[1]);
+      [...(/<ul class="featured featured--start"[\s\S]*?<\/ul>/.exec(out)?.[0] ?? "").matchAll(/class="mono featured__id" href="#\/run\/([^?"]+)/g)].map((m) => m[1]);
     const site = page({ runsLoaded: true, runs, capabilities: { ...DEFAULT_CAPABILITIES, static: true } });
     expect(featuredIds(site)).toEqual(ids);
     expect(site).not.toContain('<details id="start"');
@@ -332,7 +339,7 @@ describe("the page", () => {
     expect(yours).toContain('href="#/run/pair-1-swarm?at=end"');
     expect(yours).not.toContain("intake-1"); // a reading places no talk
     expect(out.indexOf("yourruns")).toBeLessThan(out.indexOf('aria-label="Runs to start with"'));
-    const toStart = /<ul class="featured" aria-label="Runs to start with"[\s\S]*?<\/ul>/.exec(out)?.[0] ?? "";
+    const toStart = /<ul class="featured featured--start" aria-label="Runs to start with"[\s\S]*?<\/ul>/.exec(out)?.[0] ?? "";
     expect(toStart).not.toContain("pair-1-swarm");
     expect(toStart).toContain("demo-final");
     // the static site holds nobody's runs
@@ -345,7 +352,7 @@ describe("the page", () => {
     // the main action is the final run, wherever the server lists it
     expect(out).toContain('<a class="btn btn--on" href="#/run/demo-final?at=end">Open the final run</a>');
     // the short list leads with it
-    const featured = /<ul class="featured"[\s\S]*?<\/ul>/.exec(out)?.[0] ?? "";
+    const featured = /<ul class="featured featured--start"[\s\S]*?<\/ul>/.exec(out)?.[0] ?? "";
     expect([...featured.matchAll(/class="mono featured__id" href="([^"]+)"/g)].map((m) => m[1])).toEqual(["#/run/demo-final?at=end", "#/run/old-1?at=end", "#/run/old-2?at=end"]);
     // the search, the filters and the table are in the fold with the id the address opens
     const fold = /<details id="all"[\s\S]*?<\/details>\s*<details id="start"/.exec(out)?.[0] ?? "";
