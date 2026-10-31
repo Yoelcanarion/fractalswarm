@@ -1759,3 +1759,9 @@ No real call, no spend. Nothing pushed. Handlers untouched, and no public claim 
 **Checks at b503b3a:** web 2,722 of 2,722, tsc clean, build committed. The arena measured at eleven window sizes: the work meter clear of the bar at each, and the boards at the same height before and during play. `phone_checks` 16 of 16, `menus_over` 5 of 5, the wheel on six pages, sideways 0 at 360, 390 and 430, the lens 14 of 15 (the known case), Firefox ok, the static check CLEAN. That check first printed 9 problems, all `ERR_ABORTED` on the largest log pages: my gzip server was still compressing when the script moved on. On a plain file server, none. Python untouched since 93464b3. Nothing pushed.
 
 **Ledger:** unchanged, spent $60.03, reserved $13.73.
+
+## Oct 31, night: the chart, the laptop juror, and the README
+
+- **The hero chart (788c704).** At 1536x730 it was cut by the fold, and its four translucent bands read as mud. A dot on each mean and a bar from the lowest seed to the highest, the workflows side by side, with the means in figures at C3. The page's sentence on the ten seeds is R6 with its figures read from the file and its link to R2 and R3; why a tie and both bases of the cost stand under the charts. Palette checked by the validator, dark and light.
+- **The seventh cold test (a408b13):** `.plans/notes/arena-cold-test.md`. Seven real stumbles fixed; one read as a fault was the run's clock.
+- **Next:** the README, on Yoel's request.

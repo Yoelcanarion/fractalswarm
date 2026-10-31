@@ -148,3 +148,29 @@ A fresh agent with no repo, eight jury tasks and a mouse, in a browser window of
 **Checked by:** `desk_check.mjs` at eight window sizes, `lens_room.mjs`, `wheel_views.mjs`, `menus_over.mjs`, `phone_checks` 16 of 16, by eye at 1920x950, 1920x1080 and 1366x768.
 
 **What this test teaches:** a tool that prints FAIL is read like any other line. The lens FAIL had been on my screen and I reported the check as passed; run the old build beside the new one before calling a FAIL new or old, and fix it either way.
+
+## The seventh test: a juror on a laptop, on the static site (Oct 31, at b503b3a, about 70 actions)
+
+A fresh agent with no repo, eight jury tasks and a mouse, in a window of 1536x730, the size most laptops give a browser. Its verdict: top three if the repository is public. What it valued most: a tie admitted, a page on where it does worse, and the tamper check.
+
+| What it found | Was it true | What changed |
+|---|---|---|
+| The code link is a 404, in the same tab | The 404 is expected until the release. The same tab was a fault: the reader lost the page | All four links to the code open beside the page |
+| The 3-step band stays on every page | True: 55 px of 730 for the whole visit, because the tester never pressed "Got it" | 37 px on a laptop. Each step is marked as it is done, and the band retires with the third |
+| The Guide button grows the band to 145 px and the bar cuts the trees | True, on request, and one click closes it | Nothing |
+| The hero shows nothing dying for 35 s | No: the 35 s is the run's clock. On a real clock the first death is 3.9 s after the page opens (`home_timing.mjs`) | Nothing |
+| A wall of grey text on the conditions | True | R3 reads as the list it is, one clause to a line, with no word changed (`clauses`, tested by joining them back) |
+| The home cites files the reader cannot open | True until the repo is public | Nothing. The release opens them |
+| "How to read the map" looks dead | True: at the foot of the window it opened out of sight | Any fold a person opens comes into view (`nearest`; `reveal` still goes to the top) |
+| "4 agents 1.44×" is a tie and "5.71×" a failure, unclear | Partly: the fold says why, and it was out of sight | The fold above. Nothing more: the key under the map is the rule's own |
+| View tabs reshuffle after each pick | True: the row inserted the open view in the middle | Run and Results stay where they are, and the menu takes the name of the open view |
+| "Takeover OK, 6 hand-overs" at t=0 | True: a verdict on the finished log, before anything has happened | On the page it waits for the end of the film. The takes keep it, because their scenes point at it (`.arena--bare`) |
+| A rejection's reason cut ("booke...") | True, with no way to read the rest | It wraps |
+| All zeros on Security, a popover over a heading | No fault: the first is the result, the second is a menu | Nothing |
+| Numbers caught mid-count | A model's pace | Nothing |
+
+**Found while reading it, not by the tester:** the Charts page. Its hero chart was cut by the fold at this size, and four translucent bands read as mud. It is now a dot on each mean and a bar from the lowest seed to the highest, and it fits the first screen with the guide open (788c704).
+
+**Checked by:** `triage_check.mjs` 12 of 12 by clicks on a first visit, `phone_checks` 16 of 16, `menus_over.mjs`, `wheel_views.mjs`, web 2,732, Firefox.
+
+**What this test teaches:** read a tester's clock. "35 s" was true of the label on the screen and false of the visitor's wait, and the check took a minute. And the band that was measured at every size with the guide open was still a cost nobody had counted, because every earlier test measured a page, not a visit.
