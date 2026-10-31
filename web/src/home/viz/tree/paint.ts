@@ -60,6 +60,8 @@ export interface TreeRig {
   dashes: Pen<SVGLineElement>[];
   clock: Pen<SVGTextElement> | null;
   memorial: Pen<SVGGElement> | null;
+  /** The empty places of the memorial row, by the id of the brain that will fill each: there only when the tree is drawn with them. */
+  slots?: Record<string, Pen<SVGCircleElement>>;
   /** The ambient layer's pulse on each node's edge, by the id of the node: its group, and its four circles (glow, tail, tail, head). */
   dots?: Record<string, { group: Pen<SVGGElement>; parts: Pen<SVGCircleElement>[] }>;
 }
@@ -103,12 +105,15 @@ export function collectTree(svg: SVGSVGElement, sizes: Record<string, { size: nu
   for (const el of svg.querySelectorAll<SVGGElement>("[data-amb-dot]")) {
     dots[el.dataset["ambDot"] ?? ""] = { group: new Pen(el), parts: [...el.querySelectorAll<SVGCircleElement>("circle")].map((c) => new Pen(c)) };
   }
+  const slots: NonNullable<TreeRig["slots"]> = {};
+  for (const el of svg.querySelectorAll<SVGCircleElement>("[data-slot]")) slots[el.dataset["slot"] ?? ""] = new Pen(el);
   return {
     nodes,
     edges,
     dashes: [...svg.querySelectorAll<SVGLineElement>("[data-dash]")].map((el) => new Pen(el)),
     clock: pen(svg, ".hv-clock"),
     memorial: pen(svg, ".hv-memorial"),
+    slots,
     dots,
   };
 }
@@ -182,8 +187,17 @@ export function paintTree(rig: TreeRig, frame: TreeFrame): void {
   rig.clock?.text(`${(frame.tMs / 1000).toFixed(1)} s`);
   // The label names the brains in the memorial row, so it comes in as the first dead one sets off for it, not when the first one
   // dies: the hero shows a killed brain for a while, stamped, in its place in the tree, and a label over an empty row says nothing.
+  // A tree that draws the row's empty places from the start (`frame.shelf`) has the label from the start: it names the places.
   const gone = frame.nodes.reduce((far, n) => (n.state === "dead" ? Math.max(far, n.buried) : far), 0);
   rig.memorial?.set("opacity", Math.max(frame.shelf ?? 0, smoothstep(span(gone, 0, 0.3)) * smoothstep(span(frame.appear, 0.7, 1))));
+  if (rig.slots) {
+    // A place is taken as its brain lands in it, and is open again as that brain folds away with the rest of the tree.
+    const byId = new Map(frame.nodes.map((n) => [n.id, n]));
+    for (const [id, slot] of Object.entries(rig.slots)) {
+      const n = byId.get(id);
+      slot.set("opacity", n ? 1 - n.buried * n.appear : 1);
+    }
+  }
 }
 
 /** Copies the ambient layer onto the SVG: a pulse on each edge, a halo on each brain, a ring on each working agent. */

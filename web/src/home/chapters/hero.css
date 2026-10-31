@@ -3,6 +3,26 @@
  * Colours and curves come from tokens.css only. Nothing here follows the scroll: the page is not pinned and does not hand over.
  */
 
+/*
+ * The title is two sentences, one to a line. A sentence that wrapped read as "Kill half the / brains. It / still finishes.", so the
+ * title is set no larger than its longest sentence can be and still fit the column. The column is home.css's: two of 6.2fr and 5.8fr
+ * between the page's padding and gap (the copy's is 0.447 of the viewport below 1650px, and about 730px above it), and one column of
+ * the viewport less its padding on a phone. hero.test.ts holds the sentence to its column at every width.
+ */
+.home-hero .home-hero__title {
+  font-size: min(5.6vw, 92px);
+}
+
+.home-hero__sentence {
+  display: block;
+}
+
+@media (max-width: 899px) {
+  .home-hero .home-hero__title {
+    font-size: min(11vw, 76px);
+  }
+}
+
 /* the tree and, under it, the line that says what it is */
 .home-hero__object {
   display: grid;

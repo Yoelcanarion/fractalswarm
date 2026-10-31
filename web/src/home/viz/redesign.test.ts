@@ -116,7 +116,7 @@ describe("the click demo's markup", () => {
     expect(crashLine("Root (o0)", ["a", "b"])).not.toContain("takes");
   });
 
-  it("draws the shelf of the dead from the start, faintly, and the hero's tree does not", () => {
+  it("draws the shelf of the dead from the start, faintly, in the click demo; a frame that is given no shelf waits for the first dead brain", () => {
     const rig = (log: Record<string, string>): TreeRig =>
       ({
         nodes: {},
