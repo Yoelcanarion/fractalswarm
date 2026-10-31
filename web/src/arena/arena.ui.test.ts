@@ -18,7 +18,7 @@ import { ArenaSide } from "./ArenaSide";
 import { ArenaTimeline } from "./ArenaTimeline";
 import { frameOf, sharedFrames } from "./frame";
 import { readOfficial } from "./official";
-import { PairPicker } from "./PairPicker";
+import { PairPicker, runChoices } from "./PairPicker";
 import { Scoreboard } from "./Scoreboard";
 import { createPairSession } from "./session";
 import { call, crash, kill, ready, restart, rivalStream, sent, swarmStream, takeOver } from "./testing";
@@ -301,11 +301,20 @@ describe("the picker", () => {
   const picker = (props: Partial<Parameters<typeof PairPicker>[0]> = {}) =>
     renderToStaticMarkup(createElement(PairPicker, { left: null, right: null, pairs: [pair()], runs: [run("a"), run("b")], ...props }));
 
-  it("lists the pairs on record and every run for a pair made by hand", () => {
+  it("lists the pairs on record, and for a pair made by hand only their runs, each on its side", () => {
     const html = picker();
     expect(html).toContain("swarm vs durable-max, half-the-brains, seed 1");
-    expect(count(html, /<option value="a"/)).toBe(2); // once as swarm, once as rival
-    expect(count(html, /<option value="b"/)).toBe(2);
+    expect(count(html, /<option value="demo-1-swarm"/)).toBe(1);
+    expect(count(html, /<option value="demo-1-durable-max"/)).toBe(1);
+    expect(html).not.toContain('<option value="a"');
+  });
+
+  it("never hides the run on screen, leaves a private pair's runs out of the lists, and offers every run when no pair ships", () => {
+    expect(runChoices([pair()], [run("a")], "left", "a")).toEqual(["demo-1-swarm", "a"]);
+    expect(runChoices([pair({ private: true })], [run("a")], "left", null)).toEqual(["a"]);
+    expect(runChoices([pair(), pair({ pairId: "mine", private: true, left: "mine-swarm" })], [run("a")], "left", null)).toEqual(["demo-1-swarm"]);
+    expect(runChoices([], [run("a"), run("b")], "right", null)).toEqual(["a", "b"]);
+    expect(runChoices([pair()], [], "right", "demo-1-durable-max")).toEqual(["demo-1-durable-max"]);
   });
 
   it("selects the pair that is open", () => {

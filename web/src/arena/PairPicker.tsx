@@ -26,7 +26,15 @@ export function pairName(pair: PairListing): string {
   return `${["Your pair", rivalLabel(pair.rival), pair.chaos.replace(/-/g, " "), at].filter(Boolean).join(" · ")}${billed}`;
 }
 
-/** Chooses the two runs the arena shows: a pair on record, or any swarm run and any rival run. */
+/** The runs a side's list offers: those of the pairs that ship, and the one on screen, so that a list never hides what is showing. The whole
+ * catalogue is dozens of practice and half-finished runs, which only bury these. With no pair on record it is all there is. */
+export function runChoices(pairs: PairListing[] | null, runs: RunListing[], side: "left" | "right", current: string | null): string[] {
+  const shipped = (pairs ?? []).filter((pair) => !pair.private).map((pair) => pair[side]);
+  const listed = shipped.length > 0 ? shipped : runs.map((run) => run.id);
+  return [...new Set(current ? [...listed, current] : listed)];
+}
+
+/** Chooses the two runs the arena shows: a pair on record, or a swarm run and a rival run of the pairs that ship. */
 export function PairPicker({ left, right, pairs, runs }: PairPickerProps) {
   const current = pairs?.find((p) => p.left === left && p.right === right);
   // The pairs that ship come first; the private ones (live input typed on this machine) sit apart under a divider, and keep their mark in the name,
@@ -74,9 +82,9 @@ export function PairPicker({ left, right, pairs, runs }: PairPickerProps) {
           <span className="picker__label">Swarm</span>
           <select value={left ?? ""} onChange={(e) => go(e.target.value, right ?? "")} aria-label="swarm run">
             <option value="">Choose a run…</option>
-            {runs.map((run) => (
-              <option key={run.id} value={run.id}>
-                {run.id}
+            {runChoices(pairs, runs, "left", left).map((id) => (
+              <option key={id} value={id}>
+                {id}
               </option>
             ))}
           </select>
@@ -85,9 +93,9 @@ export function PairPicker({ left, right, pairs, runs }: PairPickerProps) {
           <span className="picker__label">Rival</span>
           <select value={right ?? ""} onChange={(e) => go(left ?? "", e.target.value)} aria-label="rival run">
             <option value="">Choose a run…</option>
-            {runs.map((run) => (
-              <option key={run.id} value={run.id}>
-                {run.id}
+            {runChoices(pairs, runs, "right", right).map((id) => (
+              <option key={id} value={id}>
+                {id}
               </option>
             ))}
           </select>
