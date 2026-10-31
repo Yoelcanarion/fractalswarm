@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 
 import { GithubMark } from "../../components/ui/GithubMark";
-import { REPO_URL } from "../../lib/links";
+import { REPO_LINK } from "../../lib/links";
 import { COPY } from "../copy";
 import { scrollToTop } from "../scrollTo";
 import { ThemeSwitch } from "./ThemeSwitch";
@@ -23,7 +23,7 @@ export function TopBar({ onHome = true }: { onHome?: boolean }) {
           <span className="home-bar__short">{COPY.bar.enterShort}</span>
           <ArrowRight size={16} aria-hidden />
         </a>
-        <a className="home-icon-button" href={REPO_URL} aria-label="The code on GitHub" title="The code on GitHub">
+        <a className="home-icon-button" {...REPO_LINK} aria-label="The code on GitHub" title="The code on GitHub">
           <GithubMark />
         </a>
         <ThemeSwitch />

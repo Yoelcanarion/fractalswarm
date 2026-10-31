@@ -12,8 +12,8 @@ export interface DetailsProps {
   id?: string;
   /** Open from the start, or opened by the page when the thing inside is wanted (a prop, like the address). */
   open?: boolean;
-  /** Scrolls the fold to the top of the page when a person opens it: for a fold under a bar that is pinned over the page's foot, where its
-   * body would open out of sight behind it. */
+  /** Scrolls the fold to the top of the page when a person opens it, and not only as far as it takes to show it: for a fold under a bar that is
+   * pinned over the page's foot, where its body would open out of sight behind it. */
   reveal?: boolean;
   /** Without the bar around it: for a fold inside a card. */
   inline?: boolean;
@@ -64,7 +64,8 @@ export function Details({ summary = "Details", hint, id, open = false, reveal = 
       onToggle={(event) => {
         const fold = event.currentTarget;
         setOpen(fold.open);
-        if (fold.open && opening.current) fold.scrollIntoView({ block: "start", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+        // a fold opened near the foot of the window would open out of sight, and look dead
+        if (fold.open && opening.current) fold.scrollIntoView({ block: reveal ? "start" : "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
         opening.current = false;
       }}
       onKeyDown={(event) => {
@@ -77,7 +78,7 @@ export function Details({ summary = "Details", hint, id, open = false, reveal = 
       <summary
         className="disclosure__summary"
         onClick={() => {
-          opening.current = reveal && !root.current?.open;
+          opening.current = !menu && !root.current?.open;
         }}
       >
         <span className="disclosure__label">{summary}</span>

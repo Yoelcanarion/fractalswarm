@@ -153,6 +153,12 @@
 .side__chip {
   display: inline-flex;
   min-width: 0;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+
+.arena:not(.arena--bare) .side__chip--waiting {
+  visibility: hidden;
+  opacity: 0;
 }
 
 .side__name {

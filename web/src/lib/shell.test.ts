@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EVIDENCE_HASHES, EVIDENCE_VIEWS, evidenceViewsShown, isEvidence, pageName, pageTitle, pickedRunHash, PLACES, placeOf, RUN_VIEWS, RUN_VIEW_TITLES, runViewHash, runViewsShown, type Where } from "./shell";
+import { EVIDENCE_HASHES, EVIDENCE_VIEWS, evidenceViewsShown, isEvidence, MAIN_RUN_VIEWS, MORE_RUN_VIEWS, pageName, pageTitle, pickedRunHash, PLACES, placeOf, RUN_VIEWS, RUN_VIEW_TITLES, runViewHash, type Where } from "./shell";
 
 describe("the places", () => {
   it("are the four the brief names, in order, each with a link of its own", () => {
@@ -62,19 +62,13 @@ describe("a run's views", () => {
 });
 
 describe("which of a run's views the row shows", () => {
-  it("are two, Run and Results, and the one the person is on, with the rest in the menu, each in the order of the six", () => {
-    expect(runViewsShown("overview")).toEqual({ shown: ["overview", "results"], more: ["plan", "panels", "security", "events"] });
-    expect(runViewsShown("results")).toEqual({ shown: ["overview", "results"], more: ["plan", "panels", "security", "events"] });
-    expect(runViewsShown("plan")).toEqual({ shown: ["overview", "plan", "results"], more: ["panels", "security", "events"] });
-    expect(runViewsShown("events")).toEqual({ shown: ["overview", "results", "events"], more: ["plan", "panels", "security"] });
+  it("are two, Run and Results, always, with the rest in the menu, each in the order of the six", () => {
+    expect(MAIN_RUN_VIEWS).toEqual(["overview", "results"]);
+    expect(MORE_RUN_VIEWS).toEqual(["plan", "panels", "security", "events"]);
   });
 
   it("lose none of the six between the row and the menu", () => {
-    for (const view of RUN_VIEWS) {
-      const { shown, more } = runViewsShown(view);
-      expect([...shown, ...more].sort()).toEqual([...RUN_VIEWS].sort());
-      expect(shown).toContain(view);
-    }
+    expect([...MAIN_RUN_VIEWS, ...MORE_RUN_VIEWS].sort()).toEqual([...RUN_VIEWS].sort());
   });
 });
 

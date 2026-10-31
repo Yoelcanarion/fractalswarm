@@ -122,7 +122,7 @@ export function EscalationsPanel({ view, runId }: { view: ViewState; runId?: str
                   <td>
                     <Pill tone={STATUS[trail.status].tone}>{STATUS[trail.status].label}</Pill>
                   </td>
-                  <td className="clip">{last?.reasons[0] ?? ""}</td>
+                  <td>{last?.reasons[0] ?? ""}</td>
                 </tr>
               );
             })}

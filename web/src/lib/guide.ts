@@ -63,6 +63,18 @@ export const guideShows = (mode: GuideMode, stepped: boolean): boolean => (stepp
 /** What the Guide button in the top bar does: it asks for the sentences when there are none, and closes them when they are showing. */
 export const afterGuideButton = (mode: GuideMode): GuideMode => (mode === "full" ? "closed" : "full");
 
+/** Whether an address is where a step is done: where its link leads, or somewhere inside that. "#/run" is not "#/runs". */
+export function doneAt(step: GuideStep, hash: string): boolean {
+  const href = step.action?.href;
+  return href !== undefined && (hash === href || hash.startsWith(`${href}/`) || hash.startsWith(`${href}?`));
+}
+
+/** The steps done once an address is reached: the ones done before and the one it completes. The same set when nothing changed. */
+export function stepsDoneAt(steps: readonly GuideStep[], hash: string, seen: ReadonlySet<GuideStep["id"]>): ReadonlySet<GuideStep["id"]> {
+  const done = steps.filter((step) => seen.has(step.id) || doneAt(step, hash)).map((step) => step.id);
+  return done.length === seen.size ? seen : new Set(done);
+}
+
 /** Whether this browser has been shown the guide. It is a convenience: with no storage the guide simply shows each time. */
 export const GUIDE_KEY = "fractalswarm.guide.seen";
 

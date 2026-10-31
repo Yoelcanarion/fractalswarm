@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_CAPABILITIES, siteOf } from "./controls";
-import { afterGuideButton, GUIDE_KEY, GUIDE_STEPS, guideSeen, guideShows, guideSteps, rememberGuide } from "./guide";
+import { afterGuideButton, doneAt, GUIDE_KEY, GUIDE_STEPS, guideSeen, guideShows, guideSteps, rememberGuide, stepsDoneAt } from "./guide";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -77,6 +77,31 @@ describe("the Guide button", () => {
     expect(afterGuideButton("closed")).toBe("full");
     expect(afterGuideButton("short")).toBe("full");
     expect(afterGuideButton("full")).toBe("closed");
+  });
+});
+
+describe("a step done", () => {
+  const [choose, kill, verify] = guideSteps("static");
+
+  it("is one whose link was reached, or a page inside it, and no other page that only starts the same", () => {
+    expect(doneAt(choose, "#/run")).toBe(true);
+    expect(doneAt(choose, "#/run/demo-final/results?at=end")).toBe(true);
+    expect(doneAt(choose, "#/runs")).toBe(false);
+    expect(doneAt(kill, "#/arena")).toBe(true);
+    expect(doneAt(kill, "#/arena/some-pair?speed=4")).toBe(true);
+    expect(doneAt(verify, "#/runs?details=all")).toBe(true);
+    expect(doneAt(verify, "#/runs")).toBe(false); // the list alone is not the check
+    expect(doneAt({ id: "kill", title: "", says: "" }, "#/arena")).toBe(false); // a step with no link is never done by an address
+  });
+
+  it("stays done, and adds up to all three, with the same set kept when an address adds nothing", () => {
+    const steps = guideSteps("static");
+    const none: ReadonlySet<(typeof steps)[number]["id"]> = new Set();
+    const one = stepsDoneAt(steps, "#/run/demo-final", none);
+    expect([...one]).toEqual(["choose"]);
+    expect(stepsDoneAt(steps, "#/charts", one)).toBe(one);
+    const two = stepsDoneAt(steps, "#/arena", one);
+    expect([...stepsDoneAt(steps, "#/runs?details=all", two)]).toEqual(["choose", "kill", "verify"]);
   });
 });
 

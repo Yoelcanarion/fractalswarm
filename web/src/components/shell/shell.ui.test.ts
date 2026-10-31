@@ -64,26 +64,29 @@ describe("a run's own views", () => {
     expect(markup).toContain('<option value="other">other</option>');
     expect(plainText(markup)).toContain("swarm-seed1");
     const views = nav(markup, "Views of this run");
-    // the row keeps two views and the one the person is on; the three others are in the menu after them
-    expect(labels(views)).toEqual(["Run", "Plan", "Results", "Panels", "Security", "Events"]);
+    // the row keeps its two views in place; the four others are in the menu after them, which takes the name of the one that is open
+    expect(labels(views)).toEqual(["Run", "Results", "Plan", "Panels", "Security", "Events"]);
     expect(views).toContain('<a class="tab tab--on" href="#/run/demo/plan" aria-current="page">Plan</a>');
     expect(views).toContain('<a class="tab" href="#/run/demo">Run</a>');
     expect(occurrences(views, "aria-current")).toBe(1);
   });
 
-  it("show two views and a menu with the rest, which is a fold of its own, and a view that is open is shown whichever it is", () => {
-    const menu = (markup: string) => /<details id="views"[\s\S]*?<\/details>/.exec(markup)?.[0] ?? "";
+  it("show two views and a menu with the rest, which is a fold of its own, and no tab moves when a view in the menu opens", () => {
+    const menu = (markup: string) => /<details [^>]*id="views"[\s\S]*?<\/details>/.exec(markup)?.[0] ?? "";
     const onRun = bar({ page: "run", runId: "demo", view: "overview" });
     expect(labels(menu(onRun))).toEqual(["Plan", "Panels", "Security", "Events"]);
     expect(menu(onRun)).toContain("More views");
+    expect(menu(onRun)).not.toContain("tabs__more--on");
     expect(labels(nav(onRun, "Views of this run")).slice(0, 2)).toEqual(["Run", "Results"]);
     const onEvents = bar({ page: "run", runId: "demo", view: "events" });
-    expect(labels(menu(onEvents))).toEqual(["Plan", "Panels", "Security"]);
+    expect(labels(nav(onEvents, "Views of this run"))).toEqual(labels(nav(onRun, "Views of this run")));
+    expect(menu(onEvents)).toContain("tabs__more--on");
+    expect(menu(onEvents)).not.toContain("More views");
     expect(onEvents).toContain('<a class="tab tab--on" href="#/run/demo/events" aria-current="page">Events</a>');
   });
 
   it("have the guide's button at the end of the bar when the page has a guide, and not otherwise", () => {
-    const guide = { open: true, full: false, toggle: () => undefined, dismiss: () => undefined };
+    const guide = { open: true, full: false, done: new Set<never>(), toggle: () => undefined, dismiss: () => undefined };
     expect(bar({ page: "arena" }, { guide })).toContain('aria-controls="guide"');
     expect(bar({ page: "arena" }, { guide })).toContain('aria-expanded="true"');
     expect(bar({ page: "arena" }, { guide: { ...guide, open: false } })).toContain('aria-expanded="false"');

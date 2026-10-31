@@ -216,7 +216,7 @@ function Tie() {
       aside={
         <>
           <Reveal delay={100}>
-            <Claim id="R3" className="home-claim--small" />
+            <Claim id="R3" className="home-claim--small" lines="clauses" />
           </Reveal>
           <Reveal delay={110}>
             <p className="home-limit">{COPY.evidence.tie.terms}</p>

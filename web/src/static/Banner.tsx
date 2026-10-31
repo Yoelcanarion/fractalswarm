@@ -5,7 +5,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 
 import { pageOf } from "../home/route";
-import { REPO_URL } from "../lib/links";
+import { REPO_LINK } from "../lib/links";
 import { COMMAND } from "./answers";
 import type { SiteStamp } from "./manifest";
 import { megabytes, overall, PROGRESS_EVENT, type LoadProgress } from "./progress";
@@ -69,7 +69,7 @@ export function StaticBanner({ site }: { site: SiteStamp }) {
         Static showcase: recorded runs only.
         <span className="staticbar__more">
           {" "}
-          Run it yourself: <a href={REPO_URL}>get the code</a>, then <code>{COMMAND}</code>
+          Run it yourself: <a {...REPO_LINK}>get the code</a>, then <code>{COMMAND}</code>
         </span>
       </span>
       {loading ? (

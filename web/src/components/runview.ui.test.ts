@@ -275,9 +275,9 @@ describe("the run page", () => {
     const run = readFileSync(REPO_ROOT + "web/src/pages/RunPage.tsx", "utf-8");
     expect(run).toMatch(/<Details id="more"[^>]*\breveal\b/);
     const fold = readFileSync(REPO_ROOT + "web/src/components/ui/Details.tsx", "utf-8");
-    expect(fold).toMatch(/scrollIntoView\(\{ block: "start"/);
-    // only a person's click does it: not a prop, not an address
-    expect(fold).toMatch(/opening\.current = reveal && !root\.current\?\.open/);
+    expect(fold).toContain('scrollIntoView({ block: reveal ? "start" : "nearest"');
+    // only a person's click does it: not a prop, not an address, and not a menu, which floats
+    expect(fold).toMatch(/opening\.current = !menu && !root\.current\?\.open/);
   });
 
   it("does not say a finished run has no actors alive: it says the run is finished", async () => {
@@ -358,7 +358,7 @@ describe("the run page", () => {
 });
 
 describe("the guide", () => {
-  const guide = (open: boolean, full = false): GuideState => ({ open, full, toggle: () => undefined, dismiss: () => undefined });
+  const guide = (open: boolean, full = false): GuideState => ({ open, full, done: new Set(), toggle: () => undefined, dismiss: () => undefined });
 
   it("is nothing when closed, and the button that opens it says whether it is open", () => {
     expect(renderToStaticMarkup(createElement(Guide, { guide: guide(false) }))).toBe("");

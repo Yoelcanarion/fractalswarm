@@ -97,8 +97,8 @@ export function App() {
   const loadRuns = useRunStore((s) => s.loadRuns);
   const loadCapabilities = useRunStore((s) => s.loadCapabilities);
   const openRun = useRunStore((s) => s.openRun);
-  const guide = useGuide(route.page === "intake");
   const site = useSite();
+  const guide = useGuide(route.page === "intake", site);
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash(window.location.hash));

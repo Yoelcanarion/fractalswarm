@@ -14,10 +14,14 @@ export function PendingTag({ children = "PENDING" }: { children?: ReactNode }) {
 /** The sentences of a claim, to set a long one on several lines. Each keeps its words and its end; a decimal point is not an end. */
 export const sentences = (text: string): string[] => text.split(/(?<=[.!?])\s+/);
 
+/** The clauses of a claim: its sentences, cut again after each semicolon. A long sentence of conditions reads as the list it is. */
+export const clauses = (text: string): string[] => sentences(text).flatMap((sentence) => sentence.split(/(?<=;)\s+/));
+
 /** A claim, in the words of its row of docs/claims.md. A row that is still pending wears a PENDING tag; a row that is
- * not claimed is never drawn. With no data yet it shows the row's id and says so. `lines` sets each sentence on its own line.
- * `part` draws one sentence of it (0 is the first), unchanged: the home page opens with the first sentence of R6 and folds the second. */
-export function Claim({ id, className = "", lines = false, part }: { id: ClaimId; className?: string; lines?: boolean; part?: number }) {
+ * not claimed is never drawn. With no data yet it shows the row's id and says so. `lines` sets each sentence on its own line,
+ * or each clause with `lines="clauses"`. `part` draws one sentence of it (0 is the first), unchanged: the home page opens with the first
+ * sentence of R6 and folds the second. */
+export function Claim({ id, className = "", lines = false, part }: { id: ClaimId; className?: string; lines?: boolean | "clauses"; part?: number }) {
   const story = useStory();
   const claim = resolveClaim(story, id);
   if (claim?.state === "refused") return null;
@@ -35,9 +39,9 @@ export function Claim({ id, className = "", lines = false, part }: { id: ClaimId
         only !== null ? (
           <Inline text={only} />
         ) : lines ? (
-          all.map((sentence, i) => (
+          (lines === "clauses" ? clauses(claim.text) : all).map((line, i) => (
             <span key={i} className="home-claim__line">
-              <Inline text={sentence} />{" "}
+              <Inline text={line} />{" "}
             </span>
           ))
         ) : (

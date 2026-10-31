@@ -8,19 +8,20 @@ import {
   EVIDENCE_TITLES,
   evidenceViewsShown,
   isEvidence,
+  MAIN_RUN_VIEWS,
+  MORE_RUN_VIEWS,
   pageName,
   pageTitle,
   PLACES,
   placeOf,
   RUN_VIEW_TITLES,
   runViewHash,
-  runViewsShown,
   SITE_NAME,
   type EvidenceView,
   type RunView,
   type Where,
 } from "../../lib/shell";
-import { REPO_URL } from "../../lib/links";
+import { REPO_LINK } from "../../lib/links";
 import { Details, Hint, StatusBadge, ThemeToggle, Tooltip } from "../ui";
 import { GithubMark } from "../ui/GithubMark";
 import { GuideButton, type GuideState } from "./Guide";
@@ -61,7 +62,7 @@ function RunTab({ name, view, runId, blocked }: { name: RunView; view: RunView; 
 function RunBar({ view, runId, runs, runStatus, scenario, blocked, opening = false, strip, onPickRun }: Omit<TopBarProps, "where"> & { view: RunView }) {
   // the run that is open is an option from the first paint, before the list of runs has arrived
   const options = runId === null || runs.some((run) => run.id === runId) ? runs : [{ id: runId }, ...runs];
-  const { shown, more } = runViewsShown(view);
+  const inMenu = MORE_RUN_VIEWS.includes(view);
   return (
     <div className="subnav">
       {runId !== null && (
@@ -74,16 +75,20 @@ function RunBar({ view, runId, runs, runStatus, scenario, blocked, opening = fal
         </select>
       )}
       <nav className="tabs" aria-label="Views of this run">
-        {shown.map((name) => (
+        {MAIN_RUN_VIEWS.map((name) => (
           <RunTab key={name} name={name} view={view} runId={runId} blocked={blocked} />
         ))}
-        {more.length > 0 && (
-          <Details menu id="views" summary="More views" hint={blocked > 0 && more.includes("security") ? <span className="tab__count">{blocked}</span> : undefined}>
-            {more.map((name) => (
-              <RunTab key={name} name={name} view={view} runId={runId} blocked={blocked} />
-            ))}
-          </Details>
-        )}
+        <Details
+          menu
+          id="views"
+          className={inMenu ? "tabs__more--on" : ""}
+          summary={inMenu ? RUN_VIEW_TITLES[view] : "More views"}
+          hint={blocked > 0 ? <span className="tab__count">{blocked}</span> : undefined}
+        >
+          {MORE_RUN_VIEWS.map((name) => (
+            <RunTab key={name} name={name} view={view} runId={runId} blocked={blocked} />
+          ))}
+        </Details>
       </nav>
       {strip}
       <div className="subnav__context">
@@ -139,7 +144,7 @@ export function TopBar({ where, guide, ...run }: TopBarProps) {
         <div className="topbar__right">
           {guide && <GuideButton guide={guide} />}
           <Tooltip label="The code on GitHub" placement="bottom-end">
-            <a className="icon-btn" href={REPO_URL} aria-label="The code on GitHub">
+            <a className="icon-btn" {...REPO_LINK} aria-label="The code on GitHub">
               <GithubMark />
             </a>
           </Tooltip>

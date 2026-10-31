@@ -81,7 +81,8 @@ code,
   font-weight: 500;
 }
 
-.tab--on {
+.tab--on,
+.tabs__more--on > .disclosure__summary {
   background: var(--surface-2);
   color: var(--text-primary);
 }

@@ -1,5 +1,5 @@
 import { Card, PageHeader } from "../components/ui";
-import { REPO_URL } from "../lib/links";
+import { REPO_LINK, REPO_URL } from "../lib/links";
 
 /** New task on the static showcase. There is no server to read a text, so there is no form to fill in for nothing: only where the real one is. */
 export function StaticIntake() {
@@ -22,7 +22,7 @@ export function StaticIntake() {
         </ol>
         <p className="muted">The practice reader and the practice model are free, need no key and stay on your machine. With Muse, which is billed, the text goes to Meta&rsquo;s model API, with email addresses replaced.</p>
         <div className="staticnew__actions">
-          <a className="btn btn--on" href={REPO_URL}>
+          <a className="btn btn--on" {...REPO_LINK}>
             Get the code
           </a>
           <a className="btn" href="#/arena">

@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { CLAIM_IDS, sentences } from "./parts/Claim";
+import { CLAIM_IDS, clauses, sentences } from "./parts/Claim";
 import { bundledStory, claimState } from "./story";
 import { bare, claimRows, claimWords, HOME, sources, statusOfCell } from "./testing";
 
@@ -56,6 +56,15 @@ describe("the claims the page quotes", () => {
     expect(lines.join(" ")).toBe(words);
     expect(sentences("It stalled 14.6 s against 92.6 s. Done.")).toEqual(["It stalled 14.6 s against 92.6 s.", "Done."]);
     expect(sentences("One sentence only.")).toEqual(["One sentence only."]);
+  });
+
+  it("set R3's conditions as a list, one clause to a line, without changing a word", () => {
+    const words = bundledStory.claims.R3?.text ?? claimWords(rowOf("R3")!.text);
+    const lines = clauses(words);
+    expect(lines.join(" ")).toBe(words);
+    expect(lines).toHaveLength(5); // it holds; it ties; it fails. Per process. False deaths.
+    expect(lines[1]).toMatch(/^it ties at the default assumptions/);
+    expect(lines[2]).toMatch(/^it fails when an external supervisor/);
   });
 
   it("let the tagline be exactly the sentence of S7", () => {

@@ -118,7 +118,7 @@ describe("the banner on a phone", () => {
 
   it("marks the parts the phone leaves out, and the banner that is loading", () => {
     expect(source).toMatch(/Static showcase: recorded runs only\.\s*<span className="staticbar__more">/);
-    expect(source).toContain('Run it yourself: <a href={REPO_URL}>get the code</a>, then <code>{COMMAND}</code>');
+    expect(source).toContain('Run it yourself: <a {...REPO_LINK}>get the code</a>, then <code>{COMMAND}</code>');
     expect(source).toContain('className="staticbar__side staticbar__note"');
     expect(source).toContain('"staticbar staticbar--loading"');
   });

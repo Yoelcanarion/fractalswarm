@@ -14,6 +14,7 @@ import { talksTotal, workOf } from "./work";
 
 function SideHead({ role, title }: { role: "swarm" | "rival"; title: string }) {
   const runId = useRunStore((s) => s.runId);
+  const finished = useRunStore(playedOut);
   return (
     <header className="side__head">
       <div className="side__top">
@@ -25,9 +26,10 @@ function SideHead({ role, title }: { role: "swarm" | "rival"; title: string }) {
           {runId ?? ""}
         </span>
       </div>
-      {/* The same row on both sides, so the two boards start at the same height. The chip is what the scenes point at. */}
+      {/* The same row on both sides, so the two boards start at the same height. The chip is what the scenes point at. It is the verdict on the
+          finished log, so on the page it waits for the end of the film: at the start it would say how the film ends. */}
       <div className="side__proof">
-        <span className="side__chip">{role === "swarm" ? <TakeoverChip /> : <RecoveryChip />}</span>
+        <span className={finished ? "side__chip" : "side__chip side__chip--waiting"}>{role === "swarm" ? <TakeoverChip /> : <RecoveryChip />}</span>
         <span className="side__verify">
           <VerifyBadge />
         </span>
