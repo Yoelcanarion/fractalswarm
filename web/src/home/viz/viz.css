@@ -1769,6 +1769,10 @@
 .hv-step[data-on="true"] .hv-st-heir {
   opacity: 1;
 }
+/* a replay: back to the first frame at once, for the frames it takes to paint it */
+.hv-step[data-reset="true"] [data-part] {
+  transition: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .hv-step [data-part] {
     transition: none;

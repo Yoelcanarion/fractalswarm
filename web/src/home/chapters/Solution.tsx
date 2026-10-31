@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { COPY } from "../copy";
 import { useArrival, useCanHover, useStill } from "../hooks";
@@ -7,15 +7,17 @@ import { Claim } from "../parts/Claim";
 import { SeeMore } from "../parts/SeeMore";
 import { KillDemo } from "../viz/demo/KillDemo";
 import { StepDrawing, type StepId } from "../viz/steps/StepDrawing";
+import { createTurns, type Turns } from "../viz/steps/turns";
 
 const STEPS: readonly StepId[] = ["log", "heir", "adopt"];
 
 /**
- * Three cards, each a few words and a drawing that plays while the pointer rests on it or the keyboard is on it, and rests at
- * its end otherwise. A screen that cannot hover plays each card once, when it arrives; a tap plays it again or lets it rest.
- * Under them, the click demo. The terms of the design are folded.
+ * Three cards, each a few words and a drawing. Each plays once as it arrives, one after the other, and rests on its last frame; a
+ * pointer on it, a key on it or a tap plays it again from its first frame. Under them, the click demo. The terms of the design are
+ * folded.
  */
 export function Solution() {
+  const [turns] = useState(createTurns);
   return (
     <section id="solution" className="home-section home-solution" aria-labelledby="solution-title">
       <div className="home-wrap">
@@ -24,7 +26,7 @@ export function Solution() {
         </SectionHead>
         <ul className="home-steps">
           {STEPS.map((step) => (
-            <StepCard key={step} step={step} />
+            <StepCard key={step} step={step} turns={turns} />
           ))}
         </ul>
         <div id="demo" className="home-demo">
@@ -44,17 +46,31 @@ export function Solution() {
   );
 }
 
-function StepCard({ step }: { step: StepId }) {
+function StepCard({ step, turns }: { step: StepId; turns: Turns }) {
   const still = useStill();
   const canHover = useCanHover();
   const card = useRef<HTMLLIElement>(null);
   const arrived = useArrival(card);
   const [hover, setHover] = useState(false);
   const [focus, setFocus] = useState(false);
-  const [tapped, setTapped] = useState(false);
+  const [played, setPlayed] = useState(false);
+  const [replay, setReplay] = useState(0);
   const text = COPY.solution.cards[step];
 
-  const active = still || (canHover ? hover || focus : arrived !== tapped);
+  // On arrival the card waits for the cards before it, plays once, and rests on its last frame.
+  useEffect(() => {
+    if (!arrived || played) return undefined;
+    const wait = window.setTimeout(() => setPlayed(true), turns.take(step, performance.now()));
+    return () => window.clearTimeout(wait);
+  }, [arrived, played, step, turns]);
+
+  /** Plays the card again from its first frame, or for the first time at once if it has not had its turn. */
+  const again = () => {
+    setPlayed(true);
+    if (played) setReplay((n) => n + 1);
+  };
+
+  const active = still || (canHover ? hover || focus : played);
 
   return (
     <li
@@ -62,14 +78,20 @@ function StepCard({ step }: { step: StepId }) {
       className="home-step"
       data-active={active ? "" : undefined}
       tabIndex={0}
-      onPointerEnter={() => setHover(true)}
+      onPointerEnter={() => {
+        setHover(true);
+        if (canHover) again();
+      }}
       onPointerLeave={() => setHover(false)}
-      onFocus={() => setFocus(true)}
+      onFocus={(event) => {
+        setFocus(true);
+        if (event.currentTarget.matches(":focus-visible")) again();
+      }}
       onBlur={() => setFocus(false)}
-      onClick={() => !canHover && setTapped((was) => !was)}
+      onClick={() => !canHover && again()}
     >
       <div className="home-step__drawing" aria-hidden>
-        <StepDrawing step={step} active={active} />
+        <StepDrawing step={step} active={still || played} replay={replay} />
       </div>
       <h3 className="home-step__title">{text.title}</h3>
       <p className="home-sr">{text.drawing}</p>
