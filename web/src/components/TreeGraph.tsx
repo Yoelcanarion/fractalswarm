@@ -4,8 +4,9 @@ import { memo, useMemo, useState, type CSSProperties, type FocusEvent, type Keyb
 import { useLens, useLensStoreApi } from "../lensStore";
 import { useClock } from "../lib/clockHooks";
 import { ADOPTION_LIFE_MS, fadeLife, glowVars, litMessages, MESSAGE_LIFE_MS, ringVars } from "../lib/decay";
-import { boundsOf, colorOf, isInfraKind, isLeafKind, layoutTree, structureKey } from "../lib/layout";
+import { ACROSS, boundsOf, colorOf, isInfraKind, isLeafKind, layoutTree, structureKey } from "../lib/layout";
 import { prefersReducedMotion } from "../lib/motion";
+import { usePhone } from "../lib/phone";
 import { rootHolder, type ActorNode, type ViewState } from "../lib/reducer";
 import { useRunStoreApi, useRunStoreShallow } from "../store";
 import { ClockScope } from "./ClockScope";
@@ -24,6 +25,8 @@ type ActorData = {
   leaf: boolean;
   /** A dead brain that handed over everything it held: it stands in the row of the fallen under the tree. */
   fallen: boolean;
+  /** The tree is on its side (a phone): the cards join from the left to the right, and are smaller (lib/layout.ts ``ACROSS``). */
+  across: boolean;
   /** The one card the Tab key lands on: the cards are a single stop, and the arrow keys move between them. */
   tabbable: boolean;
 };
@@ -31,7 +34,7 @@ type ActorData = {
 type ActorProps = NodeProps<Node<ActorData>>;
 
 function ActorCardView({ data }: ActorProps) {
-  const { actor, color, rootDuty, glow, leaf, fallen, tabbable } = data;
+  const { actor, color, rootDuty, glow, leaf, fallen, across, tabbable } = data;
   // A click (or Enter) opens the actor's calls in the Muse lens; a second one closes it.
   const lens = useLensStoreApi();
   const inLens = useLens((s) => s.open && s.scope.kind === "actor" && s.scope.actor === actor.id);
@@ -45,6 +48,7 @@ function ActorCardView({ data }: ActorProps) {
     "actor",
     leaf ? "actor--leaf" : "",
     fallen ? "actor--fallen" : "",
+    across ? "actor--across" : "",
     down ? "actor--down" : "",
     outage ? "actor--restarting" : "",
     actor.status === "stopped" ? "actor--stopped" : "",
@@ -71,7 +75,7 @@ function ActorCardView({ data }: ActorProps) {
         }
       }}
     >
-      <Handle type="target" position={Position.Top} className="actor__handle" />
+      <Handle type="target" position={across ? Position.Left : Position.Top} className="actor__handle" />
       <div className="actor__id">
         {down && (
           <span className="actor__x" title={actor.status === "dead" ? "detected dead" : "killed"}>
@@ -89,7 +93,7 @@ function ActorCardView({ data }: ActorProps) {
           <div className="actor__ring" role="img" aria-label="restarting" style={ringVars(outage)} />
         </>
       )}
-      <Handle type="source" position={Position.Bottom} className="actor__handle" />
+      <Handle type="source" position={across ? Position.Right : Position.Bottom} className="actor__handle" />
     </div>
   );
 }
@@ -113,12 +117,12 @@ interface TreeFrame {
   shape: TreeShape;
 }
 
-function buildGraph(view: ViewState, now: number, active: string | null): TreeFrame {
+function buildGraph(view: ViewState, now: number, active: string | null, across: boolean): TreeFrame {
   const reduced = prefersReducedMotion();
   const messageLife = fadeLife(MESSAGE_LIFE_MS, reduced);
   const adoptionLife = fadeLife(ADOPTION_LIFE_MS, reduced);
   const holder = rootHolder(view);
-  const placed = layoutTree(view);
+  const placed = layoutTree(view, across);
   // Tab lands on the card last focused, or on the first one
   const stop = placed.some(({ id }) => id === active) ? active : (placed[0]?.id ?? null);
   const nodes: Node<ActorData>[] = placed.map(({ id, x, y, fallen }) => {
@@ -136,6 +140,7 @@ function buildGraph(view: ViewState, now: number, active: string | null): TreeFr
         glow: glowOf(actor, now, adoptionLife),
         leaf: isLeafKind(actor.kind),
         fallen,
+        across,
         tabbable: id === stop,
       },
     };
@@ -191,6 +196,7 @@ function buildGraph(view: ViewState, now: number, active: string | null): TreeFr
     parents: new Map(placed.map(({ id, parent }) => [id, parent])),
     bounds: boundsOf(view, placed),
     structure: structureKey(view, placed),
+    across,
   };
   return { nodes, edges, shape };
 }
@@ -208,40 +214,48 @@ function moveBetweenCards(event: KeyboardEvent<HTMLDivElement>): void {
   cards[to].focus();
 }
 
+// On a phone the tree is as tall as it is, and the page scrolls past it: a touch on it is not a pan or a pinch of the picture.
+const ON_A_PHONE = { panOnDrag: false, zoomOnScroll: false, zoomOnPinch: false, zoomOnDoubleClick: false, preventScrolling: false } as const;
+
 function Graph({ view }: { view: ViewState }) {
   // The committed playhead (at most ~20 writes a second) decides which edges and glows exist;
   // how bright they are comes from --now, frame by frame, in CSS.
   const now = useClock((s) => s.playhead);
   const [active, setActive] = useState<string | null>(null);
-  const frame = useMemo(() => buildGraph(view, now, active), [view, now, active]);
+  const across = usePhone();
+  const frame = useMemo(() => buildGraph(view, now, active, across), [view, now, active, across]);
   const { nodes, onInit } = useTreeMotion(frame.nodes, frame.shape);
+  const { bounds } = frame.shape;
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={frame.edges}
-      nodeTypes={nodeTypes}
-      nodesDraggable={false}
-      nodesConnectable={false}
-      elementsSelectable={false}
-      // the cards are one tab stop together (each a button that opens the lens, the arrow keys between them): the library's wrappers and
-      // every edge would add two more per node
-      nodesFocusable={false}
-      edgesFocusable={false}
-      onKeyDown={moveBetweenCards}
-      onFocus={(event: FocusEvent<HTMLDivElement>) => {
-        const id = (event.target as HTMLElement).closest(".actor")?.querySelector(".actor__id")?.textContent;
-        if (id) setActive(id);
-      }}
-      proOptions={{ hideAttribution: true }}
-      onInit={onInit}
-      minZoom={0.2}
-    >
-      <Background gap={28} size={1} color="var(--grid)" />
-      <Panel position="top-left" className="run__legend">
-        colour = the subtree an actor belongs to · ✕ killed · a moving line is a message
-      </Panel>
-    </ReactFlow>
+    <div className={across ? "run__fill run__fill--across" : "run__fill"} style={across && bounds ? { height: Math.ceil(bounds.height) + 2 * ACROSS.pad } : undefined}>
+      <ReactFlow
+        nodes={nodes}
+        edges={frame.edges}
+        nodeTypes={nodeTypes}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={false}
+        // the cards are one tab stop together (each a button that opens the lens, the arrow keys between them): the library's wrappers and
+        // every edge would add two more per node
+        nodesFocusable={false}
+        edgesFocusable={false}
+        onKeyDown={moveBetweenCards}
+        onFocus={(event: FocusEvent<HTMLDivElement>) => {
+          const id = (event.target as HTMLElement).closest(".actor")?.querySelector(".actor__id")?.textContent;
+          if (id) setActive(id);
+        }}
+        proOptions={{ hideAttribution: true }}
+        onInit={onInit}
+        minZoom={0.2}
+        {...(across ? ON_A_PHONE : undefined)}
+      >
+        <Background gap={28} size={1} color="var(--grid)" />
+        <Panel position="top-left" className="run__legend">
+          colour = the subtree an actor belongs to · ✕ killed · a moving line is a message
+        </Panel>
+      </ReactFlow>
+    </div>
   );
 }
 
@@ -283,9 +297,7 @@ export function TreeGraph({ view }: { view: ViewState }) {
   return (
     <ClockScope>
       <ReactFlowProvider>
-        <div className="run__fill">
-          <Graph view={view} />
-        </div>
+        <Graph view={view} />
       </ReactFlowProvider>
     </ClockScope>
   );

@@ -356,6 +356,21 @@ textarea {
   inset: 0;
 }
 
+/* On a phone the tree is as tall as it is (components/TreeGraph.tsx sets the height), so its box is in the page's flow and the page scrolls
+   past it: a touch on the picture is a touch of the page, not a pan of the picture. */
+.run__fill--across {
+  position: relative;
+  inset: auto;
+}
+
+.run__fill--across .react-flow__pane {
+  touch-action: pan-y;
+}
+
+.run__fill--across .run__legend {
+  display: none;
+}
+
 .run--overview > .timeline {
   position: sticky;
   bottom: 0;
@@ -602,6 +617,39 @@ textarea {
 
 .actor--fallen .actor__id {
   font-size: var(--fs-body);
+}
+
+/* The card of a tree on its side (a phone): the type scale's floor for its id, a box as wide as lib/layout.ts ACROSS says, and nothing
+   hanging off it that would run into the card above or below. */
+.actor--across {
+  width: 54px;
+  padding: 3px 1px;
+  box-shadow: none;
+}
+
+.actor--across.actor--leaf {
+  width: 62px;
+}
+
+.actor--across.actor--fallen {
+  width: 58px;
+}
+
+.actor--across .actor__id {
+  font-size: var(--fs-body);
+  line-height: 1.2;
+}
+
+.actor--across .actor__duty {
+  top: -14px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.actor--across .actor__adopted,
+.actor--across .actor__state {
+  display: none;
 }
 
 .actor__duty {
@@ -1275,6 +1323,10 @@ textarea {
   }
   .counters--headline .stat {
     flex: 1 1 auto;
+  }
+  /* the tree is as tall as its cards need (components/TreeGraph.tsx), not a share of the window */
+  .run--overview .run__tree {
+    min-height: 0;
   }
 }
 

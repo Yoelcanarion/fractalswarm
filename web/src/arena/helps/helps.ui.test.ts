@@ -192,6 +192,37 @@ describe("what the panel does not say", () => {
   });
 });
 
+describe("the setting of the counts", () => {
+  const html = render();
+  const line = /<p class="helps__setting"[^>]*>[\s\S]*?<\/p>/.exec(html)?.[0] ?? "";
+
+  it("is one line near the top, before the outcome and every count, that names the model and the clock", () => {
+    expect(line).not.toBe("");
+    expect(html.indexOf(line)).toBeLessThan(html.indexOf('data-helps="outcome"'));
+    const text = plainText(line);
+    expect(text).toContain("Fake model, simulated clock");
+    expect(text).toContain("$0 runs");
+    expect(text).toContain("do not measure the real model");
+    expect(text).toContain("is not a real-run result");
+  });
+
+  it("is in view, not in a fold", () => {
+    const before = html.slice(0, html.indexOf(line));
+    expect(occurrences(before, "<details")).toBe(occurrences(before, "</details>"));
+  });
+
+  it("says where the real-model reading is, with a link to it", () => {
+    expect(line).toContain('<a href="#/evidence">evidence page</a>');
+    expect(plainText(line)).toContain("The real-model reading is on the evidence page.");
+  });
+
+  it("is on the panel only: where there are no counts, there is no setting to state", () => {
+    for (const state of [{ status: "loading" }, { status: "missing" }] as HelpsViewProps["state"][]) {
+      expect(renderToStaticMarkup(createElement(HelpsView, { state })), state.status).not.toContain("helps__setting");
+    }
+  });
+});
+
 describe("the full count", () => {
   it("is under Details, closed, with the outcome and the map in view above it", () => {
     const html = render();
@@ -229,7 +260,7 @@ describe("the page", () => {
     for (const state of every) {
       const markup = view(state, retry);
       expect(markup.match(/<h1/g), state.status).toHaveLength(1);
-      expect(markup, state.status).toContain('<h1 class="pagehead__title">Where it helps</h1>');
+      expect(markup, state.status).toContain('<h1 class="pagehead__title">Trade-offs</h1>');
       expect(plainText(markup), state.status).toContain("The swarm against each rival, at every setting the bench ran.");
     }
   });

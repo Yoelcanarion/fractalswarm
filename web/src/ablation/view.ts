@@ -117,5 +117,8 @@ export const caveatLabel = (id: string): string => CAVEAT_LABELS[id] ?? id;
 /** The caveats the result says apply to this run, as it wrote them. */
 export const appliedCaveats = (result: Pick<Result, "caveats">): Caveat[] => result.caveats.filter((caveat) => caveat.applies);
 
-/** The ablation runs among the runs the server lists: recorded from the page, or from the CLI. */
-export const ablationRuns = (runs: readonly RunListing[]): RunListing[] => runs.filter((run) => run.id.startsWith("ablation") || (run.scenario ?? "").includes("ablation"));
+/** Whether a listed run is an ablation: recorded from the page, or from the CLI. */
+export const isAblationRun = (run: { id: string; scenario?: string | null }): boolean => run.id.startsWith("ablation") || (run.scenario ?? "").includes("ablation");
+
+/** The ablation runs among the runs the server lists. */
+export const ablationRuns = (runs: readonly RunListing[]): RunListing[] => runs.filter(isAblationRun);
