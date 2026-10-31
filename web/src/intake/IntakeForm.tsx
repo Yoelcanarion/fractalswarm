@@ -49,7 +49,7 @@ export function PrivacyNotice({ backend, site = "server" }: { backend: Backend; 
     <aside className="privacy" aria-label="Private data">
       <h3 className="privacy__title">Private by design</h3>
       <ul>
-        <li>What you paste stays on this machine: it is kept in the server&rsquo;s private folder, outside the repo, replays locally and is never bundled or committed.</li>
+        <li>What you paste is kept on this machine, in the server&rsquo;s private folder, outside the repo. It replays locally and is never bundled or committed.</li>
         <li>Email addresses are replaced by placeholders (person-01@example.invalid) before anything is logged or read by a model.</li>
         <li>Contributor pricing is forced off for runs on your text.</li>
         <li className={backend === "real" ? "privacy__out" : undefined}>

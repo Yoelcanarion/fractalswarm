@@ -78,8 +78,8 @@ describe("the click demo's markup", () => {
   });
 
   it("leaves the sentence that says it is an illustration to the page, and prints it when asked", () => {
-    expect(html).not.toContain("An illustration in your browser");
-    expect(render(KillDemo, { note: true })).toContain("An illustration in your browser, not a real run.");
+    expect(html).not.toContain("An illustration, not a real run.");
+    expect(render(KillDemo, { note: true })).toContain("An illustration, not a real run.");
   });
 
   it("draws the hero's tree: its nodes, an edge slot for each, the ambient layer", () => {

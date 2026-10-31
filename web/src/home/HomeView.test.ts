@@ -168,7 +168,7 @@ describe("the home page, rendered with a story", () => {
     expect(plain(hero)).toContain(COPY.hero.kill);
     const demo = /<div id="demo"[\s\S]*?<\/div>/.exec(html)?.[0] ?? "";
     expect(plain(demo)).toContain(COPY.solution.demo.label);
-    expect(COPY.solution.demo.label).toBe("An illustration in your browser, not a real run.");
+    expect(COPY.solution.demo.label).toBe("An illustration, not a real run.");
   });
 
   it("opens every door that is not behind the server, with a link, and sends the numbers to the evidence page", () => {

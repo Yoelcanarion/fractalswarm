@@ -42,7 +42,7 @@ describe("the words of the home page", () => {
       expect(sectionOf(html, id), id).toContain(`<h2 id="${id}-title"`);
     }
     const demo = /<div id="demo"[\s\S]*?<\/div>/.exec(html)?.[0] ?? "";
-    expect(visibleText(demo)).toContain("An illustration in your browser, not a real run.");
+    expect(visibleText(demo)).toContain("An illustration, not a real run.");
     for (const id of ["problem", "solution", "proof"]) {
       expect(sectionOf(html, id), `${id} folds its nuance`).toContain('<details class="home-fold"');
     }

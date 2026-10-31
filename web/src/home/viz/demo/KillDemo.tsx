@@ -306,7 +306,7 @@ export function KillDemo({ data, still, note = false, className }: KillDemoProps
           ))}
         </div>
       </div>
-      {note && <p className="hv-demo-note">An illustration in your browser, not a real run.</p>}
+      {note && <p className="hv-demo-note">An illustration, not a real run.</p>}
     </figure>
   );
 }

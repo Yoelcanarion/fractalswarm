@@ -73,7 +73,7 @@ export function sideStatus(system: SystemKind, view: ViewState, windows: readonl
       const last = lately[lately.length - 1];
       const heir = adopterOf(view, last.coordinator);
       const took = heir ? `${heir.adopter} took over` : "takeover under way";
-      return { tone: "warn", text: `${last.coordinator} down ${seconds((last.until ?? last.since) - last.since)} · ${took}`, restart: null };
+      return { tone: "warn", text: `${last.coordinator} was down ${seconds((last.until ?? last.since) - last.since)} · ${took}`, restart: null };
     }
     const { agents } = headcount(view);
     return { tone: "ok", text: `No coordinator down · ${plural(agents, "agent")}`, restart: null };

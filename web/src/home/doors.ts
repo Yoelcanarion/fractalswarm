@@ -42,7 +42,7 @@ export const DOORS: readonly Door[] = [
   {
     id: "replays",
     title: "Runs",
-    purpose: "Recorded runs.",
+    purpose: "Recordings.",
     href: "#/runs",
     needsServer: false,
   },
@@ -50,7 +50,7 @@ export const DOORS: readonly Door[] = [
     // The evidence page: the charts, the fair fight, where it ties and where it does worse.
     id: "numbers",
     title: "Evidence",
-    purpose: "Numbers, ties and losses.",
+    purpose: "Ties and losses.",
     href: "#/evidence",
     needsServer: false,
   },

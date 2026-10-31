@@ -84,7 +84,7 @@ describe("what a side says about itself", () => {
     s.at(12_500).emit("member.suspected", "@detector", { member: "o1" });
     expect(at(s, "swarm", 13_000).text).toBe("o1 down for 3.0 s · suspected, confirming");
     takeOver(s, "o1", "o2", 14_000, 15_000);
-    expect(at(s, "swarm", 15_500)).toMatchObject({ tone: "warn", text: "o1 down 5.0 s · o2 took over" });
+    expect(at(s, "swarm", 15_500)).toMatchObject({ tone: "warn", text: "o1 was down 5.0 s · o2 took over" });
     expect(at(s, "swarm", 25_000).tone).toBe("ok");
   });
 

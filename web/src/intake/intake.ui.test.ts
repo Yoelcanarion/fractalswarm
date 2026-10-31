@@ -49,9 +49,9 @@ describe("the form", () => {
     html(IntakeForm, { form: emptyForm(), onForm: nothing, backend: "fake", onBackend: nothing, realAllowed: false, busy: false, error: null, onRead: nothing, onSample: nothing, sampling: false, onClear: nothing, spend: null, ...over });
   const readButton = (markup: string): string => /<button[^>]*>(?:Read with the practice reader|Starting…)<\/button>/.exec(markup)?.[0] ?? "";
 
-  it("says before anything is pasted that it stays on this machine, is never bundled, and where the addresses go", () => {
+  it("says before anything is pasted that it is kept on this machine, is never bundled, and where the addresses go", () => {
     const text = plainText(form());
-    expect(text).toContain("stays on this machine");
+    expect(text).toContain("kept on this machine");
     expect(text).toContain("never bundled or committed");
     expect(text).toContain("Email addresses are replaced by placeholders");
   });
@@ -63,10 +63,10 @@ describe("the form", () => {
     expect(text).toContain("In the app, which you run yourself, it is kept in a private folder on your machine, outside the repo, and is never bundled or committed.");
     expect(text).toContain("Email addresses are replaced by placeholders");
     expect(text).toContain("with Muse, which is billed, the text (addresses replaced) is sent to Meta’s model API");
-    expect(text).not.toContain("stays on this machine");
+    expect(text).not.toContain("kept on this machine");
     expect(text).not.toContain("the server’s private folder");
     // a server's box is as it was
-    expect(plainText(form({ site: "server" }))).toContain("it is kept in the server’s private folder, outside the repo");
+    expect(plainText(form({ site: "server" }))).toContain("in the server’s private folder, outside the repo");
   });
 
   it("gives the program's fixed shape, so the person knows what Muse will fit the text to", () => {
@@ -433,7 +433,7 @@ describe("the flow", () => {
     const markup = flow();
     expect(plainText(markup)).toContain("New task (live)");
     expect(markup).toMatch(/aria-current="step"[^>]*><span[^>]*>1<\/span>Paste/);
-    expect(plainText(markup)).toContain("stays on this machine");
+    expect(plainText(markup)).toContain("kept on this machine");
   });
 
   it("waits on the server for a reading in the address, at the second step", () => {
