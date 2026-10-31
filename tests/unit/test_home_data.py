@@ -138,6 +138,8 @@ def test_claims_are_copied_by_row_id_in_the_rows_wording(committed: dict):
         "Cheaper",
         "More reliable",
         "First",
+        '"Any half", or recovery from any set of deaths',
+        "That a track lead's death is safe on the real model",
     }
 
 
