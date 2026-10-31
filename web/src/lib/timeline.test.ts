@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fraction, MARK_TONE, marksOf } from "./timeline";
+import { firstCrashStart, fraction, MARK_TONE, marksOf } from "./timeline";
 import type { RunEvent } from "./types";
 
 let seq = 0;
@@ -57,6 +57,23 @@ describe("timeline marks", () => {
     expect(marks[6].label).toBe("0.70 s · run halted: kill switch");
     expect(MARK_TONE[marks[0].kind]).toBe("recovery");
     expect(MARK_TONE[marks[6].kind]).toBe("kill");
+  });
+});
+
+describe("where to watch the first crash from", () => {
+  it("is three seconds before the first coordinator kill, whatever came before it", () => {
+    const marks = marksOf([
+      ev("chaos.injected", 1000, { fault: "kill_agent", target: "s1" }),
+      ev("chaos.injected", 53_300, { fault: "kill_coordinator", target: "o0" }),
+      ev("chaos.injected", 65_500, { fault: "kill_coordinator", target: "o1" }),
+    ]);
+    expect(firstCrashStart(marks)).toBe(50_300);
+  });
+
+  it("is the start of the run for a kill in its first seconds, and nothing where no coordinator is killed", () => {
+    expect(firstCrashStart(marksOf([ev("chaos.injected", 1200, { fault: "kill_coordinator", target: "o0" })]))).toBe(0);
+    expect(firstCrashStart(marksOf([ev("chaos.injected", 1200, { fault: "kill_agent", target: "s1" })]))).toBeNull();
+    expect(firstCrashStart([])).toBeNull();
   });
 });
 

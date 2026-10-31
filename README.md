@@ -64,7 +64,7 @@ The hard part of the demo task, planning a conference from messy emails, is read
 - **Muse Wonder** writes the root plan. Arbitration between agents is built and tested on the fake model; the real runs we checked had no dispute to settle.
 - **Llama PromptGuard 2** runs locally and screens every email and pasted input before an agent reads it.
 
-Every Muse token goes to the problem. "Zero LLM tokens spent on coordination" is a property of the design, measured in every real run, and the rivals in this benchmark spend none either, because their supervisors are code too.
+Every Muse token goes to the problem. "Zero LLM tokens spent on coordination" is a property of the design, measured in every real run of the swarm. The rivals we built spend none either, because their supervisors are code too; the LangGraph rows do, because that pattern routes through the model (about 3% of its tokens).
 
 ## The evidence
 

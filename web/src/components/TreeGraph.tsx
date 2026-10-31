@@ -11,6 +11,7 @@ import { rootHolder, type ActorNode, type ViewState } from "../lib/reducer";
 import { useRunStoreApi, useRunStoreShallow } from "../store";
 import { ClockScope } from "./ClockScope";
 import { EmptyState } from "./ui";
+import { useFirstCrashStart, watchFirstCrash } from "./PlayAction";
 import { useTreeMotion, type TreeShape } from "./useTreeMotion";
 
 // What a node is glowing from, if anything: an adoption or a restart within `life` ms of virtual
@@ -215,7 +216,7 @@ function moveBetweenCards(event: KeyboardEvent<HTMLDivElement>): void {
 }
 
 // On a phone the tree is as tall as it is, and the page scrolls past it: a touch on it is not a pan or a pinch of the picture.
-const ON_A_PHONE = { panOnDrag: false, zoomOnScroll: false, zoomOnPinch: false, zoomOnDoubleClick: false, preventScrolling: false } as const;
+const ON_A_PHONE = { panOnDrag: false, zoomOnScroll: false, zoomOnPinch: false, zoomOnDoubleClick: false } as const;
 
 function Graph({ view }: { view: ViewState }) {
   // The committed playhead (at most ~20 writes a second) decides which edges and glows exist;
@@ -248,6 +249,8 @@ function Graph({ view }: { view: ViewState }) {
         proOptions={{ hideAttribution: true }}
         onInit={onInit}
         minZoom={0.2}
+        // the tree is most of the page, so a plain wheel over it scrolls the page, not the picture; a pinch, or Ctrl and the wheel, still zooms
+        preventScrolling={false}
         {...(across ? ON_A_PHONE : undefined)}
       >
         <Background gap={28} size={1} color="var(--grid)" />
@@ -264,6 +267,7 @@ function Graph({ view }: { view: ViewState }) {
 function NoTreeYet() {
   const { live, cursor, total } = useRunStoreShallow((s) => ({ live: s.live, cursor: s.cursor, total: s.events.length }));
   const store = useRunStoreApi();
+  const crashAt = useFirstCrashStart();
   if (live) return <div className="empty">Waiting for the first actor to spawn…</div>;
   if (total > 0 && cursor >= total) {
     return (
@@ -278,7 +282,12 @@ function NoTreeYet() {
       title={cursor === 0 ? "The run is at its start" : "No orchestrator exists yet at this point"}
       actions={
         <>
-          <button type="button" className="btn btn--on" onClick={() => setPlaying(true)}>
+          {crashAt !== null && (
+            <button type="button" className="btn btn--on" onClick={() => watchFirstCrash(store, crashAt)}>
+              Watch the first crash
+            </button>
+          )}
+          <button type="button" className={crashAt === null ? "btn btn--on" : "btn"} onClick={() => setPlaying(true)}>
             {cursor === 0 ? "Play from the start" : "Play"}
           </button>
           <button type="button" className="btn" onClick={() => seek(total)}>

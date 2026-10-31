@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { opensDetails } from "../../lib/details";
+import { prefersReducedMotion } from "../../lib/motion";
 
 export interface DetailsProps {
   /** What is inside, as the closed fold says it: "Details" unless a few words say more ("All 22 runs, with filters"). */
@@ -11,6 +12,9 @@ export interface DetailsProps {
   id?: string;
   /** Open from the start, or opened by the page when the thing inside is wanted (a prop, like the address). */
   open?: boolean;
+  /** Scrolls the fold to the top of the page when a person opens it: for a fold under a bar that is pinned over the page's foot, where its
+   * body would open out of sight behind it. */
+  reveal?: boolean;
   /** Without the bar around it: for a fold inside a card. */
   inline?: boolean;
   /** A short list that floats under its summary instead of pushing the page down: for the bars. It closes on Escape, on a click
@@ -23,9 +27,10 @@ export interface DetailsProps {
 /** The one fold of the app: what a page shows at first is the essentials and one main action, and everything else sits in one of
  * these, one click away. A native `details`, so it works from the keyboard and is announced as a fold. It opens when `open` says so or
  * when the address asks for its id, and stays as the person left it. */
-export function Details({ summary = "Details", hint, id, open = false, inline = false, menu = false, className = "", children }: DetailsProps) {
+export function Details({ summary = "Details", hint, id, open = false, reveal = false, inline = false, menu = false, className = "", children }: DetailsProps) {
   const [isOpen, setOpen] = useState(() => open || (typeof window !== "undefined" && opensDetails(window.location.hash, id)));
   const root = useRef<HTMLDetailsElement>(null);
+  const opening = useRef(false); // a person is opening it now, as opposed to a prop or an address
 
   useEffect(() => {
     if (open) setOpen(true);
@@ -56,7 +61,12 @@ export function Details({ summary = "Details", hint, id, open = false, inline = 
       id={id}
       className={["disclosure", inline ? "disclosure--inline" : "", menu ? "disclosure--menu" : "", className].filter(Boolean).join(" ")}
       open={isOpen}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
+      onToggle={(event) => {
+        const fold = event.currentTarget;
+        setOpen(fold.open);
+        if (fold.open && opening.current) fold.scrollIntoView({ block: "start", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+        opening.current = false;
+      }}
       onKeyDown={(event) => {
         if (menu && event.key === "Escape" && isOpen) {
           setOpen(false);
@@ -64,7 +74,12 @@ export function Details({ summary = "Details", hint, id, open = false, inline = 
         }
       }}
     >
-      <summary className="disclosure__summary">
+      <summary
+        className="disclosure__summary"
+        onClick={() => {
+          opening.current = reveal && !root.current?.open;
+        }}
+      >
         <span className="disclosure__label">{summary}</span>
         {hint && <span className="disclosure__hint">{hint}</span>}
       </summary>

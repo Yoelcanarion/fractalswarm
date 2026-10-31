@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { HomeView } from "../HomePage";
 import { bundledStory } from "../story";
 import { TREE_HERO_SECONDS } from "../viz/keyframes";
-import { HERO_LOOP, HERO_NOTE } from "./Hero";
+import { HERO_ASPECT, HERO_LOOP, HERO_NOTE } from "./Hero";
 
 const render = (still: boolean): string => renderToStaticMarkup(createElement(HomeView, { story: bundledStory, still }));
 const heroOf = (html: string): string => /<section[^>]*class="home-hero"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
@@ -72,6 +72,14 @@ describe("the hero's tree before any script runs", () => {
     const layer = /<g class="hv-amb"[^>]*>[\s\S]*?<\/g><g>/.exec(html)?.[0] ?? "";
     expect(layer).toContain('aria-hidden="true"');
     expect(layer).not.toContain("<text");
+  });
+
+  it("is drawn to the shape of its square, so that it fills its column and does not leave a third of it empty", () => {
+    const box = /<svg[^>]*class="hv hv-tree[^"]*"[^>]*viewBox="(-?[\d.]+) (-?[\d.]+) ([\d.]+) ([\d.]+)"/.exec(html);
+    expect(box).not.toBeNull();
+    expect(Number(box?.[3]) / Number(box?.[4])).toBeCloseTo(HERO_ASPECT, 2);
+    expect(HERO_ASPECT).toBeGreaterThan(1);
+    expect(HERO_ASPECT).toBeLessThan(1.3);
   });
 
   it("has no style that follows the scroll: the hand-over is a state change, not a style the scroll position computes", () => {

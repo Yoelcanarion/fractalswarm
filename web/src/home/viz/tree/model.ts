@@ -89,6 +89,65 @@ export function treeModel(tree: TreeSlice): TreeModel {
   return model;
 }
 
+/** How far the spacing of a picture is drawn in at most, as a share of its own: any closer and a label meets the one beside it. */
+const NARROWEST = 0.7;
+
+/** How wide a picture is for each unit it is tall. */
+const shapeOf = (b: Bounds): number => (b.x1 - b.x0) / (b.y1 - b.y0);
+
+/** The model with its places moved: x about `mid` by `sx`, y by `sy`. The dead keep the step of their row, which is the width of their stamps. */
+function reshaped(model: TreeModel, sx: number, sy: number, mid: number): TreeModel {
+  const move = (s: Slot): Slot => ({ x: mid + (s.x - mid) * sx, y: s.y * sy });
+  const epochs = model.epochs.map((e) => ({ ...e, pos: Object.fromEntries(Object.entries(e.pos).map(([id, s]) => [id, move(s)])) }));
+  const memorial = Object.fromEntries(Object.entries(model.memorial).map(([id, s]) => [id, { x: s.x, y: s.y * sy }]));
+  return { ...model, epochs, memorial, bounds: boundsOf(epochs, memorial) };
+}
+
+/**
+ * Each epoch's picture reaches down to the deepest row of all. When the tracks die the survivors spread over the room they leave,
+ * where otherwise they would hang above a hole over the row of the dead.
+ */
+function deepened(model: TreeModel): TreeModel {
+  const reach = (e: Epoch): number => Math.max(0, ...e.present.map((id) => e.pos[id]?.y ?? 0));
+  const deepest = Math.max(...model.epochs.map(reach));
+  const epochs = model.epochs.map((e) => {
+    const r = reach(e);
+    if (r <= 0 || r >= deepest) return e;
+    return { ...e, pos: Object.fromEntries(Object.entries(e.pos).map(([id, s]) => [id, { x: s.x, y: (s.y * deepest) / r }])) };
+  });
+  return { ...model, epochs };
+}
+
+/**
+ * The same tree drawn to fill a figure of the shape `aspect` (width over height). A run's picture is a wide one, sixteen leaves
+ * across and five rows down, and in a square column it leaves a third of the room empty and every glyph small. It is laid out
+ * narrower (down to `NARROWEST` of its spacing), which the page draws larger, and what is still too wide is made taller; and each
+ * epoch reaches the row of the dead (`deepened`). A picture already as narrow as `aspect` keeps its shape. The model it is made
+ * from is shared by the film and the demo, and is not touched.
+ */
+export function fitted(model: TreeModel, aspect: number): TreeModel {
+  const deep = deepened(model);
+  return aspect > 0 && shapeOf(deep.bounds) > aspect ? narrowed(deep, aspect) : deep;
+}
+
+/** The picture drawn narrower, down to `NARROWEST`, and made taller if that is not enough, to the shape of `aspect`. */
+function narrowed(model: TreeModel, aspect: number): TreeModel {
+  const xs = model.epochs.flatMap((e) => e.present.map((id) => e.pos[id]?.x ?? 0));
+  const lo = Math.min(...xs);
+  const hi = Math.max(...xs);
+  if (!(hi > lo)) return model;
+  const all = [...xs, ...Object.values(model.memorial).map((s) => s.x)];
+  const sides = model.bounds.x1 - model.bounds.x0 - (Math.max(...all) - Math.min(...all));
+  const wanted = (model.bounds.y1 - model.bounds.y0) * aspect - sides;
+  const mid = (lo + hi) / 2;
+  const narrow = reshaped(model, Math.min(1, Math.max(NARROWEST, wanted / (hi - lo))), 1, mid);
+  const b = narrow.bounds;
+  if (shapeOf(b) <= aspect + 1e-9) return narrow;
+
+  const rows = Math.max(...narrow.epochs.flatMap((e) => Object.values(e.pos).map((s) => s.y)), ...Object.values(narrow.memorial).map((s) => s.y));
+  return reshaped(narrow, 1, ((b.x1 - b.x0) / aspect - (b.y1 - b.y0 - rows)) / rows, mid);
+}
+
 function build(tree: TreeSlice): TreeModel {
   const node: Record<string, NodeInfo> = {};
   for (const n of tree.nodes) {

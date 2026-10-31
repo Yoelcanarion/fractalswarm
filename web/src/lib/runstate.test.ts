@@ -57,6 +57,29 @@ describe("the line a run page opens with", () => {
     expect(stateLine(emptyView(), facts({ live: true, cursor: 0, total: 0 })).rest).toBe("waiting for the first actor");
   });
 
+  it("is not green on a result that is short or broken: talks unplaced, or hard violations in the final check", () => {
+    const short = { ...end, schedule: { ...end.schedule, cells: Object.fromEntries(Object.entries(end.schedule.cells).slice(0, 32)) } };
+    expect(stateLine(short, facts())).toEqual({
+      headline: "Finished:",
+      tone: "warn",
+      rest: "32 of 48 talks placed, 16 unplaced, 5 coordinators crashed, replay verified",
+    });
+    const broken = (hardViolations: number | null) => ({ ...end, schedule: { ...end.schedule, hardViolations } });
+    expect(stateLine(broken(2), facts())).toEqual({
+      headline: "Finished:",
+      tone: "warn",
+      rest: "48 of 48 talks placed, 2 hard violations, 5 coordinators crashed, replay verified",
+    });
+    expect(stateLine(broken(1), facts()).rest).toContain("1 hard violation,");
+    // a clean check, or none yet, stays green
+    expect(stateLine(broken(0), facts()).tone).toBe("good");
+    expect(stateLine(broken(null), facts()).tone).toBe("good");
+    // a count that can still change is not a result: nothing is said of a replay on its way, a run being written, or one that did not finish
+    expect(stateLine(short, facts({ cursor: MIDWAY })).rest).not.toContain("unplaced");
+    expect(stateLine(short, facts({ live: true })).rest).not.toContain("unplaced");
+    expect(stateLine(short, facts({ status: "halted" }))).toMatchObject({ headline: "Halted:", tone: "warn" });
+  });
+
   it("says a run that did not finish, and why the log ends", () => {
     expect(stateLine(end, facts({ status: "halted" }))).toMatchObject({ headline: "Halted:", tone: "warn" });
     expect(stateLine(end, facts({ status: "interrupted" }))).toMatchObject({ headline: "Interrupted:", tone: "warn" });
