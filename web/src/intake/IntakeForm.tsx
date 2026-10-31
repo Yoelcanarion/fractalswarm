@@ -94,6 +94,13 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, site
           <textarea className="field__box" rows={14} value={form.talks} onChange={(event) => set("talks", event.target.value)} spellCheck={false} autoComplete="off" placeholder="Submission 1&#10;Title: …&#10;Speaker: …&#10;Track: …&#10;Abstract: …" />
           <span className="field__count mono">{count(form.talks)}</span>
         </label>
+        {problems.length > 0 && form.talks.trim() !== "" && (
+          <ul className="field__problems">
+            {problems.map((problem) => (
+              <li key={problem}>{problem}</li>
+            ))}
+          </ul>
+        )}
         <Details id="more" summary="Add emails, notes, rooms or a conference name" hint="all optional" open={moreFilled}>
           <div className="intake__fields">
             <label className="field">
@@ -181,13 +188,6 @@ export function IntakeForm({ form, onForm, backend, onBackend, realAllowed, site
         </div>
         {real && problems.length === 0 && spend}
         {real && problems.length > 0 && <p className="field__problem">Fill in the form first: the cost depends on the text.</p>}
-        {problems.length > 0 && form.talks.trim() !== "" && (
-          <ul className="field__problems">
-            {problems.map((problem) => (
-              <li key={problem}>{problem}</li>
-            ))}
-          </ul>
-        )}
         {error !== null && (
           <p className="intake__error" role="alert">
             {error}

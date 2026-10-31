@@ -176,8 +176,8 @@ export function KillDemo({ data, still, note = false, className }: KillDemoProps
       if (!el) return;
       touch();
       crash(el.dataset["pick"] ?? "");
-      // the line says what the click did, and a page scrolled to the tree can have left it above the window
-      say.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+      // the line says what the click did, and a page scrolled to the tree can have left it under the top bar, where "nearest" takes it for seen
+      if (say.getBoundingClientRect().top < parseFloat(getComputedStyle(say).scrollMarginTop)) say.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
       if (reduced) {
         clock += 1;
         draw();
