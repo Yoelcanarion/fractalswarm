@@ -1473,4 +1473,21 @@ Free memory: 5.0 GB before the first worker, 3.4 GB after the third.
 
 **The first coordinator's review of 8c4ae3a (03:00):** 14 items, three of them wrong statements a juror can catch: a rival's run page said no coordinator crashed; the arena's lead said the same coordinators are killed; the arena showed one run at two costs with no word why (R5's two bases). All dispatched: W4 the rival state line, two presses at phone width, Watch on the phone, the guide band; W5 the rest of the arena, with Watch the first crash and a pinned timeline; W7 the hero's title wrap and five faint KILLED slots. **Decision reversed:** I had told W7 no rule before the first kill, and the slots keep "KILLED never labels nothing" while removing the blank third.
 
-**RELEASE at 03:14.** Still to come: pytest in chunks and the refs at HEAD (Python changed with the pairs API), after W8's chunks; W5's recorder slot; the PromptGuard tokenizer warning, which the progress log has asked to check before the attack clip.
+**RELEASE at 03:14.**
+
+**My slip at cbfc2d1:** committing the scaling cells broke `test_the_dry_run_prices_the_sweep_under_its_cap`, which read the matrix's real output directory, so the dry run saw 20 done and none ready. W8's chunks caught it; fixed at 1581f9f with an empty `--out`.
+
+**Merged 03:18–04:29 (2,484 web tests green at 48d3754):**
+- **W8, the static showcase** (2b1e2e5): 35.64 MB, five replays verified at build, Playwright clean at the root and under `/fractalswarm/`, the local bundle byte-identical. Its worker task is closed. Build at the final tip with `uv run python scripts/build_static_site.py --runs demo/final --pair demo/pair-durable-max-swarm:demo/pair-durable-max-rival --pair demo/pair-central-swarm:demo/pair-central-rival --out <folder>`. Publishing, and where, are Yoel's.
+- **W7:** the title in two clean lines at every width; five faint KILLED slots from frame one.
+- **W4:** the rival says its supervisor crashed 5 times; a touch tap opens a card. **The cause of that one was worth finding:** every render handed React Flow new node objects, so it hid and re-measured every node (1,364 hides in 3 s of play). `keepSizes` ends that. Watch shows the crash on a phone; the guide's first band is 55 px at 1366, not 143; Enter keeps the focus on Pause; the replay bar keeps its place.
+- **W5:** the same failures, each at about the same point of the work (the first coordinator caught that the sides are not hit at the same second); the two cost bases named in the scoreboard; Watch the first crash in the arena; the timeline pinned only where it fits, and unpinned at the end so the verdict shows.
+- **W6:** the last screen; Enter the app replaces Enter the simulation, because the recordings are real.
+
+**The first coordinator's second pass (04:07):** the arena's first minute works, and on the in-process pair "12 workers stopped with it" beside the swarm's tree is the strongest frame of the app. Its five new items are all in.
+
+**Checks at 1581f9f:** W8's chunks over the same Python (unit 1,211; integration 324, 169, 120, 107, 186; strict-mode 13), PromptGuard 3, refs 43 of 43 identical. **A real fresh clone with no keys, no private directory and an empty home:** `demo --verify` MATCH, `/api/pairs` lists the two pairs and only those, three verified on the server, home 200.
+
+**Closed, no work needed:** the PromptGuard tokenizer warning: `docs/api-notes.md` already records that the warned copy's scores equal the hub copy's on all four texts.
+
+**Now:** W5 has the recorder and frame-time slot; W4 has W8's three wording findings and a measure at 390 px. **Open for Yoel:** his own text (pair and ablation, then the Model against parser door and the ablation row), a finger on the sideways tree on a real phone, the attack clip's wording, master, the public repo, where the static site goes.

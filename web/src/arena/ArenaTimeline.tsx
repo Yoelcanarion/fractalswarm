@@ -8,7 +8,7 @@ import { fraction, MARK_TONE } from "../lib/timeline";
 import type { RunStoreApi } from "../store";
 import { useRoving } from "../components/useRoving";
 import { laneOf, sharedEnd, type Lane } from "./bands";
-import { clockReadout, seconds } from "./play";
+import { bringBoardIntoView, clockReadout, seconds } from "./play";
 
 const BAND_ROW = 13; // px of a band row: the band and its gap
 
@@ -87,7 +87,14 @@ export function ArenaTimeline({ clock, left, right }: ArenaTimelineProps) {
   return (
     <section className="tl" aria-label="Shared timeline">
       <div className="tl__controls">
-        <button className="btn btn--play" onClick={() => clock.setPlaying(!playing)} aria-label={playing ? "pause" : "play"}>
+        <button
+          className="btn btn--play"
+          onClick={() => {
+            clock.setPlaying(!playing);
+            if (!playing) bringBoardIntoView();
+          }}
+          aria-label={playing ? "pause" : "play"}
+        >
           {playing ? "❚❚" : "▶"}
         </button>
         <span ref={readout} className="tl__readout mono" />
