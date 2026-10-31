@@ -65,6 +65,17 @@ html.dir-on body {
   min-height: 0;
 }
 
+/* In the app the arena's boards give way to a short window and its timeline is pinned to the bottom of the view (arena.css). A frame is 1920 x 1080
+   whatever window it is previewed in, and the camera pans it: neither applies. */
+.dir__stage .board {
+  max-height: none;
+}
+
+.dir__stage .tl {
+  position: static;
+  box-shadow: none;
+}
+
 .dir__stage--flow .content {
   flex: 1 0 auto;
 }

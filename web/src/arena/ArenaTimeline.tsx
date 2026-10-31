@@ -8,10 +8,9 @@ import { fraction, MARK_TONE } from "../lib/timeline";
 import type { RunStoreApi } from "../store";
 import { useRoving } from "../components/useRoving";
 import { laneOf, sharedEnd, type Lane } from "./bands";
+import { clockReadout, seconds } from "./play";
 
 const BAND_ROW = 13; // px of a band row: the band and its gap
-
-const seconds = (ms: number): string => `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
 
 function LaneTrack({ clock, lane, end, label, noun }: { clock: Clock; lane: Lane; end: number; label: string; noun: string }) {
   // a lane is one tab stop, the bands and then the marks along it: Tab lands on one, the arrow keys move between them
@@ -35,10 +34,7 @@ function LaneTrack({ clock, lane, end, label, noun }: { clock: Clock; lane: Lane
                 title={`${band.coordinator} ${what}: ${seconds(band.since)} to ${band.open ? "the end of the run" : seconds(band.until)}`}
                 aria-label={`${noun}: ${band.coordinator} ${what} from ${seconds(band.since)}: jump here`}
                 {...roving.stop(index, count)}
-                onClick={() => {
-                  clock.setPlaying(false);
-                  clock.seekTime(band.since);
-                }}
+                onClick={() => clock.seekTime(band.since)}
               />
             );
           })}
@@ -53,10 +49,7 @@ function LaneTrack({ clock, lane, end, label, noun }: { clock: Clock; lane: Lane
               title={mark.label}
               aria-label={`${mark.label}: jump here`}
               {...roving.stop(lane.bands.length + index, count)}
-              onClick={() => {
-                clock.setPlaying(false);
-                clock.seekTime(mark.ts);
-              }}
+              onClick={() => clock.seekTime(mark.ts)}
             />
           ))}
         </div>
@@ -72,7 +65,8 @@ export interface ArenaTimelineProps {
 }
 
 /** One play button, one scrubber and one speed for both runs, over a lane per side: the band of each
- * outage and the markers of each crash and recovery, on the shared time axis. */
+ * outage and the markers of each crash and recovery, on the shared time axis. As on the run page, a click on a band or a marker only moves
+ * the playhead (a replay that plays goes on from there), and dragging the scrubber pauses. */
 export function ArenaTimeline({ clock, left, right }: ArenaTimelineProps) {
   const leftEvents = useStore(left, (s) => s.events);
   const rightEvents = useStore(right, (s) => s.events);
@@ -87,7 +81,7 @@ export function ArenaTimeline({ clock, left, right }: ArenaTimelineProps) {
   const readout = useRef<HTMLSpanElement>(null);
   useClockFrame((t) => {
     if (slider.current) slider.current.value = String(Math.min(t, end));
-    if (readout.current) readout.current.textContent = `t = ${seconds(Math.min(t, end))} / ${seconds(end)}`;
+    if (readout.current) readout.current.textContent = clockReadout(t, end);
   });
 
   return (

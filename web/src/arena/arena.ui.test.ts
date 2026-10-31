@@ -53,7 +53,7 @@ function api(logs: Record<string, RunEvent[]>): RunApi {
 
 /** A pair opened on a clock, at ``atMs``. The swarm lost o1 (adopted by o2); the rival lost its supervisor. Each had a
  * contract ready at 9 s that only went out at 15 s. */
-async function opened(atMs: number) {
+async function opened(atMs: number, play = false) {
   const swarm = swarmStream();
   call(swarm, "o2.a1", "e1");
   ready(swarm, "g1", "o1", 9_000);
@@ -69,9 +69,10 @@ async function opened(atMs: number) {
   sent(rival, "g1", "o0", 15_000, "o0.a1");
   rival.at(70_000).emit("run.completed", "@kernel");
   const session = createPairSession({ api: api({ s: swarm.events, r: rival.events }), clock: { scheduler: idle } });
-  await session.open("s", "r", { atMs, speed: null, play: false });
+  await session.open("s", "r", { atMs, speed: null, play });
   renderCurrent(session.left);
   renderCurrent(session.right);
+  renderCurrent(session.clock.state); // what the clock is doing (playing, where) is seen by the components that read it
   return session;
 }
 
@@ -171,6 +172,15 @@ describe("a side", () => {
     // a finished run waits for the server's scored report: the effect that asks does not run on the server
     expect(text(rival)).toContain("Checking recovery");
   });
+
+  it("says how its run ended once the replay has played it out, and not that nothing is down over the crosses it has drawn", async () => {
+    const ended = await opened(75_000);
+    expect(text(side(ended.left, "swarm", "swarm"))).toContain("Finished, lost 1 coordinator");
+    expect(text(side(ended.right, "rival", "durable-max"))).toContain("Finished, supervisor crashed 1 time");
+    expect(text(side(ended.left, "swarm", "swarm"))).not.toContain("No coordinator down");
+    // before the end the line is still the live one
+    expect(text(side((await opened(30_000)).left, "swarm", "swarm"))).toContain("No coordinator down");
+  });
 });
 
 describe("the scoreboard", () => {
@@ -200,6 +210,30 @@ describe("the scoreboard", () => {
     const html = score(session, { left: scored, right: scored });
     expect(html).toContain("Swarm ✓");
     expect(html).toContain("Rival ✓");
+  });
+
+  it("titles the cost on the pre-registered basis, and says what the scored number adds to the spend where it adds any", async () => {
+    // the swarm's log spent what the metrics scored; the rival's spent less: a crash cancelled calls, which the metrics estimate
+    const swarm = swarmStream();
+    swarm.at(1_000).emit("budget.settled", "@kernel", { effect_id: "e1", reserved_usd: 0.7, actual_usd: 0.5 });
+    swarm.at(60_000).emit("run.completed", "@kernel");
+    const rival = rivalStream(undefined, 4);
+    rival.at(1_000).emit("budget.settled", "@kernel", { effect_id: "e1", reserved_usd: 0.7, actual_usd: 0.6047 });
+    rival.at(70_000).emit("run.completed", "@kernel");
+    const session = createPairSession({ api: api({ s: swarm.events, r: rival.events }), clock: { scheduler: idle } });
+    await session.open("s", "r", { atMs: 75_000, speed: null, play: false });
+    renderCurrent(session.left);
+    renderCurrent(session.right);
+    const scored = (cost: number, cancelled: number) =>
+      readOfficial({ run_id: "x", status: "completed", metrics: { completed: true, valid: true, detail: "placed 48/48, hard violations 0", cost_usd: cost, cancelled_llm_calls: cancelled }, recovery: null });
+    const html = text(score(session, { left: scored(0.5, 0), right: scored(0.78461, 27) }));
+    expect(html).toContain("Cost, pre-registered basis");
+    expect(html).toContain("Rival: $0.605 spent, $0.180 estimated for 27 cancelled calls");
+    expect(html).not.toContain("Swarm: $");
+    // before the metrics are in it is the spend so far, and says nothing of an estimate
+    const before = text(score(session));
+    expect(before).toContain("Cost so far");
+    expect(before).not.toContain("estimated for");
   });
 
   it("says plainly that one pair is one run on one seed, and links to where the rest is", async () => {
@@ -286,6 +320,16 @@ describe("the picker", () => {
     expect(html.indexOf('aria-label="swarm run"')).toBeGreaterThan(html.indexOf('<details id="runs"'));
   });
 
+  it("puts the private pairs, made here from live input, under a divider after the ones that ship, with the mark still in their name", () => {
+    const html = picker({ pairs: [pair({ pairId: "mine", label: "my own pair", private: true }), pair({ pairId: "shipped", label: "a shipped pair" })] });
+    expect(count(html, "<optgroup")).toBe(1);
+    expect(html).toContain('<optgroup label="Private, made here">');
+    expect(html.indexOf("a shipped pair")).toBeLessThan(html.indexOf("<optgroup"));
+    expect(html.indexOf("my own pair · private")).toBeGreaterThan(html.indexOf("<optgroup"));
+    expect(picker()).not.toContain("<optgroup"); // nothing private, no divider
+    expect(picker({ pairs: [pair({ billed: true })] })).not.toContain("<optgroup"); // a billed pair that ships stays in the list
+  });
+
   it("marks a private or billed pair, so it is never taken for a bundled one", () => {
     const html = picker({ pairs: [pair({ private: true }), pair({ pairId: "p2", billed: true })] });
     expect(html).toContain("· private");
@@ -335,12 +379,40 @@ describe("the page", () => {
       ),
     );
 
-  it("says what it is for and what the rival is, and has one main action once a pair is open: play both from the start", async () => {
+  it("says what it is for and what the rival is, and has one main action once a pair is open: watch the first crash, with playing both from the start beside it", async () => {
     const session = await opened(0);
     const html = await view({ session, left: "s", right: "r" });
-    expect(text(html)).toContain("FractalSwarm, on the left, and a rival, on the right, do the same job while the same coordinators are killed.");
+    expect(text(html)).toContain("FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures.");
     expect(text(html)).toContain("The rival is an ideal durable supervisor: its workers survive a crash, and it is back after 5 s.");
+    expect(html).toContain('<button type="button" class="btn btn--on">Watch the first crash</button>');
+    expect(html).toContain('<button type="button" class="btn">Play both from the start</button>');
+    expect(html).not.toContain("arena__clock"); // nothing to read before it starts
+  });
+
+  it("turns the main action into Pause with the clock beside it while the pair plays, and into Carry on when it is stopped midway", async () => {
+    const playing = await view({ session: await opened(20_000, true), left: "s", right: "r" });
+    expect(playing).toContain('<button type="button" class="btn btn--on">Pause</button>');
+    expect(playing).toContain('class="arena__clock mono"');
+    expect(text(playing)).not.toContain("Watch the first crash");
+    const stopped = await view({ session: await opened(20_000), left: "s", right: "r" });
+    expect(stopped).toContain('<button type="button" class="btn btn--on">Carry on</button>');
+    expect(stopped).toContain('class="arena__clock mono"');
+    // played out, it offers the first crash again
+    expect(text(await view({ session: await opened(75_000), left: "s", right: "r" }))).toContain("Watch the first crash");
+  });
+
+  it("makes playing the pair the main action where no coordinator is killed, and offers no first crash", async () => {
+    const swarm = swarmStream();
+    swarm.at(60_000).emit("run.completed", "@kernel");
+    const rival = rivalStream(undefined, 4);
+    rival.at(60_000).emit("run.completed", "@kernel");
+    const session = createPairSession({ api: api({ s: swarm.events, r: rival.events }), clock: { scheduler: idle } });
+    await session.open("s", "r", { atMs: 0, speed: null, play: false });
+    renderCurrent(session.left);
+    renderCurrent(session.right);
+    const html = await view({ session, left: "s", right: "r" });
     expect(html).toContain('<button type="button" class="btn btn--on">Play both from the start</button>');
+    expect(html).not.toContain("Watch the first crash");
   });
 
   it("says what to do next when there is no pair, instead of a bare page", async () => {
@@ -422,6 +494,35 @@ describe("the end of a pair", () => {
 
   it("is not in a director's frame, which is the arena and nothing around it", async () => {
     expect(await page(75_000, { bare: true })).not.toContain("pairend");
+  });
+
+  it("says the hand-overs of the takeover check with their reason once the check is in, and not before", async () => {
+    const session = await opened(75_000);
+    const render = () =>
+      text(
+        renderToStaticMarkup(
+          createElement(RunStoreProvider, { store: session.left as never }, createElement(ArenaView, { session, pairs: [], runs: [], official: { left: null, right: null }, left: "s", right: "r" })),
+        ),
+      );
+    expect(render()).not.toContain("hand-overs");
+    const report = { ok: true, violations: [], heirs: 3, reclaims: 0, adoptions: 1, kills: 1 };
+    session.left.setState({ takeover: { state: "done", report } });
+    expect(render()).toContain("The takeover check counts 3 hand-overs for that coordinator: one coordinator's root duties and its subtree are two hand-overs");
+    session.left.setState({ takeover: { state: "done", report: { ...report, heirs: 1 } } });
+    expect(render()).not.toContain("hand-overs");
+  });
+
+  it("says the one-run caveat once: the end card's, which has the setting, takes the place of the scoreboard's", async () => {
+    const caveat = (html: string) => count(text(html), /under one failure plan/);
+    expect(caveat(await page(30_000))).toBe(1); // while it plays, the scoreboard's
+    expect(text(await page(30_000))).toContain("One pair is one run on one seed under one failure plan");
+    const ended = text(await page(75_000));
+    expect(caveat(ended)).toBe(1);
+    expect(ended).toContain("This is one run of each, on one seed, under one failure plan");
+    expect(ended).not.toContain("One pair is one run on one seed");
+    expect(ended).toContain("✓ marks a number the metrics have scored"); // what the ✓ means stays
+    // a director's frame has no end card, so the scoreboard keeps its caveat
+    expect(text(await page(75_000, { bare: true }))).toContain("One pair is one run on one seed under one failure plan");
   });
 });
 

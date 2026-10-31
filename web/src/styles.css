@@ -387,6 +387,11 @@ textarea {
   box-shadow: 0 12px 0 0 var(--bg);
 }
 
+.runstate {
+  /* a press on a play action on a phone scrolls the state row up to the top of the window (components/PlayAction.tsx) */
+  scroll-margin-top: var(--space-3);
+}
+
 .run__more {
   margin-top: 0;
   /* opened by a person, it is scrolled to the top of the page (components/ui/Details.tsx): not flush against the bars above */
@@ -1319,6 +1324,20 @@ textarea {
 /* A phone: the replay bar wraps (the track beside the play button, the readout and the speed under it, so that none of them is off the
    screen), and the three numbers of a run's line share the width instead of running off it. */
 @media (max-width: 760px) {
+  /* The run page on a phone is one page that scrolls, the bars above it (the top bar, the run's strip, the guide) going up off the screen with
+     it, and only the replay bar stays (it is sticky). Else 370 px of the 844 of a phone are bars that stay, and the tree, which is what a
+     press on Watch the first crash is for, has what is left. The Muse lens is a drawer over the window, so it is fixed to it. */
+  .app--run {
+    height: auto;
+    min-height: 100%;
+  }
+  .app--run .content {
+    flex: 1 0 auto;
+    overflow: visible;
+  }
+  .app--run .lens {
+    position: fixed;
+  }
   .timeline {
     flex-wrap: wrap;
     gap: 8px 12px;

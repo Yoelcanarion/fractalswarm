@@ -28,8 +28,8 @@ here has been looked at yet** (the list for the slot is at the end).
 
 ### The arena for a stranger (`web/src/arena`)
 
-- **First look.** The lead is `FractalSwarm, on the left, and a rival, on the right, do the same job while the same
-  coordinators are killed.` and, once a pair is open, a second sentence from `rivalSentence(assumptions)` (assumptions.ts), in the
+- **First look.** The lead is `FractalSwarm, on the left, and a rival, on the right, do the same job under the same
+  failures.` (it said "while the same coordinators are killed" until the review of `8c4ae3a`: the two sides lose different ones) and, once a pair is open, a second sentence from `rivalSentence(assumptions)` (assumptions.ts), in the
   words of `docs/claims.md`: in-process "…one program runs the workers, so when it crashes they stop with it." (R5); ideal durable
   "…its workers survive a crash, and it is back after 5 s." (R2); durable; swarm; single; pipeline; a default. The assumptions pill
   under it stays always on. `#/arena` alone already opens the first public pair, which on a clean clone is the durable-max one.
@@ -41,7 +41,8 @@ here has been looked at yet** (the list for the slot is at the end).
   restart time); then the scope: "This is one run of each, on one seed, under one failure plan, with the rival noticing a crash after
   X s and restarting after Y s: it shows what happened here, not what usually happens.", with links to `#/helps` (Trade-offs) and
   `#/evidence`. No sentence says who is ahead or uses simpler, cheaper, more reliable, better (a test checks those words). The
-  scoreboard's note ("One pair is one run on one seed under one failure plan…") carries the same two links.
+  scoreboard's note ("One pair is one run on one seed under one failure plan…") carries the same two links while the pair plays; at
+  the end the card's scope replaces it (the review of `8c4ae3a`, below).
 - **A way out of the load error** (`EmptyState` tone bad: Try again, Open the runs), and **Home/End** with space and the arrows
   (`keys.ts`, pure, tested).
 - **390 px and 1366 px.** The verify badge moved from the head's top row to the proof row (`.side__proof`, which wraps: the chip
@@ -131,6 +132,62 @@ Not mine, for the coordinator:
 2. The verify chips ("Checking takeover...", "Replaying from the log...") stay pending for several seconds when the machine is busy
    (below-normal priority beside a paid sweep). That is timing, not a layout fault.
 3. The hidden bubbles of the tooltips on those chips are wider than the viewport in the measurement, but they cause no scroll.
+
+### The review of 8c4ae3a (Oct 31): six items, and the look at them (a scratch stack, no model called)
+
+The coordinator's review of `8c4ae3a` (three wrong statements, the first crash, the timeline), done in its order of harm. Code and
+tests first (`8d56ee2` items 1-3, `2881db4` item 6), then the look after RELEASE, at below-normal priority: `fractalswarm serve` on
+8791 (scratch directories, a dummy key) and a Vite dev server on 5177 that passes `/api` to it (a script of my own through Vite's
+API, so the repo's config, which points at 8765, was not touched), and headless Chromium. Everything closed afterwards.
+
+1. **The lead** says "do the same job under the same failures": the two sides lose different coordinators (the durable pair's swarm
+   loses o0, o3.1, o2.1, o3.2 and o3.3, and its rival's o0 five times).
+2. **One run, two costs.** The row is "Cost, pre-registered basis" once both numbers are the metrics' (`cost_usd`, which estimates
+   the calls a crash cancelled) and "Cost so far" while a number is still the fold of the log, which is the spend (the run page's
+   number). Where the scored number is more than the spend, a line under the card's bars says "$0.605 spent, $0.180 estimated for 27
+   cancelled calls": `official.costUsd`, the fold's `costUsd` (the sum of `budget.settled`) and `official.cancelledCalls`, none of
+   them typed. Nothing while the run plays, where the two agree at three decimals, or where the log holds no spend. Seen on the
+   real pairs: durable swarm $0.406 (Swarm: $0.401 spent, $0.005 estimated for 2 cancelled calls), durable rival $0.455 (no line),
+   in-process swarm $0.504 (no line), in-process rival $0.785 (Rival: $0.605 spent, $0.180 estimated for 27 cancelled calls). The
+   tooltip says it in a sentence, and that the run page shows the spend alone.
+3. **The end of a side.** Once a side has played out its status line says "Finished, lost 5 coordinators" (swarm) and "Finished,
+   supervisor crashed 5 times" (rival), "Did not finish, ..." in the danger tone for a log that stops without `run.completed`; an
+   outage the log never closed is still said first. `sideStatus` has a fifth parameter, `finished` (default false, so nothing else
+   changed), from the shared `playedOut()` (`playedOut.ts`), which the scoreboard and the end card use as well.
+4. **"Watch the first crash"** is the main action, as on the run page: both sides to 3 s before the earlier of the two first
+   coordinator kills (about 37.7 s on the durable pair), played at 1x, with "Play both from the start" beside it (the main one
+   where no coordinator is killed). While it plays the button is Pause and the clock (`t = 42.3 s / 111.8 s`, written per frame
+   through `useClockFrame`) sits beside it; stopped midway it says Carry on. Only the playhead moves (`play.ts`, `ArenaPlay.tsx`;
+   the seek comes first, because playing a clock that stands at its end starts it at 0). Seen: 4.5 s after the click the swarm
+   says "o0 down for 1.5 s - not noticed yet" with its red cross, at 1366, 1920, 1280 and 390.
+5. **The timeline is pinned** to the bottom of the view (`.tl { position: sticky; bottom: 0 }`, z-index `--z-sticky`, the page's
+   colour as a ring so that what scrolls behind it stays out of its rounded corners), a little more compact (padding, a 36 px
+   play button). To make room: the lead's `max-width` is 82ch (two lines, and the two buttons beside it instead of under it), the
+   assumptions pill shares the picker row (two lines beside it at 1366), `.side`'s `min-height: 420px` is gone, and the board's
+   height is capped to the window (`--arena-chrome: 552px`, floor 190 px), so the frame is drawn smaller to fit: the tree is 0.64
+   of its frame's size at 1366x768 (0.76 before). Measured, page y of the sides and of the bar: 1366x768 186..576 and 591..768;
+   1440x900 184..627 and 723..900; 1536x864 184..647 and 687..864; 1920x1080 184..725 and 903..1080 (the scoreboard fits above
+   it); 1280x720 the boards end 7 px under the bar's top, inside the panel's padding; at a 650 px window the work bars are under
+   it; the bar is not pinned under 620 px high or under 761 px wide; at 1100 px the sides stack, as before. The director's frames
+   keep both as they were (`.dir__stage .board` and `.dir__stage .tl` in director.css): a frame is 1920x1080 whatever the window
+   it is previewed in, and the camera pans it.
+6. **Small ones.** A click on a band or a mark of the timeline only moves the playhead (the run page's way; dragging the scrubber
+   still pauses); seen: still Pause after a jump. The end card gives the run page's reason beside "Lost 5 coordinators" when the
+   takeover check counts more hand-overs: "The takeover check counts 7 hand-overs for those 5 coordinators: one coordinator's root
+   duties and its subtree are two hand-overs, so there can be more of them than crashes." (read from the store's takeover report,
+   so it shows once the check has answered). The one-run caveat is said once at the end: the end card's, which has the rival's
+   setting, replaces the scoreboard's (`caveat` on `Scoreboard`; a director's frame has no end card and keeps its own). The picker
+   lists the pairs that ship first and the private ones under a divider (`<optgroup label="Private, made here">`), the mark
+   staying in their names because a closed select shows only the chosen option.
+
+Not mine, for the coordinator:
+1. The first-visit guide band (W4's) is 143 px at 1366x768, so a first visit has the boards half under the pinned bar until "Got
+   it" is pressed. The crash is still readable (the status line, the red cross, the playhead).
+2. The chip's hover text (`describeTakeover`, lib/takeover.ts: "7 hand-overs: the heir of each, recomputed from the log, is the
+   one the run used.") does not carry the reason for 5 coordinators and 7 hand-overs; the run page's Counters hint does. The end
+   card has it now; a clause in that file would put it on the chip as well (outside my files, so I did not touch it).
+3. `--arena-chrome` is a constant: the height of what the page keeps around the boards at 1366x768. If a bar above them grows or
+   shrinks, the number moves with it.
 
 ## Design
 

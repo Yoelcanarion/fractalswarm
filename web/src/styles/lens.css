@@ -48,6 +48,11 @@
   .run {
     --timeline-h: 112px;
   }
+  /* the close button of the lens is a finger's size, and the chips beside it wrap rather than squeeze it */
+  .lens__head .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 /* ---- the Muse meter ---- */
@@ -201,6 +206,11 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-left: auto;
+}
+
+/* it keeps its size: a row of chips as wide as the drawer left it at 23 px of 36 on a phone */
+.lens__head .icon-btn {
+  flex: none;
 }
 
 /* No top padding: the filter bar sticks to the top edge, so a scrolled row cannot show above it. */

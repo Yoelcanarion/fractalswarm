@@ -94,6 +94,39 @@ describe("the line a run page opens with", () => {
     expect(crashedCoordinators(leaf)).toBe(0);
   });
 
+  it("says a rival's supervisor crashed as often as it did, though it is up again after each crash", () => {
+    // the committed rival of the final run's pair: its supervisor is killed five times and restarts each time
+    const rival = loadJsonl("demo/pair-central-rival/events.jsonl");
+    const rivalEnd = foldEvents(rival);
+    expect(Object.values(rivalEnd.actors).some((actor) => actor.status === "killed" || actor.status === "dead")).toBe(false); // nobody is down at the end
+    expect(crashedCoordinators(rivalEnd)).toBe(5);
+    const line = stateLine(rivalEnd, facts({ cursor: rival.length, total: rival.length, endMs: rival.at(-1)!.ts_virtual }));
+    expect(line.headline).toBe("Finished:");
+    expect(line.rest).toBe("48 of 48 talks placed, its supervisor crashed 5 times, replay verified");
+    expect(line.rest).not.toContain("no coordinator crashed");
+  });
+
+  it("does not let a rival's count fall back between its crashes, and says it can still change on the way", () => {
+    const rival = loadJsonl("demo/pair-central-rival/events.jsonl");
+    let last = 0;
+    for (let n = 0; n <= rival.length; n += 50) {
+      const count = crashedCoordinators(foldEvents(rival.slice(0, n)));
+      expect(count, `at event ${n}`).toBeGreaterThanOrEqual(last);
+      last = count;
+    }
+    expect(last).toBeGreaterThanOrEqual(4);
+    // after the second crash, whether or not it is up again
+    const second = rival.filter((e) => e.type === "baseline.crashed")[1];
+    const mid = foldEvents(rival.slice(0, rival.indexOf(second) + 1));
+    expect(crashedCoordinators(mid)).toBe(2);
+    expect(stateLine(mid, facts({ cursor: rival.indexOf(second) + 1, total: rival.length, endMs: rival.at(-1)!.ts_virtual })).rest).toContain("its supervisor crashed 2 times so far");
+  });
+
+  it("keeps a swarm's coordinators crashed, and its false deaths, as before", () => {
+    expect(stateLine(end, facts()).rest).toContain("5 coordinators crashed");
+    expect(stateLine(end, facts()).rest).not.toContain("supervisor");
+  });
+
   it("counts the coordinators killed by the playhead, in the singular too", () => {
     expect(crashedCoordinators(end)).toBe(5);
     expect(crashedCoordinators(mid)).toBe(1);

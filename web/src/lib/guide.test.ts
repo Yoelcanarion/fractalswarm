@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { GUIDE_KEY, GUIDE_STEPS, guideSeen, rememberGuide } from "./guide";
+import { afterGuideButton, GUIDE_KEY, GUIDE_STEPS, guideSeen, rememberGuide } from "./guide";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -19,6 +19,14 @@ describe("the guide's steps", () => {
 
   it("are short: about forty words each at most", () => {
     for (const step of GUIDE_STEPS) expect(step.says.split(/\s+/).length).toBeLessThanOrEqual(40);
+  });
+});
+
+describe("the Guide button", () => {
+  it("asks for what each step says when there is none, whether the guide is closed or short, and closes it when it shows", () => {
+    expect(afterGuideButton("closed")).toBe("full");
+    expect(afterGuideButton("short")).toBe("full");
+    expect(afterGuideButton("full")).toBe("closed");
   });
 });
 

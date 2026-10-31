@@ -110,6 +110,7 @@ export function describeTakeover(report: TakeoverSummary, inLog: boolean): Chip 
 
   const checked = [
     heirs > 0 ? `${plural(heirs, "hand-over")}: ${heirs === 1 ? "its heir" : "the heir of each"}, recomputed from the log, is the one the run used.` : "",
+    heirs > (report.kills ?? heirs) ? "One coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes." : "",
     reclaims > 0 ? `${plural(reclaims, "reclaim")}: a member back from a false death took its own goal back (no heir is compared).` : "",
     adoptions > 0 ? `${plural(adoptions, "tree adoption")} checked against the log.` : "",
   ].filter(Boolean);

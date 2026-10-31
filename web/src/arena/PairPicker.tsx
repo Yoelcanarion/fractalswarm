@@ -22,6 +22,10 @@ const pairName = (pair: PairListing): string => `${pair.label}${pair.private ? "
 /** Chooses the two runs the arena shows: a pair on record, or any swarm run and any rival run. */
 export function PairPicker({ left, right, pairs, runs }: PairPickerProps) {
   const current = pairs?.find((p) => p.left === left && p.right === right);
+  // The pairs that ship come first; the private ones (live input typed on this machine) sit apart under a divider, and keep their mark in the name,
+  // because a closed select shows only the name of the pair that is chosen.
+  const shipped = (pairs ?? []).filter((pair) => !pair.private);
+  const privatePairs = (pairs ?? []).filter((pair) => pair.private);
   const none = pairs === null ? "Loading pairs…" : pairs.length === 0 ? "No pairs on record" : "Choose a pair…";
   return (
     <div className="picker">
@@ -37,11 +41,20 @@ export function PairPicker({ left, right, pairs, runs }: PairPickerProps) {
             aria-label="pair on record"
           >
             <option value="">{none}</option>
-            {(pairs ?? []).map((pair) => (
+            {shipped.map((pair) => (
               <option key={pair.pairId} value={pair.pairId}>
                 {pairName(pair)}
               </option>
             ))}
+            {privatePairs.length > 0 && (
+              <optgroup label="Private, made here">
+                {privatePairs.map((pair) => (
+                  <option key={pair.pairId} value={pair.pairId}>
+                    {pairName(pair)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
           {/* a closed select cuts its text at its own width; on a phone this shows all of the name, wrapped, and the select lies over it unseen to take the tap */}
           <span className="picker__shown" aria-hidden>

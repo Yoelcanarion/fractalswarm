@@ -92,8 +92,9 @@ async def test_sweep_cells_replay_bit_for_bit(sweep: tuple[MatrixReport, Path], 
     assert replayed.ok, replayed.detail
 
 
-def test_the_dry_run_prices_the_sweep_under_its_cap() -> None:
-    result = CliRunner().invoke(app, ["bench", str(SCALING), "--dry-run"])
+def test_the_dry_run_prices_the_sweep_under_its_cap(tmp_path: Path) -> None:
+    # An empty directory: the real cells are committed, and a finished cell is not priced again.
+    result = CliRunner().invoke(app, ["bench", str(SCALING), "--dry-run", "--out", str(tmp_path)])
     assert result.exit_code == 0, result.output
     assert "20 cells" in result.output and "NOT REGISTERED" not in result.output
     assert "contributor ON" in result.output

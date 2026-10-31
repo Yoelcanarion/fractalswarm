@@ -8,6 +8,7 @@ import type { RunListing } from "../lib/types";
 import { RunStoreProvider } from "../store";
 import "./arena.css";
 import { fetchOfficial, fetchPairs, type PairListing } from "./api";
+import { ArenaPlay } from "./ArenaPlay";
 import { ArenaSide } from "./ArenaSide";
 import { ArenaTimeline } from "./ArenaTimeline";
 import { assumptionsOf, rivalSentence, startedOf, systemKind } from "./assumptions";
@@ -16,12 +17,13 @@ import { keyAction } from "./keys";
 import type { Official } from "./official";
 import { PairEnd } from "./PairEnd";
 import { PairPicker } from "./PairPicker";
+import { playedOut } from "./playedOut";
 import { arenaHash, type ArenaRoute } from "./route";
 import { Scoreboard } from "./Scoreboard";
 import { createPairSession, type PairSession } from "./session";
 
 const NO_OFFICIAL: { left: Official | null; right: Official | null } = { left: null, right: null };
-const LEAD = "FractalSwarm, on the left, and a rival, on the right, do the same job while the same coordinators are killed.";
+const LEAD = "FractalSwarm, on the left, and a rival, on the right, do the same job under the same failures.";
 
 /** The arena: the swarm and its rival on one clock, face to face. */
 export function ArenaPage({ route }: { route: ArenaRoute }) {
@@ -108,6 +110,9 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   const loadError = leftError ?? rightError;
   const playing = useStore(clock.state, (s) => s.playing);
   const fixedStep = useStore(clock.state, (s) => s.mode === "fixed-step");
+  // The end of the pair says the one-run caveat in full, so the scoreboard's is left out once both runs have played out (a director's frame has no end card).
+  const leftPlayedOut = useStore(session.left, playedOut);
+  const rightPlayedOut = useStore(session.right, playedOut);
 
   const frames = useMemo(() => sharedFrames(frameOf(leftEvents), frameOf(rightEvents)), [leftEvents, rightEvents]);
   const assumptions = useMemo(() => assumptionsOf(startedOf(rightEvents), startedOf(leftEvents)), [leftEvents, rightEvents]);
@@ -138,20 +143,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
           compact
           title="Arena"
           lead={watching ? `${LEAD} ${rivalSentence(assumptions)}` : LEAD}
-          actions={
-            watching && (
-              <button
-                type="button"
-                className="btn btn--on"
-                onClick={() => {
-                  clock.seekTime(0);
-                  clock.setPlaying(true);
-                }}
-              >
-                Play both from the start
-              </button>
-            )
-          }
+          actions={watching && <ArenaPlay clock={clock} left={session.left} right={session.right} />}
         />
       )}
       <header className="arena__bar">
@@ -206,7 +198,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
             <ArenaSide store={session.right} role="rival" title={capitalize(assumptions.name)} system={assumptions.system} frame={frames[1]} />
           </div>
           {!bare && <PairEnd left={session.left} right={session.right} leftSystem={leftSystem} assumptions={assumptions} />}
-          <Scoreboard left={session.left} right={session.right} official={official} playing={playing} fixedStep={fixedStep} />
+          <Scoreboard left={session.left} right={session.right} official={official} playing={playing} fixedStep={fixedStep} caveat={bare || !(leftPlayedOut && rightPlayedOut)} />
           <ArenaTimeline clock={clock} left={session.left} right={session.right} />
         </>
       )}

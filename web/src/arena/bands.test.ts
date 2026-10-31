@@ -110,6 +110,64 @@ describe("what a side says about itself", () => {
     expect(at(s, "durable-max", 30_000).text).toBe("Supervisor up · 2 agents");
   });
 
+  describe("once the run has played out", () => {
+    const ended = (stream: ReturnType<typeof swarmStream>, system: "swarm" | "durable-max", nowMs = 100_000) => {
+      const view = foldEvents(stream.events);
+      return sideStatus(system, view, view.arena.windows, nowMs, true);
+    };
+
+    it("says how many coordinators the swarm lost, in place of 'no coordinator down' over the crosses on its board", () => {
+      const s = swarmStream();
+      kill(s, "o1", 10_000);
+      takeOver(s, "o1", "o2", 14_000, 15_000);
+      kill(s, "o2", 30_000);
+      takeOver(s, "o2", "o0", 34_000, 35_000);
+      s.at(60_000).emit("run.completed", "@kernel");
+      expect(ended(s, "swarm")).toEqual({ tone: "ok", text: "Finished, lost 2 coordinators", restart: null });
+      // right after the last takeover it is still the end that is said, not who took over
+      expect(ended(s, "swarm", 36_000).text).toBe("Finished, lost 2 coordinators");
+    });
+
+    it("says how many times the supervisor crashed, in place of 'supervisor up'", () => {
+      const s = rivalStream(undefined, 2);
+      crash(s, "o0", 10_000, 5000);
+      restart(s, "o0", 15_000);
+      s.at(60_000).emit("run.completed", "@kernel");
+      expect(ended(s, "durable-max")).toEqual({ tone: "ok", text: "Finished, supervisor crashed 1 time", restart: null });
+      const twice = rivalStream(undefined, 2);
+      crash(twice, "o0", 10_000, 5000);
+      restart(twice, "o0", 15_000);
+      crash(twice, "o0", 30_000, 5000);
+      restart(twice, "o0", 35_000);
+      twice.at(60_000).emit("run.completed", "@kernel");
+      expect(ended(twice, "durable-max").text).toBe("Finished, supervisor crashed 2 times");
+    });
+
+    it("says so when nothing crashed", () => {
+      const swarm = swarmStream();
+      swarm.at(60_000).emit("run.completed", "@kernel");
+      expect(ended(swarm, "swarm").text).toBe("Finished, no coordinator lost");
+      const rival = rivalStream(undefined, 2);
+      rival.at(60_000).emit("run.completed", "@kernel");
+      expect(ended(rival, "durable-max").text).toBe("Finished, the supervisor never crashed");
+    });
+
+    it("does not call a run that was halted finished", () => {
+      const s = swarmStream();
+      kill(s, "o1", 10_000);
+      takeOver(s, "o1", "o2", 14_000, 15_000);
+      s.at(60_000).emit("run.halted", "@kernel", { reason: "budget" });
+      expect(ended(s, "swarm")).toEqual({ tone: "danger", text: "Did not finish, lost 1 coordinator", restart: null });
+    });
+
+    it("still says an outage that the log never closed", () => {
+      const s = swarmStream();
+      kill(s, "o1", 10_000);
+      s.at(30_000).emit("run.completed", "@kernel");
+      expect(ended(s, "swarm", 30_000)).toMatchObject({ tone: "danger", text: "o1 down for 20.0 s · not noticed yet" });
+    });
+  });
+
   it("waits for a run that has not started", () => {
     const view = foldEvents([]);
     expect(sideStatus("swarm", view, [], 0)).toMatchObject({ tone: "muted", text: "Waiting for the run" });

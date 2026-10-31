@@ -9,12 +9,18 @@
 //     the layout's own bounds, not the nodes' current ones, so it lands where they will.
 //   - Jumps. After a seek (`epoch` changed), under reduced motion, and for the first layout
 //     there is nothing to glide across: everything is drawn at its place at once.
+//   - Sizes. Every render of the tree makes new node objects, and React Flow takes a node object with no
+//     `measured` for a new node: it forgets the size and the handles, hides the node (`visibility: hidden`,
+//     which also takes it out of the hit test) and measures it again on the next frame. A press whose
+//     mouse-down and mouse-up fall either side of such a render (a tap makes both in one task, and the
+//     press itself renders the tree, for the focus) would click the pane, not the card. So each node is
+//     handed back with the size React Flow measured for it.
 //
 // Time comes from `clock.motion()`: the real clock, or in fixed-step mode a frame count, so a
 // director take repeats exactly.
 
 import { getViewportForBounds, useReactFlow, useStore, useStoreApi, type Node, type ReactFlowInstance, type Viewport } from "@xyflow/react";
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef } from "react";
 
 import { createGlide, type Glide, type Point } from "../lib/glide";
 import { ACROSS, type Bounds } from "../lib/layout";
@@ -82,6 +88,20 @@ function fitCamera(flow: ReactFlowInstance, store: FlowStore, shape: () => TreeS
   }
   const viewport = frameTree(area, { width, height, minZoom }, across, keyReach(store));
   void flow.setViewport(viewport, { duration, ease: EASE_OUT, interpolate: "linear" });
+}
+
+/** The nodes with the size React Flow has measured for each, on the node itself (see "Sizes" above). The same array when every node has it
+ * already, and a node that has not been measured yet is left as it is: it is new, and its first measure is due. */
+export function keepSizes<N extends Node>(flow: Pick<ReactFlowInstance, "getInternalNode">, nodes: N[]): N[] {
+  let changed = false;
+  const sized = nodes.map((node) => {
+    const measured = flow.getInternalNode(node.id)?.measured;
+    if (measured?.width === undefined || measured.height === undefined) return node;
+    if (node.measured?.width === measured.width && node.measured.height === measured.height) return node;
+    changed = true;
+    return { ...node, measured: { width: measured.width, height: measured.height } };
+  });
+  return changed ? sized : nodes;
 }
 
 export function useTreeMotion<N extends Node>(nodes: N[], shape: TreeShape): TreeMotion<N> {
@@ -164,13 +184,15 @@ export function useTreeMotion<N extends Node>(nodes: N[], shape: TreeShape): Tre
   );
 
   const g = glide.current;
-  if (!g.moving(drawnAt.current)) return { nodes, onInit };
-  const drawn = g.at(drawnAt.current);
-  return {
-    nodes: nodes.map((n) => {
-      const at = drawn.get(n.id);
-      return at && (at.x !== n.position.x || at.y !== n.position.y) ? { ...n, position: at } : n;
-    }),
-    onInit,
-  };
+  const gliding = g.moving(drawnAt.current) ? g.at(drawnAt.current) : null;
+  const drawn =
+    gliding === null
+      ? nodes
+      : nodes.map((n) => {
+          const at = gliding.get(n.id);
+          return at && (at.x !== n.position.x || at.y !== n.position.y) ? { ...n, position: at } : n;
+        });
+  // `drawn` is `nodes` itself when nothing is moving, so the sized array is kept too, and a quiet tree costs nothing
+  const sized = useMemo(() => keepSizes(flow, drawn), [flow, drawn]);
+  return { nodes: sized, onInit };
 }

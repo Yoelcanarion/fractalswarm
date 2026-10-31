@@ -1,10 +1,10 @@
-import { getViewportForBounds } from "@xyflow/react";
+import { getViewportForBounds, type Node } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 
 import { ACROSS, boundsOf, layoutTree } from "../lib/layout";
 import { foldEvents } from "../lib/reducer";
 import { loadJsonl } from "../lib/testing";
-import { FIT_MAX_ZOOM, FIT_PADDING, frameTree } from "./useTreeMotion";
+import { FIT_MAX_ZOOM, FIT_PADDING, frameTree, keepSizes } from "./useTreeMotion";
 
 // The committed final run. Its root, o0, is killed at event 4806 (53.3 s) and its heir takes over at 5261 (58.8 s): in between there is
 // no root, and the three tracks' brains stand side by side in the top row.
@@ -51,5 +51,39 @@ describe("where the camera puts the tree", () => {
     const across = layoutTree(view, true);
     const sideways = boundsOf(view, across)!;
     expect(frameTree(sideways, PANE, true, 999)).toEqual(getViewportForBounds(sideways, PANE.width, PANE.height, PANE.minZoom, 1, `${ACROSS.pad}px`));
+  });
+});
+
+// A press on a card renders the tree (the focus), and a tap makes its mouse-down and mouse-up in one task: if the render left the card
+// unmeasured, React Flow hid it until the next frame and the mouse-up landed on the pane. Its size goes back on every node it has measured.
+describe("the sizes React Flow measured", () => {
+  const node = (id: string, measured?: { width?: number; height?: number }): Node => ({ id, position: { x: 0, y: 0 }, data: {}, ...(measured ? { measured } : {}) });
+  const flowOf = (sizes: Record<string, { width?: number; height?: number } | undefined>) => ({
+    getInternalNode: (id: string) => (id in sizes ? ({ measured: sizes[id] ?? {} } as ReturnType<Parameters<typeof keepSizes>[0]["getInternalNode"]>) : undefined),
+  });
+
+  it("hands each node back with its size, and leaves the node's other fields alone", () => {
+    const fresh = [node("o1"), node("o2")];
+    const sized = keepSizes(flowOf({ o1: { width: 100, height: 46 }, o2: { width: 84, height: 38 } }), fresh);
+    expect(sized.map((n) => n.measured)).toEqual([{ width: 100, height: 46 }, { width: 84, height: 38 }]);
+    expect(sized.map(({ measured: _measured, ...rest }) => rest)).toEqual(fresh);
+    expect(fresh.every((n) => n.measured === undefined)).toBe(true); // the input is not changed
+  });
+
+  it("leaves a node that was not measured yet as it is: it is new, and its first measure is due", () => {
+    const fresh = [node("new"), node("half"), node("gone")];
+    const sized = keepSizes(flowOf({ new: undefined, half: { width: 100 } }), fresh);
+    expect(sized).toBe(fresh);
+  });
+
+  it("gives the same array back when every node already has the size, so a quiet tree costs nothing", () => {
+    const flow = flowOf({ o1: { width: 100, height: 46 } });
+    const once = keepSizes(flow, [node("o1")]);
+    expect(keepSizes(flow, once)).toBe(once);
+  });
+
+  it("follows a card whose size changed", () => {
+    const [moved] = keepSizes(flowOf({ o1: { width: 100, height: 68 } }), [node("o1", { width: 100, height: 46 })]);
+    expect(moved.measured).toEqual({ width: 100, height: 68 });
   });
 });

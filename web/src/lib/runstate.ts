@@ -33,12 +33,21 @@ export interface StateLine {
   rest: string;
 }
 
-/** The brains that were killed or declared dead by the playhead. */
-export const crashedCoordinators = (view: ViewState): number =>
-  view.order.filter((id) => {
-    const actor = view.actors[id];
-    return !isInfraKind(actor.kind) && !isLeafKind(actor.kind) && (actor.status === "killed" || actor.status === "dead");
-  }).length;
+const isBrain = (view: ViewState, id: string): boolean => {
+  const actor = view.actors[id];
+  return actor === undefined || (!isInfraKind(actor.kind) && !isLeafKind(actor.kind));
+};
+
+/** The coordinators that crashed by the playhead: the larger of three counts. The brains that are down now (killed, or declared dead: a swarm's
+ * false deaths are in this one only); the coordinator kills injected so far, which a restart does not undo (a rival's supervisor is up again
+ * after each, and a count of the ones down would forget it, and fall back between crashes); and the supervisor's crashes in the log. */
+export function crashedCoordinators(view: ViewState): number {
+  const down = view.order.filter((id) => isBrain(view, id) && (view.actors[id].status === "killed" || view.actors[id].status === "dead")).length;
+  const struck = view.chaos
+    .filter((fault) => fault.kind === "kill_coordinator")
+    .reduce((n, fault) => n + (fault.targets.length === 0 ? 1 : fault.targets.filter((id) => isBrain(view, id)).length), 0);
+  return Math.max(down, struck, view.supervision.crashes.length);
+}
 
 /** Talks placed by the playhead, and how many the plan holds when it says. */
 export function talksOf(view: ViewState): { placed: number; expected: number | null } {
@@ -71,7 +80,9 @@ export function stateLine(view: ViewState, facts: StateFacts): StateLine {
   if (settled && unplaced > 0) clauses.push(`${unplaced} unplaced`);
   if (settled && violations > 0) clauses.push(plural(violations, "hard violation", "hard violations"));
   // "so far" says the count can still change; a finished run's count is the run's
-  if (crashed > 0) clauses.push(`${plural(crashed, "coordinator", "coordinators")} crashed${settled ? "" : " so far"}`);
+  // a rival's coordinator is its supervisor, which comes back after each crash: the arena's end card says it the same way
+  const supervised = view.supervision.crashes.length > 0;
+  if (crashed > 0) clauses.push(`${supervised ? `its supervisor crashed ${plural(crashed, "time", "times")}` : `${plural(crashed, "coordinator", "coordinators")} crashed`}${settled ? "" : " so far"}`);
   else if (settled) clauses.push("no coordinator crashed");
   if (settled && facts.verified) clauses.push("replay verified");
   const rest = clauses.join(", ") || "waiting for the first actor";

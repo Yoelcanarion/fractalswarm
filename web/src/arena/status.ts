@@ -38,7 +38,23 @@ function adopterOf(view: ViewState, dead: string): { adopter: string; ts: number
   return found;
 }
 
-export function sideStatus(system: SystemKind, view: ViewState, windows: readonly OutageWindow[], nowMs: number): SideStatus {
+/** How a run that has played out ended, in the words of its kind of system. Its board still shows what failed, so the line must not say that
+ * nothing is down, or that the supervisor is up, over crosses it has just drawn. */
+function endStatus(system: SystemKind, view: ViewState, crashes: number): SideStatus {
+  const done = view.completed;
+  const what =
+    system === "swarm"
+      ? crashes === 0
+        ? "no coordinator lost"
+        : `lost ${plural(crashes, "coordinator")}`
+      : crashes === 0
+        ? "the supervisor never crashed"
+        : `supervisor crashed ${plural(crashes, "time")}`;
+  return { tone: done ? "ok" : "danger", text: `${done ? "Finished" : "Did not finish"}, ${what}`, restart: null };
+}
+
+/** ``finished``: the replay has played the run to its last event. An outage the log never closed is still said, before anything else. */
+export function sideStatus(system: SystemKind, view: ViewState, windows: readonly OutageWindow[], nowMs: number, finished = false): SideStatus {
   if (!view.started) return { tone: "muted", text: "Waiting for the run", restart: null };
   const open = windows.filter((w) => w.until === null);
   const now = outagesNow(view, open);
@@ -50,6 +66,7 @@ export function sideStatus(system: SystemKind, view: ViewState, windows: readonl
       const longest = Math.max(...open.map((w) => nowMs - w.since));
       return { tone: "danger", text: `${ids} down for ${seconds(longest)} · ${suspected ? "suspected, confirming" : "not noticed yet"}`, restart: null };
     }
+    if (finished) return endStatus(system, view, windows.length);
     // The outage ends at the last takeover event, so for a few seconds after it the line still says who took over.
     const lately = windows.filter((w) => w.until !== null && nowMs - w.until < ADOPTION_LIFE_MS);
     if (lately.length > 0) {
@@ -74,6 +91,7 @@ export function sideStatus(system: SystemKind, view: ViewState, windows: readonl
       restart: outage && outage.restartInMs > 0 ? Math.min(1, Math.max(0, (nowMs - outage.sinceTs) / outage.restartInMs)) : null,
     };
   }
+  if (finished) return endStatus(system, view, windows.length);
   const lately = windows.filter((w) => w.until !== null && nowMs - w.until < ADOPTION_LIFE_MS);
   if (lately.length > 0) {
     const last = lately[lately.length - 1];

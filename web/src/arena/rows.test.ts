@@ -146,3 +146,42 @@ describe("the scoreboard rows", () => {
     expect(settled.definition).not.toContain("So far");
   });
 });
+
+describe("the cost row", () => {
+  /** A side at the end of its run: its log spent ``spent``, its metrics scored ``scored`` and counted ``cancelled`` cancelled calls. */
+  const ended = (spent: number, scored: number, cancelled: number | null, over: Partial<SideNumbers> = {}): SideNumbers => {
+    const base = side(pair().swarm, 16_000, { finished: true, official: official(null, { cost_usd: scored, cancelled_llm_calls: cancelled }), ...over });
+    return { ...base, counters: { ...base.counters, costUsd: spent } };
+  };
+  const cost = (l: SideNumbers, r: SideNumbers) => scoreRows(l, r).find((row) => row.id === "cost")!;
+
+  it("is titled on the pre-registered basis once the metrics have scored it, and as the spend so far before", () => {
+    expect(cost(ended(0.5, 0.5, 0), ended(0.5, 0.5, 0)).label).toBe("Cost, pre-registered basis");
+    const playing = side(pair().swarm, 12_000);
+    expect(cost(playing, playing).label).toBe("Cost so far");
+    expect(cost(ended(0.5, 0.5, 0), playing).label).toBe("Cost so far"); // a number of the row is still the spend
+    expect(cost(playing, playing).definition).toContain("The scored figure adds an estimate");
+  });
+
+  it("adds a line where the scored cost is more than the spend: both numbers and the cancelled calls, read from the run", () => {
+    // the in-process pair: the rival's log spent $0.605, the metrics scored $0.785 for 27 cancelled calls; the swarm's two agree
+    const central = cost(ended(0.50397, 0.50397, 0), ended(0.604701, 0.78461, 27));
+    expect(central.right).toEqual({ value: 0.78461, source: "official" });
+    expect(central.notes).toEqual({ left: null, right: "$0.605 spent, $0.180 estimated for 27 cancelled calls" });
+    // the durable pair: the swarm's differ by a little
+    expect(cost(ended(0.401161, 0.406323, 2), ended(0.455, 0.455, 0)).notes).toEqual({ left: "$0.401 spent, $0.005 estimated for 2 cancelled calls", right: null });
+  });
+
+  it("says one cancelled call in the singular, and leaves the count out where the metrics give none", () => {
+    expect(cost(ended(0.5, 0.6, 1), ended(0.5, 0.5, 0)).notes.left).toBe("$0.500 spent, $0.100 estimated for 1 cancelled call");
+    expect(cost(ended(0.5, 0.6, null), ended(0.5, 0.5, 0)).notes.left).toBe("$0.500 spent, $0.100 estimated");
+  });
+
+  it("adds no line while the run plays, where the two agree at the three decimals shown, or where the log holds no spend to split", () => {
+    expect(cost(ended(0.5, 0.6, 3, { finished: false }), ended(0.5, 0.5, 0)).notes.left).toBeNull();
+    expect(cost(ended(0.5, 0.6, 3, { official: null }), ended(0.5, 0.5, 0)).notes.left).toBeNull();
+    expect(cost(ended(0.4551, 0.45512, 0), ended(0.5, 0.5, 0)).notes.left).toBeNull();
+    expect(cost(ended(0, 0.29, 3), ended(0.5, 0.5, 0)).notes.left).toBeNull();
+    expect(scoreRows(ended(0.5, 0.6, 3), ended(0.5, 0.6, 3)).filter((row) => row.id !== "cost").every((row) => row.notes.left === null && row.notes.right === null)).toBe(true);
+  });
+});

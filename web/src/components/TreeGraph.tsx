@@ -11,7 +11,7 @@ import { rootHolder, type ActorNode, type ViewState } from "../lib/reducer";
 import { useRunStoreApi, useRunStoreShallow } from "../store";
 import { ClockScope } from "./ClockScope";
 import { EmptyState } from "./ui";
-import { useFirstCrashStart, watchFirstCrash } from "./PlayAction";
+import { bringRunIntoView, useFirstCrashStart, watchFirstCrash } from "./PlayAction";
 import { useTreeMotion, type TreeShape } from "./useTreeMotion";
 
 // What a node is glowing from, if anything: an adoption or a restart within `life` ms of virtual
@@ -283,11 +283,25 @@ function NoTreeYet() {
       actions={
         <>
           {crashAt !== null && (
-            <button type="button" className="btn btn--on" onClick={() => watchFirstCrash(store, crashAt)}>
+            <button
+              type="button"
+              className="btn btn--on"
+              onClick={() => {
+                watchFirstCrash(store, crashAt);
+                bringRunIntoView();
+              }}
+            >
               Watch the first crash
             </button>
           )}
-          <button type="button" className={crashAt === null ? "btn btn--on" : "btn"} onClick={() => setPlaying(true)}>
+          <button
+            type="button"
+            className={crashAt === null ? "btn btn--on" : "btn"}
+            onClick={() => {
+              setPlaying(true);
+              bringRunIntoView();
+            }}
+          >
             {cursor === 0 ? "Play from the start" : "Play"}
           </button>
           <button type="button" className="btn" onClick={() => seek(total)}>
