@@ -156,6 +156,7 @@ export const COPY = {
       // why two means that differ are a tie: bench/PREREG.md §3, and the seeds of H2 and of the stall disagree (R2's evidence)
       rule: "The means differ, but a win needs every seed to agree by a minimum effect, a rule fixed before the runs, and these seeds disagree. The pre-registered basis estimates the cost of cancelled calls.",
       terms: "Locality: how much of the team a crash holds up. Coordinator-dependency time: waiting on a coordinator that was down, added up over the work that waited.",
+      worse: "Where it does worse",
     },
     helps: {
       lead: "Locality ties too.",

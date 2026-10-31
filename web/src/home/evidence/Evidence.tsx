@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 
 import { COPY, word } from "../copy";
@@ -10,6 +11,7 @@ import { Figure } from "../parts/Figure";
 import { Inline } from "../parts/Inline";
 import { Reveal } from "../parts/Reveal";
 import { Terminal } from "../parts/Terminal";
+import { evidenceHash } from "../route";
 import { slice, useStory } from "../story";
 import { Viz, type VizName } from "../visuals";
 
@@ -205,10 +207,20 @@ function Tie() {
         </Reveal>
       }
       aside={
-        <Reveal delay={100}>
-          <Claim id="R3" className="home-claim--small" />
-          <p className="home-limit">{COPY.evidence.tie.terms}</p>
-        </Reveal>
+        <>
+          <Reveal delay={100}>
+            <Claim id="R3" className="home-claim--small" />
+          </Reveal>
+          <Reveal delay={110}>
+            <p className="home-limit">{COPY.evidence.tie.terms}</p>
+          </Reveal>
+          <Reveal delay={120}>
+            <a className="home-link" href={evidenceHash("fails")}>
+              {COPY.evidence.tie.worse}
+              <ArrowRight size={14} aria-hidden />
+            </a>
+          </Reveal>
+        </>
       }
     >
       <Chart name="DotPlot" path="headline" duration={1.8} extra={{ setting: false }} />
