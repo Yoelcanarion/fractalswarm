@@ -8,7 +8,7 @@ export function StaticIntake() {
       <PageHeader
         className="intake__head"
         title="New task"
-        lead="In the app you paste the talks and the emails or notes, and check each row against the text it came from. By default the run kills half the brains, and you get the finished program. This site only shows recorded runs, so that happens on your machine."
+        lead="Give the swarm a real job: in the app you paste the talks and the emails or notes, check each row against the text it came from, and the agents plan a conference. By default the run kills half the brains, and you get the finished program. This site only shows recorded runs, so that happens on your machine."
       />
       <Card title="Run it on your own text" className="staticnew">
         <ol className="staticnew__steps">

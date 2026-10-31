@@ -456,10 +456,18 @@ describe("the flow", () => {
     for (const markup of [flow(), flow({ intakeId: "intake-1" })]) {
       expect(markup.match(/<h1/g)).toHaveLength(1);
       expect(markup).toContain('<h1 class="pagehead__title">New task</h1>');
-      expect(plainText(markup)).toContain("Paste the talks and the emails or notes.");
+      expect(plainText(markup)).toContain("Give the swarm a real job");
       expect(markup).toContain('<span class="term">Muse</span>');
       expect(markup).toMatch(/pagehead__actions[^]*aria-current="step"/);
     }
+  });
+
+  it("says on the form what the text has to do with the agents, and only there", () => {
+    const text = plainText(flow());
+    expect(text).toContain("Paste the talks and the emails or notes.");
+    expect(text).toContain("The emails hold what speakers ask for");
+    expect(text).toContain("agents place the talks");
+    expect(plainText(flow({ intakeId: "intake-1" }))).not.toContain("agents place the talks");
   });
 
   it("says when the server does not start runs", () => {

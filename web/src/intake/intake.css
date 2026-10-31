@@ -24,6 +24,35 @@
   border-radius: var(--radius-2);
 }
 
+/* ---- what happens to the text: on the form only ---- */
+.intake__why {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.intake__why li {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+}
+
+.intake__why b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.intake__why span {
+  color: var(--text-secondary);
+}
+
 /* ---- steps ---- */
 .steps {
   display: flex;
@@ -947,6 +976,7 @@
 }
 
 @media (max-width: 1180px) {
+  .intake__why,
   .intake__form,
   .review {
     grid-template-columns: minmax(0, 1fr);

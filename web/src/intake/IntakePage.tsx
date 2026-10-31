@@ -33,6 +33,26 @@ const go = (hash: string) => {
 
 const calm = (): boolean => typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/** What a box for emails has to do with a swarm of agents, which is the first thing a stranger asks here. */
+function WhatHappens() {
+  return (
+    <ol className="intake__why" aria-label="What happens to your text">
+      <li>
+        <b>Your text</b>
+        <span>Paste the talks and the emails or notes. The emails hold what speakers ask for, such as a day they cannot come.</span>
+      </li>
+      <li>
+        <b>The reading</b>
+        <span>Muse, or the free practice reader, fits them to the program’s shape. You check each row against the text it came from, and only then does anything run.</span>
+      </li>
+      <li>
+        <b>The swarm</b>
+        <span>Coordinators split the program into tracks and sessions, and agents place the talks. By default the run kills half the brains, and you get the finished program: each talk with its time and room.</span>
+      </li>
+    </ol>
+  );
+}
+
 export interface IntakeFlowProps {
   api: IntakeApi;
   intakeId: string | null;
@@ -179,7 +199,7 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
         title="New task"
         lead={
           <>
-            Paste the talks and the emails or notes. <Term id="muse">Muse</Term>, or the free practice reader, fits them to the program’s shape. You check each row against the text it came from, and only then does anything run. By default the run kills half the brains, and you get the finished program: each talk with its time and room.
+            Give the swarm a real job: <Term id="muse">Muse</Term> reads your text, and the agents plan a conference.
           </>
         }
         actions={<Steps current={stepOf(phase)} />}
@@ -190,6 +210,7 @@ export function IntakeFlow({ api, intakeId, realAllowed, canStart }: IntakeFlowP
         </p>
       )}
 
+      {phase.name === "form" && <WhatHappens />}
       {phase.name === "form" && (
         <IntakeForm
           form={form}
