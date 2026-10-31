@@ -539,6 +539,12 @@ describe("the keyboard on the run page", () => {
     expect(ui).toMatch(/\.disclosure--menu > \.disclosure__body \{[^}]*z-index: var\(--z-dropdown\);/); // a menu above it still falls over it
   });
 
+  it("gives each row of the panels the height of what is in it at every width, so that no card is cut to the window", () => {
+    const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
+    expect(css).toMatch(/\.pgrid \{[^}]*overflow: auto;[^}]*grid-auto-rows: minmax\(max-content, auto\);/); // a length here would still be cut where the page has a set height
+    expect(css).not.toMatch(/\.pgrid \{[^}]*grid-template-rows:/);
+  });
+
   it("keeps the height of each block of the results where the page is as tall as the screen, so that the program is not squeezed under the cards after it", () => {
     const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
     expect(css).toMatch(/\.results \{\s*flex: 1;\s*min-height: 0;\s*overflow: auto;/);

@@ -1478,12 +1478,15 @@ textarea {
   color: var(--text-muted);
 }
 
+/* A row is as tall as what is in it, and the grid scrolls: two rows cut to the window left a full HD screen with the spend chart cut at its axis
+   and six small scrollbars, one to a card. Where there is room the rows still share it. */
 .pgrid {
   flex: 1;
   min-height: 0;
+  overflow: auto;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-auto-rows: minmax(max-content, auto);
   gap: 12px;
 }
 
@@ -2635,9 +2638,6 @@ textarea {
   }
   .pgrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: none;
-    grid-auto-rows: minmax(380px, auto);
-    overflow: auto;
   }
   .pcard--wide {
     grid-column: 1 / -1;
