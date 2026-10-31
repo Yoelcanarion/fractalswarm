@@ -63,6 +63,14 @@ type Settled = { events: unknown[]; loadError: string | null; loading: boolean; 
 
 const sideOf = (store: RunStoreApi): RunSide => ({ events: () => store.getState().events, view: () => store.getState().view });
 
+/** What a run paid, from the end of its own log. The frame says "real cost", and the scored cost adds an estimate for its
+ * cancelled calls (docs/claims.md R5), so the scored cost is only the answer for a log that does not say. */
+const spentOf = (store: RunStoreApi): number | null => {
+  const last = store.getState().events.at(-1);
+  const spent = last?.type === "run.completed" ? last.payload.spent_usd : undefined;
+  return typeof spent === "number" ? spent : null;
+};
+
 /** A recorded run whose log is in and whose replay check has an answer (a run still recording is never checked). */
 const arrived = (s: Settled): boolean => !s.loading && (s.loadError !== null || (s.events.length > 0 && (s.live || s.verify.state === "done" || s.verify.state === "error")));
 
@@ -116,7 +124,7 @@ export function createArenaStage(left: string, right: string, options: StageOpti
     replay: clockReplay(session.clock),
     sides: { left: sideOf(session.left), right: sideOf(session.right) },
     lens: null,
-    costs: () => [scored.getState().left?.costUsd ?? null, scored.getState().right?.costUsd ?? null],
+    costs: () => [spentOf(session.left) ?? scored.getState().left?.costUsd ?? null, spentOf(session.right) ?? scored.getState().right?.costUsd ?? null],
     loaded: () => scored.getState().settled && arrived(session.left.getState()) && arrived(session.right.getState()),
     problem: () => problemOf(session.left, session.right),
     dispose() {
@@ -195,7 +203,7 @@ export function createRunStage(runId: string, calls: Readonly<Record<string, Cal
     replay: clockReplay(clock),
     sides: { left: sideOf(store), right: null },
     lens: lensHandle(lens, calls),
-    costs: () => [state.cost],
+    costs: () => [spentOf(store) ?? state.cost],
     loaded() {
       const s = store.getState();
       const takeover = s.takeover.state;

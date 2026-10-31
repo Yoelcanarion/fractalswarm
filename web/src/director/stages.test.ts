@@ -58,6 +58,22 @@ describe("the arena stage", () => {
     stage.dispose();
   });
 
+  it("prices the frame's note at what each run spent, never at the scored cost, which estimates cancelled calls", async () => {
+    const paid = (spent: number) => {
+      const s = rivalStream();
+      s.at(70_000).emit("run.completed", "@kernel", { spent_usd: spent });
+      return s.events;
+    };
+    const logs = { s: paid(0.504), r: paid(0.605) };
+    const arena = createArenaStage("s", "r", { api: fakeApi(logs), official: async () => scored("x", 0.785) });
+    await vi.waitFor(() => expect(arena.loaded()).toBe(true));
+    expect(arena.costs()).toEqual([0.504, 0.605]);
+    arena.dispose();
+    const run = createRunStage("r", {}, { api: fakeApi(logs), official: async () => scored("r", 0.785), lens: lensApi().api });
+    await vi.waitFor(() => expect(run.costs()).toEqual([0.605]));
+    run.dispose();
+  });
+
   it("runs on a fixed-step clock that no frame loop drives, and ends where the longer run ends", async () => {
     const stage = createArenaStage("s", "r", { api: fakeApi({ s: swarmLog, r: rivalLog }), official: async () => null });
     await vi.waitFor(() => expect(stage.loaded()).toBe(true));
