@@ -1707,3 +1707,19 @@ No real call, no spend. Nothing pushed. Handlers untouched, and no public claim 
 **Checks:** web 2,707 of 2,707, tsc clean, build committed with each change. Python untouched since 93464b3.
 
 **Ledger:** unchanged, spent $60.03, reserved $13.73.
+
+### Later that night, to 21:30: the juror's last two items, then tall windows and the live flow
+
+No real call, no spend. Nothing pushed. Handlers untouched, and no public claim changed. No take frame reached: `scripts/record_scenes.mjs` never opens Results, and a headless browser draws no scrollbar. The review is in Yoel's own `s2`, which gains from the second fix below.
+
+- **Results on a tall window (2679793): the worst thing found today.** Above 900 px of height the page is as tall as the screen and the results scroll inside it, and the flex column squeezed what it could. Since the program went in at 15:03 (5e8df6c), a window of 1920x950 showed it as a strip of 28 px, and 1920x1080 as one of 143 px, its rows running on under Goals and Report. That is the size most jurors have. Each block now keeps its own height. It passed six hours unseen because every pass since was at 1366x768, on the other side of the line, and a web test has no browser to see a layout. A pass at 2560 found it.
+- **The window's second scrollbar (45508f4).** One hidden label at the foot of the review was held by nothing inside `.content`, so `.content` did not clip it, and it stretched the document by 864 px: the review had two scrollbars, and a wheel at its foot took the whole app up off the screen. The hidden caption of the runs and charts tables and the legend of New task could do the same. `.content` now holds what is placed in it. These hidden texts were the only boxes nothing held, and by clicks the views menu, the models' fold, a hint and the Muse lens all still lie over the page.
+- **A phone's bars (e0b8889, 44b2ea7):** every page now scrolls as one, as the run page did, so the 170 px of bars leave with it. The app's button says App on a phone: the juror could not tell what "Enter" entered. **A slip of mine:** e0b8889 went in with one red test, the guard that finds that block by its first words, and 44b2ea7 repaired it minutes later. That chain had no guard. Looking into a later failure I found that `set -e`, the guard this log's lesson recommends, does nothing in this Bash tool: three forms all ran on after the failure. The commits that "had" it were clean only because their tests were green. The chains now run on `&&` up to the commit, and the note is corrected.
+- **Runs (cd8c09a):** a card up to a tablet held upright, where the table was still 44 px too wide at 768.
+- **New task on the site (2679793):** at 2560 wide the one narrow card stood at neither side. It starts where the other pages do.
+- **The whole product by clicks (45508f4, clean stage, no key):** paste, practice reader, approve, the pair live, both finished, the program, at 1920x1080: one scroller and nothing squeezed at each step. The approve bar stays on the screen down the review at 1920, 1366 and 390. On a phone it arrives with the table, after the source text.
+- **Passes with nothing else to fix:** six main pages in the light theme at 1366; ten pages by eye at 2560, and the Plan, Security and Events views by measure only; the new scroll, hints and cards in Firefox; the tables too wide at 768 and 1024 scroll inside their own frames.
+
+**Checks:** web 2,709 of 2,709, tsc clean, build committed with each change, sideways scroll clean at 390, `phone_checks` all ok once its scroll steps moved to the window. Python untouched since 93464b3.
+
+**Ledger:** unchanged, spent $60.03, reserved $13.73.
