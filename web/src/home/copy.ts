@@ -41,7 +41,7 @@ export const COPY = {
   labels: { stalled: "stalled", extraCost: "extra cost", extraCostBasis: "extra cost, pre-registered basis" },
 
   // Said next to every number that is set against the in-process supervisor (R5): the gap is mostly a property of that design.
-  rivalReason: "In-process: its agents die with it, so that design explains most of the gap.",
+  rivalReason: "In-process: its agents die with it. That design explains most of the gap.",
   // What the other rival's name means, and what a tie with it is worth (R2). The detection is the condition: the rival that restarts sooner beats the swarm (R3).
   durableReason: "Ideal durable: its agents survive; it restarts on detection. The tie comes with no central coordinator.",
 
@@ -154,7 +154,7 @@ export const COPY = {
       word: "Tie.",
       note: "Stall time and extra cost, one dot per seed, against an ideal durable supervisor.",
       // why two means that differ are a tie: bench/PREREG.md §3, and the seeds of H2 and of the stall disagree (R2's evidence)
-      rule: "The means differ, but a win needs every seed to agree by a minimum effect, a rule fixed before the runs, and these seeds disagree. The pre-registered basis estimates the cost of cancelled calls.",
+      rule: "The means differ, but a win needs every seed to agree by a minimum effect, a rule fixed before the runs, and these seeds disagree. Extra cost is on the pre-registered basis, which estimates the cost of cancelled calls.",
       terms: "Locality: how much of the team a crash holds up. Coordinator-dependency time: waiting on a coordinator that was down, added up over the work that waited.",
       worse: "Where it does worse",
     },

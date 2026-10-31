@@ -120,7 +120,7 @@ describe("the numbers the page prints beside a claim are the numbers of its word
     expect(found.fastRestart.map(written)).toEqual(["13.2", "5.7"]);
     for (const item of [...found.fastRestart, ...(found.perProcess ? [found.perProcess] : [])]) expect(text, written(item)).toContain(written(item));
     const [c2, c3] = found.falseDeaths.map(written);
-    expect(text).toContain(`${c2}–${c3} per run at three and five crashes`);
+    expect(text).toContain(`${c2}–${c3} per run under the two heaviest fault profiles`);
   });
 });
 
