@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { asRunStatus, controlState, DEFAULT_CAPABILITIES, LIVE_ONLY, parseCapabilities, statusBadge, type Capabilities } from "./controls";
+import { asRunStatus, controlState, DEFAULT_CAPABILITIES, LIVE_ONLY, parseCapabilities, siteOf, statusBadge, type Capabilities } from "./controls";
 
 const everything: Capabilities = { chaos: true, approve: true, tasks: true, budget: true, halt: true };
 
@@ -39,6 +39,34 @@ describe("which controls can be used", () => {
   it("starts a new task without needing a live run", () => {
     expect(controlState("tasks", { status: "completed", capabilities: everything }).enabled).toBe(true);
     expect(controlState("tasks", { status: null, capabilities: everything }).enabled).toBe(true);
+  });
+});
+
+describe("on the static showcase, which has no server", () => {
+  // what the exporter writes (scripts/build_static_site.py): every control off, and `static`
+  const showcase: Capabilities = { chaos: false, approve: false, tasks: false, budget: false, halt: false, real: false, static: true };
+
+  it("is read from the capabilities the site answers, only as a yes, and a server never sends it", () => {
+    expect(parseCapabilities({ ...showcase })).toEqual(showcase);
+    expect(siteOf(parseCapabilities({ ...showcase }))).toBe("static");
+    expect(siteOf(parseCapabilities({ static: "yes" }))).toBe("server");
+    expect(siteOf(parseCapabilities({ chaos: true }))).toBe("server");
+    expect(siteOf(DEFAULT_CAPABILITIES)).toBe("server");
+    expect("static" in parseCapabilities({ chaos: true })).toBe(false);
+  });
+
+  it("says that the site shows recorded runs, not that a server does not start them, and how to start one", () => {
+    expect(controlState("tasks", { status: null, capabilities: showcase })).toEqual({
+      enabled: false,
+      reason: "this site shows recorded runs only: to start one, run the app with uv run fractalswarm serve",
+    });
+    expect(controlState("chaos", { status: "running", capabilities: showcase })).toEqual({ enabled: false, reason: "this site shows recorded runs only" });
+  });
+
+  it("still says first that a recording has nothing live to act on", () => {
+    for (const control of ["chaos", "approve", "budget", "halt"] as const) {
+      expect(controlState(control, { status: "completed", capabilities: showcase })).toEqual({ enabled: false, reason: LIVE_ONLY });
+    }
   });
 });
 

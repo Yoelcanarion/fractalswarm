@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { afterGuideButton, GUIDE_KEY, GUIDE_STEPS, guideSeen, rememberGuide } from "./guide";
+import { afterGuideButton, GUIDE_KEY, GUIDE_STEPS, guideSeen, guideSteps, rememberGuide } from "./guide";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -18,7 +18,33 @@ describe("the guide's steps", () => {
   });
 
   it("are short: about forty words each at most", () => {
-    for (const step of GUIDE_STEPS) expect(step.says.split(/\s+/).length).toBeLessThanOrEqual(40);
+    for (const step of [...GUIDE_STEPS, ...guideSteps("static")]) expect(step.says.split(/\s+/).length, step.id).toBeLessThanOrEqual(40);
+  });
+});
+
+describe("the guide's steps on the static showcase", () => {
+  const server = guideSteps("server");
+  const showcase = guideSteps("static");
+
+  it("are the server's, but for the two sentences that are not true without a server: nothing is started, and the replay was checked at build", () => {
+    expect(server).toBe(GUIDE_STEPS);
+    expect(showcase.filter((step, index) => step.says !== server[index].says).map((step) => step.id)).toEqual(["kill", "verify"]);
+    expect(server.find((step) => step.id === "verify")?.says).toContain("A recorded run checks itself when it opens.");
+    const verify = showcase.find((step) => step.id === "verify")?.says ?? "";
+    expect(verify).not.toContain("checks itself when it opens");
+    expect(verify).toContain("when the site was built, not in your browser");
+    const kill = showcase.find((step) => step.id === "kill")?.says ?? "";
+    expect(kill).toContain("A recording cannot be changed");
+    expect(kill).toContain("this site starts no run");
+    expect(kill).not.toMatch(/, start a run\./);
+  });
+
+  it("keep the headings and the links, so that the short band does not change when the capabilities arrive", () => {
+    expect(showcase.map(({ id, title, action }) => ({ id, title, action }))).toEqual(server.map(({ id, title, action }) => ({ id, title, action })));
+  });
+
+  it("make no claim of their own", () => {
+    for (const step of showcase) expect(step.says).not.toMatch(/simpler|cheaper|more reliable|safer|faster/i);
   });
 });
 

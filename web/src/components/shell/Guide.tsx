@@ -1,7 +1,8 @@
 import { CircleHelp } from "lucide-react";
 import { useCallback, useState } from "react";
 
-import { afterGuideButton, GUIDE_STEPS, guideSeen, rememberGuide, type GuideMode } from "../../lib/guide";
+import type { Site } from "../../lib/controls";
+import { afterGuideButton, guideSeen, guideSteps, rememberGuide, type GuideMode } from "../../lib/guide";
 
 export interface GuideState {
   open: boolean;
@@ -36,12 +37,12 @@ export function GuideButton({ guide }: { guide: GuideState }) {
 
 /** Three steps for someone who has never seen the app: a heading and where it is done, a row for each, and the Guide button adds what each one
  * says. It sits in the flow under the bars, so it blocks nothing: the page is there under it, and it can be closed at any time. */
-export function Guide({ guide }: { guide: GuideState }) {
+export function Guide({ guide, site = "server" }: { guide: GuideState; site?: Site }) {
   if (!guide.open) return null;
   return (
     <section id="guide" className={guide.full ? "guide guide--full" : "guide"} aria-label="How to use the app, in three steps">
       <ol className="guide__steps">
-        {GUIDE_STEPS.map((step, index) => (
+        {guideSteps(site).map((step, index) => (
           <li key={step.id} className="guide__step">
             <span className="guide__n" aria-hidden="true">
               {index + 1}

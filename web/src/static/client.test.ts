@@ -69,7 +69,10 @@ describe("the lists the app opens with", () => {
     install();
     const capabilities = await fetchCapabilities();
     expect(Object.keys(capabilities)).toEqual(expect.arrayContaining(["chaos", "approve", "tasks", "budget", "halt"]));
-    expect(Object.values(capabilities).every((on) => on === false)).toBe(true);
+    const { static: onTheSite, ...controls } = capabilities;
+    expect(Object.values(controls).every((on) => on === false)).toBe(true);
+    // and the answer says where the app is, so that its words about starting a run and about the replay check are the site's
+    expect(onTheSite).toBe(true);
   });
 
   it("holds the pair the arena page lists, with both runs named", async () => {

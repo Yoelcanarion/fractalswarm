@@ -24,7 +24,16 @@ export type ControlKey = "chaos" | "approve" | "tasks" | "budget" | "halt";
 export type Capabilities = Record<ControlKey, boolean> & {
   /** True only when the server allows billed launches and has a key. Absent on a server that does not say. */
   real?: boolean;
+  /** True only on the static showcase, which has no server behind the API: its runs are recordings, and their replay checks were made when
+   * the site was built. The exporter writes it (scripts/build_static_site.py); a server does not send it. */
+  static?: boolean;
 };
+
+/** Where the app runs: on a server, or on the static showcase. What a page says about starting a run, and about when a recording was
+ * checked, is not the same in the two. */
+export type Site = "server" | "static";
+
+export const siteOf = (capabilities: Capabilities): Site => (capabilities.static === true ? "static" : "server");
 
 /** What a server without `GET api/capabilities` is taken to offer. */
 export const DEFAULT_CAPABILITIES: Capabilities = { chaos: false, approve: false, tasks: false, budget: true, halt: true };
@@ -46,12 +55,19 @@ export interface ControlContext {
   capabilities: Capabilities;
 }
 
+/** What a control that is off says about itself: a server that lacks it, or the static showcase, where there is no server to lack anything
+ * and the runs are recordings only. */
+function offReason(control: ControlKey, capabilities: Capabilities): string {
+  if (siteOf(capabilities) === "static") {
+    return control === "tasks" ? "this site shows recorded runs only: to start one, run the app with uv run fractalswarm serve" : "this site shows recorded runs only";
+  }
+  return control === "tasks" ? "this server does not start runs from here" : "this server does not offer it yet";
+}
+
 export function controlState(control: ControlKey, { status, capabilities }: ControlContext): ControlState {
   // A recording comes first: whatever the server could do, there is nothing live to do it to.
   if (ACTS_ON_A_RUN.has(control) && status !== "running") return { enabled: false, reason: LIVE_ONLY };
-  if (!capabilities[control]) {
-    return { enabled: false, reason: control === "tasks" ? "this server does not start runs from here" : "this server does not offer it yet" };
-  }
+  if (!capabilities[control]) return { enabled: false, reason: offReason(control, capabilities) };
   return { enabled: true, reason: "" };
 }
 
@@ -64,6 +80,7 @@ export function parseCapabilities(body: unknown): Capabilities {
   const result = { ...DEFAULT_CAPABILITIES };
   for (const key of Object.keys(result) as ControlKey[]) result[key] = listed[key] === true;
   if ("real" in listed) result.real = listed.real === true;
+  if ("static" in listed) result.static = listed.static === true;
   return result;
 }
 

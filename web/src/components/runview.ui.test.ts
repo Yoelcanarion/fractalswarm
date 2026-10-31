@@ -7,7 +7,7 @@ import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { GUIDE_STEPS } from "../lib/guide";
+import { GUIDE_STEPS, guideSteps } from "../lib/guide";
 import type { RunEvent } from "../lib/types";
 import { loadJsonl, REPO_ROOT, renderCurrent } from "../lib/testing";
 import { EventsPage } from "../pages/EventsPage";
@@ -348,6 +348,21 @@ describe("the guide", () => {
     }
   });
 
+  it("says on the static site what is true there: the replay was checked when the site was built, and nothing is started", () => {
+    const out = renderToStaticMarkup(createElement(Guide, { guide: guide(true, true), site: "static" }));
+    for (const step of guideSteps("static")) expect(out).toContain(step.says.slice(0, 40));
+    expect(out).toContain("when the site was built, not in your browser");
+    expect(out).toContain("this site starts no run");
+    expect(out).not.toContain("checks itself when it opens");
+    // and on a server it is as it was
+    expect(renderToStaticMarkup(createElement(Guide, { guide: guide(true, true), site: "server" }))).toContain("A recorded run checks itself when it opens.");
+    expect(renderToStaticMarkup(createElement(Guide, { guide: guide(true, true) }))).toContain("A recorded run checks itself when it opens.");
+  });
+
+  it("is the same short band on the static site as on a server, so that it does not change when the capabilities arrive", () => {
+    expect(renderToStaticMarkup(createElement(Guide, { guide: guide(true), site: "static" }))).toBe(renderToStaticMarkup(createElement(Guide, { guide: guide(true) })));
+  });
+
   it("opens for a browser that has not seen it, and stays closed for one that has", () => {
     const probe = () => {
       let seen: boolean | null = null;
@@ -453,6 +468,29 @@ describe("the keyboard on the run page", () => {
     expect(block).toMatch(/\.app--run \.lens \{\s*position: fixed;/); // the drawer is over the window, not over a page that scrolls under it
     expect(css.slice(0, phone)).not.toContain(".app--run"); // nothing of it above a phone's width
     expect(css).toMatch(/\.run--overview > \.timeline \{\s*position: sticky;\s*bottom: var\(--foot\);/);
+  });
+
+  it("lets the proof chips wrap on a phone, so that a sentence in one does not take the page sideways", () => {
+    // a recording this code does not reproduce says where it first differs, and the static site's says it was checked when the site was built
+    const css = readFileSync(REPO_ROOT + "web/src/styles/lens.css", "utf-8").replace(/\r\n/g, "\n");
+    const phone = css.indexOf("@media (max-width: 760px) {");
+    expect(phone).toBeGreaterThan(0);
+    const block = css.slice(phone, css.indexOf("\n}\n", phone));
+    expect(block).toMatch(/\.runstrip__proof \{\s*margin-left: 0;\s*min-width: 0;\s*max-width: 100%;/);
+    expect(block).toMatch(/\.runstrip__proof \.tip,\s*\.runstrip__proof \.badge \{\s*min-width: 0;\s*max-width: 100%;\s*white-space: normal;/);
+    expect(block).toMatch(/\.runstrip__proof \.badge \{\s*display: inline-block;\s*border-radius: var\(--radius-4\);/); // its words and the hash run on
+    // a chip does not wrap anywhere else: it is one line on a screen that can hold it
+    expect(css.slice(0, phone)).not.toMatch(/\.runstrip__proof \.badge \{[^}]*white-space: normal/);
+  });
+
+  it("lets the row of numbers be narrower than the loading skeleton's blocks, which have a width of their own", () => {
+    const css = readFileSync(REPO_ROOT + "web/src/styles.css", "utf-8").replace(/\r\n/g, "\n");
+    const phone = css.indexOf("@media (max-width: 760px) {\n  /* The run page on a phone");
+    expect(phone).toBeGreaterThan(0);
+    expect(css.slice(phone)).toMatch(/\.counters--headline \{\s*flex: 1 1 100%;\s*flex-wrap: nowrap;\s*min-width: 0;/);
+    const page = readFileSync(REPO_ROOT + "web/src/pages/RunPage.tsx", "utf-8");
+    expect(page).toContain('<Skeleton width="min(420px, 100%)" height={30} />');
+    expect(page).not.toMatch(/<Skeleton width=\{420\}/);
   });
 
   it("keeps the replay bar the same distance above the foot of the window where the page ends and where it goes on under it", () => {

@@ -1366,10 +1366,12 @@ textarea {
   .runstate__actions .btn {
     flex: 1 1 auto;
   }
-  /* the three numbers are one row, their labels wrapping, so that the tree comes up the page */
+  /* the three numbers are one row, their labels wrapping, so that the tree comes up the page. The row may be narrower than the least width of
+     what is in it: the loading skeleton's blocks have a width of their own (pages/RunPage.tsx), which would else take the page sideways. */
   .counters--headline {
     flex: 1 1 100%;
     flex-wrap: nowrap;
+    min-width: 0;
   }
   .counters--headline .stat {
     flex: 1 1 auto;

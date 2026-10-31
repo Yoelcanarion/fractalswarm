@@ -8,6 +8,7 @@ import { RunsTable, type Sort } from "../components/catalogue/RunsTable";
 import { RunsToolbar } from "../components/catalogue/RunsToolbar";
 import { NewTaskForm } from "../components/NewTaskForm";
 import { Details, EmptyState, PageHeader, Skeleton, SkeletonGroup, Term } from "../components/ui";
+import { useSite } from "../components/useSite";
 import { defaultRunId, openedRunHash } from "../lib/address";
 import { fetchEventAt, verifyRun } from "../lib/api";
 import { withDetails } from "../lib/details";
@@ -57,6 +58,7 @@ export function RunsPage() {
   useDocumentTitle("Runs");
   const { runs, runsError, runsLoaded } = useRunStoreShallow((s) => ({ runs: s.runs, runsError: s.runsError, runsLoaded: s.runsLoaded }));
   const loadRuns = useRunStore((s) => s.loadRuns);
+  const site = useSite();
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const [sort, setSort] = useState<Sort>({ key: "listed", dir: "asc" });
   const [facts, setFacts] = useState<Record<string, RunFacts>>({});
@@ -167,12 +169,23 @@ export function RunsPage() {
         <EmptyState
           title="No runs yet"
           actions={
-            <a className="btn btn--on" href={withDetails("#/runs", "start")}>
-              Start a run
-            </a>
+            site === "server" && (
+              <a className="btn btn--on" href={withDetails("#/runs", "start")}>
+                Start a run
+              </a>
+            )
           }
         >
-          Nothing has been recorded on this server. Start a run below, or record one from the command line with <code>fractalswarm run</code>.
+          {site === "static" ? (
+            <>
+              This site shows recorded runs only, and it holds none. The app records them: run it with <code>uv run fractalswarm serve</code>, or record
+              one from the command line with <code>fractalswarm run</code>.
+            </>
+          ) : (
+            <>
+              Nothing has been recorded on this server. Start a run below, or record one from the command line with <code>fractalswarm run</code>.
+            </>
+          )}
         </EmptyState>
       ) : (
         <>

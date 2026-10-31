@@ -15,6 +15,7 @@ import { AblationPage } from "./ablation/AblationPage";
 import { parseAblationRoute, type AblationRoute } from "./ablation/route";
 import { RunStrip } from "./components/RunStrip";
 import { Guide, useGuide } from "./components/shell/Guide";
+import { useSite } from "./components/useSite";
 import { DirectorPage } from "./director/DirectorPage";
 import { parseDirectorRoute, type DirectorRoute } from "./director/route";
 import { IntakePage } from "./intake/IntakePage";
@@ -97,6 +98,7 @@ export function App() {
   const loadCapabilities = useRunStore((s) => s.loadCapabilities);
   const openRun = useRunStore((s) => s.openRun);
   const guide = useGuide();
+  const site = useSite();
 
   useEffect(() => {
     const onHash = () => setRoute(parseHash(window.location.hash));
@@ -144,7 +146,7 @@ export function App() {
           window.location.hash = pickedRunHash(id, route.page === "run" ? route.view : "overview");
         }}
       />
-      <Guide guide={guide} />
+      <Guide guide={guide} site={site} />
       {/* the strip's place is held from the first paint: it is there before the run is open, and the page below does not jump down when it fills */}
       {route.page === "run" && loadError === null && (runId ? <RunStrip /> : opening && <div className="runstrip" aria-hidden />)}
       <main className="content" id="main" tabIndex={-1}>

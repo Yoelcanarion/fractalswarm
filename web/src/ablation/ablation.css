@@ -82,6 +82,11 @@
   margin: 0;
 }
 
+/* that the page asks again by itself: under what the server said, which has no full stop of its own to end on */
+.abl__again {
+  display: block;
+}
+
 .abl__list {
   margin: 0;
   padding-left: var(--space-5);

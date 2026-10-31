@@ -158,7 +158,11 @@ export interface Problem {
   retrying: boolean;
 }
 
-const asking = (problem: Problem): string => (problem.retrying ? `Asking again every ${RETRY_MS / 1000} seconds.` : "");
+/** That the page is going to ask again by itself, on a line of its own: what the server said ends however it ends (a reason with no full stop, a
+ * command to run), so the sentence is not run on to it. */
+function Asking({ problem }: { problem: Problem }) {
+  return problem.retrying ? <span className="abl__again">{`Asking again every ${RETRY_MS / 1000} seconds.`}</span> : null;
+}
 
 /** The ablation could not be loaded at all: what the server said, and the way out. */
 export function AblationFailed({ problem, onRetry }: { problem: Problem; onRetry: () => void }) {
@@ -177,7 +181,7 @@ export function AblationFailed({ problem, onRetry }: { problem: Problem; onRetry
         </>
       }
     >
-      {problem.message} {asking(problem)}
+      {problem.message} <Asking problem={problem} />
     </EmptyState>
   );
 }
@@ -187,7 +191,7 @@ export function AblationBanner({ problem, onRetry }: { problem: Problem; onRetry
   return (
     <div className="abl__error" role="alert">
       <p>
-        {problem.message} {asking(problem)}
+        {problem.message} <Asking problem={problem} />
       </p>
       {!problem.retrying && (
         <button type="button" className="btn" onClick={onRetry}>

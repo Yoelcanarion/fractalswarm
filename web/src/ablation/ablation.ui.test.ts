@@ -299,6 +299,18 @@ describe("the flow", () => {
     expect(plainText(restarting)).toContain("Asking again every 2 seconds.");
   });
 
+  it("puts that it asks again on a line of its own, whatever the server's words end in: a reason with no full stop, or a command", () => {
+    for (const message of ["could not reach the server: Failed to fetch", "An ablation needs the local server. Run it yourself: uv run fractalswarm demo --verify"]) {
+      const failed = html(AblationFailed, { problem: { message, retrying: true }, onRetry: nothing });
+      expect(failed).toContain(`${message} <span class="abl__again">Asking again every 2 seconds.</span>`);
+      const banner = html(AblationBanner, { problem: { message, retrying: true }, onRetry: nothing });
+      expect(banner).toContain(`${message} <span class="abl__again">Asking again every 2 seconds.</span>`);
+    }
+    expect(html(AblationFailed, { problem: { message: "no such run", retrying: false }, onRetry: nothing })).not.toContain("abl__again");
+    const css = readFileSync(new URL("ablation.css", import.meta.url), "utf-8").replace(/\r\n/g, "\n");
+    expect(css).toMatch(/\.abl__again \{\s*display: block;/);
+  });
+
   it("keeps what was loaded when asking again fails, with the reason above it", () => {
     const stopped = html(AblationBanner, { problem: { message: "the server stopped", retrying: false }, onRetry: nothing });
     expect(plainText(stopped)).toContain("the server stopped");

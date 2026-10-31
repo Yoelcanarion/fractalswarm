@@ -141,7 +141,7 @@ function ChartsBody({ sets, runs }: { sets: HeroSet[]; runs: ReadonlySet<string>
           </label>
         </div>
         <ResultsTable hero={hero} knownRuns={runs} />
-        <p className="muted charts__tablenote">A run is a link when this server has it; open it to replay and verify it.</p>
+        <p className="muted charts__tablenote">A run is a link when it can be opened here; open it to replay and verify it.</p>
       </Details>
       {hero.note && <p className="muted">{hero.note}</p>}
     </div>

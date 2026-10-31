@@ -53,6 +53,25 @@
     width: 44px;
     height: 44px;
   }
+  /* The proof chips can be a sentence: a recording this code does not reproduce says where it first differs, and the static site's says it was
+     checked when the site was built. They wrap inside the strip rather than run off the screen and take the page sideways with them. */
+  .runstrip__proof {
+    margin-left: 0;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .runstrip__proof .tip,
+  .runstrip__proof .badge {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+  }
+  /* its words and the hash run on, so that a chip that wraps reads as a sentence; the corners are a pill's where it is one line */
+  .runstrip__proof .badge {
+    display: inline-block;
+    border-radius: var(--radius-4);
+    text-align: left;
+  }
 }
 
 /* ---- the Muse meter ---- */

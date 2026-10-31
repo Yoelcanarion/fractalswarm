@@ -200,7 +200,7 @@ export function RunsTable({ rows, sort, onSort, verify, onVerify }: RunsTablePro
   return (
     <div className="runstable">
       <table>
-        <caption className="sr-only">Runs on this server. Press a column title to sort by it.</caption>
+        <caption className="sr-only">The recorded runs. Press a column title to sort by it.</caption>
         <thead>
           <tr>
             <SortHead id="run" sort={sort} onSort={onSort}>

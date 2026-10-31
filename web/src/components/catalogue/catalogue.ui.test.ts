@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { NO_FILTER, readFacts, rowOf, type RunFacts, type VerifyView } from "../../lib/catalogue";
+import { DEFAULT_CAPABILITIES } from "../../lib/controls";
 import { REPO_ROOT, renderCurrent } from "../../lib/testing";
 import type { RunEvent, RunListing, VerifyReport } from "../../lib/types";
 import { RunsPage } from "../../pages/RunsPage";
@@ -50,6 +51,11 @@ describe("the table of runs", () => {
     rowOf(listing("t2-c3-central", "completed", CENTRAL), { ...c3, spentUsd: 0.601 }, 1),
     rowOf(listing("demo-toy", "completed", "fractalswarm.actors.toy:TOY", { source: "demo", events: 56, duration_ms: 4000 }), toy, 2),
   ];
+
+  it("captions the table for a screen reader without saying where the runs are", () => {
+    const out = table([rowOf(listing("t2-c3-swarm", "completed", SWARM), c3, 0)]);
+    expect(out).toContain('<caption class="sr-only">The recorded runs. Press a column title to sort by it.</caption>');
+  });
 
   it("says in words what ran, with what task, under which failures, billed or not, and what it spent", () => {
     const out = table(rows);
@@ -238,6 +244,17 @@ describe("the page", () => {
     expect(text(out)).toContain("No runs yet");
     expect(text(out)).toContain("fractalswarm run");
     expect(out).toContain("Start a run");
+  });
+
+  it("says on the static site that it shows recorded runs only, with no button that starts one", () => {
+    const out = page({ runsLoaded: true, runs: [], capabilities: { ...DEFAULT_CAPABILITIES, static: true } });
+    const t = text(out);
+    expect(t).toContain("No runs yet");
+    expect(t).toContain("This site shows recorded runs only, and it holds none.");
+    expect(t).toContain("uv run fractalswarm serve");
+    expect(t).toContain("fractalswarm run");
+    expect(t).not.toContain("this server");
+    expect(out).not.toContain(">Start a run</a>");
   });
 
   it("says why the list did not load, and offers to try again", () => {

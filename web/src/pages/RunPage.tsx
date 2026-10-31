@@ -16,7 +16,7 @@ function RunSkeleton({ label }: { label: string }) {
     <SkeletonGroup label={label}>
       <div className="run run--overview">
         <div className="runstate">
-          <Skeleton width={420} height={30} />
+          <Skeleton width="min(420px, 100%)" height={30} />
           <div className="counters counters--headline">
             {Array.from({ length: 3 }, (_, i) => (
               <Skeleton key={i} width={i === 0 ? 190 : 118} height={64} />
