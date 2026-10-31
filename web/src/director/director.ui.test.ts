@@ -176,7 +176,10 @@ describe("the pages that say a scene cannot be shown", () => {
     expect(html).toContain('href="#/director/s1-arena-open"');
     expect(html).toContain('href="#/director/s9-close"');
     expect(plainText(html)).toContain("s1-arena-open");
-    expect(plainText(html)).toMatch(/s1-arena-open The arena opens.* · arena · 32 s · needs swarm, rival/);
+    // the manifest names the first pair and the final run, so those scenes need nothing; the ablation waits for a person's own text
+    expect(plainText(html)).toMatch(/s1-arena-open The arena opens.* · arena · 32 s(?! · needs)/);
+    expect(plainText(html)).toMatch(/s4-lens .* · run · 18 s(?! · needs)/);
+    expect(plainText(html)).toMatch(/s3-ablation .* · ablation · \d+ s · needs ablation/);
     expect(plainText(html)).toMatch(/s9-close .* · title · 10 s(?! · needs)/);
     expect(html).not.toContain("s2-intake");
   });
@@ -195,12 +198,10 @@ describe("the pages that say a scene cannot be shown", () => {
     expect(read("./director.css")).toMatch(/\.dir\[data-stage="run"\] \.dir__stage--fit \{\s*height: calc\(1080px - var\(--dir-band\)\);\s*min-height: 0;/);
   });
 
-  it("says which runs a scene needs, and where to give them", () => {
-    const said = page("s1-arena-open");
-    expect(said).toContain("s1-arena-open needs swarm and rival");
+  it("says which run a scene still needs, and where to give it", () => {
+    const said = page("s3-ablation");
+    expect(said).toContain("s3-ablation needs ablation");
     expect(said).toContain("sources.json");
-    expect(said).toContain("?swarm=<run id>");
-    expect(page("s4-lens")).toContain("s4-lens needs run");
-    expect(page("s3-ablation")).toContain("needs ablation");
+    expect(said).toContain("?ablation=<run id>");
   });
 });

@@ -8,9 +8,9 @@
     "wonder": { "model": "wonder", "role": "root_planner" }
   },
   "steps": [
-    { "do": "speed", "x": 10 },
+    { "do": "speed", "x": 15 },
     { "do": "play" },
-    { "do": "wait", "ms": 3500 },
+    { "do": "wait", "until": "call-end:spark", "timeout_ms": 8000 },
     { "do": "pause" },
     { "do": "lens", "open": "spark" },
     { "do": "highlight", "target": { "region": "lens" }, "ms": 3000 },
