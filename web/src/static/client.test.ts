@@ -119,6 +119,15 @@ describe("opening a run", () => {
     expect(await loadAllEvents(ONE_CALL)).toHaveLength(9);
   });
 
+  it("recomputes a real log in the browser to the head stored with the run, and catches the digit it changes itself", async () => {
+    install();
+    const report = await verifyRun(TOY, "log");
+    expect(report.here).toMatchObject({ ok: true, events: 56, brokenAt: null, head: report.recorded_head, changed: false });
+    const changed = await verifyRun(TOY, "changed");
+    expect(changed.here).toMatchObject({ ok: false, changed: true });
+    expect(changed.here?.brokenAt).toBeGreaterThan(1);
+  });
+
   it("shows the replay report the build made, with the commit and the date it was checked at", async () => {
     install();
     const report = await verifyRun(TOY);

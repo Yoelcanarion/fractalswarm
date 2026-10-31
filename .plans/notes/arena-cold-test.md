@@ -64,6 +64,7 @@ One agent, Sonnet, with the site's address and nothing else, asked to judge it a
 - All five shipped logs hold in Chromium and in Firefox: 30,996 events, to the head stored with each run. That is the proof that reading the page files as text gives exactly the bytes the kernel hashed, on real logs and not only on the fixture.
 - Everything together takes 2.1 s in Chromium and 3.5 s in Firefox, loading the files included. The largest log takes 0.4 s and 0.8 s.
 - With one digit changed in the first file of `demo-final` on its way to the browser, the row says "Hash chain broken at event 2828", in both browsers, and the four other logs still hold.
+- The same is one click on the site: "Change one digit" changes the page's own copy of a log and recomputes, and "Back to the real log" restores it. All five logs break in both browsers.
 - It is not a replay, and the tooltip says so. The head comes from the same site, so it shows that a log and its head agree, not who wrote them (`docs/claims.md`, S8).
 
 ## What the three tests teach

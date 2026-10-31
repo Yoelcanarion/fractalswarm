@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { REPO_ROOT } from "../lib/testing";
-import { chainHash, checkChain, eventsOfPage } from "./chain";
+import { chainHash, checkChain, eventsOfPage, withOneDigitChanged } from "./chain";
 
 // Written by the kernel's own helpers and json.dumps the way the API's answers are: floats JSON.parse would change, keys out of order, text
 // that has to be escaped, characters of two and four bytes.
@@ -63,6 +63,19 @@ describe("the chain of a log", () => {
     expect(await checkChain([changed])).toEqual({ ok: false, events: 0, head: "0".repeat(32), brokenAt: 1 });
     const later = await checkChain([FIXTURE.replace("ñandú", "ñandu")]);
     expect(later).toMatchObject({ ok: false, events: 2, brokenAt: 3 });
+  });
+
+  it("breaks about halfway through on the copy with one digit changed, and leaves the rest as it was", async () => {
+    const lines = toy();
+    const pages = [page(lines.slice(0, 20)), page(lines.slice(20))];
+    const copy = withOneDigitChanged(pages);
+    expect(copy[0]).toBe(pages[0]);
+    expect(copy[1]).toHaveLength(pages[1].length);
+    expect([...copy[1]].filter((character, at) => character !== pages[1][at])).toHaveLength(1);
+    const { ok, brokenAt } = await checkChain(copy);
+    expect(ok).toBe(false);
+    expect(brokenAt).toBeGreaterThan(20);
+    expect(await checkChain(pages)).toMatchObject({ ok: true });
   });
 
   it("breaks where an event is missing, and where a whole page is", async () => {

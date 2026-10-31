@@ -156,6 +156,17 @@ const encoder = new TextEncoder();
 /** `chain_hash` of kernel/ids.py. */
 export const chainHash = (prevHash: string, row: string): string => blake2bHex(encoder.encode(prevHash + row));
 
+const TIME = '"ts_virtual":';
+
+/** The log as a person who edited one number would leave it: a digit of an event's time changed, about halfway through. */
+export function withOneDigitChanged(pages: readonly string[]): string[] {
+  const index = pages.length >> 1;
+  const page = pages[index];
+  const at = page.indexOf(TIME, page.length >> 1) + TIME.length;
+  const digit = (Number(page[at]) + 1) % 10;
+  return pages.map((text, i) => (i === index ? text.slice(0, at) + digit + text.slice(at + 1) : text));
+}
+
 /** The chain of a log, from its page files in order, stopping at the first event that does not follow. */
 export async function checkChain(pages: readonly string[]): Promise<ChainCheck> {
   let head = GENESIS;

@@ -54,4 +54,6 @@ export interface ChainHere {
   head: string;
   brokenAt: number | null;
   ms: number;
+  /** The check ran on a copy with one digit changed on purpose, to show that it can fail. */
+  changed?: boolean;
 }

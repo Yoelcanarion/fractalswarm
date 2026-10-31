@@ -10,7 +10,7 @@ import { NewTaskForm } from "../components/NewTaskForm";
 import { Details, EmptyState, PageHeader, Skeleton, SkeletonGroup, Term } from "../components/ui";
 import { useSite } from "../components/useSite";
 import { defaultRunId, openedRunHash } from "../lib/address";
-import { fetchEventAt, verifyRun } from "../lib/api";
+import { fetchEventAt, verifyRun, type HereCheck } from "../lib/api";
 import { withDetails } from "../lib/details";
 import {
   FEATURED_RUNS,
@@ -111,15 +111,17 @@ export function RunsPage() {
     [],
   );
 
-  const verifyOne = useCallback(async (id: string) => {
+  const check = useCallback(async (id: string, here?: HereCheck) => {
     setVerify((now) => ({ ...now, [id]: { state: "pending" } }));
     try {
-      const report = await verifyRun(id, import.meta.env.MODE === "static");
+      const report = await verifyRun(id, here);
       if (mounted.current) setVerify((now) => ({ ...now, [id]: { state: "done", report } }));
     } catch (error) {
       if (mounted.current) setVerify((now) => ({ ...now, [id]: { state: "error", error: messageOf(error) } }));
     }
   }, []);
+
+  const verifyOne = useCallback((id: string) => check(id, site === "static" ? "log" : undefined), [check, site]);
 
   // Not yet checked: a run that is recorded, halted or interrupted and has no verdict, or whose last try failed.
   const unchecked = tableRows.filter((row) => row.state !== "empty" && ["idle", "error"].includes(verify[row.listing.id]?.state ?? "idle"));
@@ -221,7 +223,14 @@ export function RunsPage() {
             />
             {tableRows.length > 0 ? (
               <>
-                <RunsTable rows={tableRows} sort={sort} onSort={onSort} verify={verify} onVerify={(id) => void verifyOne(id)} />
+                <RunsTable
+                  rows={tableRows}
+                  sort={sort}
+                  onSort={onSort}
+                  verify={verify}
+                  onVerify={(id) => void verifyOne(id)}
+                  onChangeDigit={site === "static" ? (id) => void check(id, "changed") : undefined}
+                />
                 <RunsKey />
               </>
             ) : (

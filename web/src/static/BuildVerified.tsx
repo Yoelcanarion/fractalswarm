@@ -32,6 +32,13 @@ export function verifiedAtBuild(report: VerifyReport): { label: string; detail: 
   const built = `${whereChecked(readStamp(report))} Recorded and replayed head ${report.replayed_head.slice(0, 12)}. Check it yourself: ${COMMAND}`;
   const { here } = report;
   if (here === undefined) return { label: "Replay verified at build", detail: built };
+  if (here.changed) {
+    return {
+      label: `One digit changed: hash chain broken at event ${(here.brokenAt ?? 0).toLocaleString("en-US")}`,
+      tone: "bad",
+      detail: "This page changed one digit of an event in its own copy of the log and recomputed. The hash of that event no longer matches, and every hash after it rests on it. The log itself was not touched.",
+    };
+  }
   if (!here.ok) {
     return {
       label: here.brokenAt === null ? "Log does not reach its stored head" : `Hash chain broken at event ${here.brokenAt}`,

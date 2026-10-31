@@ -69,7 +69,13 @@ function StateCell({ state }: { state: RunState }) {
   );
 }
 
-function VerifyCell({ row, view, onVerify }: { row: CatalogueRow; view: VerifyView; onVerify: (id: string) => void }) {
+/** What a row's check does. `onChangeDigit` is the static showcase's: its browser recomputes, so it can show the check failing. */
+interface VerifyActions {
+  onVerify: (id: string) => void;
+  onChangeDigit?: (id: string) => void;
+}
+
+function VerifyCell({ row, view, onVerify, onChangeDigit }: { row: CatalogueRow; view: VerifyView } & VerifyActions) {
   if (row.state === "live" || row.state === "empty") return <span className="muted">–</span>;
   if (view.state === "idle") {
     const here = import.meta.env.MODE === "static";
@@ -97,6 +103,18 @@ function VerifyCell({ row, view, onVerify }: { row: CatalogueRow; view: VerifyVi
           </span>
         </Tooltip>
       )}
+      {words.also && onChangeDigit && (
+        <Tooltip label="Changes one digit in this page's copy of the log and recomputes, to show that the check can fail.">
+          <button type="button" className="btn btn--seg" onClick={() => onChangeDigit(row.listing.id)} aria-label={`Change one digit of ${row.listing.id} and recompute`}>
+            Change one digit
+          </button>
+        </Tooltip>
+      )}
+      {view.state === "done" && view.report.here?.changed && (
+        <button type="button" className="btn btn--seg" onClick={() => onVerify(row.listing.id)} aria-label={`Recompute the real log of ${row.listing.id}`}>
+          Back to the real log
+        </button>
+      )}
       {view.state === "error" && (
         <button type="button" className="btn btn--seg" onClick={() => onVerify(row.listing.id)} aria-label={`Try again to verify ${row.listing.id}`}>
           Retry
@@ -106,7 +124,7 @@ function VerifyCell({ row, view, onVerify }: { row: CatalogueRow; view: VerifyVi
   );
 }
 
-function RunRow({ row, view, onVerify }: { row: CatalogueRow; view: VerifyView; onVerify: (id: string) => void }) {
+function RunRow({ row, view, onVerify, onChangeDigit }: { row: CatalogueRow; view: VerifyView } & VerifyActions) {
   const { listing, facts } = row;
   const task = facts?.task ? taskOf(facts.task) : null;
   const chaos = facts ? chaosWords(facts) : null;
@@ -188,23 +206,22 @@ function RunRow({ row, view, onVerify }: { row: CatalogueRow; view: VerifyView; 
         )}
       </td>
       <td className="runcell">
-        <VerifyCell row={row} view={view} onVerify={onVerify} />
+        <VerifyCell row={row} view={view} onVerify={onVerify} onChangeDigit={onChangeDigit} />
       </td>
     </tr>
   );
 }
 
-export interface RunsTableProps {
+export interface RunsTableProps extends VerifyActions {
   rows: readonly CatalogueRow[];
   sort: Sort;
   onSort: (key: SortKey) => void;
   verify: Readonly<Record<string, VerifyView>>;
-  onVerify: (id: string) => void;
 }
 
 /** One row per run, in words. The facts that live in the log (task, failures, billing, spend) arrive as the page reads them,
  * so a row is first a name and a size and then fills in. */
-export function RunsTable({ rows, sort, onSort, verify, onVerify }: RunsTableProps) {
+export function RunsTable({ rows, sort, onSort, verify, onVerify, onChangeDigit }: RunsTableProps) {
   return (
     <div className="runstable">
       <table>
@@ -233,7 +250,7 @@ export function RunsTable({ rows, sort, onSort, verify, onVerify }: RunsTablePro
         </thead>
         <tbody>
           {rows.map((row) => (
-            <RunRow key={row.listing.id} row={row} view={verify[row.listing.id] ?? { state: "idle" }} onVerify={onVerify} />
+            <RunRow key={row.listing.id} row={row} view={verify[row.listing.id] ?? { state: "idle" }} onVerify={onVerify} onChangeDigit={onChangeDigit} />
           ))}
         </tbody>
       </table>

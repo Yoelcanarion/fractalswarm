@@ -56,6 +56,15 @@ describe("the Runs page's verify cell", () => {
     expect(words.also?.detail).toContain("it is not a replay, which needs the code");
   });
 
+  it("says that a digit was changed on purpose when it was, and that the log itself was not touched", () => {
+    vi.stubEnv("MODE", "static");
+    const here = { ok: false, events: 4320, head: "a".repeat(32), brokenAt: 4321, ms: 1, changed: true };
+    const words = verifyWords({ state: "done", report: { ...VERIFY, here } } as never);
+    expect(words).toMatchObject({ label: "One digit changed: hash chain broken at event 4,321", tone: "bad" });
+    expect(words.detail).toContain("The log itself was not touched.");
+    expect(words.also).toBeUndefined();
+  });
+
   it("says where a chain breaks, and that a log that holds but stops short is not the one stored", () => {
     vi.stubEnv("MODE", "static");
     const here = { ok: false, events: 6, head: "a".repeat(32), brokenAt: 7, ms: 1 };

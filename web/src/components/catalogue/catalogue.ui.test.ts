@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { NO_FILTER, readFacts, rowOf, type RunFacts, type VerifyView } from "../../lib/catalogue";
 import { DEFAULT_CAPABILITIES } from "../../lib/controls";
@@ -137,6 +137,22 @@ describe("the table of runs", () => {
     expect(out).toContain("Replay mismatch at seq 812");
     expect(out).toContain("badge--bad");
     expect(out).not.toContain("Verify the replay of e"); // a live run has nothing to replay yet
+  });
+
+  it("lets the static showcase show its check failing, and go back to the real log", () => {
+    vi.stubEnv("MODE", "static");
+    const report = { ok: true, chain_ok: true, recorded_events: 9, replayed_events: 9, recorded_head: "a", replayed_head: "a", first_divergence: null, detail: "", bundle_head: null, bundle_head_ok: true };
+    const here = { ok: true, events: 9, head: "a", brokenAt: null, ms: 10 };
+    const verified = { state: "done", report: { ...report, here } } as const;
+    const rows = [rowOf(listing("a"), c3, 0)];
+    const shown = (view: VerifyView, onChangeDigit?: (id: string) => void) => html(createElement(RunsTable, { rows, sort: { key: "listed", dir: "asc" }, onSort: () => undefined, verify: { a: view }, onVerify: () => undefined, onChangeDigit }));
+    expect(shown(verified, () => undefined)).toContain(">Change one digit<");
+    expect(shown(verified)).not.toContain("Change one digit");
+    const changed = shown({ state: "done", report: { ...report, here: { ...here, ok: false, brokenAt: 5, changed: true } } }, () => undefined);
+    expect(changed).toContain("One digit changed: hash chain broken at event 5");
+    expect(changed).toContain(">Back to the real log<");
+    expect(changed).not.toContain(">Change one digit<");
+    vi.unstubAllEnvs();
   });
 
   it("keeps a failed check apart from a mismatch and offers to try again", () => {
