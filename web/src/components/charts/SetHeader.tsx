@@ -55,19 +55,19 @@ export function SetCaption({ set }: { set: HeroSet }) {
           {task.name && ` ${task.name}`} · {caption.seeds}
           {caption.runs && ` · ${caption.runs}`}
         </span>
+        {levels.length > 0 && (
+          <span className="setcaption__levels">
+            Failure levels:{" "}
+            {levels.map((id, index) => (
+              <Fragment key={id}>
+                {index > 0 && <span aria-hidden="true"> · </span>}
+                <Term id={id} />
+              </Fragment>
+            ))}
+          </span>
+        )}
         <span className="mono setcaption__source">{set.source}</span>
       </div>
-      {levels.length > 0 && (
-        <div className="setcaption__line setcaption__levels">
-          <span>Failure levels:</span>
-          {levels.map((id, index) => (
-            <Fragment key={id}>
-              {index > 0 && <span aria-hidden="true">·</span>}
-              <Term id={id} />
-            </Fragment>
-          ))}
-        </div>
-      )}
       {note && <p className="setcaption__note">{note}</p>}
     </div>
   );

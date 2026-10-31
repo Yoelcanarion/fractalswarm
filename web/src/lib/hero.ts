@@ -179,11 +179,13 @@ export function normalizeHero(data: unknown): HeroData {
 /** The key of a series' [lowest, highest] band in a chart row. */
 export const bandKey = (seriesId: string): string => `${seriesId}:band`;
 
+export type ChartRow = Record<string, number | string | [number, number] | null>;
+
 /** Recharts rows: one per x value, one column per workflow for the chosen metric, and
  * ``<workflow>:band`` with the [lowest, highest] over the seeds where the file records them. */
-export function chartRows(hero: HeroData, metric: MetricKey): Record<string, number | string | [number, number] | null>[] {
+export function chartRows(hero: HeroData, metric: MetricKey): ChartRow[] {
   return hero.x.map((x) => {
-    const row: Record<string, number | string | [number, number] | null> = {
+    const row: ChartRow = {
       x,
       label: `${x} (${PROFILE_BY_KILLS[x] ?? "?"})`,
     };
@@ -196,6 +198,18 @@ export function chartRows(hero: HeroData, metric: MetricKey): Record<string, num
     return row;
   });
 }
+
+/** The two ends of a workflow's mark in a chart row: its lowest and highest seed, or its mean twice where the file records no spread. Null where the
+ * workflow has no point at that level. */
+export function rangeOf(row: ChartRow, id: string): [number, number] | null {
+  const mean = row[id];
+  if (typeof mean !== "number") return null;
+  const band = row[bandKey(id)];
+  return Array.isArray(band) ? band : [mean, mean];
+}
+
+/** How far down a mark that spans ``range`` a value falls, as a share of the mark's height: 0 at the highest seed. */
+export const shareDown = (value: number, [low, high]: readonly [number, number]): number => (high > low ? (high - value) / (high - low) : 0);
 
 /** How many seeds the points of a set were taken over: the smallest and largest count, so a set whose
  * points differ says so. Null where the file does not name its seeds. */

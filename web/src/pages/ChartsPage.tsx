@@ -4,12 +4,12 @@ import "../components/charts/charts.css";
 import { seriesColors } from "../components/charts/colors";
 import { MetricChart } from "../components/charts/MetricChart";
 import { ResultsTable } from "../components/charts/ResultsTable";
-import { SeriesKey } from "../components/charts/SeriesKey";
+import { MarkKey, SeriesKey } from "../components/charts/SeriesKey";
 import { SetCaption, SetPicker } from "../components/charts/SetHeader";
 import { Card, Details, EmptyState, PageHeader, Skeleton, SkeletonGroup } from "../components/ui";
 import { benchResults, listRuns } from "../lib/api";
 import { heroSets, runCount, type HeroSet } from "../lib/hero";
-import { drawsInProcess, IN_PROCESS_REASON, isFlat } from "../lib/heroText";
+import { COST_BASIS, drawsInProcess, IN_PROCESS_REASON, isFlat, setFinding, TIE_RULE } from "../lib/heroText";
 import { useDocumentTitle } from "../lib/title";
 
 /** Why a chart of a recorded set shows less than 100%: the one run on record that is not valid (bench/REPORT.md §4.10.7). */
@@ -74,7 +74,6 @@ function FlatCard({ title, children }: { title: string; children: string }) {
 function ChartsBody({ sets, runs }: { sets: HeroSet[]; runs: ReadonlySet<string> }) {
   const [chosen, setChosen] = useState(sets[0].name);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
-  const [showBand, setShowBand] = useState(true);
   const set = sets.find((s) => s.name === chosen) ?? sets[0];
   const { hero } = set;
   const colors = useMemo(() => seriesColors(hero), [hero]);
@@ -90,12 +89,22 @@ function ChartsBody({ sets, runs }: { sets: HeroSet[]; runs: ReadonlySet<string>
   );
   const finished = isFlat(hero, "completionRate", 1) && isFlat(hero, "validityRate", 1);
   const total = runCount(hero);
-  const chart = { hero, colors, hidden, showBand };
+  const chart = { hero, colors, hidden };
+  const finding = setFinding(set);
   return (
     <div className="charts">
       <PageHeader
-        title="Stall time and extra cost when coordinators die"
-        lead="The same failures hit every workflow. Each point is the mean over the seeds that were run, and the band behind a line runs from the lowest to the highest seed."
+        compact
+        title="When coordinators die"
+        lead={
+          finding ? (
+            <>
+              {finding} <a href="#/helps?details=claim">When this holds</a>
+            </>
+          ) : (
+            "The same failures hit every workflow."
+          )
+        }
       />
       <SetPicker
         sets={sets}
@@ -106,12 +115,18 @@ function ChartsBody({ sets, runs }: { sets: HeroSet[]; runs: ReadonlySet<string>
         }}
       />
       <SetCaption set={set} />
-      <SeriesKey series={hero.series} colors={colors} hidden={hidden} />
+      <div className="charts__keyrow">
+        <SeriesKey series={hero.series} colors={colors} hidden={hidden} />
+        <MarkKey />
+      </div>
       <div className="charts__hero">
         <MetricChart {...chart} metric="stallS" height={340} />
         <MetricChart {...chart} metric="extraCostPct" height={340} />
       </div>
-      {drawsInProcess(hero) && <p className="charts__reason">{IN_PROCESS_REASON}</p>}
+      <div className="charts__notes">
+        {finding && <p className="charts__reason">{TIE_RULE}</p>}
+        {drawsInProcess(hero) && <p className="charts__reason">{finding ? `${IN_PROCESS_REASON} ${COST_BASIS}` : IN_PROCESS_REASON}</p>}
+      </div>
       <div className="charts__secondary">
         <MetricChart {...chart} metric="costUsd" height={220} />
         {finished ? (
@@ -139,13 +154,9 @@ function ChartsBody({ sets, runs }: { sets: HeroSet[]; runs: ReadonlySet<string>
         )}
       </div>
       {NOT_VALID[set.name] && <p className="muted charts__notvalid">{NOT_VALID[set.name]}</p>}
-      <Details id="more" summary="Hide a workflow, show the band of seeds, or read every number" hint="the table of the charts is here">
+      <Details id="more" summary="Hide a workflow, or read every number" hint="the table of the charts is here">
         <div className="charts__controls">
           <SeriesKey series={hero.series} colors={colors} hidden={hidden} onToggle={toggle} />
-          <label className="checkline">
-            <input type="checkbox" checked={showBand} onChange={(event) => setShowBand(event.target.checked)} />
-            Show the lowest to highest seed
-          </label>
         </div>
         <ResultsTable hero={hero} knownRuns={runs} />
         <p className="muted charts__tablenote">A run is a link when it can be opened here; open it to replay and verify it.</p>

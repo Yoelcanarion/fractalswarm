@@ -1295,6 +1295,7 @@ textarea {
   .run__main,
   .run__main--split,
   .charts__hero,
+  .charts__notes,
   .charts__secondary {
     grid-template-columns: 1fr;
   }

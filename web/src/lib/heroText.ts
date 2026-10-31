@@ -1,7 +1,8 @@
 // The words and the number formats of the Charts page. Pure, so they are tested without a browser.
 //
 // The numbers come from the recorded files; the words that describe a setting come from docs/claims.md and
-// bench/REPORT.md §1, and none of them compares one workflow with another (that is for claims.md alone).
+// bench/REPORT.md §1, and none of them compares one workflow with another (that is for claims.md alone: what a
+// set found, at the end of this file, quotes its rows).
 
 import type { TermId } from "./glossary";
 import type { Backend, HeroData, HeroPoint, HeroSet, MetricKey } from "./hero";
@@ -43,6 +44,9 @@ export function formatMetric(metric: MetricKey, value: number | null | undefined
   const sign = Number(body.replace(/,/g, "")) === 0 ? "" : shown < 0 ? MINUS : spec.signed ? "+" : "";
   return `${sign}${spec.prefix ?? ""}${body}${spec.unit}`;
 }
+
+/** A value on an axis: round numbers need no decimals. "100 s", "+120%", "12.5 s", "$0.300". */
+export const formatTick = (metric: MetricKey, value: number): string => formatMetric(metric, value).replace(/\.0+(?!\d)/, "");
 
 /** "5.6 to 23.5 s": the lowest and highest seed, in the unit of the metric. */
 export function formatRange(metric: MetricKey, range: readonly [number, number]): string {
@@ -133,3 +137,20 @@ export function settingNote(set: HeroSet): string | null {
 
 /** Whether a set draws the in-process supervisor, which then carries its reason. */
 export const drawsInProcess = (hero: HeroData): boolean => hero.series.some((s) => s.id === "central");
+
+// ---- what a set found (docs/claims.md) ----
+
+/** Why two means that differ are a tie: bench/PREREG.md §3, in the words of the home page. */
+export const TIE_RULE = "Why a tie, when the means differ: a win needs every seed to agree by a minimum effect, a rule fixed before the runs, and these seeds disagree.";
+
+/** The two bases of claim R5, for the set whose extra cost it quotes. The second is summed from the run logs, so it is not in the set's file. */
+export const COST_BASIS =
+  "Extra cost is on the pre-registered basis, which estimates the cost of cancelled calls. On completed calls only, the swarm's is −1.1% against +29.2% for the in-process supervisor.";
+
+/** Claim R6, with its figures read from the set's own file, for the one set it is about. It must stay beside a link to R2 and R3. Null for a set that is only drawn. */
+export function setFinding(set: HeroSet): string | null {
+  if (set.name !== "headline-10") return null;
+  const [swarm, central] = ["swarm", "central"].map((id) => set.hero.series.find((s) => s.id === id)?.points.at(-1)?.stallS);
+  if (swarm === undefined || central === undefined) return null;
+  return `On the real model, with five of the swarm's ten coordinators crashed and half its agents killed, every run finished with a valid result. It stalled ${formatMetric("stallS", swarm)} against ${formatMetric("stallS", central)} for an in-process supervisor, and tied an ideal durable supervisor on stall time and extra cost.`;
+}

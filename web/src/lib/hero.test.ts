@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { bandKey, chartRows, heroSets, normalizeHero, runCount, seedCounts, workflowLabel } from "./hero";
+import { bandKey, chartRows, heroSets, normalizeHero, rangeOf, runCount, seedCounts, shareDown, workflowLabel } from "./hero";
 import { REPO_ROOT } from "./testing";
 
 const fixture = JSON.parse(readFileSync(REPO_ROOT + "src/fractalswarm/api/fixtures/hero_chart.json", "utf-8"));
@@ -122,6 +122,19 @@ describe("the recorded sets", () => {
     expect(rows[3][bandKey("swarm")]).toEqual([5.64, 23.516]);
     // a metric the file has no range for leaves the band empty rather than inventing one
     expect(chartRows(normalizeHero(fixture), "stallS")[3][bandKey("swarm")]).toBeNull();
+  });
+
+  it("marks a workflow from its lowest seed to its highest, or at its mean where the file has no spread, and not where it has no point", () => {
+    expect(rangeOf(chartRows(normalizeHero(recorded("v1")), "stallS")[3], "swarm")).toEqual([5.64, 23.516]);
+    expect(rangeOf({ swarm: 7, [bandKey("swarm")]: null }, "swarm")).toEqual([7, 7]);
+    expect(rangeOf({ swarm: null }, "swarm")).toBeNull();
+  });
+
+  it("puts the mean on its mark by how far it falls from the highest seed", () => {
+    expect(shareDown(10, [10, 30])).toBe(1);
+    expect(shareDown(30, [10, 30])).toBe(0);
+    expect(shareDown(25, [10, 30])).toBe(0.25);
+    expect(shareDown(5, [5, 5])).toBe(0); // a mark with no height: the dot stands where it starts
   });
 
   it("counts seeds and runs only where the file names them", () => {

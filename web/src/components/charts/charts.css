@@ -10,6 +10,81 @@
   min-width: 0;
 }
 
+.chartcard__plot {
+  height: var(--plot-h);
+}
+
+/* The two charts the page is for fit a laptop's first screen, their axis included. */
+.charts__hero .chartcard__plot {
+  height: clamp(240px, calc(100vh - 470px), var(--plot-h));
+}
+
+/* A figure beside a dot stays legible across a gridline. */
+.chartmark__figure {
+  fill: var(--text-primary);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  dominant-baseline: central;
+  stroke: var(--surface-1);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+
+.charts__keyrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.markkey {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 0 auto;
+  color: var(--text-secondary);
+  font-size: var(--fs-body);
+}
+
+.markkey__mark {
+  flex: none;
+  fill: var(--text-secondary);
+}
+
+.markkey__mark rect {
+  fill-opacity: 0.45;
+}
+
+/* What the charts cannot say, each under the chart it speaks to first. */
+.charts__notes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.charts__notes:empty {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .markkey {
+    margin-left: 0;
+  }
+}
+
+/* The head keeps one row and one height, so that the set just pressed stays under the pointer when its sentence is shorter. */
+@media (min-width: 1101px) {
+  .charts .pagehead__text {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .charts .pagehead__lead {
+    min-height: 2lh;
+  }
+}
+
 /* ---- which recorded set ---- */
 .setpicker {
   display: flex;
@@ -50,11 +125,24 @@
   }
 }
 
+/* On a phone four sets stacked would take the screen the chart needs. */
+@media (max-width: 760px) {
+  .setpicker {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .setpicker__item {
+    align-content: start;
+    padding-inline: var(--space-3);
+  }
+}
+
 /* ---- what the set was run with: always next to the charts ---- */
 .setcaption {
   display: grid;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-3);
   background: var(--surface-1);
@@ -153,15 +241,6 @@
   }
 }
 
-.checkline {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--text-secondary);
-  font-size: var(--fs-body);
-  cursor: pointer;
-}
-
 /* ---- the cards ---- */
 .flatnote {
   margin: 0;
@@ -180,6 +259,22 @@
   color: var(--text-secondary);
   font-size: var(--fs-base);
   line-height: var(--lh-body);
+}
+
+/* A laptop's first screen ends at the axis of the charts: the rows above them give back what they can. */
+@media (min-width: 1101px) and (max-height: 900px) {
+  .charts {
+    gap: 10px;
+    padding-block: 12px;
+  }
+
+  .setpicker__item {
+    padding-block: var(--space-1);
+  }
+
+  .serieskey__item {
+    padding-block: 3px;
+  }
 }
 
 /* ---- the hover card ---- */

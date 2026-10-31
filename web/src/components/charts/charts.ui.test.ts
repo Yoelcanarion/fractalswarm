@@ -11,7 +11,7 @@ import { MetricChart } from "./MetricChart";
 import story from "../../home/data/story.json";
 import { NOT_VALID } from "../../pages/ChartsPage";
 import { ResultsTable, runName, seedsText } from "./ResultsTable";
-import { SeriesKey } from "./SeriesKey";
+import { MarkKey, SeriesKey } from "./SeriesKey";
 import { SetCaption, SetPicker } from "./SetHeader";
 
 const recorded = (set: string) => JSON.parse(readFileSync(REPO_ROOT + `bench/results/${set}/hero-t2_conference.json`, "utf-8"));
@@ -161,10 +161,17 @@ describe("a chart", () => {
   it("is a card titled with its metric's definition and the file's own words for the axis", () => {
     const hero = set("v1").hero;
     const out = html(
-      createElement(MetricChart, { hero, metric: "stallS", colors: seriesColors(hero), hidden: new Set<string>(), showBand: true, height: 300 }),
+      createElement(MetricChart, { hero, metric: "stallS", colors: seriesColors(hero), hidden: new Set<string>(), height: 300 }),
     );
     expect(out).toContain("Stall time");
     expect(out).toContain("no agent LLM call is in flight anywhere"); // the glossary bubble
     expect(out).toContain("no agent work in flight anywhere"); // the file's note
+  });
+
+  it("is read from a key drawn beside the workflows: a dot for the mean and a bar for the seeds", () => {
+    const out = html(createElement(MarkKey));
+    expect(out).toContain("Dot: mean.");
+    expect(out).toContain("Bar: lowest to highest seed.");
+    expect(out).toContain('aria-hidden="true"'); // the words carry it, so the drawing is not read out
   });
 });

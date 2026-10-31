@@ -1,13 +1,53 @@
-import { useMemo } from "react";
-import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useMemo, type CSSProperties } from "react";
+import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import { axis, GRID, TOOLTIP_STYLE } from "../../lib/chart";
+import { axis, GRID, TOOLTIP_CURSOR, TOOLTIP_STYLE } from "../../lib/chart";
 import { useFirstDraw } from "../../lib/chartMotion";
-import { bandKey, chartRows, type HeroData, type MetricKey } from "../../lib/hero";
-import { formatMetric, formatPoint, METRICS } from "../../lib/heroText";
+import { chartRows, rangeOf, shareDown, type ChartRow, type HeroData, type MetricKey } from "../../lib/hero";
+import { formatMetric, formatPoint, formatTick, METRICS } from "../../lib/heroText";
 import { Card, Term } from "../ui";
 
 const AXIS = axis(14);
+const BAR_W = 6;
+const DOT_R = 6;
+const FIGURE_SLOT = 54; // the narrowest slot whose mean fits beside its dot, short of the next workflow's bar
+
+interface RangeMarkProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  index?: number;
+  payload?: ChartRow;
+  id: string;
+  color: string;
+  metric: MetricKey;
+  /** The row whose marks say their mean in figures. */
+  figures: number;
+}
+
+/** One workflow at one failure level: a thin bar from its lowest to its highest seed, and a dot on its mean. The workflows stand side by side, so that
+ * whether the seeds of two of them overlap reads at a glance. The level with the most failures says its means in figures beside the dots, where the slot
+ * has room: over a bar, a figure would read as the height it stands at. */
+function RangeMark({ x = 0, y = 0, width = 0, height = 0, index, payload, id, color, metric, figures }: RangeMarkProps) {
+  const range = payload ? rangeOf(payload, id) : null;
+  const mean = payload?.[id];
+  if (range === null || typeof mean !== "number") return <g />;
+  const middle = x + width / 2;
+  const radius = Math.min(DOT_R, Math.max(3, width / 2 - 0.5));
+  const dot = y + shareDown(mean, range) * height;
+  return (
+    <g>
+      {height > 0 && <rect x={middle - BAR_W / 2} y={y} width={BAR_W} height={height} rx={BAR_W / 2} fill={color} fillOpacity={0.55} />}
+      <circle cx={middle} cy={dot} r={radius} fill={color} stroke="var(--surface-1)" strokeWidth={2} />
+      {index === figures && width >= FIGURE_SLOT && (
+        <text className="chartmark__figure" x={middle + radius + 5} y={dot}>
+          {formatMetric(metric, mean)}
+        </text>
+      )}
+    </g>
+  );
+}
 
 interface Row {
   x?: unknown;
@@ -53,84 +93,68 @@ export interface MetricChartProps {
   metric: MetricKey;
   colors: Record<string, string>;
   hidden: ReadonlySet<string>;
-  /** Draw the lowest to highest seed behind each line, where the file records it. */
-  showBand: boolean;
   height: number;
   /** What the axis is, when the file does not say. */
   note?: string;
 }
 
-export function MetricChart({ hero, metric, colors, hidden, showBand, height, note }: MetricChartProps) {
+export function MetricChart({ hero, metric, colors, hidden, height, note }: MetricChartProps) {
   const spec = METRICS[metric];
   const rows = useMemo(() => chartRows(hero, metric), [hero, metric]);
+  // recharts recomputes a series whose dataKey is a new function: one for each workflow, for as long as the set is the same.
+  const ranges = useMemo(() => new Map(hero.series.map((s) => [s.id, (row: ChartRow) => rangeOf(row, s.id)])), [hero]);
   const draw = useFirstDraw();
   const visible = hero.series.filter((s) => !hidden.has(s.id));
   const ids = visible.map((s) => s.id);
-  const banded = (id: string) => hero.series.find((s) => s.id === id)?.points.some((p) => p.range[metric]) ?? false;
   const title = spec.term ? <Term id={spec.term}>{spec.title}</Term> : spec.title;
   return (
     <Card title={title} hint={hero.panels[metric]?.note || note} className="chartcard">
-      <ResponsiveContainer width="100%" height={height}>
-        <ComposedChart data={rows} margin={{ top: 12, right: 24, bottom: 24, left: 4 }}>
-          <CartesianGrid stroke={GRID} vertical={false} />
-          <XAxis
-            dataKey="label"
-            {...AXIS}
-            label={{ value: hero.xLabel, position: "insideBottom", offset: -14, fill: "var(--text-secondary)", fontSize: 14 }}
-          />
-          <YAxis
-            {...AXIS}
-            width={72}
-            tickFormatter={(value) => formatMetric(metric, Number(value))}
-            domain={spec.rate ? [0, 1] : ["auto", "auto"]}
-            allowDecimals
-          />
-          {!spec.rate && <ReferenceLine y={0} stroke="var(--border-strong)" ifOverflow="extendDomain" />}
-          <Tooltip
-            cursor={{ stroke: "var(--border-strong)" }}
-            content={(props) => (
-              <ChartTip
-                active={props.active}
-                payload={props.payload as TipProps["payload"]}
-                hero={hero}
-                metric={metric}
-                visible={ids}
-                colors={colors}
-              />
-            )}
-          />
-          {showBand &&
-            visible
-              .filter((s) => banded(s.id))
-              .map((s) => (
-                <Area
-                  key={`${s.id}:band`}
-                  dataKey={bandKey(s.id)}
-                  stroke="none"
-                  fill={colors[s.id]}
-                  fillOpacity={0.14}
-                  connectNulls
-                  isAnimationActive={false}
-                  activeDot={false}
-                  legendType="none"
-                  tooltipType="none"
-                />
-              ))}
-          {visible.map((s) => (
-            <Line
-              key={s.id}
-              dataKey={s.id}
-              name={s.label}
-              stroke={colors[s.id]}
-              strokeWidth={s.id === "swarm" ? 3.5 : 2}
-              dot={{ r: 4, strokeWidth: 2, fill: "var(--surface-1)" }}
-              activeDot={{ r: 6 }}
-              connectNulls
-              {...draw}
+      <div className="chartcard__plot" style={{ "--plot-h": `${height}px` } as CSSProperties}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={rows} margin={{ top: 12, right: 24, bottom: 24, left: 4 }} barGap={0} barCategoryGap="6%">
+            <CartesianGrid stroke={GRID} vertical={false} />
+            <XAxis
+              dataKey="label"
+              {...AXIS}
+              label={{ value: hero.xLabel, position: "insideBottom", offset: -14, fill: "var(--text-secondary)", fontSize: 14 }}
             />
-          ))}
-        </ComposedChart>
-      </ResponsiveContainer>
+            <YAxis
+              {...AXIS}
+              width={72}
+              tickFormatter={(value) => formatTick(metric, Number(value))}
+              domain={spec.rate ? [0, 1] : ["auto", "auto"]}
+              allowDecimals
+            />
+            {/* layer 0: under the marks, so that the line does not strike through a figure beside a dot */}
+            {!spec.rate && <ReferenceLine y={0} stroke="var(--border-strong)" ifOverflow="extendDomain" zIndex={0} />}
+            <Tooltip
+              cursor={TOOLTIP_CURSOR}
+              content={(props) => (
+                <ChartTip
+                  active={props.active}
+                  payload={props.payload as TipProps["payload"]}
+                  hero={hero}
+                  metric={metric}
+                  visible={ids}
+                  colors={colors}
+                />
+              )}
+            />
+            {visible.map((s) => (
+              <Bar
+                key={s.id}
+                dataKey={ranges.get(s.id)}
+                name={s.label}
+                maxBarSize={72}
+                shape={(mark: Omit<RangeMarkProps, "id" | "color" | "metric" | "figures">) => (
+                  <RangeMark {...mark} id={s.id} color={colors[s.id]} metric={metric} figures={rows.length - 1} />
+                )}
+                {...draw}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </Card>
   );
 }

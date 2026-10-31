@@ -10,6 +10,19 @@ export interface SeriesKeyProps {
   onToggle?: (id: string) => void;
 }
 
+/** How to read a mark of the charts, drawn as one. */
+export function MarkKey() {
+  return (
+    <p className="markkey">
+      <svg className="markkey__mark" width="14" height="26" viewBox="0 0 14 26" aria-hidden="true">
+        <rect x="4" y="1" width="6" height="24" rx="3" />
+        <circle cx="7" cy="15" r="5" />
+      </svg>
+      Dot: mean. Bar: lowest to highest seed.
+    </p>
+  );
+}
+
 /** The key to every chart of the page: one entry per workflow, with what it is on hover. One key serves all the charts, so none of
  * them repeats a legend. In view it is only a legend; the toggles that hide a workflow are the same key under Details. */
 export function SeriesKey({ series, colors, hidden, onToggle }: SeriesKeyProps) {

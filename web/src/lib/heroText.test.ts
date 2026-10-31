@@ -9,10 +9,14 @@ import {
   formatMetric,
   formatPoint,
   formatRange,
+  formatTick,
+  COST_BASIS,
   IN_PROCESS_REASON,
   isFlat,
+  setFinding,
   settingNote,
   taskOf,
+  TIE_RULE,
   WORKFLOW_HELP,
 } from "./heroText";
 import { REPO_ROOT } from "./testing";
@@ -26,6 +30,16 @@ const sets = heroSets({
 const byName = (name: string) => sets.find((s) => s.name === name)!;
 
 describe("number formats", () => {
+  it("keeps an axis free of the decimals a round number does not need", () => {
+    expect(formatTick("stallS", 100)).toBe("100 s");
+    expect(formatTick("stallS", 12.5)).toBe("12.5 s");
+    expect(formatTick("stallS", 0)).toBe("0 s");
+    expect(formatTick("extraCostPct", 120)).toBe("+120%");
+    expect(formatTick("extraCostPct", -40)).toBe("−40%");
+    expect(formatTick("costUsd", 0.3)).toBe("$0.300");
+    expect(formatTick("costUsd", 1)).toBe("$1");
+  });
+
   it("writes each metric in its unit, with the signs the report uses", () => {
     expect(formatMetric("stallS", 14.578)).toBe("14.6 s");
     expect(formatMetric("stallS", 0)).toBe("0.0 s");
@@ -116,5 +130,29 @@ describe("the in-process supervisor", () => {
     for (const id of drawn) expect(WORKFLOW_HELP[id], id).toBeTruthy();
     const claims = /simpler|cheaper|more reliable|faster|better|\bbest\b|worse|outperform/i;
     for (const [id, text] of Object.entries(WORKFLOW_HELP)) expect(text, id).not.toMatch(claims);
+  });
+});
+
+describe("what a set found", () => {
+  const claim = (id: string) => readFileSync(REPO_ROOT + "docs/claims.md", "utf-8").split(/\r?\n/).find((line) => line.startsWith(`| ${id} |`))!;
+  const [tenSeeds] = heroSets({ fixture: false, sets: [{ name: "headline-10", source: "bench/results/headline-10", data: recorded("headline-10") }] });
+
+  it("is claim R6 for the ten seeds, with the set's own figures", () => {
+    const finding = setFinding(tenSeeds)!;
+    const stated = "every run finished with a valid result. It stalled 11.2 s against 42.8 s for an in-process supervisor, and tied an ideal durable supervisor on stall time and extra cost.";
+    expect(finding).toContain(stated);
+    expect(claim("R6")).toContain(stated);
+    expect(finding).toContain("half its agents killed");
+  });
+
+  it("says nothing for a set that is only drawn", () => {
+    for (const set of sets) expect(setFinding(set), set.name).toBeNull();
+  });
+
+  it("gives the rule that makes a tie, and both bases of the cost it shows (claim R5)", () => {
+    expect(TIE_RULE).toContain("every seed to agree by a minimum effect");
+    expect(COST_BASIS).toContain("pre-registered basis");
+    expect(claim("R5")).toContain("−1.1% against +29.2% on completed calls only");
+    expect(COST_BASIS).toContain("−1.1% against +29.2%");
   });
 });
