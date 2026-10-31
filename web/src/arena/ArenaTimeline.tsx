@@ -35,10 +35,7 @@ function LaneTrack({ clock, lane, end, label, noun }: { clock: Clock; lane: Lane
                 title={`${band.coordinator} ${what}: ${seconds(band.since)} to ${band.open ? "the end of the run" : seconds(band.until)}`}
                 aria-label={`${noun}: ${band.coordinator} ${what} from ${seconds(band.since)}: jump here`}
                 {...roving.stop(index, count)}
-                onClick={() => {
-                  clock.setPlaying(false);
-                  clock.seekTime(band.since);
-                }}
+                onClick={() => clock.seekTime(band.since)}
               />
             );
           })}
@@ -53,10 +50,7 @@ function LaneTrack({ clock, lane, end, label, noun }: { clock: Clock; lane: Lane
               title={mark.label}
               aria-label={`${mark.label}: jump here`}
               {...roving.stop(lane.bands.length + index, count)}
-              onClick={() => {
-                clock.setPlaying(false);
-                clock.seekTime(mark.ts);
-              }}
+              onClick={() => clock.seekTime(mark.ts)}
             />
           ))}
         </div>
@@ -72,7 +66,8 @@ export interface ArenaTimelineProps {
 }
 
 /** One play button, one scrubber and one speed for both runs, over a lane per side: the band of each
- * outage and the markers of each crash and recovery, on the shared time axis. */
+ * outage and the markers of each crash and recovery, on the shared time axis. As on the run page, a click on a band or a marker only moves
+ * the playhead (a replay that plays goes on from there), and dragging the scrubber pauses. */
 export function ArenaTimeline({ clock, left, right }: ArenaTimelineProps) {
   const leftEvents = useStore(left, (s) => s.events);
   const rightEvents = useStore(right, (s) => s.events);

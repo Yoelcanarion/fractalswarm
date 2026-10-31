@@ -80,11 +80,13 @@ export interface ScoreboardProps {
   playing: boolean;
   /** The clock steps by hand (a director's take): numbers are shown as they are, never counted up. */
   fixedStep: boolean;
+  /** The caveat that one pair is one run on one seed, with its links. Left out where the end of the pair, which says it in full, is on the page. */
+  caveat?: boolean;
 }
 
 /** The face-to-face counters. They run on the fold of each log while it plays, and a run that has
  * played out ends on the numbers the metrics scored (marked ✓). */
-export function Scoreboard({ left, right, official, playing, fixedStep }: ScoreboardProps) {
+export function Scoreboard({ left, right, official, playing, fixedStep, caveat = true }: ScoreboardProps) {
   const l = useSideNumbers(left, official.left);
   const r = useSideNumbers(right, official.right);
   const rows = useMemo(() => scoreRows(l, r), [l, r]);
@@ -100,8 +102,13 @@ export function Scoreboard({ left, right, official, playing, fixedStep }: Scoreb
       <p className="score__note">
         {settled
           ? "✓ Scored by the metrics from each run's log."
-          : "Counted from each log up to the playhead; ✓ marks a number the metrics have scored, which the count ends on."}{" "}
-        One pair is one run on one seed under one failure plan, so it shows what happened here and nothing more: <a href="#/helps">Trade-offs</a> holds the multi-seed verdicts, and <a href="#/evidence">the Evidence page</a> the numbers.
+          : "Counted from each log up to the playhead; ✓ marks a number the metrics have scored, which the count ends on."}
+        {caveat && (
+          <>
+            {" "}
+            One pair is one run on one seed under one failure plan, so it shows what happened here and nothing more: <a href="#/helps">Trade-offs</a> holds the multi-seed verdicts, and <a href="#/evidence">the Evidence page</a> the numbers.
+          </>
+        )}
       </p>
     </section>
   );

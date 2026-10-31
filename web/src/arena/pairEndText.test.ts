@@ -34,6 +34,16 @@ describe("what a side did, by the kind of system it is", () => {
     expect(sideText(side({ crashes: 0 }), assumptions("durable-max"))).toBe("No coordinator crashed. It finished with all 48 talks placed. No call was paid for twice.");
   });
 
+  it("swarm: says why the takeover check counts more hand-overs than the coordinators lost, in the run page's words, and only then", () => {
+    const why = "The takeover check counts 7 hand-overs for those 5 coordinators: one coordinator's root duties and its subtree are two hand-overs, so there can be more of them than crashes.";
+    expect(sideText(side({ handOvers: 7 }), assumptions("durable-max"))).toBe(`Lost 5 coordinators and still finished with all 48 talks placed. No call was paid for twice. ${why}`);
+    expect(sideText(side({ crashes: 1, handOvers: 2 }), assumptions("durable-max"))).toContain("counts 2 hand-overs for that coordinator:");
+    for (const handOvers of [5, 4, 0, null, undefined]) expect(sideText(side({ handOvers }), assumptions("durable-max")), `${handOvers}`).not.toContain("hand-overs");
+    expect(sideText(side({ crashes: 0, handOvers: 3 }), assumptions("durable-max"))).not.toContain("hand-overs");
+    // a supervisor's crashes are not hand-overs
+    expect(sideText(side({ system: "durable-max", handOvers: 7 }), assumptions("durable-max"))).not.toContain("hand-overs");
+  });
+
   it("an in-process supervisor: its workers stop with it, and the calls paid for again are counted", () => {
     const text = sideText(side({ system: "central", duplicatedCalls: 14 }), assumptions("central"));
     expect(text).toBe("Its supervisor crashed 5 times, and its workers stopped with it each time. It finished with all 48 talks placed. 14 calls paid for again.");

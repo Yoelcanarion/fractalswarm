@@ -319,6 +319,16 @@ describe("the picker", () => {
     expect(html.indexOf('aria-label="swarm run"')).toBeGreaterThan(html.indexOf('<details id="runs"'));
   });
 
+  it("puts the private pairs, made here from live input, under a divider after the ones that ship, with the mark still in their name", () => {
+    const html = picker({ pairs: [pair({ pairId: "mine", label: "my own pair", private: true }), pair({ pairId: "shipped", label: "a shipped pair" })] });
+    expect(count(html, "<optgroup")).toBe(1);
+    expect(html).toContain('<optgroup label="Private, made here">');
+    expect(html.indexOf("a shipped pair")).toBeLessThan(html.indexOf("<optgroup"));
+    expect(html.indexOf("my own pair · private")).toBeGreaterThan(html.indexOf("<optgroup"));
+    expect(picker()).not.toContain("<optgroup"); // nothing private, no divider
+    expect(picker({ pairs: [pair({ billed: true })] })).not.toContain("<optgroup"); // a billed pair that ships stays in the list
+  });
+
   it("marks a private or billed pair, so it is never taken for a bundled one", () => {
     const html = picker({ pairs: [pair({ private: true }), pair({ pairId: "p2", billed: true })] });
     expect(html).toContain("· private");
@@ -455,6 +465,35 @@ describe("the end of a pair", () => {
 
   it("is not in a director's frame, which is the arena and nothing around it", async () => {
     expect(await page(75_000, { bare: true })).not.toContain("pairend");
+  });
+
+  it("says the hand-overs of the takeover check with their reason once the check is in, and not before", async () => {
+    const session = await opened(75_000);
+    const render = () =>
+      text(
+        renderToStaticMarkup(
+          createElement(RunStoreProvider, { store: session.left as never }, createElement(ArenaView, { session, pairs: [], runs: [], official: { left: null, right: null }, left: "s", right: "r" })),
+        ),
+      );
+    expect(render()).not.toContain("hand-overs");
+    const report = { ok: true, violations: [], heirs: 3, reclaims: 0, adoptions: 1, kills: 1 };
+    session.left.setState({ takeover: { state: "done", report } });
+    expect(render()).toContain("The takeover check counts 3 hand-overs for that coordinator: one coordinator's root duties and its subtree are two hand-overs");
+    session.left.setState({ takeover: { state: "done", report: { ...report, heirs: 1 } } });
+    expect(render()).not.toContain("hand-overs");
+  });
+
+  it("says the one-run caveat once: the end card's, which has the setting, takes the place of the scoreboard's", async () => {
+    const caveat = (html: string) => count(text(html), /under one failure plan/);
+    expect(caveat(await page(30_000))).toBe(1); // while it plays, the scoreboard's
+    expect(text(await page(30_000))).toContain("One pair is one run on one seed under one failure plan");
+    const ended = text(await page(75_000));
+    expect(caveat(ended)).toBe(1);
+    expect(ended).toContain("This is one run of each, on one seed, under one failure plan");
+    expect(ended).not.toContain("One pair is one run on one seed");
+    expect(ended).toContain("✓ marks a number the metrics have scored"); // what the ✓ means stays
+    // a director's frame has no end card, so the scoreboard keeps its caveat
+    expect(text(await page(75_000, { bare: true }))).toContain("One pair is one run on one seed under one failure plan");
   });
 });
 

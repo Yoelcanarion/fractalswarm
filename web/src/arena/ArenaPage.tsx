@@ -16,6 +16,7 @@ import { keyAction } from "./keys";
 import type { Official } from "./official";
 import { PairEnd } from "./PairEnd";
 import { PairPicker } from "./PairPicker";
+import { playedOut } from "./playedOut";
 import { arenaHash, type ArenaRoute } from "./route";
 import { Scoreboard } from "./Scoreboard";
 import { createPairSession, type PairSession } from "./session";
@@ -108,6 +109,9 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
   const loadError = leftError ?? rightError;
   const playing = useStore(clock.state, (s) => s.playing);
   const fixedStep = useStore(clock.state, (s) => s.mode === "fixed-step");
+  // The end of the pair says the one-run caveat in full, so the scoreboard's is left out once both runs have played out (a director's frame has no end card).
+  const leftPlayedOut = useStore(session.left, playedOut);
+  const rightPlayedOut = useStore(session.right, playedOut);
 
   const frames = useMemo(() => sharedFrames(frameOf(leftEvents), frameOf(rightEvents)), [leftEvents, rightEvents]);
   const assumptions = useMemo(() => assumptionsOf(startedOf(rightEvents), startedOf(leftEvents)), [leftEvents, rightEvents]);
@@ -206,7 +210,7 @@ export function ArenaView({ session, pairs, runs, official, left, right, bare = 
             <ArenaSide store={session.right} role="rival" title={capitalize(assumptions.name)} system={assumptions.system} frame={frames[1]} />
           </div>
           {!bare && <PairEnd left={session.left} right={session.right} leftSystem={leftSystem} assumptions={assumptions} />}
-          <Scoreboard left={session.left} right={session.right} official={official} playing={playing} fixedStep={fixedStep} />
+          <Scoreboard left={session.left} right={session.right} official={official} playing={playing} fixedStep={fixedStep} caveat={bare || !(leftPlayedOut && rightPlayedOut)} />
           <ArenaTimeline clock={clock} left={session.left} right={session.right} />
         </>
       )}
