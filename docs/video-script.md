@@ -164,7 +164,7 @@ Anything that doesn't answer one of them stays out of the video.
 - [x] The outcome has been decided with Yoel (B, Oct 29), and only that version is in the script.
 - [x] Every placeholder is filled and matches a row of `docs/claims.md` (the ablation numbers are row M4).
 - [x] No "simpler", "cheaper" or "more reliable" appears without its own row in `docs/claims.md`: it appears only as "what we do not claim".
-- [ ] The rival's assumptions are on screen in `s6`.
+- [x] The rival's assumptions are on screen in `s6`: the caption "Rival: ideal durable supervisor — 5 s detection · 0 s restart · workers survive · same log" is in every frame of the take (checked on frames at 8, 15, 24 and 29.5 s of the Nov 2 recording).
 - [x] Nothing says that every run was valid: one real run of the headline was not (`swarm__t2_conference__C0__s5`, `bench/REPORT.md` §4.10.7), and neither was one of the track leads' deaths (`K-o3`, seed 1, §4.10.9). The tagline's evidence (S7) speaks of C3.
 - [x] Each scene's voice-over fits its time when read slowly: counted at 2.3 words per second, every scene fits its slot with at least 0.7 s to spare (`s9-close`, the tightest, is 39 words in 17.7 s).
 - [ ] **The three-question check:** someone who has not seen the project watches the cut and can say what problem it solves, why Meta's models matter and what the evidence is.
