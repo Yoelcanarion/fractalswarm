@@ -1,23 +1,23 @@
-# Submission form — draft v1
+# Submission form — final draft
 
-**Status:** draft v1 (Oct 31, with the ten-seed claims). Yoel edits it, and the coordinator keeps it consistent with `docs/claims.md`. The final version is due on Nov 4, before 20:00 CET.
+**Status:** final draft (Nov 2), written from `docs/claims.md`. Only the video link is still open. The form is due on Nov 4, before 20:00 CET.
 - **Form:** `cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit`.
-- **Placeholders:** every number is a `{{placeholder}}` until it has a row in `docs/claims.md`.
+- **Numbers:** every number has a row in `docs/claims.md`, in its wording. The one placeholder left is `{{video link}}`.
 - **Wording:** no "simpler", "cheaper" or "more reliable" without its own evidence row.
 
 ---
 
 ## Team Name
-FractalSwarm *(suggested; Yoel confirms)*
+FractalSwarm
 
 ## Team Members
 Yoel Garcia (GitHub: Yoelcanarion)
 
 ## Which track?
-*Yoel picks it from the form's list on Nov 4.* The project spec assumed the Indie track, "Push the Frontier".
+Indie ("Push the Frontier").
 
 ## Which problem statement?
-*Yoel picks it from the form's list on Nov 4.*
+Push the Frontier.
 
 ## Most Viral X post (optional)
 Skipped.
@@ -38,7 +38,9 @@ Skipped.
 > **Try it:** `uv run fractalswarm demo --verify`. No API key is needed.
 
 ## Public GitHub Repository
-https://github.com/Yoelcanarion/fractalswarm (it becomes public on Nov 3, after the final secret and PII scan).
+https://github.com/Yoelcanarion/fractalswarm
+
+*Private until the final secret and PII scan; it is set public before the form is sent.*
 
 ## 3-Minute Demo Video
 {{video link}} (unlisted YouTube or similar; it is also linked from the README).
@@ -52,7 +54,7 @@ https://github.com/Yoelcanarion/fractalswarm (it becomes public on Nov 3, after 
 >   - writing blurbs.
 >
 >   We use tool calling (with parallel calls), a reasoning effort per role, and prompt caching with one `prompt_cache_key` per role: in the recorded demo run, 65% of input tokens were served from cache.
-> - **Muse Spark 1.3 Contributor** runs the benchmark matrix at about 1/20 of the Standard price, behind a PII gate. Calls that read emails stay on Standard.
+> - **Muse Spark 1.3 Contributor** runs the benchmark matrix, behind a PII gate. Calls that read emails stay on Standard.
 > - **Muse Wonder 1.0** writes the root plan of every run.
 > - **Llama PromptGuard 2 (22M)** runs locally through LlamaFirewall. In the recorded demo and pair runs, all 32 inputs were scored before an agent read them; the bench's runs, runs on the fake LLM and an install without it use a pattern scanner. The score is logged, so replays never recompute it.
 > - **The API's usage fields** (cached and reasoning tokens) feed a per-call cost ledger and budget reservations. Its rate-limit headers drive our adaptive quotas.
@@ -65,7 +67,7 @@ https://github.com/Yoelcanarion/fractalswarm (it becomes public on Nov 3, after 
 > - **The tokens go to the problem.** Zero LLM tokens spent on coordination: takeover is a deterministic hash over the log.
 
 ## Feedback on Meta products
-*Drafted from `docs/api-notes.md` (the Day 2 live spike) and later runs. Yoel edits it.*
+*Drafted from `docs/api-notes.md` (the Day 2 live spike) and later runs.*
 
 **What worked well:**
 - **Strict structured outputs** worked on both the Responses API and Chat Completions, and a bad schema failed fast with a clear message.
@@ -93,6 +95,5 @@ https://github.com/Yoelcanarion/fractalswarm (it becomes public on Nov 3, after 
 - **PromptGuard 2 scored a politely worded injection email at 0.0009,** so it did not flag it. Only an explicit "ignore your previous instructions" scored high. That is expected from a jailbreak classifier, but worth stating in the docs. Our scope check caught the polite version.
 
 ## Feedback on partner technologies
-*TBD: check the form's list of partners.*
+*The only partner technology we used is Hugging Face Hub.*
 - **Hugging Face Hub:** the gated PromptGuard 2 weights; access was granted quickly.
-- {{others, if any}}
