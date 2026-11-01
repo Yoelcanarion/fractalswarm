@@ -58,7 +58,7 @@ https://github.com/Yoelcanarion/fractalswarm (it becomes public on Nov 3, after 
 > - **The API's usage fields** (cached and reasoning tokens) feed a per-call cost ledger and budget reservations. Its rate-limit headers drive our adaptive quotas.
 
 ## Why are Meta's models important to your solution?
-> - **Understanding.** The input is human language: emails, notes, abstracts. On the same notes, a hand-written parser understood {{ablation_parser}} of {{ablation_total}}, and Muse Spark understood {{ablation_muse}}. Without the model, there is no problem to schedule.
+> - **Understanding.** The input is human language: emails, notes, abstracts. In one run on one made-up conference (20 notes, written for this test with an AI assistant), a hand-written parser understood 8 and Muse Spark understood 19. The model's reading is what turns messy notes into a problem the swarm can schedule.
 > - **Planning and judgment.** Wonder breaks the conference down into tracks and sessions. Spark agents check each other's work.
 > - **Cost.** Prompt caching and Contributor pricing make it affordable to run a dozen agents per run, and a full benchmark: 96 real benchmark runs for about $17.
 > - **Safety.** PromptGuard 2 runs locally, on every input of the recorded demo runs.

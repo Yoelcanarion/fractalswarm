@@ -48,26 +48,26 @@ Anything that doesn't answer one of them stays out of the video.
 
 ### s2-intake (0:33–0:53) — recorded live
 **On screen:**
-- Yoel types or pastes a small conference in plain English, sped up: talks, and speakers' emails such as "I land at noon on day two".
+- Yoel pastes a small made-up conference in plain English, sped up: talks, and speakers' emails such as "I land at noon on day two".
 - Clicks **Read with Muse (billed)**.
 - The review table fills in: talks, tracks and constraints, each with its source sentence highlighted.
 - Clicks **Approve**.
 
 **Voice-over (≈ 45 words):**
-> The input is real, and messy. I type a small conference in plain English: talks, speakers, and emails like "I land at noon on day two".
+> The input is plain, messy text. This is a made-up conference: talks, speakers, and emails like "I land at noon on day two".
 > Muse Spark turns it into constraints, each linked to the sentence it came from. I check them and approve.
 
-**Key points:** real, messy input · Spark turns it into constraints · each constraint links to its source sentence · a human approves.
+**Key points:** messy plain-text input, made up for the test · Spark turns it into constraints · each constraint links to its source sentence · a human approves.
 
 ### s3-ablation (0:53–1:05)
 **On screen:**
 - The Model vs parser page: regex parser on the left, Muse Spark on the right, with ✓/✗ per note.
-- **Headline:** "parser {{ablation_parser}} of {{ablation_total}} · Muse {{ablation_muse}} of {{ablation_total}}".
+- **Headline:** "parser 8 of 20 · Muse 19 of 20" (row M4 of `docs/claims.md`: one run, one made-up conference, no verdict).
 
-**Voice-over (≈ 28 words):**
-> Is the model doing real work here? We ran the same notes through a hand-written parser. It understood {{ablation_parser}} of {{ablation_total}}. Muse understood {{ablation_muse}}.
+**Voice-over (≈ 22 words):**
+> Is the model really doing the work? One run on made-up notes: a hand-written parser understood eight of twenty. Muse understood nineteen.
 
-**Key points:** same notes, parser against Muse · the parser's score, then Muse's.
+**Key points:** same made-up notes, parser against Muse · one run · the parser's score, then Muse's.
 
 ### s4-lens (1:05–1:24)
 **On screen:**
@@ -157,7 +157,7 @@ Anything that doesn't answer one of them stays out of the video.
 
 | Placeholder | Source |
 |---|---|
-| `{{ablation_parser}}`, `{{ablation_muse}}`, `{{ablation_total}}` | The ablation result on the live input |
+| Ablation: parser 8, Muse 19, of 20 notes | Row M4 of `docs/claims.md`: one run (`ablation-yoel-20261101-235159`), one made-up conference, no verdict |
 
 ## Checks before recording
 - [ ] S5 is confirmed at the release commit, as its row in `docs/claims.md` says: `s8` and `s9` state it.
