@@ -266,6 +266,14 @@ The web app lives in `web/` (Vite, React, TypeScript): `npm --prefix web install
 
 </details>
 
+## Built during the hackathon
+
+- **When.** The history begins on October 27, 2026, the first day of the building period, with an empty "Initial commit". No commit predates it: `git log --reverse --format='%h %aI %s' | head -3`.
+- **What was built.** The runtime, the benchmark, the web app, the recorded runs and the documents are all in that history.
+- **What is not ours.** The third-party libraries, declared in `pyproject.toml` and `web/package.json`. The Inter and JetBrains Mono fonts, under the SIL Open Font License ([`NOTICE`](NOTICE)). Meta's models, reached through the Meta Model API (Muse Spark, Muse Wonder) and Hugging Face (the Llama PromptGuard 2 weights, which are not in this repository).
+- **Which model made a call.** Every call of a recorded run is logged with its model. Replay one (`uv run fractalswarm demo`) and open "What the models cost", or read `/api/runs/demo-final/models`.
+- **Synthetic data.** The conferences in the demos, the benchmark and the tests (talks, speakers, emails, rooms) are synthetic: invented for this project, with `example.org` addresses. They are not real people's data, and nothing here is evidence of use in production.
+
 ## License
 
 MIT
