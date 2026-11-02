@@ -35,7 +35,7 @@ Skipped.
 >
 > **Meta's models do the understanding.** Muse Spark turns messy human input into constraints and does the agents' work. Muse Wonder writes the root plan. Llama PromptGuard 2 screened every input of the recorded demo runs.
 >
-> **Built during the hackathon.** The repository's history begins on Oct 27, 2026, the first day of the building period, and no commit predates it. Third-party: the libraries, the Inter and JetBrains Mono fonts (SIL Open Font License) and Meta's models. The conferences in the demos and benchmarks are synthetic, and the one behind the ablation was written with an AI assistant.
+> **Built during the hackathon.** The repository's history begins on Oct 27, 2026, the first day of the building period; no commit predates it, and no earlier code or data was brought in. Third-party: the libraries, the Inter and JetBrains Mono fonts (SIL Open Font License) and Meta's models. The conferences in the demos and benchmarks are synthetic, and the one behind the ablation was written with an AI assistant.
 >
 > **Try it:** `uv run fractalswarm demo --verify`. No API key is needed.
 
