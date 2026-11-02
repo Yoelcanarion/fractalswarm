@@ -1,0 +1,29 @@
+FractalSwarm
+Copyright (c) 2026 Yoelcanarion. Released under the MIT License (see LICENSE).
+
+Third-party material in this repository
+=======================================
+
+Fonts (SIL Open Font License 1.1; the full texts are in licenses/)
+
+  Inter
+    Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+    licenses/Inter-OFL-1.1.txt
+
+  JetBrains Mono
+    Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+    licenses/JetBrainsMono-OFL-1.1.txt
+
+  Both come from the npm packages @fontsource-variable/inter and
+  @fontsource-variable/jetbrains-mono. They are shipped as the woff2 files of the
+  web app's build (src/fractalswarm/api/static/assets/) and, as subsets, inside the
+  pictures of docs/assets/*.svg (scripts/build_readme_art.py).
+
+Libraries
+  The Python and JavaScript dependencies are declared in pyproject.toml, uv.lock,
+  web/package.json and web/package-lock.json. Each keeps its own license.
+
+Models
+  Muse Spark and Muse Wonder are reached through the Meta Model API. The Llama
+  PromptGuard 2 weights are downloaded from Hugging Face under their own license
+  and are not part of this repository.

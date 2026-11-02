@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>FractalSwarm · Kill half the brains. It still finishes.</title>
+    <meta
+      name="description"
+      content="Kill half the brains. It still finishes. FractalSwarm is a multi-agent runtime on Muse Spark and Muse Wonder. Kill a coordinator yourself, watch the rest take over, then step into the app."
+    />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <script>
+      // The saved or requested theme goes on before the first paint, so a light page never starts dark. It mirrors initTheme() in
+      // src/lib/theme.ts (src/lib/theme.test.ts keeps the two the same). The meta above is the dark default; this keeps it with the theme.
+      (function () {
+        var wanted = null;
+        try {
+          var asked = new URLSearchParams(window.location.search).get("theme");
+          wanted = asked !== null ? asked : window.localStorage.getItem("fractalswarm.theme");
+        } catch (error) {
+          wanted = null;
+        }
+        var light = wanted === "light";
+        if (light) document.documentElement.setAttribute("data-theme", "light");
+        var meta = document.querySelector('meta[name="color-scheme"]');
+        if (meta) meta.setAttribute("content", light ? "light" : "dark");
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-W_zejAms.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/jsx-runtime-BsPR_7g3.js">
+    <link rel="modulepreload" crossorigin href="./assets/react-dom-Da0b86jc.js">
+    <link rel="modulepreload" crossorigin href="./assets/GithubMark-D-mNs8aP.js">
+    <link rel="modulepreload" crossorigin href="./assets/MotionConfigContext-DMihlYd3.js">
+    <link rel="modulepreload" crossorigin href="./assets/SwarmTree-CW2LvE21.js">
+    <link rel="stylesheet" crossorigin href="./assets/SwarmTree-aQEjCKQy.css">
+    <link rel="stylesheet" crossorigin href="./assets/index-fR4si2-Y.css">
+  </head>
+  <body>
+    <div id="root"><p style="margin:0;padding:24px">Loading the static showcase. If this stays empty, the page cannot run from a file: serve this folder (python -m http.server) and open http://localhost:8000/.</p></div>
+  </body>
+</html>
